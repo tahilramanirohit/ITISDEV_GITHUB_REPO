@@ -4,6 +4,7 @@ from typing import Any, Dict, List
 
 import uvicorn
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from player_tracking import PlayerTracker
@@ -11,6 +12,13 @@ from event_extraction import EventExtractor
 from video_capture import VideoCaptureService
 
 app = FastAPI(title="Pickleball CV Backend", version="0.1.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"]
+)
 
 
 class EventItem(BaseModel):
