@@ -1,3 +1,4 @@
+from rag_coach import RAGRequest, RAGResponse as RAGOutput, generate_coach_response
 from pathlib import Path
 import tempfile
 from typing import Any, Dict, List
@@ -74,3 +75,12 @@ async def analyze_video(file: UploadFile = File(...), max_frames: int = 300):
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+
+@app.post("/api/v1/rag-coach", response_model=RAGOutput)
+async def rag_coach_endpoint(payload: RAGRequest):
+    try:
+        # Passes the request to our newly created LangChain/ChromaDB pipeline
+        return generate_coach_response(payload)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
