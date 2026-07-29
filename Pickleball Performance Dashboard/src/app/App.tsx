@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ScatterChart, Scatter, ComposedChart,
@@ -717,6 +717,7 @@ const CV_EVENTS = [
   { time: 85, tag: "ERROR",  label: "Drive Error",   player: "P#01", color: ORANGE,    textColor: WHITE  },
 ];
 
+// ── CV Replay Widget with Video Preview & Bounding Box Overlay ────────────
 function CVReplayWidget({
   onUpload,
   analysisStatus,
@@ -730,36 +731,154 @@ function CVReplayWidget({
   analysisError: string;
   selectedFile: File | null;
 }) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+
+  // 1. Create a local URL for the selected video file to preview it instantly
+  useEffect(() => {
+    if (selectedFile) {
+      const url = URL.createObjectURL(selectedFile);
+      setVideoUrl(url);
+      return () => URL.revokeObjectURL(url); // Clean up memory
+    } else {
+      setVideoUrl(null);
+    }
+  }, [selectedFile]);
+
+  // 2. Draw bounding boxes on canvas synced to video time
+  const drawOverlay = useCallback(() => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    if (!video || !canvas || !analysisResult || !analysisResult.player_positions.length) {
+      return;
+    }
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Match canvas dimensions to rendered video display size
+    if (canvas.width !== video.clientWidth || canvas.height !== video.clientHeight) {
+      canvas.width = video.clientWidth;
+      canvas.height = video.clientHeight;
+    }
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const currentTime = video.currentTime;
+    const videoWidth = video.videoWidth || 1;
+    const videoHeight = video.videoHeight || 1;
+
+    const scaleX = canvas.width / videoWidth;
+    const scaleY = canvas.height / videoHeight;
+
+    // Find the snapshot closest to the video's current playback time
+    const snapshot = analysisResult.player_positions.reduce((prev, curr) => {
+      return Math.abs(curr.time_seconds - currentTime) < Math.abs(prev.time_seconds - currentTime)
+        ? curr
+        : prev;
+    }, analysisResult.player_positions[0]);
+
+    if (snapshot && Math.abs(snapshot.time_seconds - currentTime) < 0.5) {
+      snapshot.players.forEach((player) => {
+        const [x1, y1, x2, y2] = player.bbox;
+
+        // Scale bounding box to display dimensions
+        const boxX = x1 * scaleX;
+        const boxY = y1 * scaleY;
+        const boxWidth = (x2 - x1) * scaleX;
+        const boxHeight = (y2 - y1) * scaleY;
+
+        // Draw Bounding Box (Neon Green)
+        ctx.strokeStyle = "#b8f523";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+
+        // Draw Player Label Header
+        const labelText = `Player #${player.track_id ?? "1"}`;
+        ctx.fillStyle = "#b8f523";
+        ctx.fillRect(boxX, Math.max(0, boxY - 22), ctx.measureText(labelText).width + 12, 22);
+
+        ctx.fillStyle = "#071a3e";
+        ctx.font = "bold 12px Inter, sans-serif";
+        ctx.fillText(labelText, boxX + 6, Math.max(14, boxY - 6));
+      });
+    }
+  }, [analysisResult]);
+
+  // Request Animation Frame loop for smooth box animation while video plays
+  useEffect(() => {
+    let animId: number;
+    const loop = () => {
+      drawOverlay();
+      animId = requestAnimationFrame(loop);
+    };
+
+    if (analysisStatus === "ready" && videoUrl) {
+      animId = requestAnimationFrame(loop);
+    }
+
+    return () => cancelAnimationFrame(animId);
+  }, [analysisStatus, videoUrl, drawOverlay]);
+
   return (
     <Card accent={BLUE_SKY} className="mt-4">
       <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
         <WidgetHeader
-          title="Video Analysis: Track Performance from Match Footage"
-          subtitle="Upload match footage to generate court tracking, player positions, and CV event timelines."
+          title="Video Analysis & Live Bounding Box Tracking"
+          subtitle="Upload match footage to generate court tracking, player detections, and CV event timelines."
           accent={BLUE_SKY}
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
-        <div>
-          <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4 mb-4">
+      <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
+        {/* Left Column: Upload Controls & Video Player */}
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
             <div className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: WHITE_SUB }}>
               Upload Match Video
             </div>
             <input
               type="file"
               accept="video/*"
-              className="w-full text-sm text-white bg-slate-900 rounded-lg border border-slate-800 p-3"
+              className="w-full text-sm text-white bg-slate-900 rounded-lg border border-slate-800 p-3 cursor-pointer"
               onChange={(event) => {
                 const file = event.target.files?.[0];
                 if (file) onUpload(file);
               }}
             />
             <div className="mt-3 text-xs" style={{ color: WHITE_DIM }}>
-              Supported: MP4, MOV, AVI. Maximum 180 frames scanned for the first pass.
+              Supported: MP4, MOV, AVI. Maximum 150MB scanned for pass.
             </div>
           </div>
 
+          {/* Interactive Video Player Container with Canvas Overlay */}
+          <div className="relative rounded-2xl border border-white/10 bg-black overflow-hidden min-h-[220px] flex items-center justify-center">
+            {videoUrl ? (
+              <div className="relative w-full flex items-center justify-center">
+                <video
+                  ref={videoRef}
+                  src={videoUrl}
+                  controls
+                  className="w-full max-h-[420px] object-contain block"
+                  onLoadedMetadata={drawOverlay}
+                />
+                <canvas
+                  ref={canvasRef}
+                  className="absolute top-0 left-0 w-full h-full pointer-events-none"
+                />
+              </div>
+            ) : (
+              <p className="text-sm p-8 text-center" style={{ color: WHITE_DIM }}>
+                No video loaded. Select a file above to display the video player preview.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Right Column: Status & Live Analysis Preview */}
+        <div className="space-y-4">
           <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
             <div className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: WHITE_SUB }}>
               Analysis Status
@@ -767,13 +886,13 @@ function CVReplayWidget({
             <div className="space-y-2 text-sm">
               <div className="flex items-center justify-between">
                 <span>Selected file</span>
-                <span style={{ color: selectedFile ? NEON : WHITE_SUB }}>
+                <span className="font-mono text-xs truncate max-w-[180px]" style={{ color: selectedFile ? NEON : WHITE_SUB }}>
                   {selectedFile ? selectedFile.name : "None"}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span>Current state</span>
-                <span style={{ color: analysisStatus === "error" ? ORANGE : NEON }}>
+                <span className="font-mono font-bold" style={{ color: analysisStatus === "error" ? ORANGE : NEON }}>
                   {analysisStatus}
                 </span>
               </div>
@@ -784,67 +903,72 @@ function CVReplayWidget({
               ) : null}
             </div>
           </div>
-        </div>
 
-        <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-          <div className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: WHITE_SUB }}>
-            Live Analysis Preview
-          </div>
-          {analysisStatus === "idle" ? (
-            <p className="text-sm" style={{ color: WHITE_DIM }}>
-              Upload a video to start analysis and populate the event timeline.
-            </p>
-          ) : analysisStatus === "uploading" ? (
-            <p className="text-sm" style={{ color: NEON }}>Uploading video to backend...</p>
-          ) : analysisStatus === "processing" ? (
-            <p className="text-sm" style={{ color: NEON }}>Processing video frames…</p>
-          ) : analysisStatus === "ready" && analysisResult ? (
-            <div className="space-y-3">
-              <div className="text-[11px] text-white/70">Analysis complete</div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="rounded-xl bg-slate-900/80 p-3">
-                  <div className="text-[10px] uppercase tracking-widest" style={{ color: WHITE_SUB }}>
-                    Duration
-                  </div>
-                  <div className="font-bold text-white">{analysisResult.duration_seconds.toFixed(1)}s</div>
-                </div>
-                <div className="rounded-xl bg-slate-900/80 p-3">
-                  <div className="text-[10px] uppercase tracking-widest" style={{ color: WHITE_SUB }}>
-                    Frames
-                  </div>
-                  <div className="font-bold text-white">{analysisResult.frame_count}</div>
-                </div>
-              </div>
-              <div className="rounded-xl bg-slate-900/80 p-3">
-                <div className="text-[10px] uppercase tracking-widest" style={{ color: WHITE_SUB }}>
-                  Latest event
-                </div>
-                <div className="mt-2 text-sm text-white">
-                  {analysisResult.event_timeline[analysisResult.event_timeline.length - 1]?.description ?? "No events detected."}
-                </div>
-              </div>
+          <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+            <div className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: WHITE_SUB }}>
+              Live Analysis Preview
             </div>
-          ) : (
-            <p className="text-sm" style={{ color: WHITE_DIM }}>
-              No analysis result available yet.
-            </p>
-          )}
+            {analysisStatus === "idle" ? (
+              <p className="text-sm" style={{ color: WHITE_DIM }}>
+                Upload a video to start analysis and populate player bounding boxes.
+              </p>
+            ) : analysisStatus === "uploading" ? (
+              <p className="text-sm" style={{ color: NEON }}>Uploading video to backend...</p>
+            ) : analysisStatus === "processing" ? (
+              <p className="text-sm" style={{ color: NEON }}>Processing video frames & tracking positions…</p>
+            ) : analysisStatus === "ready" && analysisResult ? (
+              <div className="space-y-3">
+                <div className="text-[11px] text-white/70">Analysis complete</div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-xl bg-slate-900/80 p-3">
+                    <div className="text-[10px] uppercase tracking-widest" style={{ color: WHITE_SUB }}>
+                      Duration
+                    </div>
+                    <div className="font-bold text-white">{analysisResult.duration_seconds.toFixed(1)}s</div>
+                  </div>
+                  <div className="rounded-xl bg-slate-900/80 p-3">
+                    <div className="text-[10px] uppercase tracking-widest" style={{ color: WHITE_SUB }}>
+                      Frames
+                    </div>
+                    <div className="font-bold text-white">{analysisResult.frame_count}</div>
+                  </div>
+                </div>
+                <div className="rounded-xl bg-slate-900/80 p-3">
+                  <div className="text-[10px] uppercase tracking-widest" style={{ color: WHITE_SUB }}>
+                    Latest Event
+                  </div>
+                  <div className="mt-1 text-xs text-white">
+                    {analysisResult.event_timeline[analysisResult.event_timeline.length - 1]?.description ?? "No events detected."}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm" style={{ color: WHITE_DIM }}>
+                No analysis result available yet.
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
+      {/* Event Timeline */}
       {analysisResult ? (
         <div className="mt-6 rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-          <div className="font-semibold uppercase tracking-widest mb-3" style={{ color: WHITE }}>
-            Event Timeline
+          <div className="font-semibold uppercase tracking-widest mb-3 text-xs" style={{ color: WHITE }}>
+            Detected Action Event Timeline
           </div>
-          <div className="grid gap-3">
-            {analysisResult.event_timeline.slice(0, 6).map((event, index) => (
-              <div key={index} className="rounded-2xl border border-white/10 bg-[#06172f]/80 p-3">
-                <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.18em]" style={{ color: WHITE_SUB }}>
-                  <span>{event.label}</span>
-                  <span>{event.time_seconds.toFixed(1)}s</span>
+          <div className="grid gap-2 max-h-[260px] overflow-y-auto pr-1">
+            {analysisResult.event_timeline.map((event, index) => (
+              <div key={index} className="rounded-xl border border-white/10 bg-[#06172f]/80 p-3 flex items-center justify-between">
+                <div>
+                  <div className="text-[10px] font-bold font-mono tracking-wider" style={{ color: NEON }}>
+                    {event.label}
+                  </div>
+                  <div className="text-xs text-white mt-0.5">{event.description}</div>
                 </div>
-                <div className="mt-2 text-sm text-white">{event.description}</div>
+                <span className="font-mono text-xs px-2 py-1 rounded bg-white/10" style={{ color: BLUE_SKY }}>
+                  {event.time_seconds.toFixed(1)}s
+                </span>
               </div>
             ))}
           </div>
@@ -853,6 +977,7 @@ function CVReplayWidget({
     </Card>
   );
 }
+
 // ── Login Page ────────────────────────────────────────────────────────────
 const DEMO_ACCOUNT = {
   email: "coach@picklepro.app",

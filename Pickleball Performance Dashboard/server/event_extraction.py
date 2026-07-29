@@ -1,8 +1,6 @@
 from __future__ import annotations
-
 from typing import Any, Dict, List
 import math
-
 
 class EventExtractor:
     def __init__(self, heatmap_cols: int = 6, heatmap_rows: int = 4):
@@ -62,16 +60,12 @@ class EventExtractor:
         return snapshots
 
     def _extract_events(self, tracked_frames: List[Dict[str, Any]], fps: float) -> List[Dict[str, Any]]:
-        """
-        Extracts meaningful pickleball events (e.g., rapid movement, court-zone changes, 
-        rally tracking actions) based on tracking velocity and positional thresholds.
-        """
         events: List[Dict[str, Any]] = []
         if not tracked_frames:
             return events
 
         last_positions: Dict[int, tuple[float, float, float]] = {}
-        velocity_threshold = 45.0  # Pixels per second displacement threshold for action triggers
+        velocity_threshold = 45.0  # Pixels per second displacement threshold
 
         for frame in tracked_frames:
             timestamp = frame.get("timestamp", 0.0)
@@ -93,7 +87,7 @@ class EventExtractor:
                         dist = math.hypot(cx - px, cy - py)
                         speed = dist / dt
 
-                        # Detect high-intensity movement (e.g. lunging for a dink or chasing a drive)
+                        # Detect high-intensity movement
                         if speed > velocity_threshold:
                             zone = "Baseline Zone"
                             if cy < 150:
@@ -101,7 +95,6 @@ class EventExtractor:
                             elif cy < 280:
                                 zone = "Transition Zone"
 
-                            # Avoid flooding timeline with duplicate events for the same burst
                             if not events or (timestamp - events[-1]["time_seconds"] > 1.5):
                                 events.append({
                                     "time_seconds": round(timestamp, 2),
@@ -114,8 +107,7 @@ class EventExtractor:
 
                 last_positions[track_id] = (cx, cy, timestamp)
 
-        # Fallback safeguard: if movement heuristics didn't trigger enough events, 
-        # append baseline position updates so the timeline isn't completely empty.
+        # Fallback if no bursts were detected (keeps UI from breaking on very slow clips)
         if not events and tracked_frames:
             skip = max(1, len(tracked_frames) // 5)
             for frame in tracked_frames[::skip]:
@@ -128,4 +120,4 @@ class EventExtractor:
                 })
 
         events.sort(key=lambda x: x["time_seconds"])
-        return events[:20]  # Cap timeline length for clean UI consumption
+        return events[:20]
