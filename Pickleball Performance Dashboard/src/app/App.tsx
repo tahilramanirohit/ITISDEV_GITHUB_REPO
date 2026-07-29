@@ -1233,63 +1233,42 @@ export default function App() {
     }
   }
 
-  const generateRAG = async () => {
-    const hasKey = !!(import.meta.env as Record<string, string>).VITE_ANTHROPIC_API_KEY;
-    if (!hasKey) {
-      setRagStatus("error");
-      setRagError("Add VITE_ANTHROPIC_API_KEY to enable AI generation.");
-      return;
-    }
+ const generateRAG = async () => {
     setRagStatus("loading");
     setRagError("");
     try {
       const goals = playerGoalsRef.current;
-      const stats = { dinkRate: 81, kitchenTime: 34, volleyRate: 76, focusArea: goals.focusArea };
-      const docs  = retrieveRelevantDocs(stats, 3);
-      const ctx   = docs.map(d => `### ${d.title}\n${d.content}`).join("\n\n");
+      
+      // Make a secure POST request to your new FastAPI RAG endpoint
+      const response = await fetch(`${BACKEND_BASE_URL}/api/v1/rag-coach`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          playerGoals: goals,
+          metrics: { 
+            avgDinkRate: 81, 
+            unforcedErrors: 4.8, 
+            kitchenTime: 34, 
+            volleyRate: 76 
+          }
+        })
+      });
 
-      const SYSTEM_COACH =
-        "You are PicklePro's AI coaching engine. You generate personalized, data-driven " +
-        "pickleball post-game analysis for players using retrieved coaching knowledge. " +
-        "Be specific, encouraging, and reference exact stats. Use second-person voice.";
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.statusText}`);
+      }
 
-      const summaryPrompt =
-        `Player: Alex Garcia | Session: July 8, 2026\n` +
-        `Stats: Dink Rate 81% (target ${goals.dinkTarget}%) | Kitchen Time 34% (target ${goals.kitchenTarget}%) | ` +
-        `Volley Rate 76% (target ${goals.volleyTarget}%) | Rally Fatigue Threshold 18 shots | ` +
-        `Pearson r=0.97 (rally length vs unforced errors) | DUPR 4.0 target in ~14 weeks\n\n` +
-        `Retrieved coaching knowledge:\n${ctx}\n\n` +
-        `Write a spoken audio coaching summary (90-110 seconds at 0.92 speech rate). ` +
-        `Structure: greeting → descriptive performance → positioning analysis → diagnostic finding → ` +
-        `predictive outlook → 3 specific recommendations → closing. ` +
-        `Plain prose only — no markdown, headers, or bullet characters. Conversational tone.`;
-
-      const recsPrompt =
-        `Player: Alex Garcia | Session: July 8, 2026\n` +
-        `Stats: Dink Rate 81% (target ${goals.dinkTarget}%) | Kitchen Time 34% (target ${goals.kitchenTarget}%) | ` +
-        `Volley Rate 76% (target ${goals.volleyTarget}%) | Rally Fatigue Threshold 18 shots\n\n` +
-        `Retrieved coaching knowledge:\n${ctx}\n\n` +
-        `Return exactly 3 prescriptive action recommendations as a JSON array. ` +
-        `Each object must have: "priority" ("HIGH" or "MED"), "title" (short action name), "body" (2-3 sentence detail referencing stats and drills). ` +
-        `Respond with JSON only — no markdown fences, no explanation.`;
-
-      const [summaryText, recsRaw] = await Promise.all([
-        callClaude(summaryPrompt, SYSTEM_COACH, 900),
-        callClaude(recsPrompt, SYSTEM_COACH, 600),
-      ]);
-
-      setRagSummary(summaryText);
-
-      try {
-        const match = recsRaw.match(/\[[\s\S]*\]/);
-        if (match) setRagRecs(JSON.parse(match[0]) as RAGRec[]);
-      } catch { /* fall back to static recs */ }
-
+      const data = await response.json();
+      
+      // Update state with the backend's generated insights
+      setRagSummary(data.summary);
+      setRagRecs(data.recommendations);
       setRagStatus("ready");
+      
     } catch (e) {
       console.error("[RAG]", e);
       setRagStatus("error");
-      setRagError(e instanceof Error ? e.message : "Generation failed");
+      setRagError(e instanceof Error ? e.message : "Backend connection failed.");
     }
   };
 
