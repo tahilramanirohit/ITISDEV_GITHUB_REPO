@@ -899,10 +899,15 @@ function CVReplayWidget() {
 }
 
 // ── Login Page ────────────────────────────────────────────────────────────
+const DEMO_ACCOUNT = {
+  email: "coach@picklepro.app",
+  password: "demo123",
+};
+
 function LoginPage({ onLogin }: { onLogin: () => void }) {
-  const [email, setEmail]       = useState("");
-  const [password, setPassword] = useState("");
-  const [remember, setRemember] = useState(false);
+  const [email, setEmail]       = useState(DEMO_ACCOUNT.email);
+  const [password, setPassword] = useState(DEMO_ACCOUNT.password);
+  const [remember, setRemember] = useState(true);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState("");
   const [showPw, setShowPw]     = useState(false);
@@ -911,6 +916,15 @@ function LoginPage({ onLogin }: { onLogin: () => void }) {
     e.preventDefault();
     setError("");
     if (!email || !password) { setError("Please enter your email and password."); return; }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const isDemoAccount = normalizedEmail === DEMO_ACCOUNT.email && password === DEMO_ACCOUNT.password;
+
+    if (!isDemoAccount) {
+      setError("Try the demo account below to continue.");
+      return;
+    }
+
     setLoading(true);
     setTimeout(() => { setLoading(false); onLogin(); }, 1200);
   }
@@ -979,7 +993,7 @@ function LoginPage({ onLogin }: { onLogin: () => void }) {
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="alex@picklepro.app"
+                placeholder={DEMO_ACCOUNT.email}
                 className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all"
                 style={{
                   background: "rgba(255,255,255,0.06)",
@@ -1004,7 +1018,7 @@ function LoginPage({ onLogin }: { onLogin: () => void }) {
                   type={showPw ? "text" : "password"}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder={DEMO_ACCOUNT.password}
                   className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all pr-11"
                   style={{
                     background: "rgba(255,255,255,0.06)",
@@ -1051,6 +1065,27 @@ function LoginPage({ onLogin }: { onLogin: () => void }) {
                 <span>⚠</span> {error}
               </div>
             )}
+
+            <div
+              className="rounded-xl px-3.5 py-3 text-xs"
+              style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${BORDER}` }}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <div className="font-semibold" style={{ color: WHITE }}>Demo account</div>
+                  <div style={{ color: WHITE_SUB }}>Email: {DEMO_ACCOUNT.email}</div>
+                  <div style={{ color: WHITE_SUB }}>Password: {DEMO_ACCOUNT.password}</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setEmail(DEMO_ACCOUNT.email); setPassword(DEMO_ACCOUNT.password); setError(""); }}
+                  className="rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-all hover:bg-white/10"
+                  style={{ background: "rgba(255,255,255,0.06)", color: NEON }}
+                >
+                  Use demo
+                </button>
+              </div>
+            </div>
 
             <button
               type="submit"
