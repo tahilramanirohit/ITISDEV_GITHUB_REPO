@@ -1239,7 +1239,7 @@ export default function App() {
     try {
       const goals = playerGoalsRef.current;
       
-      // Make a secure POST request to your new FastAPI RAG endpoint
+      // Make a secure POST request to the FastAPI backend RAG endpoint
       const response = await fetch(`${BACKEND_BASE_URL}/api/v1/rag-coach`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1675,11 +1675,11 @@ export default function App() {
           />
           <Card accent={NEON}>
             <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
-              <WidgetHeader
+             <WidgetHeader
                 title="Recommended Action Plan & Matchmaking"
                 subtitle={ragStatus === "ready"
-                  ? `AI-generated via RAG · ${KB_DOCS.length} coaching docs · claude-haiku`
-                  : "Powered by Automated Coach Agent · 47 strategy docs × 25 match records retrieved"}
+                  ? `AI-generated via RAG · Secure Backend Retrieval · claude-3-haiku`
+                  : "Powered by Automated Coach Agent · Strategy docs retrieved"}
                 accent={NEON}
               />
               <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
@@ -1783,7 +1783,7 @@ export default function App() {
               <div className="flex items-center gap-1.5">
                 <Zap size={10} />
                 {ragStatus === "ready"
-                  ? `Retrieval k=3 · ${KB_DOCS.length} docs · claude-haiku-4-5`
+                  ? `Retrieval successful · claude-3-haiku`
                   : "Retrieval k=12 · Confidence: 91.4% · coach-v2.1"}
               </div>
             </div>
