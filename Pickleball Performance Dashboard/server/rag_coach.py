@@ -11,11 +11,17 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 
 # ── IN-MEMORY VECTOR STORE & STRATEGY DATABASE ─────────────────────────────
 chroma_client = chromadb.Client()
-default_ef = embedding_functions.DefaultEmbeddingFunction()
-# ChromaDB acts as our vector store for the MVP (replacing pgvector for local testing)
-collection = chroma_client.create_collection(name="pickleball_rules_and_strategy", embedding_function=default_ef)
 
+# Fix WinError 5 by forcing the model to download to a local cache folder
+local_cache_path = os.path.join(os.getcwd(), ".chroma_cache")
+os.makedirs(local_cache_path, exist_ok=True)
+os.environ["CHROMA_CACHE_DIR"] = local_cache_path
+
+default_ef = embedding_functions.DefaultEmbeddingFunction()
+# The DefaultEmbeddingFunction will now respect the CHROMA_CACHE_DIR environment variable
+# ChromaDB acts as our vector store for the MVP (replacing pgvector for local testing)
 # Strategy Document Library
+
 KB_DOCS = [
     {
         "id": "dink-fundamentals",
