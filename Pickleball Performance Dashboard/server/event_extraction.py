@@ -1,22 +1,18 @@
 from __future__ import annotations
+
 from typing import Any, Dict, List
 import math
+
 
 class EventExtractor:
     def __init__(self, heatmap_cols: int = 6, heatmap_rows: int = 4):
         self.heatmap_cols = heatmap_cols
         self.heatmap_rows = heatmap_rows
-        # Define basic court zones for heuristics (normalized 0.0 to 1.0)
-        self.kitchen_y_threshold = 0.4 
-        self.baseline_y_threshold = 0.8
 
     def extract(self, tracked_frames: List[Dict[str, Any]], fps: float, duration: float) -> Dict[str, Any]:
-        """
-        Analyzes tracked frames to extract heatmaps, player snapshots, and high-level events.
-        """
         heatmap = self._compute_heatmap(tracked_frames)
         player_positions = self._build_player_snapshots(tracked_frames)
-        event_timeline = self._extract_events(player_positions, fps)
+        event_timeline = self._extract_events(tracked_frames, fps)
 
         return {
             "duration_seconds": duration,
@@ -25,42 +21,30 @@ class EventExtractor:
             "event_timeline": event_timeline,
             "heatmap": heatmap,
             "player_positions": player_positions,
-            "message": "Analysis complete. Events extracted via heuristic rules.",
+            "message": "Analysis complete. Extracted structured event timeline and spatial metrics.",
         }
 
     def _compute_heatmap(self, tracked_frames: List[Dict[str, Any]]) -> List[List[float]]:
-        # Initialize an empty heatmap
         heatmap = [[0.0 for _ in range(self.heatmap_cols)] for _ in range(self.heatmap_rows)]
         counts = [[0 for _ in range(self.heatmap_cols)] for _ in range(self.heatmap_rows)]
 
         for frame in tracked_frames:
             for detection in frame.get("detections", []):
                 bbox = detection.get("bbox")
-                if not bbox or len(bbox) != 4: continue
-                
-                # Calculate center point
+                if not bbox or len(bbox) != 4:
+                    continue
                 x_center = (bbox[0] + bbox[2]) / 2
                 y_center = (bbox[1] + bbox[3]) / 2
-                
-                # Map to grid (assuming an arbitrary 600x400 normalized space for now)
-                # In a real app, you'd use a homography matrix here.
                 col = min(self.heatmap_cols - 1, max(0, int(x_center / 100)))
                 row = min(self.heatmap_rows - 1, max(0, int(y_center / 100)))
-                
                 heatmap[row][col] += 1.0
                 counts[row][col] += 1
 
-        # Normalize heatmap values to 0.0 - 1.0 range based on maximum concentration
-        max_val = 0
-        for r in range(self.heatmap_rows):
-            for c in range(self.heatmap_cols):
-                if heatmap[r][c] > max_val:
-                    max_val = heatmap[r][c]
-                    
-        if max_val > 0:
-            for r in range(self.heatmap_rows):
-                for c in range(self.heatmap_cols):
-                    heatmap[r][c] = round(heatmap[r][c] / max_val, 2)
+        for row_idx in range(self.heatmap_rows):
+            for col_idx in range(self.heatmap_cols):
+                if counts[row_idx][col_idx] > 0:
+                    heatmap[row_idx][col_idx] /= counts[row_idx][col_idx]
+                heatmap[row_idx][col_idx] = round(heatmap[row_idx][col_idx], 2)
 
         return heatmap
 
@@ -74,55 +58,74 @@ class EventExtractor:
                     "label": detection.get("label", "player"),
                     "bbox": detection.get("bbox", []),
                 })
-            snapshots.append({"time_seconds": frame.get("timestamp", 0), "players": players})
+            snapshots.append({"time_seconds": frame.get("timestamp", 0.0), "players": players})
         return snapshots
 
-    def _extract_events(self, player_positions: List[Dict[str, Any]], fps: float) -> List[Dict[str, Any]]:
+    def _extract_events(self, tracked_frames: List[Dict[str, Any]], fps: float) -> List[Dict[str, Any]]:
+        """
+        Extracts meaningful pickleball events (e.g., rapid movement, court-zone changes, 
+        rally tracking actions) based on tracking velocity and positional thresholds.
+        """
         events: List[Dict[str, Any]] = []
-        if not player_positions:
+        if not tracked_frames:
             return events
 
-        # Heuristic 1: Detect significant movement (potential shot/recovery)
-        last_positions = {}
-        movement_threshold = 50.0 # Pixels moved to trigger an event
+        last_positions: Dict[int, tuple[float, float, float]] = {}
+        velocity_threshold = 45.0  # Pixels per second displacement threshold for action triggers
 
-        for snap in player_positions:
-            time_sec = snap["time_seconds"]
-            for player in snap["players"]:
-                tid = player["track_id"]
-                bbox = player["bbox"]
-                if not tid or not bbox or len(bbox) != 4: continue
-                
+        for frame in tracked_frames:
+            timestamp = frame.get("timestamp", 0.0)
+            detections = frame.get("detections", [])
+
+            for detection in detections:
+                track_id = detection.get("track_id")
+                bbox = detection.get("bbox")
+                if track_id is None or not bbox or len(bbox) != 4:
+                    continue
+
                 cx = (bbox[0] + bbox[2]) / 2
                 cy = (bbox[1] + bbox[3]) / 2
-                
-                if tid in last_positions:
-                    prev_x, prev_y, prev_time = last_positions[tid]
-                    dist = math.hypot(cx - prev_x, cy - prev_y)
-                    
-                    # If they moved fast in a short time, call it an action
-                    time_diff = time_sec - prev_time
-                    if time_diff > 0 and (dist / time_diff) > (movement_threshold * fps):
-                        # Determine zone heuristically (assuming y goes down)
-                        # Normally requires court homography
-                        zone = "Baseline"
-                        if cy < 200: zone = "NVZ (Kitchen)"
-                        elif cy < 350: zone = "Transition Zone"
-                        
-                        events.append({
-                            "time_seconds": round(time_sec, 2),
-                            "label": "RAPID_MOVEMENT",
-                            "description": f"Rapid movement detected in {zone}",
-                            "track_id": tid,
-                        })
-                        # Update last position to prevent rapid-fire events
-                        last_positions[tid] = (cx, cy, time_sec + 1.0) 
-                        continue
 
-                last_positions[tid] = (cx, cy, time_sec)
+                if track_id in last_positions:
+                    px, py, p_time = last_positions[track_id]
+                    dt = timestamp - p_time
+                    if dt > 0:
+                        dist = math.hypot(cx - px, cy - py)
+                        speed = dist / dt
 
-        # Sort events chronologically
+                        # Detect high-intensity movement (e.g. lunging for a dink or chasing a drive)
+                        if speed > velocity_threshold:
+                            zone = "Baseline Zone"
+                            if cy < 150:
+                                zone = "NVZ / Kitchen Zone"
+                            elif cy < 280:
+                                zone = "Transition Zone"
+
+                            # Avoid flooding timeline with duplicate events for the same burst
+                            if not events or (timestamp - events[-1]["time_seconds"] > 1.5):
+                                events.append({
+                                    "time_seconds": round(timestamp, 2),
+                                    "label": "PLAYER_BURST_ACTION",
+                                    "description": f"High-intensity movement/shot recovery detected in {zone}.",
+                                    "track_id": track_id,
+                                })
+                            last_positions[track_id] = (cx, cy, timestamp)
+                            continue
+
+                last_positions[track_id] = (cx, cy, timestamp)
+
+        # Fallback safeguard: if movement heuristics didn't trigger enough events, 
+        # append baseline position updates so the timeline isn't completely empty.
+        if not events and tracked_frames:
+            skip = max(1, len(tracked_frames) // 5)
+            for frame in tracked_frames[::skip]:
+                first_det = frame["detections"][0] if frame["detections"] else {}
+                events.append({
+                    "time_seconds": round(frame["timestamp"], 2),
+                    "label": "player_position_update",
+                    "description": "Routine positional snapshot recorded from tracker.",
+                    "track_id": first_det.get("track_id"),
+                })
+
         events.sort(key=lambda x: x["time_seconds"])
-        
-        # Limit to top 15 events to avoid overwhelming the UI
-        return events[:15]
+        return events[:20]  # Cap timeline length for clean UI consumption
