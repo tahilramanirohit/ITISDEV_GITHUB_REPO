@@ -25,7 +25,7 @@ app.add_middleware(
 )
 
 # --- Configuration for Uploads ---
-MAX_FILE_SIZE_MB = 50
+MAX_FILE_SIZE_MB = 150 # Increased limit for full match highlights
 ALLOWED_MIME_TYPES = ["video/mp4", "video/x-msvideo", "video/quicktime", "video/webm"]
 MAX_FRAMES_LIMIT = 500
 
@@ -55,7 +55,6 @@ async def health() -> Dict[str, str]:
 @app.post("/api/v1/rag-coach", response_model=RAGOutput)
 async def rag_coach_endpoint(payload: RAGRequest):
     try:
-        # Passes the request to our LangChain/ChromaDB pipeline
         return generate_coach_response(payload)
     except Exception as e:
         logger.error(f"RAG Coaching Error: {e}")
@@ -63,20 +62,18 @@ async def rag_coach_endpoint(payload: RAGRequest):
 
 @app.post("/analyze/video", response_model=AnalysisResult)
 async def analyze_video(file: UploadFile = File(...), max_frames: int = 300):
-    # 1. Validation: Mime Type
     if file.content_type not in ALLOWED_MIME_TYPES:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             detail=f"Unsupported file type: {file.content_type}. Allowed: MP4, AVI, MOV, WEBM."
         )
 
-    # 2. Validation: Frame limit bounds
     if max_frames > MAX_FRAMES_LIMIT:
         max_frames = MAX_FRAMES_LIMIT
 
     suffix = Path(file.filename).suffix or ".mp4"
     
-    # 3. Validation: File Size (Read in chunks to prevent memory overload)
+    # Safely write the file in chunks to prevent Memory (RAM) crashes
     file_size = 0
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         tmp_path = Path(tmp.name)
@@ -86,7 +83,7 @@ async def analyze_video(file: UploadFile = File(...), max_frames: int = 300):
                 break
             file_size += len(chunk)
             if file_size > (MAX_FILE_SIZE_MB * 1024 * 1024):
-                tmp_path.unlink() # Clean up
+                tmp_path.unlink() 
                 raise HTTPException(
                     status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                     detail=f"File exceeds maximum allowed size of {MAX_FILE_SIZE_MB}MB."
@@ -97,23 +94,18 @@ async def analyze_video(file: UploadFile = File(...), max_frames: int = 300):
         # Run CV Pipeline
         capture = VideoCaptureService(str(tmp_path))
         frames, fps, duration = capture.read_frames(max_frames=max_frames)
-        
         tracker = PlayerTracker()
         tracked_frames = tracker.track(frames)
-        
         extractor = EventExtractor()
         result = extractor.extract(tracked_frames, fps=fps, duration=duration)
-        
         return result
     except ValueError as ve:
-        # Catch specific VideoCaptureService errors (e.g., bad codec)
         logger.error(f"Video processing ValueError: {ve}")
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(ve))
     except Exception as exc:
         logger.error(f"Unexpected error during analysis: {exc}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred while processing the video.")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
     finally:
-        # Always clean up temp file
         try:
             if tmp_path.exists():
                 tmp_path.unlink()
