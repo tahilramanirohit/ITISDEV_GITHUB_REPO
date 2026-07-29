@@ -1239,7 +1239,7 @@ export default function App() {
     try {
       const goals = playerGoalsRef.current;
       
-      // Make a secure POST request to your new FastAPI RAG endpoint
+      // Make a secure POST request to the FastAPI backend RAG endpoint
       const response = await fetch(`${BACKEND_BASE_URL}/api/v1/rag-coach`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
