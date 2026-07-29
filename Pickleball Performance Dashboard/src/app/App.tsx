@@ -83,7 +83,39 @@ const heatGrid = [
 
 const WAVE_BARS = [3,6,10,14,18,22,18,26,30,22,18,14,26,18,10,22,30,18,14,10,18,22,14,8,18,26,18,12,8,14,22,18,30,22,14,18,10,6,12,18];
 
+type PlayerDetection = {
+  track_id: number;
+  bbox: number[];
+  confidence: number;
+  label: string;
+};
+
+type PositionSnapshot = {
+  time_seconds: number;
+  players: Array<{ track_id: number; label: string; bbox: number[] }>;
+};
+
+type AnalysisEvent = {
+  time_seconds: number;
+  label: string;
+  description: string;
+  track_id?: number | null;
+};
+
+type AnalysisResult = {
+  duration_seconds: number;
+  frame_count: number;
+  fps: number;
+  event_timeline: AnalysisEvent[];
+  heatmap: number[][];
+  player_positions: PositionSnapshot[];
+  message: string;
+};
+
+const BACKEND_BASE_URL = import.meta.env.VITE_CV_BACKEND_URL ?? "http://localhost:8000";
+
 // ── Post-game summary script (read by Web Speech API) ─────────────────────
+// This is a static example of a post-game summary script. In a real application, this would be dynamically generated based on the player's actual performance data and analysis results.
 const SUMMARY_TEXT =
   `Welcome back, Alex Garcia. Here is your post-game audio summary for July 8th, 2026. ` +
   `This analysis covers your performance across four key dimensions. ` +
@@ -288,7 +320,7 @@ function WidgetHeader({ title, subtitle, accent }: { title: string; subtitle: st
 
 // ── Chart Tooltip ─────────────────────────────────────────────────────────
 function ChartTip({ active, payload, label, suffix = "" }: {
-  active?: boolean; payload?: Array<{ name: string; value: number; color?: string }>; label?: string; suffix?: string;
+  active?: boolean; payload?: any[]; label?: string; suffix?: string;
 }) {
   if (!active || !payload?.length) return null;
   return (
@@ -796,108 +828,142 @@ const CV_EVENTS = [
   { time: 85, tag: "ERROR",  label: "Drive Error",   player: "P#01", color: ORANGE,    textColor: WHITE  },
 ];
 
-function CVReplayWidget() {
+function CVReplayWidget({
+  onUpload,
+  analysisStatus,
+  analysisResult,
+  analysisError,
+  selectedFile,
+}: {
+  onUpload: (file: File) => void;
+  analysisStatus: "idle" | "uploading" | "processing" | "ready" | "error";
+  analysisResult: AnalysisResult | null;
+  analysisError: string;
+  selectedFile: File | null;
+}) {
   return (
     <Card accent={BLUE_SKY} className="mt-4">
-      {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
         <WidgetHeader
-          title="Sample Match Replay: Diagnostic Deep Dive"
-          subtitle="PPA Tour · Waters / B. Johns vs. Bright / Tardio · CIBC Finals 2024 · CV annotation overlay pending integration"
+          title="Video Analysis: Track Performance from Match Footage"
+          subtitle="Upload match footage to generate court tracking, player positions, and CV event timelines."
           accent={BLUE_SKY}
         />
-        <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg flex-shrink-0"
-          style={{ background: `${ORANGE}20`, border: `1px solid ${ORANGE}50` }}>
-          <Cpu size={11} color={ORANGE} />
-          <span className="font-mono text-[10px] font-bold tracking-widest" style={{ color: ORANGE }}>
-            CV INTEGRATION PENDING
-          </span>
-        </div>
       </div>
 
-      {/* YouTube embed */}
-      <div className="relative rounded-xl overflow-hidden mb-4" style={{ aspectRatio: "16/9", background: "#000" }}>
-        <iframe
-          className="absolute inset-0 w-full h-full"
-          src="https://www.youtube.com/embed/3i40PVC03TQ?rel=0&modestbranding=1&color=white"
-          title="PPA Tour – Waters/B.Johns vs Bright/Tardio · CIBC Finals 2024"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        />
-        <div
-          className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-mono text-[10px] font-bold pointer-events-none"
-          style={{ background: "rgba(0,0,0,0.72)", border: `1px solid ${ORANGE}60`, color: ORANGE }}
-        >
-          ◈ SAMPLE FOOTAGE
-        </div>
-      </div>
-
-      {/* CV integration note */}
-      <div className="rounded-xl p-3 mb-4 flex items-start gap-3"
-        style={{ background: `${BLUE_SKY}12`, border: `1px solid ${BLUE_SKY}35` }}>
-        <Cpu size={14} color={BLUE_SKY} className="flex-shrink-0 mt-0.5" />
-        <p className="text-xs leading-relaxed" style={{ color: WHITE_DIM }}>
-          In the integrated build, this player will display live match footage with{" "}
-          <span style={{ color: BLUE_SKY }}>YOLOv8 bounding boxes</span>,{" "}
-          <span style={{ color: NEON }}>ByteTrack persistent player IDs</span>, highlighted{" "}
-          <span style={{ color: ORANGE }}>NVZ fault detections</span>, and a real-time ball
-          trajectory trail — all generated from the CV batch-processing pipeline.
-        </p>
-      </div>
-
-      {/* Simulated event timeline */}
-      <div className="rounded-xl p-3" style={{ background: "rgba(0,0,0,0.25)", border: `1px solid ${BORDER}` }}>
-        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-          <div className="font-mono text-[10px] font-bold tracking-widest" style={{ color: WHITE_SUB }}>
-            CV EVENT TIMELINE · SIMULATED BATCH OUTPUT
-          </div>
-          <div className="font-mono text-[9px] px-2 py-0.5 rounded" style={{ background: `${ORANGE}20`, color: ORANGE, border: `1px solid ${ORANGE}40` }}>
-            DEMO DATA
-          </div>
-        </div>
-
-        {/* Track bar */}
-        <div className="relative h-1.5 rounded-full mb-4" style={{ background: "rgba(255,255,255,0.1)" }}>
-          {CV_EVENTS.map((ev) => (
-            <div
-              key={ev.time}
-              className="absolute top-1/2 w-2.5 h-2.5 rounded-full border-2"
-              style={{
-                left: `${ev.time}%`,
-                transform: "translate(-50%,-50%)",
-                background: ev.color,
-                borderColor: BLUE_DEEP,
+      <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
+        <div>
+          <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4 mb-4">
+            <div className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: WHITE_SUB }}>
+              Upload Match Video
+            </div>
+            <input
+              type="file"
+              accept="video/*"
+              className="w-full text-sm text-white bg-slate-900 rounded-lg border border-slate-800 p-3"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) onUpload(file);
               }}
-              title={ev.label}
             />
-          ))}
+            <div className="mt-3 text-xs" style={{ color: WHITE_DIM }}>
+              Supported: MP4, MOV, AVI. Maximum 180 frames scanned for the first pass.
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+            <div className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: WHITE_SUB }}>
+              Analysis Status
+            </div>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center justify-between">
+                <span>Selected file</span>
+                <span style={{ color: selectedFile ? NEON : WHITE_SUB }}>
+                  {selectedFile ? selectedFile.name : "None"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Current state</span>
+                <span style={{ color: analysisStatus === "error" ? ORANGE : NEON }}>
+                  {analysisStatus}
+                </span>
+              </div>
+              {analysisError ? (
+                <div className="rounded-xl bg-[#681d0b] px-3 py-2 text-[11px]" style={{ color: WHITE }}>
+                  {analysisError}
+                </div>
+              ) : null}
+            </div>
+          </div>
         </div>
 
-        {/* Event cards */}
-        <div className="flex flex-wrap gap-2">
-          {CV_EVENTS.map((ev, i) => (
-            <div
-              key={i}
-              className="flex items-start gap-1.5 rounded-lg px-2.5 py-2"
-              style={{
-                background: "rgba(255,255,255,0.04)",
-                border: `1px solid rgba(255,255,255,0.1)`,
-              }}
-            >
-              <div className="w-1.5 h-1.5 rounded-full mt-0.5 flex-shrink-0" style={{ background: ev.color }} />
-              <div>
-                <div className="font-mono text-[9px] font-bold" style={{ color: ev.color }}>{ev.tag}</div>
-                <div className="text-[10px] font-medium text-white">{ev.label}</div>
-                <div className="font-mono text-[9px]" style={{ color: WHITE_SUB }}>{ev.player}</div>
+        <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+          <div className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: WHITE_SUB }}>
+            Live Analysis Preview
+          </div>
+          {analysisStatus === "idle" ? (
+            <p className="text-sm" style={{ color: WHITE_DIM }}>
+              Upload a video to start analysis and populate the event timeline.
+            </p>
+          ) : analysisStatus === "uploading" ? (
+            <p className="text-sm" style={{ color: NEON }}>Uploading video to backend...</p>
+          ) : analysisStatus === "processing" ? (
+            <p className="text-sm" style={{ color: NEON }}>Processing video frames…</p>
+          ) : analysisStatus === "ready" && analysisResult ? (
+            <div className="space-y-3">
+              <div className="text-[11px] text-white/70">Analysis complete</div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-xl bg-slate-900/80 p-3">
+                  <div className="text-[10px] uppercase tracking-widest" style={{ color: WHITE_SUB }}>
+                    Duration
+                  </div>
+                  <div className="font-bold text-white">{analysisResult.duration_seconds.toFixed(1)}s</div>
+                </div>
+                <div className="rounded-xl bg-slate-900/80 p-3">
+                  <div className="text-[10px] uppercase tracking-widest" style={{ color: WHITE_SUB }}>
+                    Frames
+                  </div>
+                  <div className="font-bold text-white">{analysisResult.frame_count}</div>
+                </div>
+              </div>
+              <div className="rounded-xl bg-slate-900/80 p-3">
+                <div className="text-[10px] uppercase tracking-widest" style={{ color: WHITE_SUB }}>
+                  Latest event
+                </div>
+                <div className="mt-2 text-sm text-white">
+                  {analysisResult.event_timeline[analysisResult.event_timeline.length - 1]?.description ?? "No events detected."}
+                </div>
               </div>
             </div>
-          ))}
+          ) : (
+            <p className="text-sm" style={{ color: WHITE_DIM }}>
+              No analysis result available yet.
+            </p>
+          )}
         </div>
       </div>
+
+      {analysisResult ? (
+        <div className="mt-6 rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+          <div className="font-semibold uppercase tracking-widest mb-3" style={{ color: WHITE }}>
+            Event Timeline
+          </div>
+          <div className="grid gap-3">
+            {analysisResult.event_timeline.slice(0, 6).map((event, index) => (
+              <div key={index} className="rounded-2xl border border-white/10 bg-[#06172f]/80 p-3">
+                <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.18em]" style={{ color: WHITE_SUB }}>
+                  <span>{event.label}</span>
+                  <span>{event.time_seconds.toFixed(1)}s</span>
+                </div>
+                <div className="mt-2 text-sm text-white">{event.description}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </Card>
   );
 }
-
 // ── Login Page ────────────────────────────────────────────────────────────
 const DEMO_ACCOUNT = {
   email: "coach@picklepro.app",
@@ -1231,6 +1297,11 @@ export default function App() {
     focusArea: "Left-Side Coverage",
   });
 
+  const [cvFile, setCvFile] = useState<File | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const [analysisStatus, setAnalysisStatus] = useState<"idle" | "uploading" | "processing" | "ready" | "error">("idle");
+  const [analysisError, setAnalysisError] = useState<string>("");
+
   // ── RAG state ────────────────────────────────────────────────────────────
   const [ragStatus,  setRagStatus]  = useState<RAGStatus>("idle");
   const [ragSummary, setRagSummary] = useState<string>(SUMMARY_TEXT);
@@ -1241,6 +1312,37 @@ export default function App() {
 
   const playerGoalsRef = useRef(playerGoals);
   useEffect(() => { playerGoalsRef.current = playerGoals; }, [playerGoals]);
+
+  async function uploadAndAnalyzeVideo(file: File) {
+    setCvFile(file);
+    setAnalysisStatus("uploading");
+    setAnalysisError("");
+    setAnalysisResult(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await fetch(`${BACKEND_BASE_URL}/analyze/video?max_frames=180`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || "Video analysis failed.");
+      }
+
+      setAnalysisStatus("processing");
+      const result = await response.json() as AnalysisResult;
+      setAnalysisResult(result);
+      setAnalysisStatus("ready");
+    } catch (error) {
+      console.error("Video analysis error", error);
+      setAnalysisStatus("error");
+      setAnalysisError(error instanceof Error ? error.message : String(error));
+    }
+  }
 
   const generateRAG = async () => {
     const hasKey = !!(import.meta.env as Record<string, string>).VITE_ANTHROPIC_API_KEY;
@@ -1609,7 +1711,13 @@ export default function App() {
           </Card>
         </section>
 
-        <CVReplayWidget />
+        <CVReplayWidget
+          onUpload={uploadAndAnalyzeVideo}
+          analysisStatus={analysisStatus}
+          analysisResult={analysisResult}
+          analysisError={analysisError}
+          selectedFile={cvFile}
+        />
 
         {/* ══ 03 PREDICTIVE ════════════════════════════════════════════ */}
         <section>
