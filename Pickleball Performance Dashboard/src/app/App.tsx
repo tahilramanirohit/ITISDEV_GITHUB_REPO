@@ -1300,7 +1300,7 @@ function PlayStyleWidget() {
 }
 
 // ── Main App ──────────────────────────────────────────────────────────────
-export default function App() {
+export default function App({ userEmail, onSignOut }: { userEmail?: string; onSignOut?: () => void }) {
   const [loggedIn, setLoggedIn] = useState(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
 
