@@ -1,0 +1,756 @@
+{
+  "schema_version": "1.0",
+  "status": "insufficient_data",
+  "data_origin": "measured",
+  "message": "Detections are available for review, but court metrics were not produced: Court not calibrated: at least 4 court landmarks are required.",
+  "provenance": {
+    "pipeline_version": "0.5.0-dev",
+    "generated_at": "2026-01-01T00:00:00+00:00",
+    "detector": {
+      "name": "opencv-mog2-motion",
+      "confidence_is_model_score": false
+    },
+    "ball_detector": null,
+    "source": {
+      "filename": "synthetic_fixture.mp4",
+      "sha256": null
+    }
+  },
+  "video": {
+    "width": 960,
+    "height": 540,
+    "fps": 15.0,
+    "frame_count_reported": 300,
+    "container_duration_s": 20.0
+  },
+  "coverage": {
+    "analyzed_start_s": 0.0,
+    "analyzed_end_s": 20.0,
+    "analyzed_duration_s": 20.0,
+    "frames_decoded": 300,
+    "frames_analyzed": 150,
+    "sample_stride": 2,
+    "decode_failures": 0,
+    "stopped_early_reason": null,
+    "fraction_of_video_analyzed": 1.0,
+    "frames_with_detections": 146,
+    "frames_with_ball_detections": 0
+  },
+  "calibration": null,
+  "player_selection": null,
+  "tracks": [
+    {
+      "track_id": 1,
+      "first_seen_s": 0.533,
+      "last_seen_s": 19.867,
+      "observed_frames": 146
+    },
+    {
+      "track_id": 2,
+      "first_seen_s": 1.6,
+      "last_seen_s": 2.4,
+      "observed_frames": 6
+    }
+  ],
+  "player_positions": [
+    {
+      "time_seconds": 0.533,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            476,
+            156,
+            536,
+            416
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 0.667,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            534,
+            155,
+            582,
+            413
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 0.8,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            546,
+            155,
+            592,
+            413
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 0.933,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            558,
+            155,
+            604,
+            410
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 1.067,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            570,
+            156,
+            614,
+            410
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 1.2,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            582,
+            156,
+            624,
+            407
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 1.333,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            554,
+            155,
+            634,
+            405
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 1.467,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            560,
+            155,
+            640,
+            400
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 1.6,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            572,
+            156,
+            624,
+            399
+          ],
+          "confidence": null
+        },
+        {
+          "track_id": 2,
+          "bbox": [
+            632,
+            154,
+            650,
+            399
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 1.733,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            580,
+            156,
+            616,
+            394
+          ],
+          "confidence": null
+        },
+        {
+          "track_id": 2,
+          "bbox": [
+            640,
+            155,
+            656,
+            395
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 1.867,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            586,
+            156,
+            624,
+            393
+          ],
+          "confidence": null
+        },
+        {
+          "track_id": 2,
+          "bbox": [
+            640,
+            155,
+            664,
+            393
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 2.0,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            592,
+            154,
+            638,
+            389
+          ],
+          "confidence": null
+        },
+        {
+          "track_id": 2,
+          "bbox": [
+            648,
+            153,
+            670,
+            389
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 2.133,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            598,
+            154,
+            640,
+            384
+          ],
+          "confidence": null
+        },
+        {
+          "track_id": 2,
+          "bbox": [
+            656,
+            153,
+            672,
+            384
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 2.267,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            602,
+            154,
+            654,
+            381
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 2.4,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            609,
+            155,
+            654,
+            377
+          ],
+          "confidence": null
+        },
+        {
+          "track_id": 2,
+          "bbox": [
+            667,
+            153,
+            682,
+            376
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 2.533,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            611,
+            153,
+            686,
+            375
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 2.667,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            614,
+            153,
+            686,
+            371
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 2.8,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            617,
+            152,
+            686,
+            365
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 2.933,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            618,
+            151,
+            674,
+            361
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 3.067,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            619,
+            151,
+            672,
+            357
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 3.2,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            620,
+            151,
+            684,
+            352
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 3.333,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            618,
+            149,
+            683,
+            349
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 3.467,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            618,
+            149,
+            681,
+            345
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 3.6,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            616,
+            149,
+            680,
+            341
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 3.733,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            614,
+            148,
+            672,
+            336
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 3.867,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            610,
+            148,
+            670,
+            331
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 4.0,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            604,
+            147,
+            664,
+            327
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 4.133,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            600,
+            146,
+            660,
+            323
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 4.267,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            594,
+            145,
+            653,
+            319
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 4.4,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            592,
+            144,
+            648,
+            316
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 4.533,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            585,
+            144,
+            639,
+            311
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 4.667,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            578,
+            141,
+            632,
+            307
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 4.8,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            570,
+            140,
+            624,
+            303
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 4.933,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            564,
+            140,
+            616,
+            299
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 5.067,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            557,
+            138,
+            609,
+            295
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 5.2,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            549,
+            139,
+            600,
+            291
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 5.333,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            541,
+            137,
+            592,
+            287
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 5.467,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            533,
+            136,
+            582,
+            283
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 5.6,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            526,
+            135,
+            573,
+            281
+          ],
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "time_seconds": 5.733,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            516,
+            134,
+            566,
+            277
+          ],
+          "confidence": null
+        }
+      ]
+    }
+  ],
+  "ball_positions": [],
+  "metrics": {
+    "court_heatmap": {
+      "status": "insufficient_data",
+      "validation": "not_evaluated",
+      "scope": "whole_clip",
+      "reason": "Court not calibrated: at least 4 court landmarks are required.",
+      "value": null
+    },
+    "zone_occupancy": {
+      "status": "not_computed",
+      "validation": "not_evaluated",
+      "scope": "whole_clip",
+      "reason": "Zone occupancy is experimental and disabled by default (enable with experimental_zones).",
+      "value": null
+    },
+    "positioning": {
+      "status": "insufficient_data",
+      "validation": "not_evaluated",
+      "scope": "whole_clip",
+      "reason": "Court not calibrated: at least 4 court landmarks are required.",
+      "value": null
+    },
+    "rally_segmentation": {
+      "status": "not_computed",
+      "validation": "not_evaluated",
+      "scope": "whole_clip",
+      "reason": "Rally segmentation is not implemented or validated. All metrics are whole-clip metrics."
+    },
+    "shot_classification": {
+      "status": "not_computed",
+      "validation": "not_evaluated",
+      "scope": "whole_clip",
+      "reason": "Shot classification requires validated ball trajectories and a shot classifier; neither exists in this pipeline yet."
+    }
+  },
+  "warnings": [
+    "Motion-based detection finds moving objects, not specifically people: stationary players can be missed and non-players (balls, shadows, passers-by) can be detected. Detection confidence is not available."
+  ]
+}

@@ -1,0 +1,4 @@
+# Not part of increments 1–2. Only needed when PICKLEPRO_ENABLE_EXPERIMENTAL_RAG=1.
+# rag_coach.py downloads an ONNX embedding model on import and calls a hosted LLM.
+chromadb
+anthropic

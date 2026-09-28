@@ -1,0 +1,1028 @@
+{
+  "$defs": {
+    "BallSnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "time_seconds": {
+          "title": "Time Seconds",
+          "type": "number"
+        },
+        "bbox": {
+          "items": {
+            "type": "integer"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "title": "Bbox",
+          "type": "array"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        }
+      },
+      "required": [
+        "time_seconds",
+        "bbox",
+        "confidence"
+      ],
+      "title": "BallSnapshot",
+      "type": "object"
+    },
+    "CalibrationSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "enum": [
+            "manual_landmarks",
+            "auto_model_landmarks"
+          ],
+          "title": "Method",
+          "type": "string"
+        },
+        "court_model": {
+          "title": "Court Model",
+          "type": "string"
+        },
+        "landmarks_used": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Landmarks Used",
+          "type": "array"
+        },
+        "reprojection_rmse_px": {
+          "title": "Reprojection Rmse Px",
+          "type": "number"
+        },
+        "reprojection_rmse_m": {
+          "title": "Reprojection Rmse M",
+          "type": "number"
+        },
+        "quality": {
+          "enum": [
+            "good",
+            "poor"
+          ],
+          "title": "Quality",
+          "type": "string"
+        }
+      },
+      "required": [
+        "method",
+        "court_model",
+        "landmarks_used",
+        "reprojection_rmse_px",
+        "reprojection_rmse_m",
+        "quality"
+      ],
+      "title": "CalibrationSummary",
+      "type": "object"
+    },
+    "CourtHeatmapMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "measured",
+            "insufficient_data",
+            "not_computed",
+            "experimental"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "validation": {
+          "default": "not_evaluated",
+          "enum": [
+            "not_evaluated",
+            "synthetic_only",
+            "evaluated_on_real_footage"
+          ],
+          "title": "Validation",
+          "type": "string"
+        },
+        "scope": {
+          "const": "whole_clip",
+          "default": "whole_clip",
+          "title": "Scope",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Why the metric is missing, partial, or experimental.",
+          "title": "Reason"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HeatmapValue"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "CourtHeatmapMetric",
+      "type": "object"
+    },
+    "Coverage": {
+      "additionalProperties": false,
+      "properties": {
+        "analyzed_start_s": {
+          "title": "Analyzed Start S",
+          "type": "number"
+        },
+        "analyzed_end_s": {
+          "title": "Analyzed End S",
+          "type": "number"
+        },
+        "analyzed_duration_s": {
+          "title": "Analyzed Duration S",
+          "type": "number"
+        },
+        "frames_decoded": {
+          "title": "Frames Decoded",
+          "type": "integer"
+        },
+        "frames_analyzed": {
+          "title": "Frames Analyzed",
+          "type": "integer"
+        },
+        "sample_stride": {
+          "description": "Every Nth decoded frame was analyzed.",
+          "title": "Sample Stride",
+          "type": "integer"
+        },
+        "decode_failures": {
+          "title": "Decode Failures",
+          "type": "integer"
+        },
+        "stopped_early_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Set when analysis stopped before the end of the video (e.g. max_seconds).",
+          "title": "Stopped Early Reason"
+        },
+        "fraction_of_video_analyzed": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fraction Of Video Analyzed"
+        },
+        "frames_with_detections": {
+          "title": "Frames With Detections",
+          "type": "integer"
+        },
+        "frames_with_ball_detections": {
+          "default": 0,
+          "title": "Frames With Ball Detections",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "analyzed_start_s",
+        "analyzed_end_s",
+        "analyzed_duration_s",
+        "frames_decoded",
+        "frames_analyzed",
+        "sample_stride",
+        "decode_failures",
+        "frames_with_detections"
+      ],
+      "title": "Coverage",
+      "type": "object"
+    },
+    "DetectorInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "confidence_is_model_score": {
+          "description": "True only when per-detection confidence comes from a model. Motion-based detection has no confidence and reports null.",
+          "title": "Confidence Is Model Score",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "confidence_is_model_score"
+      ],
+      "title": "DetectorInfo",
+      "type": "object"
+    },
+    "HeatmapValue": {
+      "additionalProperties": false,
+      "properties": {
+        "units": {
+          "const": "seconds",
+          "default": "seconds",
+          "title": "Units",
+          "type": "string"
+        },
+        "coordinate_system": {
+          "title": "Coordinate System",
+          "type": "string"
+        },
+        "cell_size_m": {
+          "title": "Cell Size M",
+          "type": "number"
+        },
+        "x_edges_m": {
+          "items": {
+            "type": "number"
+          },
+          "title": "X Edges M",
+          "type": "array"
+        },
+        "y_edges_m": {
+          "items": {
+            "type": "number"
+          },
+          "title": "Y Edges M",
+          "type": "array"
+        },
+        "dwell_seconds": {
+          "description": "rows follow y (near\u2192far), columns follow x (left\u2192right)",
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "title": "Dwell Seconds",
+          "type": "array"
+        },
+        "tracked_time_s": {
+          "title": "Tracked Time S",
+          "type": "number"
+        },
+        "outside_mapped_area_s": {
+          "title": "Outside Mapped Area S",
+          "type": "number"
+        }
+      },
+      "required": [
+        "coordinate_system",
+        "cell_size_m",
+        "x_edges_m",
+        "y_edges_m",
+        "dwell_seconds",
+        "tracked_time_s",
+        "outside_mapped_area_s"
+      ],
+      "title": "HeatmapValue",
+      "type": "object"
+    },
+    "Metric": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "measured",
+            "insufficient_data",
+            "not_computed",
+            "experimental"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "validation": {
+          "default": "not_evaluated",
+          "enum": [
+            "not_evaluated",
+            "synthetic_only",
+            "evaluated_on_real_footage"
+          ],
+          "title": "Validation",
+          "type": "string"
+        },
+        "scope": {
+          "const": "whole_clip",
+          "default": "whole_clip",
+          "title": "Scope",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Why the metric is missing, partial, or experimental.",
+          "title": "Reason"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "Metric",
+      "type": "object"
+    },
+    "Metrics": {
+      "additionalProperties": false,
+      "properties": {
+        "court_heatmap": {
+          "$ref": "#/$defs/CourtHeatmapMetric"
+        },
+        "zone_occupancy": {
+          "$ref": "#/$defs/ZoneOccupancyMetric"
+        },
+        "positioning": {
+          "$ref": "#/$defs/PositioningMetric"
+        },
+        "rally_segmentation": {
+          "$ref": "#/$defs/Metric"
+        },
+        "shot_classification": {
+          "$ref": "#/$defs/Metric"
+        }
+      },
+      "required": [
+        "court_heatmap",
+        "zone_occupancy",
+        "rally_segmentation",
+        "shot_classification"
+      ],
+      "title": "Metrics",
+      "type": "object"
+    },
+    "PlayerBox": {
+      "additionalProperties": false,
+      "properties": {
+        "track_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Track Id"
+        },
+        "bbox": {
+          "items": {
+            "type": "integer"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "title": "Bbox",
+          "type": "array"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        }
+      },
+      "required": [
+        "bbox"
+      ],
+      "title": "PlayerBox",
+      "type": "object"
+    },
+    "PlayerSelectionSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "enum": [
+            "track_id",
+            "court_half"
+          ],
+          "title": "Method",
+          "type": "string"
+        },
+        "track_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Track Id"
+        },
+        "court_half": {
+          "anyOf": [
+            {
+              "enum": [
+                "near",
+                "far"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Court Half"
+        },
+        "tracked_time_s": {
+          "title": "Tracked Time S",
+          "type": "number"
+        },
+        "tracked_fraction": {
+          "description": "tracked_time_s / coverage.analyzed_duration_s",
+          "title": "Tracked Fraction",
+          "type": "number"
+        },
+        "ambiguous_frames": {
+          "default": 0,
+          "description": "Frames excluded because the selection matched >1 detection.",
+          "title": "Ambiguous Frames",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "method",
+        "tracked_time_s",
+        "tracked_fraction"
+      ],
+      "title": "PlayerSelectionSummary",
+      "type": "object"
+    },
+    "PositionSnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "time_seconds": {
+          "title": "Time Seconds",
+          "type": "number"
+        },
+        "players": {
+          "items": {
+            "$ref": "#/$defs/PlayerBox"
+          },
+          "title": "Players",
+          "type": "array"
+        }
+      },
+      "required": [
+        "time_seconds",
+        "players"
+      ],
+      "title": "PositionSnapshot",
+      "type": "object"
+    },
+    "PositioningMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "measured",
+            "insufficient_data",
+            "not_computed",
+            "experimental"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "validation": {
+          "default": "not_evaluated",
+          "enum": [
+            "not_evaluated",
+            "synthetic_only",
+            "evaluated_on_real_footage"
+          ],
+          "title": "Validation",
+          "type": "string"
+        },
+        "scope": {
+          "const": "whole_clip",
+          "default": "whole_clip",
+          "title": "Scope",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Why the metric is missing, partial, or experimental.",
+          "title": "Reason"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PositioningValue"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "PositioningMetric",
+      "type": "object"
+    },
+    "PositioningValue": {
+      "additionalProperties": false,
+      "properties": {
+        "court_half": {
+          "description": "The selected player's side; depths are from this baseline.",
+          "enum": [
+            "near",
+            "far"
+          ],
+          "title": "Court Half",
+          "type": "string"
+        },
+        "band_definitions": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Band Definitions",
+          "type": "object"
+        },
+        "seconds": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Seconds",
+          "type": "object"
+        },
+        "fraction_of_mapped_time": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Fraction Of Mapped Time",
+          "type": "object"
+        },
+        "mapped_time_s": {
+          "title": "Mapped Time S",
+          "type": "number"
+        },
+        "left_side_fraction": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Share of in-court time on the player's own left half, facing the net.",
+          "title": "Left Side Fraction"
+        },
+        "transition_lingers": {
+          "description": "Continuous stays of at least 2 s in the transition band.",
+          "title": "Transition Lingers",
+          "type": "integer"
+        },
+        "longest_transition_linger_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Longest Transition Linger S"
+        },
+        "approaches_to_kitchen_line": {
+          "description": "Moves from the baseline bands to the kitchen-line bands.",
+          "title": "Approaches To Kitchen Line",
+          "type": "integer"
+        },
+        "median_approach_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Median time from last baseline-area sample to first kitchen-line sample.",
+          "title": "Median Approach S"
+        },
+        "retreats_to_baseline": {
+          "title": "Retreats To Baseline",
+          "type": "integer"
+        },
+        "distance_covered_m": {
+          "description": "Path length of the smoothed foot position; includes walking between points.",
+          "title": "Distance Covered M",
+          "type": "number"
+        }
+      },
+      "required": [
+        "court_half",
+        "band_definitions",
+        "seconds",
+        "fraction_of_mapped_time",
+        "mapped_time_s",
+        "transition_lingers",
+        "approaches_to_kitchen_line",
+        "retreats_to_baseline",
+        "distance_covered_m"
+      ],
+      "title": "PositioningValue",
+      "type": "object"
+    },
+    "Provenance": {
+      "additionalProperties": false,
+      "properties": {
+        "pipeline_version": {
+          "title": "Pipeline Version",
+          "type": "string"
+        },
+        "generated_at": {
+          "title": "Generated At",
+          "type": "string"
+        },
+        "detector": {
+          "$ref": "#/$defs/DetectorInfo"
+        },
+        "ball_detector": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DetectorInfo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "source": {
+          "$ref": "#/$defs/SourceInfo"
+        }
+      },
+      "required": [
+        "pipeline_version",
+        "generated_at",
+        "detector",
+        "source"
+      ],
+      "title": "Provenance",
+      "type": "object"
+    },
+    "SourceInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "filename": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Filename"
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sha256"
+        }
+      },
+      "title": "SourceInfo",
+      "type": "object"
+    },
+    "TrackSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "track_id": {
+          "title": "Track Id",
+          "type": "integer"
+        },
+        "first_seen_s": {
+          "title": "First Seen S",
+          "type": "number"
+        },
+        "last_seen_s": {
+          "title": "Last Seen S",
+          "type": "number"
+        },
+        "observed_frames": {
+          "title": "Observed Frames",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "track_id",
+        "first_seen_s",
+        "last_seen_s",
+        "observed_frames"
+      ],
+      "title": "TrackSummary",
+      "type": "object"
+    },
+    "VideoInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "width": {
+          "title": "Width",
+          "type": "integer"
+        },
+        "height": {
+          "title": "Height",
+          "type": "integer"
+        },
+        "fps": {
+          "title": "Fps",
+          "type": "number"
+        },
+        "frame_count_reported": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Frame count from the container header; may be approximate.",
+          "title": "Frame Count Reported"
+        },
+        "container_duration_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "frame_count_reported / fps; null when the container does not report it.",
+          "title": "Container Duration S"
+        }
+      },
+      "required": [
+        "width",
+        "height",
+        "fps"
+      ],
+      "title": "VideoInfo",
+      "type": "object"
+    },
+    "ZoneOccupancyMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "measured",
+            "insufficient_data",
+            "not_computed",
+            "experimental"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "validation": {
+          "default": "not_evaluated",
+          "enum": [
+            "not_evaluated",
+            "synthetic_only",
+            "evaluated_on_real_footage"
+          ],
+          "title": "Validation",
+          "type": "string"
+        },
+        "scope": {
+          "const": "whole_clip",
+          "default": "whole_clip",
+          "title": "Scope",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Why the metric is missing, partial, or experimental.",
+          "title": "Reason"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ZoneOccupancyValue"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "ZoneOccupancyMetric",
+      "type": "object"
+    },
+    "ZoneOccupancyValue": {
+      "additionalProperties": false,
+      "properties": {
+        "zone_definitions": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Zone Definitions",
+          "type": "object"
+        },
+        "seconds": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Seconds",
+          "type": "object"
+        },
+        "fraction_of_tracked_time": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Fraction Of Tracked Time",
+          "type": "object"
+        }
+      },
+      "required": [
+        "zone_definitions",
+        "seconds",
+        "fraction_of_tracked_time"
+      ],
+      "title": "ZoneOccupancyValue",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "ok",
+        "insufficient_data"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "data_origin": {
+      "enum": [
+        "measured",
+        "test_fixture"
+      ],
+      "title": "Data Origin",
+      "type": "string"
+    },
+    "message": {
+      "title": "Message",
+      "type": "string"
+    },
+    "provenance": {
+      "$ref": "#/$defs/Provenance"
+    },
+    "video": {
+      "$ref": "#/$defs/VideoInfo"
+    },
+    "coverage": {
+      "$ref": "#/$defs/Coverage"
+    },
+    "calibration": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CalibrationSummary"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "player_selection": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PlayerSelectionSummary"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "tracks": {
+      "items": {
+        "$ref": "#/$defs/TrackSummary"
+      },
+      "title": "Tracks",
+      "type": "array"
+    },
+    "player_positions": {
+      "items": {
+        "$ref": "#/$defs/PositionSnapshot"
+      },
+      "title": "Player Positions",
+      "type": "array"
+    },
+    "ball_positions": {
+      "items": {
+        "$ref": "#/$defs/BallSnapshot"
+      },
+      "title": "Ball Positions",
+      "type": "array"
+    },
+    "metrics": {
+      "$ref": "#/$defs/Metrics"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "status",
+    "data_origin",
+    "message",
+    "provenance",
+    "video",
+    "coverage",
+    "tracks",
+    "player_positions",
+    "metrics",
+    "warnings"
+  ],
+  "title": "AnalysisResultV1",
+  "type": "object"
+}
