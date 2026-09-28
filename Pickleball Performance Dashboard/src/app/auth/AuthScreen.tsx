@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ArrowRight, FlaskConical } from "lucide-react";
-import { BLUE_MID, BORDER, COBALT, DISPLAY_FONT, INK, NEON, NEON_D, ORANGE, PAPER, WHITE_DIM, WHITE_SUB } from "../theme";
+import { COBALT, DISPLAY_FONT, INK, LAVENDER, NAVY, NEON, NEON_D, PAGE_BG } from "../theme";
 import { Notice, PickleProLogo, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
 
 type Mode = "sign_in" | "sign_up";
@@ -46,11 +46,11 @@ export function AuthScreen({ sb, devMode }: { sb: SupabaseClient; devMode?: DevM
   }
 
   return (
-    <div className="min-h-screen" style={{ background: PAPER, color: INK, fontFamily: "'Inter', sans-serif" }}>
-      <header className="border-b" style={{ borderColor: "#d6d5ce" }}>
+    <div className="min-h-screen" style={{ background: PAGE_BG, color: INK, fontFamily: "'Inter', sans-serif" }}>
+      <header className="border-b" style={{ background: NAVY, borderColor: "#354262" }}>
         <div className="mx-auto max-w-7xl px-5 py-4 sm:px-8 lg:px-12 flex items-center justify-between gap-3">
-          <PickleProLogo size="sm" tone="light" />
-          <span className="hidden sm:block text-xs font-bold uppercase tracking-widest" style={{ color: COBALT }}>Your game, made clearer</span>
+          <PickleProLogo size="sm" tone="dark" />
+          <span className="hidden sm:block text-xs font-bold uppercase tracking-widest" style={{ color: LAVENDER }}>Your game, made clearer</span>
         </div>
       </header>
       <main className="mx-auto grid max-w-7xl gap-10 px-5 py-8 sm:px-8 sm:py-12 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-start lg:gap-16 lg:px-12 lg:py-16">
@@ -68,28 +68,28 @@ export function AuthScreen({ sb, devMode }: { sb: SupabaseClient; devMode?: DevM
           </p>
         </section>
 
-        <section aria-labelledby="auth-title" className="p-6 sm:p-8" style={{ background: BLUE_MID, color: INK, border: `1px solid ${BORDER}` }}>
-          <p className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: NEON }}>Get started</p>
-          <h2 id="auth-title" className="text-[#101827] mb-1" style={{ fontFamily: DISPLAY_FONT, letterSpacing: "0.02em", fontSize: "2rem", fontWeight: 700 }}>
+        <section aria-labelledby="auth-title" className="p-6 sm:p-8" style={{ background: NAVY, color: "white", border: "1px solid #354262" }}>
+          <p className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: LAVENDER }}>Get started</p>
+          <h2 id="auth-title" className="text-white mb-1" style={{ fontFamily: DISPLAY_FONT, letterSpacing: "0.02em", fontSize: "2rem", fontWeight: 700 }}>
             {mode === "sign_in" ? "Sign in" : "Create an account"}
           </h2>
-          <p className="text-sm mb-6" style={{ color: WHITE_DIM }}>
+          <p className="text-sm mb-6" style={{ color: "#d4d9e5" }}>
             Your sessions, videos and results are private to your account.
           </p>
           <form onSubmit={submit} className="space-y-4" noValidate>
             <div>
-              <label className={labelClass} style={labelStyle} htmlFor="email">Email address</label>
+              <label className={labelClass} style={{ ...labelStyle, color: "#d4d9e5" }} htmlFor="email">Email address</label>
               <input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)}
                 className="w-full rounded-xl px-4 py-3 text-sm outline-none" style={fieldStyle} />
             </div>
             <div>
-              <label className={labelClass} style={labelStyle} htmlFor="password">Password</label>
+              <label className={labelClass} style={{ ...labelStyle, color: "#d4d9e5" }} htmlFor="password">Password</label>
               <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
                 autoComplete={mode === "sign_in" ? "current-password" : "new-password"}
                 className="w-full rounded-xl px-4 py-3 text-sm outline-none" style={fieldStyle} />
             </div>
-            {error && <Notice tone="error">{error}</Notice>}
-            {info && <Notice>{info}</Notice>}
+            {error && <Notice tone="error" onDark>{error}</Notice>}
+            {info && <Notice onDark>{info}</Notice>}
             <button type="submit" disabled={busy}
               className="w-full flex items-center justify-center gap-2 py-3.5 font-bold text-sm disabled:opacity-60"
               style={{ background: NEON, color: NEON_D }}>
@@ -100,19 +100,19 @@ export function AuthScreen({ sb, devMode }: { sb: SupabaseClient; devMode?: DevM
             <div className="mt-3">
               <button type="button" onClick={devMode.onEnter} disabled={devMode.busy || busy}
                 className="w-full inline-flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold disabled:opacity-60"
-                style={{ color: ORANGE, border: `1px dashed ${ORANGE}`, background: "transparent" }}>
+                style={{ color: "#ffc19f", border: "1px dashed #ffc19f", background: "transparent" }}>
                 <FlaskConical size={14} />
                 {devMode.busy ? "Creating sample sessions…" : "Try PicklePro with sample sessions"}
               </button>
-              <p className="text-xs mt-2 text-center" style={{ color: WHITE_SUB }}>
+              <p className="text-xs mt-2 text-center" style={{ color: "#b5c0d4" }}>
                 Dev mode uses a temporary guest account and sample results, not a real video analysis.
               </p>
-              {devMode.error && <div className="mt-2"><Notice tone="error">{devMode.error}</Notice></div>}
+              {devMode.error && <div className="mt-2"><Notice tone="error" onDark>{devMode.error}</Notice></div>}
             </div>
           )}
-          <p className="text-center text-[11px] mt-6" style={{ color: WHITE_SUB }}>
+          <p className="text-center text-[11px] mt-6" style={{ color: "#b5c0d4" }}>
             {mode === "sign_in" ? "No account yet? " : "Already registered? "}
-            <button type="button" className="font-semibold" style={{ color: NEON }}
+            <button type="button" className="font-semibold" style={{ color: LAVENDER }}
               onClick={() => { setMode(mode === "sign_in" ? "sign_up" : "sign_in"); setError(""); setInfo(""); }}>
               {mode === "sign_in" ? "Create one" : "Sign in"}
             </button>

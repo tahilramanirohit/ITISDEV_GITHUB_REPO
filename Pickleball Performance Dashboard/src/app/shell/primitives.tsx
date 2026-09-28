@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import {
-  BLUE_MID, BORDER, CARD_GLOW, COBALT, DISPLAY_FONT, INK, NEON, NEON_D, ORANGE, VIOLET, WHITE, WHITE_DIM, WHITE_SUB,
+  BLUE_MID, BORDER, CARD_GLOW, COBALT, DISPLAY_FONT, INK, LAVENDER, NEON, NEON_D, ORANGE, VIOLET, WHITE, WHITE_DIM, WHITE_SUB,
 } from "../theme";
 
 // ── Card ──────────────────────────────────────────────────────────────────
@@ -92,13 +92,16 @@ export function Pill({ children, color = VIOLET, title }: { children: ReactNode;
   );
 }
 
-export function Notice({ tone = "info", children }: { tone?: "info" | "warn" | "error"; children: ReactNode }) {
+export function Notice({ tone = "info", onDark = false, children }: { tone?: "info" | "warn" | "error"; onDark?: boolean; children: ReactNode }) {
   const color = tone === "error" ? "#ad2545" : tone === "warn" ? ORANGE : COBALT;
+  const darkColor = tone === "error" ? "#ffb5c6" : tone === "warn" ? "#ffc19f" : LAVENDER;
   return (
     <div
       role={tone === "error" ? "alert" : "status"}
       className="rounded-xl px-4 py-2.5 text-xs leading-relaxed"
-      style={{ background: `${color}0d`, border: `1px solid ${color}50`, color }}
+      style={onDark
+        ? { background: "rgba(255,255,255,0.08)", border: `1px solid ${darkColor}70`, color: darkColor }
+        : { background: `${color}0d`, border: `1px solid ${color}50`, color }}
     >
       {children}
     </div>
@@ -125,7 +128,7 @@ export function PickleProLogo({ size = "md", tone = "dark" }: { size?: "sm" | "m
         </svg>
       </div>
       <span style={{ fontFamily: DISPLAY_FONT, fontWeight: 800, fontSize: size === "lg" ? "2.8rem" : size === "sm" ? "1.8rem" : "2.2rem", letterSpacing: "0.02em", lineHeight: 1, color: tone === "light" ? INK : WHITE }}>
-        Pickle<span style={{ color: tone === "light" ? COBALT : NEON }}>Pro</span>
+        Pickle<span style={{ color: tone === "light" ? COBALT : LAVENDER }}>Pro</span>
       </span>
     </div>
   );

@@ -8,7 +8,7 @@ import {
   type PerformanceScope, type PlayFormat, type SessionContext,
 } from "../../lib/api/types";
 import { deriveAnalysisState, type AnalysisUiState } from "../../lib/analysis/state";
-import { BLUE_SKY, BORDER, COBALT, DISPLAY_FONT, INK, NEON, NEON_D, PAPER, WHITE_DIM, WHITE_SUB } from "../theme";
+import { BLUE_SKY, BORDER, COBALT, DISPLAY_FONT, LAVENDER, NAVY, NEON, NEON_D, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Card, Notice, Pill, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
 import { AnalysisStateBadge } from "../analysis/AnalysisStatus";
 import { GoalFields } from "./GoalFields";
@@ -42,24 +42,24 @@ export default function SessionsPage({ sb }: { sb: SupabaseClient }) {
 
   return (
     <div className="space-y-10">
-      <section aria-labelledby="home-title" className="p-5 sm:p-8 lg:p-10" style={{ background: PAPER, color: INK }}>
+      <section aria-labelledby="home-title" className="p-5 sm:p-8 lg:p-10" style={{ background: NAVY, color: "white" }}>
         <div className="flex items-center justify-between gap-3 border-b pb-3 text-xs font-bold uppercase tracking-widest"
-          style={{ borderColor: "#bfc2c7", color: COBALT }}>
+          style={{ borderColor: "#56617a", color: LAVENDER }}>
           <span>PicklePro / start here</span><span className="hidden sm:inline">Your game, made clearer</span>
         </div>
         <div className="grid gap-6 py-8 lg:grid-cols-[minmax(0,1fr)_285px] lg:items-end">
           <div>
             <h1 id="home-title" className="max-w-3xl font-extrabold uppercase tracking-tight"
               style={{ fontFamily: DISPLAY_FONT, fontSize: "clamp(2.8rem, 7vw, 6.8rem)", lineHeight: 0.88 }}>
-              Improve your<br /><span style={{ color: COBALT }}>pickleball game.</span>
+              Improve your<br /><span style={{ color: LAVENDER }}>pickleball game.</span>
             </h1>
-            <p className="mt-6 max-w-2xl text-base leading-relaxed" style={{ color: "#354052" }}>
+            <p className="mt-6 max-w-2xl text-base leading-relaxed" style={{ color: "#d4d9e5" }}>
               Choose a skill, upload your video, and get a practice plan from what PicklePro can measure.
             </p>
           </div>
           <div className="space-y-4">
-            <p className="text-sm leading-relaxed" style={{ color: "#455062" }}>
-              <strong style={{ color: INK }}>Available today:</strong> court positioning feedback. Shot feedback is still in development.
+            <p className="text-sm leading-relaxed" style={{ color: "#d4d9e5" }}>
+              <strong style={{ color: "white" }}>Available today:</strong> court positioning feedback. Shot feedback is still in development.
             </p>
             {!creating && (
               <button type="button" onClick={() => setCreating(true)}
@@ -71,13 +71,13 @@ export default function SessionsPage({ sb }: { sb: SupabaseClient }) {
             )}
           </div>
         </div>
-        <JourneySteps current={1} tone="light" />
+        <JourneySteps current={1} tone="dark" />
       </section>
 
       {creating && <div id="new-session" className="scroll-mt-24"><NewSessionForm sb={sb} onCancel={() => setCreating(false)} /></div>}
       {error && <Notice tone="error">{error}</Notice>}
 
-      <section aria-labelledby="sessions-heading" className="space-y-4">
+      <section aria-labelledby="sessions-heading" className="space-y-4 bg-white p-5 sm:p-8">
         <div className="flex flex-wrap items-end justify-between gap-2 border-b pb-4" style={{ borderColor: BORDER }}>
           <div>
             <p className="text-xs font-bold uppercase tracking-widest" style={{ color: BLUE_SKY }}>Your history</p>
@@ -99,7 +99,7 @@ export default function SessionsPage({ sb }: { sb: SupabaseClient }) {
               const state = deriveAnalysisState({ video: item.video, job: item.job, result: item.result });
               return (
                 <li key={item.session.id}>
-                  <a href={`#/sessions/${item.session.id}`} className="grid gap-3 border-b py-5 transition-colors hover:bg-white/5 sm:grid-cols-[3.5rem_minmax(0,1fr)_auto] sm:items-center"
+                  <a href={`#/sessions/${item.session.id}`} className="grid gap-3 border-b py-5 transition-colors hover:bg-[#f0f2ff] sm:grid-cols-[3.5rem_minmax(0,1fr)_auto] sm:items-center"
                     style={{ borderColor: BORDER }}>
                     <span className="font-mono text-sm font-bold" style={{ color: BLUE_SKY }}>{String(index + 1).padStart(2, "0")}</span>
                     <div className="flex flex-wrap items-center justify-between gap-3">

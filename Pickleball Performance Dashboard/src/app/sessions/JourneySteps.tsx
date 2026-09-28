@@ -1,5 +1,5 @@
 import { Check } from "lucide-react";
-import { BORDER, COBALT, INK, NEON, NEON_D, WHITE, WHITE_DIM } from "../theme";
+import { COBALT, INK, LAVENDER, WHITE } from "../theme";
 
 const STEPS = [
   { label: "Choose a focus", detail: "What do you want to improve?" },
@@ -20,15 +20,15 @@ export function JourneySteps({ current, tone = "dark" }: { current: 1 | 2 | 3; t
           <li key={step.label} aria-current={active ? "step" : undefined}
             className={`flex items-start gap-3 p-4 ${light ? "border-b sm:border-r" : "rounded-xl"}`}
             style={light ? { borderColor: "#bfc2c7", background: active ? "#eaecff" : "transparent" }
-              : { background: active ? `${NEON}14` : "rgba(255,255,255,0.03)", border: `1px solid ${active ? `${NEON}80` : BORDER}` }}>
+              : { background: active ? "#26365a" : "#1b2947", border: `1px solid ${active ? LAVENDER : "#56617a"}` }}>
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold"
-              style={{ background: light ? (active || done ? COBALT : "#e1e3e8") : (active || done ? NEON : "rgba(255,255,255,0.1)"),
-                color: light ? (active || done ? WHITE : INK) : (active || done ? NEON_D : WHITE_DIM) }}>
+              style={{ background: light ? (active || done ? COBALT : "#e1e3e8") : (active || done ? LAVENDER : "#425170"),
+                color: light ? (active || done ? WHITE : INK) : (active || done ? INK : WHITE) }}>
               {done ? <Check size={17} aria-label="Done" /> : number}
             </span>
             <span>
-              <span className="block text-sm font-semibold" style={{ color: light ? INK : active ? WHITE : WHITE_DIM }}>{step.label}</span>
-              <span className="block text-xs mt-0.5" style={{ color: light ? "#596372" : WHITE_DIM }}>{step.detail}</span>
+              <span className="block text-sm font-semibold" style={{ color: light ? INK : WHITE }}>{step.label}</span>
+              <span className="block text-xs mt-0.5" style={{ color: light ? "#596372" : "#c2cad9" }}>{step.detail}</span>
             </span>
           </li>
         );

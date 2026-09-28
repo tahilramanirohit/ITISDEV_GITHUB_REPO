@@ -12,7 +12,7 @@ import { deriveAnalysisState, shouldPoll, stateDescription, STATE_LABELS, type L
 import { config } from "../../lib/config";
 import { startResumableUpload, type UploadHandle } from "../../lib/upload/tusUpload";
 import { formatBytes, validateVideoFile } from "../../lib/upload/validate";
-import { BLUE_SKY, BORDER, COBALT, DISPLAY_FONT, INK, NEON, NEON_D, ORANGE, PAPER, WHITE_DIM, WHITE_SUB } from "../theme";
+import { BLUE_SKY, BORDER, DISPLAY_FONT, LAVENDER, NAVY, NEON, NEON_D, ORANGE, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Card, Notice } from "../shell/primitives";
 import { AnalysisParamsForm, ProgressBar, type AnalysisParams } from "../analysis/AnalysisStatus";
 import { ResultView } from "../analysis/ResultView";
@@ -159,28 +159,28 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
     <div className="space-y-4">
       <a href="#/" className="inline-flex items-center gap-1 text-xs" style={{ color: BLUE_SKY }}><ArrowLeft size={12} /> All sessions</a>
 
-      <section className="p-5 sm:p-8" style={{ background: PAPER, color: INK }}>
-        <p className="text-xs font-bold uppercase tracking-widest" style={{ color: COBALT }}>Your video review</p>
+      <section className="p-5 sm:p-8" style={{ background: NAVY, color: "white" }}>
+        <p className="text-xs font-bold uppercase tracking-widest" style={{ color: LAVENDER }}>Your video review</p>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="mt-2">
             <h1 className="break-words font-bold uppercase leading-none" style={{ fontFamily: DISPLAY_FONT, fontSize: "clamp(2.6rem, 5vw, 4.8rem)" }}>{session.title}</h1>
-            <p className="text-sm mt-2" style={{ color: "#4d5664" }}>
+            <p className="text-sm mt-2" style={{ color: "#d4d9e5" }}>
               {session.session_date} · {CONTEXT_LABELS[session.session_context]} · {FORMAT_LABELS[session.play_format]} · {session.performance_scope === "individual" ? "Individual analysis" : "Pair analysis"}
             </p>
-            {session.notes && <p className="text-sm mt-2" style={{ color: "#4d5664" }}>{session.notes}</p>}
+            {session.notes && <p className="text-sm mt-2" style={{ color: "#d4d9e5" }}>{session.notes}</p>}
             {session.improvement_goals?.length > 0 && (
               <div className="mt-5">
-                <p className="text-xs font-bold uppercase tracking-wider" style={{ color: COBALT }}>Your focus</p>
+                <p className="text-xs font-bold uppercase tracking-wider" style={{ color: LAVENDER }}>Your focus</p>
                 <ul className="mt-1 flex flex-wrap gap-2">
                   {session.improvement_goals.map((goal: ImprovementGoal) => (
-                    <li key={goal} className="text-xs px-2 py-1" style={{ border: "1px solid #bfc2c7", color: INK }}>
+                    <li key={goal} className="text-xs px-2 py-1" style={{ border: "1px solid #64718e", color: "#e8ecf6" }}>
                       {GOAL_LABELS[goal]} · self rating {session[`${goal}_rating`] ?? "not set"}{session[`${goal}_rating`] ? "/5" : ""}
                     </li>
                   ))}
                 </ul>
               </div>
             )}
-            <button type="button" className="text-xs mt-2 underline" style={{ color: COBALT }}
+            <button type="button" className="text-xs mt-2 underline" style={{ color: LAVENDER }}
               onClick={() => setGoalDraft({
                 improvement_goals: session.improvement_goals ?? [],
                 positioning_rating: session.positioning_rating ?? null,
@@ -189,15 +189,15 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
             })}>Edit improvement goals</button>
           </div>
           <div className="flex items-center gap-3 mt-2">
-            {state && <span className="text-xs font-bold uppercase tracking-wider" style={{ color: state === "failed" || state === "insufficient_data" ? "#a94318" : COBALT }}>{STATE_LABELS[state]}</span>}
+            {state && <span className="text-xs font-bold uppercase tracking-wider" style={{ color: state === "failed" || state === "insufficient_data" ? "#ffc19f" : LAVENDER }}>{STATE_LABELS[state]}</span>}
             <button type="button" title="Delete session" disabled={busy || state === "uploading" || state === "processing"}
               onClick={() => { if (window.confirm("Delete this session, its video and results?")) void run(async () => { await deleteSession(sb, bundle); navigate("/"); }); }}
-              className="p-2 disabled:opacity-30" style={{ color: INK, border: "1px solid #bfc2c7" }}>
+              className="p-2 disabled:opacity-30" style={{ color: "white", border: "1px solid #64718e" }}>
               <Trash2 size={14} />
             </button>
           </div>
         </div>
-        <div className="mt-6"><JourneySteps current={hasFeedback ? 3 : 2} tone="light" /></div>
+        <div className="mt-6"><JourneySteps current={hasFeedback ? 3 : 2} tone="dark" /></div>
       </section>
 
       {goalDraft && (

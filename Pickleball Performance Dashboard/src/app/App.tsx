@@ -7,7 +7,7 @@ import { AuthScreen } from "./auth/AuthScreen";
 import { useAuth } from "./auth/useAuth";
 import { AppShell } from "./shell/AppShell";
 import { Card, Notice, WidgetHeader } from "./shell/primitives";
-import { BLUE_SKY, COBALT, INK, ORANGE, WHITE_DIM, WHITE_SUB } from "./theme";
+import { LAVENDER, ORANGE, WHITE, WHITE_DIM, WHITE_SUB } from "./theme";
 
 // Loaded only when their routes are visited, so sample data and dev tools are
 // not part of the main application bundle.
@@ -22,8 +22,8 @@ function DevLinks({ cfg }: { cfg: AppConfig }) {
   if (!cfg.designPreviewEnabled && !cfg.localPrototypeEnabled) return null;
   return (
     <>
-      {cfg.localPrototypeEnabled && <a href="#/local-prototype" style={{ color: ORANGE }}>Local prototype</a>}
-      {cfg.designPreviewEnabled && <a href="#/design-preview" style={{ color: ORANGE }}>Design preview (sample data)</a>}
+      {cfg.localPrototypeEnabled && <a href="#/local-prototype" style={{ color: LAVENDER }}>Local prototype</a>}
+      {cfg.designPreviewEnabled && <a href="#/design-preview" style={{ color: LAVENDER }}>Design preview (sample data)</a>}
     </>
   );
 }
@@ -95,15 +95,15 @@ function SignedInApp({ sb, cfg }: { sb: SupabaseClient; cfg: AppConfig }) {
   const user = auth.session.user;
   return (
     <AppShell
-      nav={<><a href="#/" style={{ color: COBALT }}>My sessions</a><DevLinks cfg={cfg} /></>}
+      nav={<><a href="#/" style={{ color: WHITE }}>My sessions</a><DevLinks cfg={cfg} /></>}
       right={
         <div className="flex items-center gap-3 text-xs">
-          <span style={{ color: INK }}>
+          <span style={{ color: WHITE }}>
             {user.is_anonymous ? "Dev mode (mock data)" : user.email}
           </span>
           <button type="button" onClick={() => void sb.auth.signOut()} className="px-3 py-1.5 rounded-lg"
             title={user.is_anonymous ? "Leaves this temporary guest. Dev mode creates fresh mock data next time." : undefined}
-            style={{ color: INK, border: "1px solid #b8b8b0" }}>{user.is_anonymous ? "Exit dev mode" : "Sign out"}</button>
+            style={{ color: WHITE, border: "1px solid #64718e" }}>{user.is_anonymous ? "Exit dev mode" : "Sign out"}</button>
         </div>
       }
     >
@@ -127,7 +127,7 @@ export default function App({ cfg = defaultConfig, sb = defaultSupabase }: { cfg
           <Route
             path="/local-prototype"
             element={cfg.localPrototypeEnabled
-              ? <AppShell nav={<><a href="#/" style={{ color: BLUE_SKY }}>Home</a><DevLinks cfg={cfg} /></>}><LocalPrototype /></AppShell>
+              ? <AppShell nav={<><a href="#/" style={{ color: WHITE }}>Home</a><DevLinks cfg={cfg} /></>}><LocalPrototype /></AppShell>
               : <NotAvailable />}
           />
           <Route path="/*" element={sb ? <SignedInApp sb={sb} cfg={cfg} /> : <SetupRequired cfg={cfg} />} />

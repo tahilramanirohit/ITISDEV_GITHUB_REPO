@@ -17,6 +17,8 @@ export const ROSE      = "#ad2545";
 export const PAPER     = "#f6f5ef";   // editorial introduction surface
 export const INK       = "#101827";
 export const COBALT    = "#293df2";
+export const NAVY      = "#101b35";
+export const LAVENDER  = "#b9c4ff";
 
-export const PAGE_BG = PAPER;
+export const PAGE_BG = "#e8ebf1";
 export const DISPLAY_FONT = "'Barlow Condensed',sans-serif";
