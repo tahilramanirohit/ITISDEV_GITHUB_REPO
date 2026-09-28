@@ -79,15 +79,15 @@ function fakeSupabase({ rpcError = null as { message: string } | null } = {}) {
 describe("dev mode entry", () => {
   it("is hidden in production builds by default", async () => {
     render(<App cfg={{ ...prodConfig, supabase: { url: "x", anonKey: "y" } }} sb={fakeSupabase() as unknown as SupabaseClient} />);
-    await screen.findByText("SIGN IN →");
-    expect(screen.queryByRole("button", { name: /Dev mode/ })).toBeNull();
+    await screen.findByRole("button", { name: "Sign in" });
+    expect(screen.queryByRole("button", { name: /Try PicklePro with sample sessions/ })).toBeNull();
   });
 
   it("offers guest testing on an explicitly enabled production preview", async () => {
     const sb = fakeSupabase();
     const previewConfig = getConfig({ DEV: false, PROD: true, VITE_ENABLE_DEV_MODE: "true" });
     render(<App cfg={previewConfig} sb={sb as unknown as SupabaseClient} />);
-    fireEvent.click(await screen.findByRole("button", { name: /Dev mode: enter with mock data/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /Try PicklePro with sample sessions/ }));
     expect(await screen.findByText("Dev mode (mock data)")).toBeTruthy();
     expect(sb.auth.signInAnonymously).toHaveBeenCalledOnce();
   });
@@ -95,7 +95,7 @@ describe("dev mode entry", () => {
   it("signs in as a guest, seeds mock sessions, and enters the app", async () => {
     const sb = fakeSupabase();
     render(<App cfg={devConfig} sb={sb as unknown as SupabaseClient} />);
-    fireEvent.click(await screen.findByRole("button", { name: /Dev mode: enter with mock data/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /Try PicklePro with sample sessions/ }));
     expect(await screen.findByText("Dev mode (mock data)")).toBeTruthy();
     expect(sb.auth.signInAnonymously).toHaveBeenCalledOnce();
     const [fn, args] = sb.rpc.mock.calls[0] as unknown as [string, { p_sessions: unknown[] }];
@@ -107,7 +107,7 @@ describe("dev mode entry", () => {
   it("explains how to fix a missing database function and stays signed out", async () => {
     const sb = fakeSupabase({ rpcError: { message: "Could not find the function public.seed_dev_mock_data" } });
     render(<App cfg={devConfig} sb={sb as unknown as SupabaseClient} />);
-    fireEvent.click(await screen.findByRole("button", { name: /Dev mode: enter with mock data/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /Try PicklePro with sample sessions/ }));
     expect(await screen.findByText(/Run supabase\/migrations\/20260928000100_dev_mock_data.sql/)).toBeTruthy();
     await waitFor(() => expect(sb.auth.signOut).toHaveBeenCalled());
   });

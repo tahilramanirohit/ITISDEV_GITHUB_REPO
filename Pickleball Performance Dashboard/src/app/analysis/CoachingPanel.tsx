@@ -75,6 +75,7 @@ function ProgressTable({ rows, label }: { rows: ProgressRow[]; label: string }) 
 
 export function CoachingPanel({ result, previous }: { result: AnalysisResultV1; previous?: PreviousSession | null }) {
   const report = useMemo(() => buildCoachingReport(result), [result]);
+  const devMock = result.provenance.pipeline_version === "dev-mock";
   const progress = useMemo(() => previous ? compareProgress(result, previous.result) : null, [result, previous]);
   const speechText = coachingSpeechText(report);
   const [playing, setPlaying] = useState(false);
@@ -105,7 +106,7 @@ export function CoachingPanel({ result, previous }: { result: AnalysisResultV1; 
   return (
     <Card accent={report.available ? NEON : undefined}>
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <WidgetHeader title="Gameplay feedback" subtitle="Practice plan based on measured player positions." />
+        <WidgetHeader title="What to practice next" subtitle={devMock ? "Example practice plan using sample data." : "Practice plan based on court positioning observed in your video."} />
         {report.available && (
           <button type="button" onClick={toggleAudio} disabled={!speechAvailable}
             aria-label={playing ? "Stop audio coaching" : "Play audio coaching"}
@@ -117,7 +118,7 @@ export function CoachingPanel({ result, previous }: { result: AnalysisResultV1; 
           </button>
         )}
       </div>
-      <p className="text-sm text-white">{report.introduction}</p>
+      <p className="text-sm text-white">{devMock ? "Example only: these findings do not describe your play." : report.introduction}</p>
       {report.strengths.length > 0 && (
         <div className="mt-3">
           <p className="text-xs font-semibold text-white">What's working</p>

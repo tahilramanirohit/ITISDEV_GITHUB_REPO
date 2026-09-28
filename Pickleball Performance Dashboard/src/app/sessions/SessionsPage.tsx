@@ -8,7 +8,7 @@ import {
   type PerformanceScope, type PlayFormat, type SessionContext,
 } from "../../lib/api/types";
 import { deriveAnalysisState, type AnalysisUiState } from "../../lib/analysis/state";
-import { BLUE_SKY, BORDER, NEON, NEON_D, WHITE_DIM, WHITE_SUB } from "../theme";
+import { BLUE_SKY, BORDER, COBALT, DISPLAY_FONT, INK, NEON, NEON_D, PAPER, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Card, Notice, Pill, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
 import { AnalysisStateBadge } from "../analysis/AnalysisStatus";
 import { GoalFields } from "./GoalFields";
@@ -36,36 +36,55 @@ export default function SessionsPage({ sb }: { sb: SupabaseClient }) {
     listSessions(sb).then(setItems).catch((e) => setError(e.message));
   }, [sb]);
   useEffect(load, [load]);
+  useEffect(() => {
+    if (creating) document.getElementById("new-session")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [creating]);
 
   return (
-    <div className="space-y-7">
-      <section className="space-y-5">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="max-w-2xl">
-            <p className="text-xs font-bold uppercase tracking-widest" style={{ color: NEON }}>Your pickleball progress</p>
-            <h1 className="mt-1 text-2xl sm:text-3xl font-bold text-white">Know what to practice next</h1>
-            <p className="mt-2 text-sm" style={{ color: WHITE_DIM }}>
-              Choose a skill, add a video, and get feedback on what PicklePro can observe.
+    <div className="space-y-10">
+      <section aria-labelledby="home-title" className="p-5 sm:p-8 lg:p-10" style={{ background: PAPER, color: INK }}>
+        <div className="flex items-center justify-between gap-3 border-b pb-3 text-xs font-bold uppercase tracking-widest"
+          style={{ borderColor: "#bfc2c7", color: COBALT }}>
+          <span>PicklePro / start here</span><span className="hidden sm:inline">Your game, made clearer</span>
+        </div>
+        <div className="grid gap-6 py-8 lg:grid-cols-[minmax(0,1fr)_285px] lg:items-end">
+          <div>
+            <h1 id="home-title" className="max-w-3xl font-extrabold uppercase tracking-tight"
+              style={{ fontFamily: DISPLAY_FONT, fontSize: "clamp(2.8rem, 7vw, 6.8rem)", lineHeight: 0.88 }}>
+              Improve your<br /><span style={{ color: COBALT }}>pickleball game.</span>
+            </h1>
+            <p className="mt-6 max-w-2xl text-base leading-relaxed" style={{ color: "#354052" }}>
+              Choose a skill, upload your video, and get a practice plan from what PicklePro can measure.
             </p>
           </div>
-          {!creating && (
-            <button type="button" onClick={() => setCreating(true)}
-              className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold"
-              style={{ background: NEON, color: NEON_D }}>
-              <Plus size={18} /> Start a video review
-            </button>
-          )}
+          <div className="space-y-4">
+            <p className="text-sm leading-relaxed" style={{ color: "#455062" }}>
+              <strong style={{ color: INK }}>Available today:</strong> court positioning feedback. Shot feedback is still in development.
+            </p>
+            {!creating && (
+              <button type="button" onClick={() => setCreating(true)}
+                className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left text-sm font-bold transition-transform hover:-translate-y-0.5"
+                style={{ background: COBALT, color: "white" }}>
+                <span className="inline-flex items-center gap-2"><Plus size={18} /> Start a video review</span>
+                <ArrowRight size={18} aria-hidden="true" />
+              </button>
+            )}
+          </div>
         </div>
-        <JourneySteps current={1} />
+        <JourneySteps current={1} tone="light" />
       </section>
 
-      {creating && <NewSessionForm sb={sb} onCancel={() => setCreating(false)} />}
+      {creating && <div id="new-session" className="scroll-mt-24"><NewSessionForm sb={sb} onCancel={() => setCreating(false)} /></div>}
       {error && <Notice tone="error">{error}</Notice>}
 
-      <section aria-labelledby="sessions-heading" className="space-y-3">
-        <div>
-          <h2 id="sessions-heading" className="text-lg font-bold text-white">Your sessions</h2>
-          <p className="text-sm" style={{ color: WHITE_DIM }}>Pick up where you left off or review an earlier result.</p>
+      <section aria-labelledby="sessions-heading" className="space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-2 border-b pb-4" style={{ borderColor: BORDER }}>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest" style={{ color: BLUE_SKY }}>Your history</p>
+            <h2 id="sessions-heading" className="mt-1 text-3xl font-bold text-white" style={{ fontFamily: DISPLAY_FONT }}>Your sessions</h2>
+            <p className="text-sm" style={{ color: WHITE_DIM }}>Pick up where you left off or review an earlier result.</p>
+          </div>
+          {items && <span className="font-mono text-sm" style={{ color: WHITE_DIM }}>{items.length} total</span>}
         </div>
         {items === null ? (
           <p className="text-sm" style={{ color: WHITE_SUB }}>Loading your sessions…</p>
@@ -75,27 +94,28 @@ export default function SessionsPage({ sb }: { sb: SupabaseClient }) {
             <p className="text-sm mt-1" style={{ color: WHITE_DIM }}>Start with one skill you want to improve. You can add a video in the next step.</p>
           </Card>
         ) : (
-          <ul className="grid gap-3">
-            {items.map((item) => {
+          <ul>
+            {items.map((item, index) => {
               const state = deriveAnalysisState({ video: item.video, job: item.job, result: item.result });
               return (
                 <li key={item.session.id}>
-                  <a href={`#/sessions/${item.session.id}`} className="block rounded-2xl p-4 transition-all hover:brightness-110"
-                    style={{ background: "rgba(13,37,84,0.9)", border: `1px solid ${BORDER}` }}>
+                  <a href={`#/sessions/${item.session.id}`} className="grid gap-3 border-b py-5 transition-colors hover:bg-white/5 sm:grid-cols-[3.5rem_minmax(0,1fr)_auto] sm:items-center"
+                    style={{ borderColor: BORDER }}>
+                    <span className="font-mono text-sm font-bold" style={{ color: BLUE_SKY }}>{String(index + 1).padStart(2, "0")}</span>
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
-                        <h3 className="text-base font-semibold text-white">{item.session.title}</h3>
+                        <h3 className="text-lg font-semibold text-white">{item.session.title}</h3>
                         <p className="text-sm mt-1" style={{ color: WHITE_DIM }}>
                           {item.session.session_date} · {CONTEXT_LABELS[item.session.session_context]} · {FORMAT_LABELS[item.session.play_format]}
                         </p>
                       </div>
-                      <div className="flex flex-wrap items-center gap-3">
-                        {item.result?.data_origin === "test_fixture" && <Pill color="#f43f5e">TEST DATA</Pill>}
-                        <AnalysisStateBadge state={state} />
-                        <span className="inline-flex items-center gap-1 text-sm font-semibold" style={{ color: NEON }}>
-                          {NEXT_ACTION[state]} <ArrowRight size={16} aria-hidden="true" />
-                        </span>
-                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      {item.result?.data_origin === "test_fixture" && <Pill color="#f43f5e">TEST DATA</Pill>}
+                      <AnalysisStateBadge state={state} />
+                      <span className="inline-flex items-center gap-1 text-sm font-semibold" style={{ color: NEON }}>
+                        {NEXT_ACTION[state]} <ArrowRight size={16} aria-hidden="true" />
+                      </span>
                     </div>
                   </a>
                 </li>

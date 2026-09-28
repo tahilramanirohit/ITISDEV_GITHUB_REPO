@@ -14,6 +14,9 @@ export const BORDER    = "rgba(100,160,255,0.18)";
 export const CARD_GLOW = "0 0 0 1px rgba(100,160,255,0.15), 0 4px 24px rgba(7,26,62,0.5)";
 export const VIOLET    = "#a78bfa";
 export const ROSE      = "#f43f5e";
+export const PAPER     = "#f6f5ef";   // editorial introduction surface
+export const INK       = "#101827";
+export const COBALT    = "#293df2";
 
 export const PAGE_BG = "linear-gradient(160deg, #071a3e 0%, #0a2258 50%, #071a3e 100%)";
 export const DISPLAY_FONT = "'Barlow Condensed',sans-serif";

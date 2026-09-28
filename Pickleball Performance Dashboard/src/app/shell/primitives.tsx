@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import {
-  BLUE_MID, BORDER, CARD_GLOW, DISPLAY_FONT, NEON, NEON_D, ORANGE, ORANGE_L, VIOLET, WHITE, WHITE_DIM, WHITE_SUB,
+  BLUE_MID, BORDER, CARD_GLOW, COBALT, DISPLAY_FONT, INK, NEON, NEON_D, ORANGE, ORANGE_L, VIOLET, WHITE, WHITE_DIM, WHITE_SUB,
 } from "../theme";
 
 // ── Card ──────────────────────────────────────────────────────────────────
@@ -106,25 +106,26 @@ export function Notice({ tone = "info", children }: { tone?: "info" | "warn" | "
 }
 
 // ── Brand mark ────────────────────────────────────────────────────────────
-export function PickleProLogo({ size = "md" }: { size?: "md" | "lg" }) {
-  const box = size === "lg" ? 56 : 44;
+export function PickleProLogo({ size = "md", tone = "dark" }: { size?: "sm" | "md" | "lg"; tone?: "dark" | "light" }) {
+  const box = size === "lg" ? 56 : size === "sm" ? 36 : 44;
   return (
     <div className="flex items-center gap-2">
       <div
         className="rounded-xl flex items-center justify-center flex-shrink-0"
-        style={{ width: box, height: box, background: NEON, boxShadow: `0 0 18px ${NEON}80` }}
+        style={{ width: box, height: box, background: tone === "light" ? COBALT : NEON,
+          boxShadow: tone === "light" ? "none" : `0 0 18px ${NEON}80` }}
       >
         <svg viewBox="0 0 20 30" width={box * 0.55} height={box * 0.68} fill="none" aria-hidden>
-          <path d="M10 1C5.5 1 1.5 4.5 1.5 9.5C1.5 14.5 5 17.5 10 17.5C15 17.5 18.5 14.5 18.5 9.5C18.5 4.5 14.5 1 10 1Z" fill={NEON_D} />
+          <path d="M10 1C5.5 1 1.5 4.5 1.5 9.5C1.5 14.5 5 17.5 10 17.5C15 17.5 18.5 14.5 18.5 9.5C18.5 4.5 14.5 1 10 1Z" fill={tone === "light" ? WHITE : NEON_D} />
           <line x1="5" y1="7" x2="15" y2="7" stroke={NEON} strokeWidth="0.8" strokeOpacity="0.5" />
           <line x1="4" y1="10" x2="16" y2="10" stroke={NEON} strokeWidth="0.8" strokeOpacity="0.5" />
           <line x1="5" y1="13" x2="15" y2="13" stroke={NEON} strokeWidth="0.8" strokeOpacity="0.5" />
-          <path d="M7.5 17.5 L8.5 20 L11.5 20 L12.5 17.5Z" fill={NEON_D} />
-          <rect x="8" y="19.5" width="4" height="9.5" rx="2" fill={NEON_D} />
+          <path d="M7.5 17.5 L8.5 20 L11.5 20 L12.5 17.5Z" fill={tone === "light" ? WHITE : NEON_D} />
+          <rect x="8" y="19.5" width="4" height="9.5" rx="2" fill={tone === "light" ? WHITE : NEON_D} />
         </svg>
       </div>
-      <span style={{ fontFamily: DISPLAY_FONT, fontWeight: 800, fontSize: size === "lg" ? "2.8rem" : "2.2rem", letterSpacing: "0.06em", lineHeight: 1, color: WHITE }}>
-        Pickle<span style={{ color: NEON }}>Pro</span>
+      <span style={{ fontFamily: DISPLAY_FONT, fontWeight: 800, fontSize: size === "lg" ? "2.8rem" : size === "sm" ? "1.8rem" : "2.2rem", letterSpacing: "0.02em", lineHeight: 1, color: tone === "light" ? INK : WHITE }}>
+        Pickle<span style={{ color: tone === "light" ? COBALT : NEON }}>Pro</span>
       </span>
     </div>
   );

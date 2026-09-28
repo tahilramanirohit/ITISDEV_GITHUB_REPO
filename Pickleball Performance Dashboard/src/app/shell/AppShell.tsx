@@ -1,15 +1,15 @@
 import type { ReactNode } from "react";
-import { BORDER, PAGE_BG, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
+import { BORDER, INK, PAPER, PAGE_BG, WHITE, WHITE_SUB } from "../theme";
 import { PickleProLogo } from "./primitives";
 
 export function AppShell({ children, right, nav }: { children: ReactNode; right?: ReactNode; nav?: ReactNode }) {
   return (
     <div style={{ background: PAGE_BG, minHeight: "100vh", color: WHITE, fontFamily: "'Inter',sans-serif" }}>
-      <header className="sticky top-0 z-20 border-b" style={{ background: "rgba(7,26,62,0.95)", backdropFilter: "blur(12px)", borderColor: BORDER }}>
+      <header className="sticky top-0 z-20 border-b" style={{ background: PAPER, borderColor: "#d6d5ce" }}>
         <div className="max-w-6xl mx-auto px-6 py-3 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-6">
-            <a href="#/" aria-label="PicklePro home"><PickleProLogo /></a>
-            {nav && <nav className="flex items-center gap-4 text-xs font-semibold" style={{ color: WHITE_DIM }}>{nav}</nav>}
+          <div className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-2">
+            <a href="#/" aria-label="PicklePro home"><PickleProLogo size="sm" tone="light" /></a>
+            {nav && <nav className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold" style={{ color: INK }}>{nav}</nav>}
           </div>
           {right}
         </div>

@@ -8,13 +8,13 @@ import {
 } from "../../lib/api/sessions";
 import { CONTEXT_LABELS, FORMAT_LABELS, GOAL_LABELS, type GoalValues, type ImprovementGoal } from "../../lib/api/types";
 import { ContractError, parseAnalysisResult } from "../../lib/analysis/contract";
-import { deriveAnalysisState, shouldPoll, stateDescription, type LocalUpload } from "../../lib/analysis/state";
+import { deriveAnalysisState, shouldPoll, stateDescription, STATE_LABELS, type LocalUpload } from "../../lib/analysis/state";
 import { config } from "../../lib/config";
 import { startResumableUpload, type UploadHandle } from "../../lib/upload/tusUpload";
 import { formatBytes, validateVideoFile } from "../../lib/upload/validate";
-import { BLUE_SKY, BORDER, NEON, NEON_D, ORANGE, WHITE_DIM, WHITE_SUB } from "../theme";
+import { BLUE_SKY, BORDER, COBALT, DISPLAY_FONT, INK, NEON, NEON_D, ORANGE, PAPER, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Card, Notice } from "../shell/primitives";
-import { AnalysisParamsForm, AnalysisStateBadge, ProgressBar, type AnalysisParams } from "../analysis/AnalysisStatus";
+import { AnalysisParamsForm, ProgressBar, type AnalysisParams } from "../analysis/AnalysisStatus";
 import { ResultView } from "../analysis/ResultView";
 import type { PreviousSession } from "../analysis/CoachingPanel";
 import { GoalFields } from "./GoalFields";
@@ -159,46 +159,46 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
     <div className="space-y-4">
       <a href="#/" className="inline-flex items-center gap-1 text-xs" style={{ color: BLUE_SKY }}><ArrowLeft size={12} /> All sessions</a>
 
-      <JourneySteps current={hasFeedback ? 3 : 2} />
-
-      <Card>
+      <section className="p-5 sm:p-8" style={{ background: PAPER, color: INK }}>
+        <p className="text-xs font-bold uppercase tracking-widest" style={{ color: COBALT }}>Your video review</p>
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-white">{session.title}</h1>
-            <p className="text-sm mt-1" style={{ color: WHITE_SUB }}>
-              {session.session_date} · {CONTEXT_LABELS[session.session_context]} · {FORMAT_LABELS[session.play_format]} · {session.performance_scope}
+          <div className="mt-2">
+            <h1 className="break-words font-bold uppercase leading-none" style={{ fontFamily: DISPLAY_FONT, fontSize: "clamp(2.6rem, 5vw, 4.8rem)" }}>{session.title}</h1>
+            <p className="text-sm mt-2" style={{ color: "#4d5664" }}>
+              {session.session_date} · {CONTEXT_LABELS[session.session_context]} · {FORMAT_LABELS[session.play_format]} · {session.performance_scope === "individual" ? "Individual analysis" : "Pair analysis"}
             </p>
-            {session.notes && <p className="text-sm mt-2" style={{ color: WHITE_DIM }}>{session.notes}</p>}
+            {session.notes && <p className="text-sm mt-2" style={{ color: "#4d5664" }}>{session.notes}</p>}
             {session.improvement_goals?.length > 0 && (
-              <div className="mt-3">
-                <p className="text-xs font-semibold text-white">Your improvement goals</p>
+              <div className="mt-5">
+                <p className="text-xs font-bold uppercase tracking-wider" style={{ color: COBALT }}>Your focus</p>
                 <ul className="mt-1 flex flex-wrap gap-2">
                   {session.improvement_goals.map((goal: ImprovementGoal) => (
-                    <li key={goal} className="text-xs rounded-lg px-2 py-1" style={{ border: `1px solid ${BORDER}`, color: BLUE_SKY }}>
+                    <li key={goal} className="text-xs px-2 py-1" style={{ border: "1px solid #bfc2c7", color: INK }}>
                       {GOAL_LABELS[goal]} · self rating {session[`${goal}_rating`] ?? "not set"}{session[`${goal}_rating`] ? "/5" : ""}
                     </li>
                   ))}
                 </ul>
               </div>
             )}
-            <button type="button" className="text-xs mt-2 underline" style={{ color: BLUE_SKY }}
+            <button type="button" className="text-xs mt-2 underline" style={{ color: COBALT }}
               onClick={() => setGoalDraft({
                 improvement_goals: session.improvement_goals ?? [],
                 positioning_rating: session.positioning_rating ?? null,
                 shot_outcomes_rating: session.shot_outcomes_rating ?? null,
                 shot_technique_rating: session.shot_technique_rating ?? null,
-              })}>Edit improvement goals</button>
+            })}>Edit improvement goals</button>
           </div>
-          <div className="flex items-center gap-2">
-            {state && <AnalysisStateBadge state={state} />}
+          <div className="flex items-center gap-3 mt-2">
+            {state && <span className="text-xs font-bold uppercase tracking-wider" style={{ color: state === "failed" || state === "insufficient_data" ? "#a94318" : COBALT }}>{STATE_LABELS[state]}</span>}
             <button type="button" title="Delete session" disabled={busy || state === "uploading" || state === "processing"}
               onClick={() => { if (window.confirm("Delete this session, its video and results?")) void run(async () => { await deleteSession(sb, bundle); navigate("/"); }); }}
-              className="p-2 rounded-lg disabled:opacity-30" style={{ color: WHITE_DIM, border: `1px solid ${BORDER}` }}>
+              className="p-2 disabled:opacity-30" style={{ color: INK, border: "1px solid #bfc2c7" }}>
               <Trash2 size={14} />
             </button>
           </div>
         </div>
-      </Card>
+        <div className="mt-6"><JourneySteps current={hasFeedback ? 3 : 2} tone="light" /></div>
+      </section>
 
       {goalDraft && (
         <Card accent={BLUE_SKY}>

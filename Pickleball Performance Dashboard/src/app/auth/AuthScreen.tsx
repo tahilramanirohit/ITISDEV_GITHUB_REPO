@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { FlaskConical } from "lucide-react";
-import { BLUE_MID, BLUE_POP, BORDER, DISPLAY_FONT, NEON, NEON_D, ORANGE, PAGE_BG, WHITE_DIM, WHITE_SUB } from "../theme";
+import { ArrowRight, FlaskConical } from "lucide-react";
+import { BLUE_MID, BORDER, COBALT, DISPLAY_FONT, INK, NEON, NEON_D, ORANGE, PAPER, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Notice, PickleProLogo, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
 
 type Mode = "sign_in" | "sign_up";
@@ -46,19 +46,34 @@ export function AuthScreen({ sb, devMode }: { sb: SupabaseClient; devMode?: DevM
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: PAGE_BG, fontFamily: "'Inter', sans-serif" }}>
-      <div className="relative w-full max-w-md">
-        <div className="flex flex-col items-center mb-8">
-          <PickleProLogo size="lg" />
-          <p className="text-sm text-center mt-3" style={{ color: WHITE_DIM }}>
-            Choose a focus, upload your play, and see what to practice next.
-          </p>
+    <div className="min-h-screen" style={{ background: PAPER, color: INK, fontFamily: "'Inter', sans-serif" }}>
+      <header className="border-b" style={{ borderColor: "#d6d5ce" }}>
+        <div className="mx-auto max-w-7xl px-5 py-4 sm:px-8 lg:px-12 flex items-center justify-between gap-3">
+          <PickleProLogo size="sm" tone="light" />
+          <span className="hidden sm:block text-xs font-bold uppercase tracking-widest" style={{ color: COBALT }}>Your game, made clearer</span>
         </div>
-        <div className="rounded-2xl p-8" style={{ background: BLUE_MID, border: `1px solid ${BORDER}`, boxShadow: `0 24px 64px rgba(7,26,62,0.7)` }}>
-          <h2 className="text-white mb-1" style={{ fontFamily: DISPLAY_FONT, letterSpacing: "0.04em", fontSize: "1.4rem", fontWeight: 700 }}>
+      </header>
+      <main className="mx-auto grid max-w-7xl gap-10 px-5 py-8 sm:px-8 sm:py-12 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-start lg:gap-16 lg:px-12 lg:py-16">
+        <section aria-labelledby="intro-title">
+          <p className="text-xs font-bold uppercase tracking-[0.2em]" style={{ color: COBALT }}>Pickleball video coaching / beta</p>
+          <h1 id="intro-title" className="mt-5 font-extrabold uppercase tracking-tight" style={{ fontFamily: DISPLAY_FONT,
+            fontSize: "clamp(3.6rem, 9vw, 8.5rem)", lineHeight: 0.83 }}>
+            See your game.<br /><span style={{ color: COBALT }}>Know what to practice.</span>
+          </h1>
+          <p className="mt-7 max-w-xl text-base leading-relaxed sm:text-lg" style={{ color: "#354052" }}>
+            Choose a skill to improve, upload a video of your play, and get a clear practice plan based on what PicklePro can see.
+          </p>
+          <p className="mt-5 max-w-xl text-sm leading-relaxed" style={{ color: "#4d5664" }}>
+            <strong>Court positioning feedback is available now.</strong> Shot outcome and technique analysis are still being developed.
+          </p>
+        </section>
+
+        <section aria-labelledby="auth-title" className="p-6 sm:p-8" style={{ background: BLUE_MID, color: "white", border: `1px solid ${BORDER}` }}>
+          <p className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: NEON }}>Get started</p>
+          <h2 id="auth-title" className="text-white mb-1" style={{ fontFamily: DISPLAY_FONT, letterSpacing: "0.02em", fontSize: "2rem", fontWeight: 700 }}>
             {mode === "sign_in" ? "Sign in" : "Create an account"}
           </h2>
-          <p className="text-xs mb-6" style={{ color: WHITE_SUB }}>
+          <p className="text-sm mb-6" style={{ color: WHITE_DIM }}>
             Your sessions, videos and results are private to your account.
           </p>
           <form onSubmit={submit} className="space-y-4" noValidate>
@@ -76,9 +91,9 @@ export function AuthScreen({ sb, devMode }: { sb: SupabaseClient; devMode?: DevM
             {error && <Notice tone="error">{error}</Notice>}
             {info && <Notice>{info}</Notice>}
             <button type="submit" disabled={busy}
-              className="w-full rounded-xl py-3.5 font-bold text-sm disabled:opacity-60"
-              style={{ background: NEON, color: NEON_D, fontFamily: DISPLAY_FONT, fontSize: "1rem", letterSpacing: "0.08em" }}>
-              {busy ? "PLEASE WAIT…" : mode === "sign_in" ? "SIGN IN →" : "CREATE ACCOUNT →"}
+              className="w-full flex items-center justify-center gap-2 py-3.5 font-bold text-sm disabled:opacity-60"
+              style={{ background: NEON, color: NEON_D }}>
+              {busy ? "Please wait…" : mode === "sign_in" ? "Sign in" : "Create account"} {!busy && <ArrowRight size={16} aria-hidden="true" />}
             </button>
           </form>
           {devMode && (
@@ -87,10 +102,10 @@ export function AuthScreen({ sb, devMode }: { sb: SupabaseClient; devMode?: DevM
                 className="w-full inline-flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold disabled:opacity-60"
                 style={{ color: ORANGE, border: `1px dashed ${ORANGE}`, background: "transparent" }}>
                 <FlaskConical size={14} />
-                {devMode.busy ? "Creating mock data…" : "Dev mode: enter with mock data"}
+                {devMode.busy ? "Creating sample sessions…" : "Try PicklePro with sample sessions"}
               </button>
-              <p className="text-[11px] mt-1.5 text-center" style={{ color: WHITE_SUB }}>
-                Testing mode. Signs in as a temporary guest with sample sessions.
+              <p className="text-xs mt-2 text-center" style={{ color: WHITE_SUB }}>
+                Dev mode uses a temporary guest account and sample results, not a real video analysis.
               </p>
               {devMode.error && <div className="mt-2"><Notice tone="error">{devMode.error}</Notice></div>}
             </div>
@@ -102,11 +117,26 @@ export function AuthScreen({ sb, devMode }: { sb: SupabaseClient; devMode?: DevM
               {mode === "sign_in" ? "Create one" : "Sign in"}
             </button>
           </p>
-        </div>
-        <p className="text-center text-[10px] mt-4" style={{ color: `${BLUE_POP}` }}>
-          Research prototype · DLSU CAPIT-01
-        </p>
-      </div>
+        </section>
+        <section aria-labelledby="how-it-works-title" className="lg:col-start-1 lg:row-start-2">
+          <h2 id="how-it-works-title" className="text-sm font-bold uppercase tracking-widest" style={{ color: COBALT }}>How it works</h2>
+          <ol className="mt-4 max-w-xl border-t" style={{ borderColor: "#bfc2c7" }}>
+            {[
+              ["01", "Choose a focus", "Tell PicklePro what you want to work on."],
+              ["02", "Upload your video", "Use a handheld or fixed-camera recording."],
+              ["03", "Review feedback", "See observations, limits, and what to try next."],
+            ].map(([number, title, detail]) => (
+              <li key={number} className="grid grid-cols-[3.5rem_1fr] gap-3 border-b py-3" style={{ borderColor: "#bfc2c7" }}>
+                <span className="font-mono text-sm font-bold" style={{ color: COBALT }}>{number}</span>
+                <span><strong className="block text-sm">{title}</strong><span className="block text-sm mt-0.5" style={{ color: "#5a6471" }}>{detail}</span></span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      </main>
+      <footer className="mx-auto max-w-7xl px-5 pb-6 text-xs sm:px-8 lg:px-12" style={{ color: "#69727c" }}>
+        PicklePro research prototype · DLSU CAPIT-01
+      </footer>
     </div>
   );
 }

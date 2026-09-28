@@ -67,15 +67,11 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack 
   const sel = result.player_selection;
   const coaching = buildCoachingReport(result);
   const [selectingPlayer, setSelectingPlayer] = useState(false);
+  const devMock = isDevMock(result);
+  const warnings = devMock ? result.warnings.filter((warning) => !warning.startsWith("DEV MOCK DATA")) : result.warnings;
 
   return (
     <div id="feedback" className="space-y-4 scroll-mt-6" data-testid="result-view">
-      {isDevMock(result) && (
-        <Notice tone="warn">
-          <strong>Dev mock data.</strong> Dev mode generated this result so developers can test the screens. No video was
-          analyzed, and none of the numbers describe real play.
-        </Notice>
-      )}
       {result.data_origin === "test_fixture" && (
         <Notice tone="error">
           <strong>Test data.</strong> This result was produced by the worker's test mode from a synthetic clip. None
@@ -84,17 +80,17 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack 
       )}
 
       <Card accent={result.status === "ok" ? NEON : ORANGE}>
+        <h2 className="mb-3 text-xl font-bold text-white">What PicklePro could assess</h2>
         <div className="flex flex-wrap items-center gap-2 mb-2">
-          <OriginBadge origin={result.data_origin} devMock={isDevMock(result)} />
-          <Pill color={result.status === "ok" ? NEON : ORANGE}>
-            {result.status === "ok" ? "RESULT" : "INSUFFICIENT DATA"}
+          <OriginBadge origin={result.data_origin} devMock={devMock} />
+          <Pill color={devMock ? ORANGE : result.status === "ok" ? NEON : ORANGE}>
+            {devMock ? "SAMPLE" : result.status === "ok" ? "RESULT" : "INSUFFICIENT DATA"}
           </Pill>
-          <Pill color={BLUE_SKY}>{heat.scope === "selected_view" ? "SELECTED-VIEW METRICS" : "WHOLE-CLIP METRICS"}</Pill>
         </div>
-        <p className="text-sm text-white">{result.message}</p>
-        {result.warnings.length > 0 && (
+        <p className="text-sm text-white">{devMock ? "This sample shows the kind of practice plan PicklePro can display. It is not feedback about your play." : result.message}</p>
+        {warnings.length > 0 && (
           <ul className="mt-3 space-y-1">
-            {result.warnings.map((w) => (
+            {warnings.map((w) => (
               <li key={w} className="text-xs flex gap-2" style={{ color: ORANGE_L }}>
                 <AlertTriangle size={12} className="flex-shrink-0 mt-0.5" /> {w}
               </li>
@@ -148,6 +144,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack 
 
       <details className="rounded-2xl p-4" style={{ border: `1px solid ${BORDER}` }}>
         <summary className="cursor-pointer text-sm font-semibold" style={{ color: BLUE_SKY }}>Detailed measurements and analysis notes</summary>
+        <div className="mt-3"><Pill color={BLUE_SKY}>{heat.scope === "selected_view" ? "SELECTED-VIEW METRICS" : "WHOLE-CLIP METRICS"}</Pill></div>
         <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_340px]">
           <div className="space-y-4">
 
