@@ -37,6 +37,12 @@ WORKER_RESULT_MODE=test_fixture
 
 Never place the service-role key in a `VITE_` setting or browser code. The worker bypasses row-level security and must run on a trusted machine.
 
+## Fix: "Could not find the 'performance_scope' column" / "table 'public.video_assets'"
+
+These errors mean the Supabase project the app points at does not have the PicklePro schema. The ITISDEV project had an older, smaller `sessions` table, so the normal migrations fail with "already exists" there. Open the project's SQL editor, paste the whole of `supabase/scripts/itisdev_upgrade.sql` and run it. It keeps existing rows, adds the missing columns, tables, functions, private `session-videos` bucket and the Dev mode function, and reloads the API schema. It is safe to run again. The last query should show `app_tables_of_4 = 4`. Then reload the app.
+
+`bash supabase/tests/run_upgrade_script_test.sh` checks this script against a local copy of the old schema (run twice), then runs the access, job and Dev mode tests. Like the other local harness, it needs PostgreSQL command-line tools and a non-root user.
+
 ## Dev mode (development builds only)
 
 `npm run dev` shows a **Dev mode: enter with mock data** button under Sign in. It signs in as a Supabase anonymous user and creates four `[Dev mock]` sessions, including three weeks of improving practice and one unusable clip, so the results, feedback and progress screens can be tested without uploading a video. Mock results carry `provenance.pipeline_version = "dev-mock"` and are labelled **DEV MOCK DATA — NOT A REAL ANALYSIS**. The button is not in production builds.

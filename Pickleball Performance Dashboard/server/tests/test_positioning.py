@@ -60,6 +60,14 @@ def test_long_tracking_gap_breaks_an_approach():
     assert v["median_approach_s"] is None
 
 
+def test_gap_limit_counts_only_unobserved_time():
+    # Exactly 1 s without a sample (e.g. standing still for a motion detector)
+    # does not break the approach; the limit is on missing time.
+    depths = [0.5] * 10 + [None] * 10 + [2.5] * 5 + [4.3] * 10
+    v = positioning_patterns(_track(depths), DT)
+    assert v["approaches_to_kitchen_line"] == 1
+
+
 def test_single_frame_jitter_is_smoothed_away():
     depths = [4.3] * 10 + [2.5] + [4.3] * 10
     v = positioning_patterns(_track(depths), DT)

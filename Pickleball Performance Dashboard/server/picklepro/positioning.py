@@ -33,7 +33,7 @@ BASELINE_AREA_M = 1.5
 KITCHEN_LINE_BEHIND_M = 1.0
 KITCHEN_LINE_PAST_M = 0.3
 LINGER_MIN_S = 2.0
-MAX_GAP_S = 1.0          # longer gaps break lingers and approaches
+MAX_GAP_S = 1.0          # longer unobserved gaps break lingers and approaches
 SMOOTHING_SAMPLES = 5    # rolling median over ~0.5 s at 10 fps
 
 BANDS = ("behind_baseline", "baseline_area", "transition", "kitchen_line", "inside_kitchen")
@@ -124,7 +124,8 @@ def positioning_patterns(track: SelectedTrack, frame_interval_s: float,
         band = band_of(depth_from_baseline(p[1], half))
         if band is None:
             continue
-        gap = (i - last_seen) * frame_interval_s if last_seen is not None else 0.0
+        # Time with no usable sample between the two observations.
+        gap = (i - last_seen - 1) * frame_interval_s if last_seen is not None else 0.0
         if last_seen is not None and gap > MAX_GAP_S:
             close_run(last_seen)
             anchor, last_back = None, None

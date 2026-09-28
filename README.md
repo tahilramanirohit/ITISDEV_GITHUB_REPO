@@ -49,7 +49,7 @@ cd server
 .venv/bin/python -m pytest -q
 ```
 
-From the repository root, `bash supabase/tests/run_local_rls_tests.sh` runs the database policy and job tests against a temporary local PostgreSQL instance. It needs PostgreSQL command-line tools. This harness does not include the hosted Supabase Auth, Storage, or TUS services.
+From the repository root, `bash supabase/tests/run_local_rls_tests.sh` runs the database policy and job tests against a temporary local PostgreSQL instance. It needs PostgreSQL command-line tools. `bash supabase/tests/run_upgrade_script_test.sh` does the same for the one-off ITISDEV upgrade script. This harness does not include the hosted Supabase Auth, Storage, or TUS services.
 
 Read [adviser decisions](docs/ADVISER_DECISIONS.md) before presenting proposed thesis features as delivered. The code does not copy `kpp91302/Pickleball-Analytics`, and the optional YOLO dependency has separate licensing implications.
 
