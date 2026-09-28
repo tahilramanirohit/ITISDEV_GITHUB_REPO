@@ -221,8 +221,9 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
         <h2 className="text-xl font-bold text-white mt-1">{stepTitle}</h2>
         <p className="text-sm mt-2 mb-4" style={{ color: WHITE_DIM }}>{state ? stateDescription(state, job) : ""}</p>
         {hasFeedback && (
-          <a href="#feedback" className="inline-flex items-center gap-2 rounded-xl px-4 py-2 mb-4 text-sm font-bold"
-            style={{ background: NEON, color: NEON_D }}>See your feedback <ArrowDown size={16} aria-hidden="true" /></a>
+          <button type="button" onClick={() => document.getElementById("feedback")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            className="inline-flex items-center gap-2 rounded-xl px-4 py-2 mb-4 text-sm font-bold"
+            style={{ background: NEON, color: NEON_D }}>See your feedback <ArrowDown size={16} aria-hidden="true" /></button>
         )}
         {video && (
           <p className="text-xs mb-3" style={{ color: WHITE_DIM }}>
