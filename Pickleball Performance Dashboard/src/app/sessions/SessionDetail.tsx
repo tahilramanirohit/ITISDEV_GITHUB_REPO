@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ArrowLeft, RefreshCw, Trash2, Upload } from "lucide-react";
+import { ArrowDown, ArrowLeft, RefreshCw, Trash2, Upload } from "lucide-react";
 import {
   deleteSession, finalizeUpload, findPreviousCoachableResult, getSessionBundle, registerVideo, removeVideo, requestReanalysis, signedVideoUrl,
   updateSessionGoals, type SessionBundle,
@@ -13,11 +13,12 @@ import { config } from "../../lib/config";
 import { startResumableUpload, type UploadHandle } from "../../lib/upload/tusUpload";
 import { formatBytes, validateVideoFile } from "../../lib/upload/validate";
 import { BLUE_SKY, BORDER, NEON, NEON_D, ORANGE, WHITE_DIM, WHITE_SUB } from "../theme";
-import { Card, Notice, WidgetHeader } from "../shell/primitives";
+import { Card, Notice } from "../shell/primitives";
 import { AnalysisParamsForm, AnalysisStateBadge, ProgressBar, type AnalysisParams } from "../analysis/AnalysisStatus";
 import { ResultView } from "../analysis/ResultView";
 import type { PreviousSession } from "../analysis/CoachingPanel";
 import { GoalFields } from "./GoalFields";
+import { JourneySteps } from "./JourneySteps";
 
 const POLL_MS = 3000;
 
@@ -146,19 +147,28 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
   const { session, video, job } = bundle;
   const canChangeVideo = state === "not_uploaded" || state === "upload_incomplete";
   const finished = state === "completed" || state === "insufficient_data" || state === "failed";
+  const hasFeedback = state === "completed" || state === "insufficient_data";
+  const stepTitle = state === "not_uploaded" ? "Add your video"
+    : state === "upload_incomplete" ? "Finish uploading your video"
+    : state === "queued" ? "Waiting to analyze your video"
+    : state === "processing" ? "Analyzing your video"
+    : state === "failed" ? "Your video needs attention"
+    : hasFeedback ? "Your result is ready" : "Uploading your video";
 
   return (
     <div className="space-y-4">
       <a href="#/" className="inline-flex items-center gap-1 text-xs" style={{ color: BLUE_SKY }}><ArrowLeft size={12} /> All sessions</a>
 
+      <JourneySteps current={hasFeedback ? 3 : 2} />
+
       <Card>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-xl font-bold text-white">{session.title}</h1>
-            <p className="text-xs" style={{ color: WHITE_SUB }}>
+            <h1 className="text-2xl font-bold text-white">{session.title}</h1>
+            <p className="text-sm mt-1" style={{ color: WHITE_SUB }}>
               {session.session_date} · {CONTEXT_LABELS[session.session_context]} · {FORMAT_LABELS[session.play_format]} · {session.performance_scope}
             </p>
-            {session.notes && <p className="text-xs mt-2" style={{ color: WHITE_DIM }}>{session.notes}</p>}
+            {session.notes && <p className="text-sm mt-2" style={{ color: WHITE_DIM }}>{session.notes}</p>}
             {session.improvement_goals?.length > 0 && (
               <div className="mt-3">
                 <p className="text-xs font-semibold text-white">Your improvement goals</p>
@@ -207,7 +217,13 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
       )}
 
       <Card accent={BLUE_SKY}>
-        <WidgetHeader title="Video & analysis status" subtitle={state ? stateDescription(state, job) : ""} accent={BLUE_SKY} />
+        <p className="text-xs font-bold uppercase tracking-widest" style={{ color: BLUE_SKY }}>{hasFeedback ? "Step 3 of 3" : "Step 2 of 3"}</p>
+        <h2 className="text-xl font-bold text-white mt-1">{stepTitle}</h2>
+        <p className="text-sm mt-2 mb-4" style={{ color: WHITE_DIM }}>{state ? stateDescription(state, job) : ""}</p>
+        {hasFeedback && (
+          <a href="#feedback" className="inline-flex items-center gap-2 rounded-xl px-4 py-2 mb-4 text-sm font-bold"
+            style={{ background: NEON, color: NEON_D }}>See your feedback <ArrowDown size={16} aria-hidden="true" /></a>
+        )}
         {video && (
           <p className="text-xs mb-3" style={{ color: WHITE_DIM }}>
             {video.original_filename} · {formatBytes(video.byte_size)}
@@ -228,7 +244,6 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
 
         {canChangeVideo && (
           <div className="space-y-3">
-            <AnalysisParamsForm onChange={(p, err) => { setParams(p); setParamsError(err); }} />
             <label className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold cursor-pointer"
               style={{ background: params ? NEON : `${NEON}50`, color: NEON_D }}>
               <Upload size={14} /> {state === "upload_incomplete" ? "Resume upload (select the same file)" : "Choose video & upload"}
@@ -237,8 +252,12 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
                 onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void onFileSelected(f); }} />
             </label>
             <p className="text-[11px]" style={{ color: WHITE_SUB }}>
-              MP4, MOV, WEBM or AVI up to {formatBytes(config.maxUploadBytes)}. Handheld and fixed-camera videos are accepted. Court feedback needs usable court views; uploads go to private storage and resume after interruptions.
+              MP4, MOV, WEBM or AVI up to {formatBytes(config.maxUploadBytes)}. Handheld and fixed-camera videos are welcome. Your upload is private.
             </p>
+            <details className="rounded-xl p-3" style={{ border: `1px solid ${BORDER}` }}>
+              <summary className="text-sm font-semibold cursor-pointer" style={{ color: BLUE_SKY }}>Advanced analysis options</summary>
+              <div className="mt-3"><AnalysisParamsForm onChange={(p, err) => { setParams(p); setParamsError(err); }} /></div>
+            </details>
             {state === "upload_incomplete" && video && (
               <div className="flex flex-wrap gap-2">
                 <button type="button" disabled={busy} onClick={() => void run(() => finalizeUpload(sb, video.id, (params ?? {}) as Record<string, unknown>))}

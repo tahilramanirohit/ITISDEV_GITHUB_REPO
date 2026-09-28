@@ -51,7 +51,7 @@ export function AuthScreen({ sb, devMode }: { sb: SupabaseClient; devMode?: DevM
         <div className="flex flex-col items-center mb-8">
           <PickleProLogo size="lg" />
           <p className="text-sm text-center mt-3" style={{ color: WHITE_DIM }}>
-            Personal informatics for pickleball — fixed-camera video analysis
+            Choose a focus, upload your play, and see what to practice next.
           </p>
         </div>
         <div className="rounded-2xl p-8" style={{ background: BLUE_MID, border: `1px solid ${BORDER}`, boxShadow: `0 24px 64px rgba(7,26,62,0.7)` }}>

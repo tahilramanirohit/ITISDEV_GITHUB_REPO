@@ -42,20 +42,20 @@ export function deriveAnalysisState({ video, job, result, localUpload }: Inputs)
 export const shouldPoll = (s: AnalysisUiState) => s === "queued" || s === "processing";
 
 export const STATE_LABELS: Record<AnalysisUiState, string> = {
-  not_uploaded: "No video uploaded",
+  not_uploaded: "Needs video",
   uploading: "Uploading",
   upload_incomplete: "Upload incomplete",
-  queued: "Queued for analysis",
-  processing: "Processing",
-  completed: "Completed",
-  insufficient_data: "Insufficient data",
-  failed: "Failed",
+  queued: "Waiting",
+  processing: "Analyzing",
+  completed: "Feedback ready",
+  insufficient_data: "Limited result",
+  failed: "Needs attention",
 };
 
 export function stateDescription(state: AnalysisUiState, job: AnalysisJobRow | null): string {
   switch (state) {
     case "not_uploaded":
-      return "Upload a fixed-camera recording of this session to analyze it.";
+      return "Choose a video of your play. Handheld and fixed-camera recordings are welcome.";
     case "uploading":
       return "Uploading directly to private storage. You can keep this tab open; an interrupted upload resumes if you select the same file again.";
     case "upload_incomplete":
@@ -63,13 +63,13 @@ export function stateDescription(state: AnalysisUiState, job: AnalysisJobRow | n
     case "queued":
       return job && job.attempts > 0 && job.error_code
         ? `Waiting to retry (attempt ${job.attempts + 1} of ${job.max_attempts}). Last error: ${job.error_code}.`
-        : "Waiting for the analysis worker to pick this up.";
+        : "Your video is waiting for analysis. During development, keep the analyzer running on your computer.";
     case "processing":
-      return "The analysis worker is processing the video.";
+      return "PicklePro is checking the video now. This page will update when the result is ready.";
     case "completed":
-      return "Analysis finished. Check the origin and coverage of each metric below.";
+      return "Your result is ready. Review what the video shows and what to practice next.";
     case "insufficient_data":
-      return "The video was analyzed, but there was not enough reliable data to produce court metrics. The reasons are listed below.";
+      return "PicklePro checked the video, but could not reliably measure every skill. See what it could and could not assess below.";
     case "failed":
       return job?.error_message ?? "Analysis failed.";
   }

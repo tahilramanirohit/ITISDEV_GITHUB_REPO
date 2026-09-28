@@ -142,7 +142,7 @@ export function CoachingPanel({ result, previous }: { result: AnalysisResultV1; 
       {progress && previous && <ProgressTable rows={progress} label={previous.label} />}
       {report.available && !progress && (
         <p className="mt-3 text-xs" style={{ color: WHITE_DIM }}>
-          Record and analyze another session with the same camera setup to track progress against these targets.
+          Record and analyze another session with a similar view and play format to track progress against these targets.
         </p>
       )}
       <p className="mt-3 text-xs" style={{ color: WHITE_DIM }}>{report.limitation}</p>

@@ -17,7 +17,7 @@ export function AppShell({ children, right, nav }: { children: ReactNode; right?
       <main className="max-w-6xl mx-auto px-6 py-8">{children}</main>
       <footer className="border-t py-4 px-6 text-[10px]" style={{ borderColor: BORDER, color: WHITE_SUB }}>
         <div className="max-w-6xl mx-auto">
-          PicklePro research prototype. Metrics are whole-clip estimates from a fixed camera; accuracy on real footage has not yet been evaluated.
+          PicklePro research prototype. Video findings depend on visibility and have not yet been validated on real footage.
         </div>
       </footer>
     </div>

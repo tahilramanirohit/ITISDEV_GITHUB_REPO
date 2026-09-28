@@ -81,7 +81,7 @@ export function coachingBlocker(result: AnalysisResultV1): string | null {
     return "Coaching needs a player detection model. Motion detection alone cannot reliably identify a person.";
   }
   if (result.calibration?.quality !== "good") {
-    return "Coaching needs a reliable court calibration. Review the court lines or use a clearer fixed-camera recording.";
+    return "Coaching needs a reliable court calibration. Review the court lines or use a video with a clearer view of the court.";
   }
   const selection = result.player_selection;
   if (!selection || selection.tracked_fraction < 0.5 ||
