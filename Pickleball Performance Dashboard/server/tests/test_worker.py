@@ -59,6 +59,13 @@ def test_worker_defaults_to_near_player_and_passes_court_model():
     assert opts.court_weights == "court.pt"
 
 
+def test_worker_passes_selected_video_time_and_rejects_invalid_time():
+    opts = runner.options_from_params({"selection_time_s": 12.5}, _cfg(), "clip.mp4")
+    assert opts.selection_time_s == 12.5
+    with pytest.raises(ValueError, match="selection_time_s"):
+        runner.options_from_params({"selection_time_s": -1}, _cfg(), "clip.mp4")
+
+
 def test_missing_video_fails_without_retry():
     store = InMemoryJobStore()
     store.add_job(_job())  # no bytes in storage

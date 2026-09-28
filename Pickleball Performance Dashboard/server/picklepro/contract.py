@@ -30,7 +30,7 @@ MetricStatus = Literal["measured", "insufficient_data", "not_computed", "experim
 # How far a metric's accuracy has been checked. Nothing is "validated" until it
 # has been compared against labelled real footage.
 ValidationLevel = Literal["not_evaluated", "synthetic_only", "evaluated_on_real_footage"]
-MetricScope = Literal["whole_clip"]
+MetricScope = Literal["whole_clip", "selected_view"]
 
 
 class _Model(BaseModel):
@@ -84,6 +84,9 @@ class Coverage(_Model):
     fraction_of_video_analyzed: Optional[float] = None
     frames_with_detections: int
     frames_with_ball_detections: int = 0
+    selected_view_duration_s: Optional[float] = Field(
+        None, description="Duration of the selected camera view when a cut was detected; null for a continuous video."
+    )
 
 
 class CalibrationSummary(_Model):
@@ -100,7 +103,7 @@ class PlayerSelectionSummary(_Model):
     track_id: Optional[int] = None
     court_half: Optional[Literal["near", "far"]] = None
     tracked_time_s: float
-    tracked_fraction: float = Field(description="tracked_time_s / coverage.analyzed_duration_s")
+    tracked_fraction: float = Field(description="tracked_time_s / selected view duration, or whole analyzed duration for a continuous video")
     ambiguous_frames: int = Field(0, description="Frames excluded because the selection matched >1 detection.")
 
 

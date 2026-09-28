@@ -4,7 +4,7 @@
   "data_origin": "test_fixture",
   "message": "TEST DATA: produced from a synthetic clip by the worker's test_fixture mode. It is not an analysis of your video.",
   "provenance": {
-    "pipeline_version": "0.5.0-dev",
+    "pipeline_version": "0.6.0-dev",
     "generated_at": "2026-01-01T00:00:00+00:00",
     "detector": {
       "name": "opencv-mog2-motion",
@@ -34,7 +34,8 @@
     "stopped_early_reason": null,
     "fraction_of_video_analyzed": 1.0,
     "frames_with_detections": 146,
-    "frames_with_ball_detections": 0
+    "frames_with_ball_detections": 0,
+    "selected_view_duration_s": null
   },
   "calibration": {
     "method": "manual_landmarks",
@@ -741,7 +742,7 @@
       "status": "measured",
       "validation": "not_evaluated",
       "scope": "whole_clip",
-      "reason": "Positional accuracy has not been evaluated on real footage. Whole-clip dwell time, including time between rallies.",
+      "reason": "Positional accuracy has not been evaluated on real footage. Dwell time covers the selected view when the upload has cuts, and includes time between rallies.",
       "value": {
         "units": "seconds",
         "coordinate_system": "pickleball_full_court_v1: x across court from near-left sideline, y from near baseline (metres)",

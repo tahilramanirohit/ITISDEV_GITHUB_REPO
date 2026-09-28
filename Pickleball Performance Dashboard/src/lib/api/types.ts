@@ -4,10 +4,19 @@
 export const SESSION_CONTEXTS = ["practice", "casual_match", "tournament", "leveling_game"] as const;
 export const PLAY_FORMATS = ["singles", "doubles", "wall_practice", "ball_machine", "drill_other"] as const;
 export const PERFORMANCE_SCOPES = ["individual", "pair"] as const;
+export const IMPROVEMENT_GOALS = ["positioning", "shot_outcomes", "shot_technique"] as const;
 
 export type SessionContext = (typeof SESSION_CONTEXTS)[number];
 export type PlayFormat = (typeof PLAY_FORMATS)[number];
 export type PerformanceScope = (typeof PERFORMANCE_SCOPES)[number];
+export type ImprovementGoal = (typeof IMPROVEMENT_GOALS)[number];
+export type SelfRating = 1 | 2 | 3 | 4 | 5;
+
+export const GOAL_LABELS: Record<ImprovementGoal, string> = {
+  positioning: "Court positioning",
+  shot_outcomes: "Shot outcomes",
+  shot_technique: "Shot technique",
+};
 
 export const CONTEXT_LABELS: Record<SessionContext, string> = {
   practice: "Practice",
@@ -32,9 +41,16 @@ export type SessionRow = {
   play_format: PlayFormat;
   performance_scope: PerformanceScope;
   notes: string | null;
+  improvement_goals: ImprovementGoal[];
+  positioning_rating: SelfRating | null;
+  shot_outcomes_rating: SelfRating | null;
+  shot_technique_rating: SelfRating | null;
   created_at: string;
   updated_at: string;
 };
+
+export type GoalValues = Pick<SessionRow,
+  "improvement_goals" | "positioning_rating" | "shot_outcomes_rating" | "shot_technique_rating">;
 
 export type VideoAssetRow = {
   id: string;

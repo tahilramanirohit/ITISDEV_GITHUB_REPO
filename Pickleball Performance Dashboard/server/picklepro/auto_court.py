@@ -1,4 +1,4 @@
-"""Optional court pose model adapter for fixed-camera video.
+"""Optional court pose model adapter for each usable video frame.
 
 The 14-point layout matches the public pickleball-analysis court model. Model
 weights are supplied by the operator; no weights are fetched or bundled here.
@@ -88,16 +88,7 @@ def detect_court(path: str | Path, props: VideoProperties, weights: str,
                  model=None, seconds_to_scan: float = 5.0) -> Optional[CourtCalibration]:
     """Sample the opening seconds; keep the strongest well-fitted pose."""
     if model is None:
-        if not Path(weights).is_file():
-            raise DetectorUnavailable(f"Court model weights not found: {weights}")
-        try:
-            from ultralytics import YOLO  # type: ignore
-        except ImportError as exc:
-            raise DetectorUnavailable("Auto court detection requires requirements-yolo.txt.") from exc
-        try:
-            model = YOLO(weights)
-        except Exception as exc:
-            raise DetectorUnavailable(f"Could not load court model weights: {type(exc).__name__}") from exc
+        model = CourtPoseDetector(weights).model
 
     best: Optional[CourtCalibration] = None
     next_sample_s = 0.0
@@ -116,3 +107,27 @@ def detect_court(path: str | Path, props: VideoProperties, weights: str,
         if best is not None and len(best.landmarks_used) == len(MODEL_LANDMARKS):
             break
     return best
+
+
+class CourtPoseDetector:
+    """Load weights once, then calibrate each sampled frame independently.
+
+    A camera move cannot reuse a homography from an earlier view. Missing or
+    weak court keypoints yield None for that frame.
+    """
+
+    def __init__(self, weights: str):
+        if not Path(weights).is_file():
+            raise DetectorUnavailable(f"Court model weights not found: {weights}")
+        try:
+            from ultralytics import YOLO  # type: ignore
+        except ImportError as exc:
+            raise DetectorUnavailable("Auto court detection requires requirements-yolo.txt.") from exc
+        try:
+            self.model = YOLO(weights)
+        except Exception as exc:
+            raise DetectorUnavailable(f"Could not load court model weights: {type(exc).__name__}") from exc
+
+    def calibrate_frame(self, frame: np.ndarray) -> Optional[CourtCalibration]:
+        results = self.model.predict(frame, verbose=False)
+        return calibration_from_pose(results[0], (frame.shape[1], frame.shape[0])) if results else None

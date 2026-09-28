@@ -1,4 +1,4 @@
-import { act, cleanup, render } from "@testing-library/react";
+import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { VideoOverlayPlayer } from "./VideoOverlayPlayer";
 
@@ -60,5 +60,31 @@ describe("VideoOverlayPlayer", () => {
     });
     act(() => drawFrame?.(0));
     expect(strokeRect).toHaveBeenCalledWith(50, 40, 5, 5);
+  });
+
+  it("selects one observed player at the paused video time", () => {
+    let drawFrame: FrameRequestCallback | undefined;
+    vi.stubGlobal("requestAnimationFrame", vi.fn((callback: FrameRequestCallback) => {
+      drawFrame = callback;
+      return 1;
+    }));
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+      clearRect: vi.fn(), strokeRect: vi.fn(), fillRect: vi.fn(), fillText: vi.fn(),
+      measureText: vi.fn(() => ({ width: 35 })),
+    } as unknown as CanvasRenderingContext2D);
+    const onSelectTrack = vi.fn();
+    const { container } = render(<VideoOverlayPlayer src="/demo.mp4" onSelectTrack={onSelectTrack}
+      positions={[{ time_seconds: 6, players: [{ track_id: 7, bbox: [100, 80, 200, 300], confidence: null }] }]} />);
+    const video = container.querySelector("video")!;
+    const canvas = container.querySelector("canvas")!;
+    Object.defineProperties(video, {
+      clientWidth: { value: 480 }, clientHeight: { value: 270 },
+      videoWidth: { value: 960 }, videoHeight: { value: 540 }, currentTime: { value: 6 },
+    });
+    vi.spyOn(canvas, "getBoundingClientRect").mockReturnValue({ left: 0, top: 0, width: 480, height: 270 } as DOMRect);
+    act(() => drawFrame?.(0));
+    fireEvent.click(canvas, { clientX: 75, clientY: 70 });
+    expect(onSelectTrack).toHaveBeenCalledWith(7, 6);
   });
 });

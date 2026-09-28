@@ -4,9 +4,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { ArrowLeft, RefreshCw, Trash2, Upload } from "lucide-react";
 import {
   deleteSession, finalizeUpload, findPreviousCoachableResult, getSessionBundle, registerVideo, removeVideo, requestReanalysis, signedVideoUrl,
-  type SessionBundle,
+  updateSessionGoals, type SessionBundle,
 } from "../../lib/api/sessions";
-import { CONTEXT_LABELS, FORMAT_LABELS } from "../../lib/api/types";
+import { CONTEXT_LABELS, FORMAT_LABELS, GOAL_LABELS, type GoalValues, type ImprovementGoal } from "../../lib/api/types";
 import { ContractError, parseAnalysisResult } from "../../lib/analysis/contract";
 import { deriveAnalysisState, shouldPoll, stateDescription, type LocalUpload } from "../../lib/analysis/state";
 import { config } from "../../lib/config";
@@ -17,6 +17,7 @@ import { Card, Notice, WidgetHeader } from "../shell/primitives";
 import { AnalysisParamsForm, AnalysisStateBadge, ProgressBar, type AnalysisParams } from "../analysis/AnalysisStatus";
 import { ResultView } from "../analysis/ResultView";
 import type { PreviousSession } from "../analysis/CoachingPanel";
+import { GoalFields } from "./GoalFields";
 
 const POLL_MS = 3000;
 
@@ -31,6 +32,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [previous, setPrevious] = useState<PreviousSession | null>(null);
+  const [goalDraft, setGoalDraft] = useState<GoalValues | null>(null);
   const uploadRef = useRef<UploadHandle | null>(null);
   const inFlight = useRef(false); // guards against double clicks before React re-renders
 
@@ -157,6 +159,25 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
               {session.session_date} · {CONTEXT_LABELS[session.session_context]} · {FORMAT_LABELS[session.play_format]} · {session.performance_scope}
             </p>
             {session.notes && <p className="text-xs mt-2" style={{ color: WHITE_DIM }}>{session.notes}</p>}
+            {session.improvement_goals?.length > 0 && (
+              <div className="mt-3">
+                <p className="text-xs font-semibold text-white">Your improvement goals</p>
+                <ul className="mt-1 flex flex-wrap gap-2">
+                  {session.improvement_goals.map((goal: ImprovementGoal) => (
+                    <li key={goal} className="text-xs rounded-lg px-2 py-1" style={{ border: `1px solid ${BORDER}`, color: BLUE_SKY }}>
+                      {GOAL_LABELS[goal]} · self rating {session[`${goal}_rating`] ?? "not set"}{session[`${goal}_rating`] ? "/5" : ""}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <button type="button" className="text-xs mt-2 underline" style={{ color: BLUE_SKY }}
+              onClick={() => setGoalDraft({
+                improvement_goals: session.improvement_goals ?? [],
+                positioning_rating: session.positioning_rating ?? null,
+                shot_outcomes_rating: session.shot_outcomes_rating ?? null,
+                shot_technique_rating: session.shot_technique_rating ?? null,
+              })}>Edit improvement goals</button>
           </div>
           <div className="flex items-center gap-2">
             {state && <AnalysisStateBadge state={state} />}
@@ -168,6 +189,22 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
           </div>
         </div>
       </Card>
+
+      {goalDraft && (
+        <Card accent={BLUE_SKY}>
+          <GoalFields value={goalDraft} onChange={setGoalDraft} />
+          <div className="flex gap-2 mt-3">
+            <button type="button" disabled={busy || goalDraft.improvement_goals.length === 0}
+              onClick={() => void run(async () => {
+                await updateSessionGoals(sb, session.id, goalDraft);
+                setGoalDraft(null);
+              })}
+              className="rounded-lg px-3 py-2 text-xs font-semibold disabled:opacity-40"
+              style={{ background: BLUE_SKY, color: "#071a3e" }}>Save goals</button>
+            <button type="button" onClick={() => setGoalDraft(null)} className="text-xs px-3 py-2" style={{ color: WHITE_DIM }}>Cancel</button>
+          </div>
+        </Card>
+      )}
 
       <Card accent={BLUE_SKY}>
         <WidgetHeader title="Video & analysis status" subtitle={state ? stateDescription(state, job) : ""} accent={BLUE_SKY} />
@@ -200,7 +237,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
                 onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void onFileSelected(f); }} />
             </label>
             <p className="text-[11px]" style={{ color: WHITE_SUB }}>
-              MP4, MOV, WEBM or AVI up to {formatBytes(config.maxUploadBytes)}. Uploads go straight to private storage and resume after interruptions.
+              MP4, MOV, WEBM or AVI up to {formatBytes(config.maxUploadBytes)}. Handheld and fixed-camera videos are accepted. Court feedback needs usable court views; uploads go to private storage and resume after interruptions.
             </p>
             {state === "upload_incomplete" && video && (
               <div className="flex flex-wrap gap-2">
@@ -236,7 +273,10 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
         {error && <div className="mt-3"><Notice tone="error">{error}</Notice></div>}
       </Card>
 
-      {parsed?.ok && <ResultView result={parsed.result} videoUrl={videoUrl} previous={previous} />}
+      {parsed?.ok && <ResultView result={parsed.result} videoUrl={videoUrl} previous={previous} session={session}
+        onSelectTrack={job && finished ? (trackId, timeSeconds) => void run(() => requestReanalysis(sb, job.id, {
+          ...job.params, selection: { method: "track_id", track_id: trackId }, selection_time_s: timeSeconds,
+        })) : undefined} />}
       {parsed && !parsed.ok && (
         <Notice tone="error">The stored result could not be read ({parsed.error}). It is not shown to avoid presenting it incorrectly.</Notice>
       )}

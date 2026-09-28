@@ -35,6 +35,9 @@ for f in "$MIGRATIONS"/*.sql; do
   echo "applying $(basename "$f")"
   "${PSQL[@]}" -f "$f"
 done
+# The hosted ITISDEV project uses this idempotent upgrade path. Check that it
+# can be run again after the normal migrations without changing access tests.
+"${PSQL[@]}" -f "$HERE/../scripts/itisdev_upgrade.sql" >/dev/null 2>&1
 "${PSQL[@]}" -f "$HERE/local/05_helpers.sql"
 "${PSQL[@]}" -f "$HERE/local/10_access_and_jobs.sql" 2>&1 >/dev/null | sed -e 's/^psql:[^ ]* NOTICE:  /  /'
 "${PSQL[@]}" -f "$HERE/local/20_dev_mock_data.sql" 2>&1 >/dev/null | sed -e 's/^psql:[^ ]* NOTICE:  /  /'

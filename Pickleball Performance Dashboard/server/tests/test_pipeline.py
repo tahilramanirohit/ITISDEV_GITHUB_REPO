@@ -135,6 +135,20 @@ def test_unvalidated_analytics_are_never_claimed(synthetic_clip):
         assert forbidden not in dumped
 
 
+def test_manual_map_is_discarded_after_view_moves(synthetic_clip, monkeypatch):
+    calls = 0
+
+    def changed(_reference, _frame):
+        nonlocal calls
+        calls += 1
+        return calls >= 20
+
+    monkeypatch.setattr("picklepro.pipeline.view_changed", changed)
+    result = analyze_video(synthetic_clip.path, _opts(synthetic_clip, min_tracked_seconds=1))
+    assert result.player_selection.tracked_fraction < 0.2
+    assert any("manual court map was discarded" in warning for warning in result.warnings)
+
+
 def test_result_round_trips_through_contract(synthetic_clip):
     r = analyze_video(synthetic_clip.path, _opts(synthetic_clip, max_seconds=3))
     assert AnalysisResultV1.model_validate_json(r.model_dump_json()) == r

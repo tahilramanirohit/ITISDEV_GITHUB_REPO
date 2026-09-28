@@ -64,4 +64,6 @@ From `Pickleball Performance Dashboard/`, run `npm ci && npm run dev`. In anothe
 
 The fixture worker stores a canned result without analyzing the uploaded file. For actual processing, stop it and start `.venv/bin/python -m picklepro.worker --mode measured`. The worker selects the near player by default. See [MODEL_SETUP.md](MODEL_SETUP.md) for optional court, player, and ball models and [CV_PIPELINE.md](CV_PIPELINE.md) for result interpretation. Results may legitimately say `insufficient_data`.
 
+The goals form needs `supabase/migrations/20260928000200_session_goals.sql` on a database already created from these migrations. For the existing ITISDEV project, re-run the idempotent `supabase/scripts/itisdev_upgrade.sql` in the SQL editor before deploying this web build. This changes only the selected project's schema; committing code does not run it. Older sessions receive empty goals and no self-ratings.
+
 [Supabase migration deployment](https://supabase.com/docs/guides/deployment/database-migrations) · [Supabase resumable uploads](https://supabase.com/docs/guides/storage/uploads/resumable-uploads)

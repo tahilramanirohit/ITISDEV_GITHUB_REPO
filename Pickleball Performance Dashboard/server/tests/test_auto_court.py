@@ -42,14 +42,14 @@ def test_sparse_or_low_confidence_pose_does_not_invent_calibration():
 
 
 def test_video_analysis_uses_detected_court_without_manual_json(synthetic_clip, monkeypatch):
-    class FakeCourtModel:
-        def predict(self, _frame, verbose=False):
-            return [_result(_pose())]
+    class FakeCourtDetector:
+        def __init__(self, _weights):
+            pass
 
-    import picklepro.auto_court as auto_court
-    real_detect = auto_court.detect_court
-    monkeypatch.setattr("picklepro.pipeline.detect_court", lambda path, props, weights, seconds_to_scan:
-                        real_detect(path, props, weights, model=FakeCourtModel(), seconds_to_scan=seconds_to_scan))
+        def calibrate_frame(self, frame):
+            return calibration_from_pose(_result(_pose()), (frame.shape[1], frame.shape[0]))
+
+    monkeypatch.setattr("picklepro.pipeline.CourtPoseDetector", FakeCourtDetector)
     result = analyze_video(synthetic_clip.path, AnalysisOptions(
         court_weights="supplied-by-operator.pt", selection=Selection("court_half", court_half="near"),
         compute_sha256=False))
@@ -57,6 +57,52 @@ def test_video_analysis_uses_detected_court_without_manual_json(synthetic_clip, 
     assert result.calibration.method == "auto_model_landmarks"
     assert result.metrics.court_heatmap.status == "measured"
     assert result.player_selection.tracked_fraction > 0.8
+
+
+def test_frames_without_visible_court_are_not_mapped(synthetic_clip, monkeypatch):
+    class IntermittentCourtDetector:
+        def __init__(self, _weights):
+            self.calls = 0
+
+        def calibrate_frame(self, frame):
+            self.calls += 1
+            return (calibration_from_pose(_result(_pose()), (frame.shape[1], frame.shape[0]))
+                    if self.calls <= 20 else None)
+
+    monkeypatch.setattr("picklepro.pipeline.CourtPoseDetector", IntermittentCourtDetector)
+    result = analyze_video(synthetic_clip.path, AnalysisOptions(
+        court_weights="operator.pt", selection=Selection("court_half", court_half="near"),
+        compute_sha256=False, min_tracked_seconds=1))
+    assert result.player_selection.tracked_fraction < 0.2
+    assert any("excluded from court-position measures" in w for w in result.warnings)
+
+
+def test_camera_cut_limits_court_feedback_to_selected_view(synthetic_clip, monkeypatch):
+    calibration = calibration_from_dict(synthetic_clip.calibration)
+
+    class FakeCourtDetector:
+        def __init__(self, _weights):
+            pass
+
+        def calibrate_frame(self, _frame):
+            return calibration
+
+    calls = 0
+
+    def cut_once(_previous, _frame):
+        nonlocal calls
+        calls += 1
+        return calls == 50
+
+    monkeypatch.setattr("picklepro.pipeline.CourtPoseDetector", FakeCourtDetector)
+    monkeypatch.setattr("picklepro.pipeline.likely_scene_cut", cut_once)
+    result = analyze_video(synthetic_clip.path, AnalysisOptions(
+        court_weights="operator.pt", selection=Selection("court_half", court_half="near"),
+        selection_time_s=15, compute_sha256=False))
+    assert result.metrics.court_heatmap.scope == "selected_view"
+    assert result.coverage.selected_view_duration_s == 13.333
+    assert result.player_selection.tracked_fraction > 0.8
+    assert any("Detected 2 camera views" in w for w in result.warnings)
 
 
 def test_detection_returns_none_when_model_sees_no_court(synthetic_clip):

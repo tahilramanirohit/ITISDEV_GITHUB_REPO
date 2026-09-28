@@ -1,7 +1,7 @@
 # Court, player, and ball model setup
 
 PicklePro's measured worker has three separate detection tasks. The court
-model proposes a one-time ground-plane calibration from the first five seconds.
+model proposes a ground-plane calibration for each sampled frame.
 The player model supplies person boxes and track IDs. The ball model supplies
 observed ball boxes at sampled frames. The heatmap uses player feet and the
 court calibration; ball boxes appear in video replay but do not create shot or
@@ -37,10 +37,10 @@ PICKLEPRO_BALL_WEIGHTS=/absolute/path/to/ball,person,paddle.pt
 ```
 
 Restart the worker after changing its environment. Upload a permitted
-fixed-camera video with the complete court visible early in the clip. The
+handheld or fixed-camera video. Court-position feedback needs enough sampled frames with visible court lines. The
 result shows the calibration method, player detector, ball detector, coverage,
 warnings, and time-stamped boxes. If the court landmarks are weak, the
-heatmap remains `insufficient_data`; manual calibration is the fallback.
+heatmap remains `insufficient_data`; manual calibration is a fallback only for a stable camera view.
 
 Before using these results as performance evidence, compare detections with
 hand-labelled real clips from the intended camera angle. Record court

@@ -105,8 +105,11 @@
           "type": "string"
         },
         "scope": {
-          "const": "whole_clip",
           "default": "whole_clip",
+          "enum": [
+            "whole_clip",
+            "selected_view"
+          ],
           "title": "Scope",
           "type": "string"
         },
@@ -206,6 +209,19 @@
           "default": 0,
           "title": "Frames With Ball Detections",
           "type": "integer"
+        },
+        "selected_view_duration_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Duration of the selected camera view when a cut was detected; null for a continuous video.",
+          "title": "Selected View Duration S"
         }
       },
       "required": [
@@ -328,8 +344,11 @@
           "type": "string"
         },
         "scope": {
-          "const": "whole_clip",
           "default": "whole_clip",
+          "enum": [
+            "whole_clip",
+            "selected_view"
+          ],
           "title": "Scope",
           "type": "string"
         },
@@ -468,7 +487,7 @@
           "type": "number"
         },
         "tracked_fraction": {
-          "description": "tracked_time_s / coverage.analyzed_duration_s",
+          "description": "tracked_time_s / selected view duration, or whole analyzed duration for a continuous video",
           "title": "Tracked Fraction",
           "type": "number"
         },
@@ -533,8 +552,11 @@
           "type": "string"
         },
         "scope": {
-          "const": "whole_clip",
           "default": "whole_clip",
+          "enum": [
+            "whole_clip",
+            "selected_view"
+          ],
           "title": "Scope",
           "type": "string"
         },
@@ -850,8 +872,11 @@
           "type": "string"
         },
         "scope": {
-          "const": "whole_clip",
           "default": "whole_clip",
+          "enum": [
+            "whole_clip",
+            "selected_view"
+          ],
           "title": "Scope",
           "type": "string"
         },

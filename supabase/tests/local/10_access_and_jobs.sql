@@ -11,8 +11,16 @@ insert into auth.users (id, email) values
 set role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', false);
 
-insert into public.sessions (id, title, session_context, play_format)
-values ('5a000000-0000-4000-8000-00000000000a', 'A practice', 'practice', 'singles');
+insert into public.sessions (id, title, session_context, play_format, improvement_goals, positioning_rating)
+values ('5a000000-0000-4000-8000-00000000000a', 'A practice', 'practice', 'singles', array['positioning'], 3);
+
+select tests.expect_error($$
+  insert into public.sessions (title, session_context, play_format, improvement_goals)
+  values ('invalid goal', 'practice', 'singles', array['invented_skill']) $$,
+  'unknown improvement goal is rejected');
+select tests.expect_error($$
+  update public.sessions set positioning_rating = 6 where id = '5a000000-0000-4000-8000-00000000000a' $$,
+  'self rating outside 1 through 5 is rejected');
 
 select tests.expect_error($$
   insert into public.sessions (title, session_context, play_format, owner_id)

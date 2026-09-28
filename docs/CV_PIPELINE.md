@@ -4,9 +4,9 @@
 
 `server/picklepro/` reads a video sequentially, samples frames at a requested rate, detects moving objects, tracks detections, and records bounding boxes for replay. Motion detection is the default and does **not** establish that an object is a person. It has no model confidence score. Its tracker can reconnect a box after up to two missed samples, but missing samples never create positions or heatmap time. YOLO person detection is optional, requires `server/requirements-yolo.txt` and local weights, and is never downloaded silently. The detector reads the model's class names so a custom pickleball model's ball class cannot be mistaken for a person just because it is class 0.
 
-An optional 14-keypoint court pose model can calibrate the court from the video's opening five seconds. Set `PICKLEPRO_COURT_WEIGHTS` for the worker, or pass `--court-weights` to the CLI. This adapter uses the landmark ordering documented by [pickleball-analysis](https://github.com/sumanblack666/pickleball-analysis); weights are supplied separately and are never downloaded or committed here. It needs the optional `server/requirements-yolo.txt` dependencies. At least six confident, well-spread keypoints and a good robust fit are required. If none is found, the result says `insufficient_data` and manual calibration remains available.
+An optional 14-keypoint court pose model calibrates **each sampled frame** so a handheld pan or zoom cannot reuse a map from an earlier view. Set `PICKLEPRO_COURT_WEIGHTS` for the worker, or pass `--court-weights` to the CLI. This adapter uses the landmark ordering documented by [pickleball-analysis](https://github.com/sumanblack666/pickleball-analysis); weights are supplied separately and are never downloaded or committed here. It needs the optional `server/requirements-yolo.txt` dependencies. At least six confident, well-spread keypoints and a good robust fit are required per frame. Frames without a reliable court map are excluded from court measures. Per-frame inference costs more processing time than the earlier opening-frame scan.
 
-Calibration maps image pixels on the **court ground plane** to metres. A detection's bottom-center box point approximates its foot location. The worker selects the single near-side player by default; the UI can choose the far side or a track ID. Frames with ambiguous half selection are excluded. A court heatmap sums the time represented by each usable sampled frame; it is a whole-clip dwell-time map, not rally analysis.
+Calibration maps image pixels on the **court ground plane** to metres. A detection's bottom-center box point approximates its foot location. The worker selects the single near-side player by default. After the first result, pause the video and click your detection box to re-run for that track and camera view. Frames with ambiguous half selection are excluded. An abrupt detected camera cut limits court measures to the selected view; the UI labels them **selected-view metrics**. Cuts can be missed, and track identity across cuts is not guaranteed. A court heatmap sums the time represented by usable sampled frames, not rallies.
 
 An optional local YOLO model with a `pickleball` or `ball` class saves observed ball boxes for replay. It does not fill gaps between detections or estimate ball speed, height, shots, or rallies. The heatmap needs calibration, player selection, at least 10 tracked seconds, and at least 25% of analyzed time tracked. Without enough evidence the metric and overall result say `insufficient_data`. Zone occupancy is experimental and off by default. Rally segmentation and shot classification are always `not_computed` in this version.
 
@@ -47,7 +47,7 @@ Identify at least four named **ground-plane** court landmarks visible in the ext
 }
 ```
 
-These pixel values only illustrate the file format. Do not use them for footage whose landmarks differ. Net posts are above the ground and are not calibration landmarks. Camera movement, zoom, or a changed crop requires a new calibration. A calibration made at another resolution is rescaled only under the assumption of identical framing.
+These pixel values only illustrate the file format. Do not use them for footage whose landmarks differ. Net posts are above the ground and are not calibration landmarks. A manual map is discarded when the camera view changes; the worker does not stabilize handheld footage. For moving footage, use a compatible court model. A calibration made at another resolution is rescaled only under the assumption of identical framing.
 
 Then analyze:
 
@@ -60,8 +60,9 @@ Use `--track-id N` instead of `--court-half near` when a player can be followed 
 ## Read a result honestly
 
 - `data_origin` is `measured` for pipeline output and `test_fixture` for the worker's canned flow test. A fixture result says nothing about the uploaded video.
-- `coverage` records analyzed start/end, sample stride, decoded/analyzed frames, detection count, and the fraction of the reported video duration covered. Container duration and frame rate can themselves be approximate.
+- `coverage` records analyzed start/end, sample stride, decoded/analyzed frames, detection count, and the fraction of the reported video duration covered. For a detected cut it also records selected-view duration; selected-player tracking fraction uses that view as its denominator. Container duration and frame rate can themselves be approximate.
 - Each `metrics` entry has a status and a validation level. `measured` means computed from observed frames; it does not mean scientifically validated. `synthetic_only` and `not_evaluated` must be presented as such.
+- `metrics.*.scope` is `selected_view` when a camera cut was detected and only the selected view contributed to court measures; `coverage` still describes decoding of the whole upload.
 - `player_positions` contain timestamped pixel boxes for replay. Box visibility depends on detections at that playback time; empty stretches have no boxes.
 - `ball_positions` contain only observed, timestamped boxes with model scores. Missing detections remain missing; a model score is not an accuracy estimate.
 - `calibration.method` says whether landmarks came from the model or manual input. `calibration.reprojection_rmse_m` measures fit to those landmarks, not real-world tracking accuracy. Automatic calibration rejects a poor fit; a poor manual fit is warned about but does not automatically suppress a heatmap.
@@ -69,6 +70,10 @@ Use `--track-id N` instead of `--court-half near` when a player can be followed 
 The synthetic fixture previously produced roughly 3.2 cm median and 9.7 cm 90th-percentile foot-position error under ideal, known geometry. This is a development check, **not** an estimate of accuracy on real matches. Real-footage evaluation still needs permitted, labeled clips with varying lighting, occlusion, court views, players, and camera stability.
 
 The homography cannot infer height above the court, airborne ball arcs, ball speed, shot type, skill, or play style.
+
+### Improvement goals and self-ratings
+
+Each session can store selected goals for positioning, shot outcomes, and shot technique, plus optional 1–5 self-ratings. These ratings are the player's own assessment, never a score inferred from video. The result screen shows goal-by-goal availability. Positioning feedback appears only when the existing coaching evidence gates pass. Shot outcome and technique goals currently show **cannot assess** because the worker does not measure those skills. No manual shot labels are requested from players.
 
 ### Positioning patterns and practice feedback
 

@@ -67,18 +67,25 @@ def in_mapped_area(x: float, y: float) -> bool:
 
 def select_player(
     frames: Sequence[Sequence[dict]],
-    calibration: CourtCalibration,
+    calibration: CourtCalibration | Sequence[Optional[CourtCalibration]],
     selection: Selection,
 ) -> SelectedTrack:
     """Pick the selected player's foot position in each analyzed frame.
 
     ``frames`` is a list (one entry per analyzed frame) of detection dicts with
-    ``track_id`` and ``bbox`` in the calibration's pixel space.
+    ``track_id`` and ``bbox`` in pixel space. Dynamic videos supply one
+    calibration per frame; frames without a court mapping contribute no point.
     """
+    calibrations = [calibration] * len(frames) if isinstance(calibration, CourtCalibration) else calibration
+    if len(calibrations) != len(frames):
+        raise ValueError("Each analyzed frame needs a corresponding calibration.")
     out = SelectedTrack()
-    for detections in frames:
+    for detections, court_map in zip(frames, calibrations):
+        if court_map is None:
+            out.positions_m.append(None)
+            continue
         feet = [foot_point(d["bbox"]) for d in detections]
-        court = calibration.image_to_court(feet) if feet else np.zeros((0, 2))
+        court = court_map.image_to_court(feet) if feet else np.zeros((0, 2))
         candidates: List[Tuple[float, float]] = []
         for det, (x, y) in zip(detections, court):
             x, y = float(x), float(y)

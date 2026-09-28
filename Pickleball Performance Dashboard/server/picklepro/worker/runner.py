@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import tempfile
 import threading
 from dataclasses import dataclass
@@ -80,10 +81,14 @@ def options_from_params(params: dict, cfg: WorkerConfig, filename: Optional[str]
             raise ValueError(f"Unsupported player selection: {json.dumps(sel)[:200]}")
     if selection is None:
         selection = Selection("court_half", court_half="near")
+    selection_time_s = params.get("selection_time_s")
+    if selection_time_s is not None:
+        if isinstance(selection_time_s, bool) or not isinstance(selection_time_s, (int, float)) or not math.isfinite(selection_time_s) or selection_time_s < 0:
+            raise ValueError("selection_time_s must be a non-negative number")
     return AnalysisOptions(detector=cfg.detector, yolo_weights=cfg.yolo_weights,
                            court_weights=cfg.court_weights, ball_weights=cfg.ball_weights,
                            target_fps=cfg.target_fps,
-                           calibration=calibration, selection=selection,
+                           calibration=calibration, selection=selection, selection_time_s=selection_time_s,
                            experimental_zones=bool(params.get("experimental_zones")), source_filename=filename)
 
 

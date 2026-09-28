@@ -8,8 +8,9 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
 from . import PIPELINE_VERSION
-from .auto_court import detect_court
+from .auto_court import CourtPoseDetector
 from .ball_detection import BallDetector
+from .camera_view import likely_scene_cut, view_changed
 from .contract import (
     RALLY_NOT_COMPUTED,
     SHOTS_NOT_COMPUTED,
@@ -56,6 +57,7 @@ class AnalysisOptions:
     max_seconds: Optional[float] = None
     calibration: Optional[CourtCalibration] = None
     selection: Optional[Selection] = None
+    selection_time_s: Optional[float] = None
     experimental_zones: bool = False
     min_tracked_seconds: float = 10.0
     min_tracked_fraction: float = 0.25
@@ -75,14 +77,8 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
         warnings.append("The video did not report a frame rate; 30 fps was assumed for timing.")
 
     calibration = opts.calibration
-    calibration_method = "manual_landmarks"
-    if calibration is None and opts.court_weights:
-        scan_seconds = min(5.0, opts.max_seconds) if opts.max_seconds is not None else 5.0
-        calibration = detect_court(path, props, opts.court_weights, seconds_to_scan=scan_seconds)
-        if calibration is None:
-            warnings.append("The court model could not find enough reliable landmarks in the opening video frames; provide manual calibration or check the camera view.")
-        else:
-            calibration_method = "auto_model_landmarks"
+    court_detector = CourtPoseDetector(opts.court_weights) if calibration is None and opts.court_weights else None
+    calibration_method = "auto_model_landmarks" if court_detector else "manual_landmarks"
     if calibration is not None and calibration.image_size != (props.width, props.height):
         warnings.append(
             f"Calibration was made on a {calibration.image_size[0]}x{calibration.image_size[1]} image and "
@@ -100,6 +96,12 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
 
     stats = ReadStats()
     per_frame: List[List[dict]] = []
+    per_frame_calibration: List[Optional[CourtCalibration]] = []
+    segments: List[int] = []
+    segment = 0
+    previous_sample = None
+    manual_reference = None
+    manual_view_lost = False
     times: List[float] = []
     snapshots: List[PositionSnapshot] = []
     ball_snapshots: List[BallSnapshot] = []
@@ -110,6 +112,19 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
     for index, ts, frame in iter_frames(path, props.fps, stats, max_seconds=opts.max_seconds):
         if index % stride:
             continue
+        if previous_sample is not None and likely_scene_cut(previous_sample, frame):
+            segment += 1
+        previous_sample = frame.copy()
+        segments.append(segment)
+        if court_detector:
+            frame_calibration = court_detector.calibrate_frame(frame)
+        else:
+            if calibration is not None and manual_reference is None:
+                manual_reference = frame.copy()
+            if calibration is not None and manual_reference is not None and not manual_view_lost:
+                manual_view_lost = view_changed(manual_reference, frame)
+            frame_calibration = None if manual_view_lost else calibration
+        per_frame_calibration.append(frame_calibration)
         detections = tracker.update(frame)
         if ball_detector is not None:
             ball = ball_detector.detect(frame)
@@ -152,6 +167,24 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
         warnings.append(f"{stats.decode_failures} frame(s) could not be decoded and were skipped.")
     if ball_detector is not None and not ball_snapshots:
         warnings.append("The ball model found no pickleball in the sampled frames; no ball positions are shown.")
+    if manual_view_lost:
+        warnings.append("Camera movement or a changed view was detected. The manual court map was discarded from that point onward; re-run with a compatible court model for moving footage.")
+
+    selected_view_duration = None
+    if segment > 0 and times:
+        selected_index = min(range(len(times)), key=lambda i: abs(times[i] - opts.selection_time_s)) if opts.selection_time_s is not None else 0
+        selected_segment = segments[selected_index]
+        selected_view_duration = segments.count(selected_segment) * frame_interval_s
+        per_frame_calibration = [c if segments[i] == selected_segment else None
+                                 for i, c in enumerate(per_frame_calibration)]
+        warnings.append(f"Detected {segment + 1} camera views. Court feedback uses only the view containing the selected player frame; select yourself in another view and re-run to inspect it.")
+    mapped_frames = sum(c is not None for c in per_frame_calibration)
+    if court_detector and mapped_frames < frames_analyzed:
+        warnings.append(f"Court landmarks were usable in {mapped_frames} of {frames_analyzed} sampled frames for this analysis. Other frames were excluded from court-position measures.")
+
+    # The result contract keeps one representative calibration for provenance;
+    # actual player positions use only the calibration measured for each frame.
+    representative_calibration = next((c for c in per_frame_calibration if c is not None), None)
 
     coverage = Coverage(
         analyzed_start_s=round(start, 3),
@@ -165,10 +198,13 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
         fraction_of_video_analyzed=round(min(1.0, analyzed_duration / expected), 4) if expected else None,
         frames_with_detections=frames_with_detections,
         frames_with_ball_detections=len(ball_snapshots),
+        selected_view_duration_s=round(selected_view_duration, 3) if selected_view_duration is not None else None,
     )
 
     heatmap_metric, zone_metric, positioning_metric, selection_summary, calib_summary = _court_metrics(
-        per_frame, frame_interval_s, analyzed_duration, calibration, calibration_method, opts, warnings
+        per_frame, frame_interval_s, analyzed_duration, per_frame_calibration,
+        representative_calibration, calibration_method, opts, warnings,
+        selected_view=segment > 0, selected_view_duration=selected_view_duration
     )
 
     if frames_analyzed == 0:
@@ -177,8 +213,9 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
         status, message = "insufficient_data", "No moving players were detected in the analyzed frames."
     elif heatmap_metric.status == "measured":
         status = "ok"
+        reference = selected_view_duration if selected_view_duration is not None else analyzed_duration
         message = (f"Court heatmap measured for the selected player over {selection_summary.tracked_time_s:.1f}s "
-                   f"of tracked time ({selection_summary.tracked_fraction:.0%} of the analyzed {analyzed_duration:.1f}s).")
+                   f"of tracked time ({selection_summary.tracked_fraction:.0%} of the applicable {reference:.1f}s view).")
     else:
         status = "insufficient_data"
         message = f"Detections are available for review, but court metrics were not produced: {heatmap_metric.reason}"
@@ -220,17 +257,19 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
     )
 
 
-def _court_metrics(per_frame, frame_interval_s, analyzed_duration, calibration, calibration_method,
-                   opts: AnalysisOptions, warnings):
+def _court_metrics(per_frame, frame_interval_s, analyzed_duration, per_frame_calibration,
+                   calibration, calibration_method,
+                   opts: AnalysisOptions, warnings, selected_view=False, selected_view_duration=None):
+    scope = "selected_view" if selected_view else "whole_clip"
     zones_off = ZoneOccupancyMetric(
-        status="not_computed",
+        status="not_computed", scope=scope,
         reason="Zone occupancy is experimental and disabled by default (enable with experimental_zones).",
     )
     calib_summary = None
     if calibration is None:
         reason = "Court not calibrated: at least 4 court landmarks are required."
-        return (CourtHeatmapMetric(status="insufficient_data", reason=reason),
-                zones_off, PositioningMetric(status="insufficient_data", reason=reason), None, None)
+        return (CourtHeatmapMetric(status="insufficient_data", scope=scope, reason=reason),
+                zones_off, PositioningMetric(status="insufficient_data", scope=scope, reason=reason), None, None)
 
     calib_summary = CalibrationSummary(
         method=calibration_method, court_model=COURT_MODEL, landmarks_used=calibration.landmarks_used,
@@ -244,12 +283,13 @@ def _court_metrics(per_frame, frame_interval_s, analyzed_duration, calibration, 
     sel = opts.selection
     if sel is None:
         reason = "No player selected: choose a track id or a court half."
-        return (CourtHeatmapMetric(status="insufficient_data", reason=reason),
-                zones_off, PositioningMetric(status="insufficient_data", reason=reason), None, calib_summary)
+        return (CourtHeatmapMetric(status="insufficient_data", scope=scope, reason=reason),
+                zones_off, PositioningMetric(status="insufficient_data", scope=scope, reason=reason), None, calib_summary)
 
-    track = select_player(per_frame, calibration, sel)
+    track = select_player(per_frame, per_frame_calibration, sel)
     tracked_time = track.observed * frame_interval_s
-    fraction = tracked_time / analyzed_duration if analyzed_duration else 0.0
+    reference_duration = selected_view_duration if selected_view_duration is not None else analyzed_duration
+    fraction = tracked_time / reference_duration if reference_duration else 0.0
     selection_summary = PlayerSelectionSummary(
         method=sel.method, track_id=sel.track_id, court_half=sel.court_half,
         tracked_time_s=round(tracked_time, 3), tracked_fraction=round(fraction, 4),
@@ -259,30 +299,30 @@ def _court_metrics(per_frame, frame_interval_s, analyzed_duration, calibration, 
         warnings.append(f"{track.ambiguous_frames} frame(s) excluded because more than one detection matched the selection.")
 
     if tracked_time < opts.min_tracked_seconds or fraction < opts.min_tracked_fraction:
-        reason = (f"Selected player was tracked for {tracked_time:.1f}s ({fraction:.0%} of analyzed time); "
+        reason = (f"Selected player was tracked for {tracked_time:.1f}s ({fraction:.0%} of the applicable view); "
                   f"at least {opts.min_tracked_seconds:g}s and {opts.min_tracked_fraction:.0%} are required.")
-        return (CourtHeatmapMetric(status="insufficient_data", reason=reason), zones_off,
-                PositioningMetric(status="insufficient_data", reason=reason), selection_summary, calib_summary)
+        return (CourtHeatmapMetric(status="insufficient_data", scope=scope, reason=reason), zones_off,
+                PositioningMetric(status="insufficient_data", scope=scope, reason=reason), selection_summary, calib_summary)
 
     heatmap = CourtHeatmapMetric(
-        status="measured", validation="not_evaluated",
-        reason="Positional accuracy has not been evaluated on real footage. Whole-clip dwell time, including time between rallies.",
+        status="measured", scope=scope, validation="not_evaluated",
+        reason="Positional accuracy has not been evaluated on real footage. Dwell time covers the selected view when the upload has cuts, and includes time between rallies.",
         value=HeatmapValue(**dwell_heatmap(track, frame_interval_s)),
     )
     zones = zones_off
     if opts.experimental_zones:
         zones = ZoneOccupancyMetric(
-            status="experimental", validation="synthetic_only",
+            status="experimental", scope=scope, validation="synthetic_only",
             reason="Zone boundaries are defined but positional error has only been measured on synthetic video. "
                    "Kitchen-line presence is not computed.",
             value=ZoneOccupancyValue(**zone_occupancy(track, frame_interval_s)),
         )
     positions = positioning_patterns(track, frame_interval_s, sel.court_half if sel.method == "court_half" else None)
     positioning = PositioningMetric(
-        status="measured", validation="synthetic_only",
+        status="measured", scope=scope, validation="synthetic_only",
         reason="Depth bands, lingers and approaches from the selected player's smoothed foot position. Checked on "
                "synthetic video only; includes time between rallies; describes position, not shot quality.",
         value=PositioningValue(**positions),
     ) if positions else PositioningMetric(
-        status="insufficient_data", reason="The selected player was never mapped inside their half of the court.")
+        status="insufficient_data", scope=scope, reason="The selected player was never mapped inside their half of the court.")
     return heatmap, zones, positioning, selection_summary, calib_summary

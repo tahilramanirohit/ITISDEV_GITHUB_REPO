@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { AlertTriangle, FlaskConical, Info } from "lucide-react";
 import {
   METRIC_KEYS, METRIC_LABELS, VALIDATION_LABELS,
   type AnalysisResultV1, type MetricKey, type MetricStatus,
 } from "../../lib/analysis/contract";
+import { GOAL_LABELS, type SessionRow } from "../../lib/api/types";
+import { buildCoachingReport } from "../../lib/analysis/coaching";
 import { BLUE_SKY, BORDER, NEON, ORANGE, ORANGE_L, ROSE, VIOLET, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Card, Notice, Pill, WidgetHeader } from "../shell/primitives";
 import { CourtDwellHeatmap } from "./CourtDwellHeatmap";
@@ -54,13 +57,16 @@ function Row({ k, v }: { k: string; v: React.ReactNode }) {
   );
 }
 
-export function ResultView({ result, videoUrl, previous }: {
+export function ResultView({ result, videoUrl, previous, session, onSelectTrack }: {
   result: AnalysisResultV1; videoUrl: string | null; previous?: PreviousSession | null;
+  session?: SessionRow; onSelectTrack?: (trackId: number, timeSeconds: number) => void;
 }) {
   const c = result.coverage;
   const heat = result.metrics.court_heatmap;
   const zones = result.metrics.zone_occupancy;
   const sel = result.player_selection;
+  const coaching = buildCoachingReport(result);
+  const [selectingPlayer, setSelectingPlayer] = useState(false);
 
   return (
     <div className="space-y-4" data-testid="result-view">
@@ -83,7 +89,7 @@ export function ResultView({ result, videoUrl, previous }: {
           <Pill color={result.status === "ok" ? NEON : ORANGE}>
             {result.status === "ok" ? "RESULT" : "INSUFFICIENT DATA"}
           </Pill>
-          <Pill color={BLUE_SKY}>WHOLE-CLIP METRICS</Pill>
+          <Pill color={BLUE_SKY}>{heat.scope === "selected_view" ? "SELECTED-VIEW METRICS" : "WHOLE-CLIP METRICS"}</Pill>
         </div>
         <p className="text-sm text-white">{result.message}</p>
         {result.warnings.length > 0 && (
@@ -97,15 +103,49 @@ export function ResultView({ result, videoUrl, previous }: {
         )}
       </Card>
 
-      <CoachingPanel result={result} previous={previous} />
+      {session?.improvement_goals?.length ? (
+        <Card accent={BLUE_SKY}>
+          <WidgetHeader title="Your goals and video evidence" subtitle="Your own skill ratings are separate from video measurements." />
+          <ul className="space-y-2">
+            {session.improvement_goals.map((goal) => {
+              const rating = session[`${goal}_rating`];
+              const observed = goal === "positioning" && coaching.available;
+              const reason = goal === "positioning" ? coaching.introduction
+                : goal === "shot_outcomes"
+                  ? "Shot outcomes cannot be assessed yet. Ball observations alone do not establish contact, landing, or point result."
+                  : "Technique cannot be assessed yet. The current analysis does not measure body and paddle mechanics.";
+              return <li key={goal} className="rounded-xl p-3 text-xs" style={{ border: `1px solid ${BORDER}` }}>
+                <p className="font-semibold text-white">{GOAL_LABELS[goal]} · {observed ? "video feedback available" : "cannot assess from this analysis"}</p>
+                <p className="mt-1" style={{ color: WHITE_DIM }}>Your starting rating: {rating ? `${rating}/5` : "not set"}</p>
+                <p className="mt-1" style={{ color: observed ? NEON : ORANGE_L }}>{reason}</p>
+              </li>;
+            })}
+          </ul>
+        </Card>
+      ) : null}
+
+      {(!session?.improvement_goals?.length || session.improvement_goals.includes("positioning")) &&
+        <CoachingPanel result={result} previous={previous} />}
 
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
         <div className="space-y-4">
+          {videoUrl && onSelectTrack && result.tracks.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" onClick={() => setSelectingPlayer((value) => !value)}
+                className="rounded-lg px-3 py-2 text-xs font-semibold" style={{ background: BLUE_SKY, color: "#071a3e" }}>
+                {selectingPlayer ? "Cancel player selection" : "Select yourself in the video"}
+              </button>
+              {selectingPlayer && <p className="text-xs" style={{ color: WHITE_DIM }}>Pause on a frame where you are visible, then click your blue box. This re-runs the analysis for that track.</p>}
+            </div>
+          )}
           <VideoOverlayPlayer src={videoUrl} positions={result.player_positions} ballPositions={result.ball_positions ?? []}
-            selectedTrackId={sel?.method === "track_id" ? sel.track_id : null} />
+            selectedTrackId={sel?.method === "track_id" ? sel.track_id : null}
+            onSelectTrack={selectingPlayer ? (id, time) => { setSelectingPlayer(false); onSelectTrack?.(id, time); } : undefined} />
 
           <Card>
-            <WidgetHeader title="Metrics" subtitle="Each metric reports its own status. Nothing here is a rally-level or shot-level finding." />
+            <WidgetHeader title="Metrics" subtitle={heat.scope === "selected_view"
+              ? "Court measures cover one camera view. Shot and rally findings are not available."
+              : "Each metric reports its own status. Nothing here is a rally-level or shot-level finding."} />
             <ul className="space-y-2">
               {METRIC_KEYS.map((key: MetricKey) => {
                 const m = result.metrics[key];
@@ -163,6 +203,7 @@ export function ResultView({ result, videoUrl, previous }: {
             <Row k="Video length" v={fmtS(result.video.container_duration_s)} />
             <Row k="Analyzed" v={`${fmtS(c.analyzed_start_s)} – ${fmtS(c.analyzed_end_s)}`} />
             <Row k="Share of video analyzed" v={pct(c.fraction_of_video_analyzed)} />
+            {c.selected_view_duration_s != null && <Row k="Selected camera view" v={fmtS(c.selected_view_duration_s)} />}
             <Row k="Frames analyzed" v={`${c.frames_analyzed} (every ${c.sample_stride}${c.sample_stride === 1 ? "" : "th"} frame)`} />
             <Row k="Frames with player detections" v={c.frames_with_detections} />
             <Row k="Frames with ball detections" v={c.frames_with_ball_detections ?? 0} />

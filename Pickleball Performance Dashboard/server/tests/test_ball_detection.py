@@ -45,8 +45,14 @@ def test_pipeline_records_ball_observations_without_claiming_shots(synthetic_cli
 def test_court_player_and_ball_paths_produce_one_honest_result(synthetic_clip, monkeypatch):
     monkeypatch.setattr("picklepro.pipeline.BallDetector", lambda _weights:
                         BallDetector("operator-weights.pt", model=FakeBallModel()))
-    monkeypatch.setattr("picklepro.pipeline.detect_court", lambda *_args, **_kwargs:
-                        calibration_from_dict(synthetic_clip.calibration))
+    class FakeCourtDetector:
+        def __init__(self, _weights):
+            pass
+
+        def calibrate_frame(self, _frame):
+            return calibration_from_dict(synthetic_clip.calibration)
+
+    monkeypatch.setattr("picklepro.pipeline.CourtPoseDetector", FakeCourtDetector)
     result = analyze_video(synthetic_clip.path, AnalysisOptions(
         court_weights="court.pt", ball_weights="object.pt",
         selection=Selection("court_half", court_half="near"), compute_sha256=False))

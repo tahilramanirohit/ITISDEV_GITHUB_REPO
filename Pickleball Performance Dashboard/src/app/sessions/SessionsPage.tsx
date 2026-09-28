@@ -11,6 +11,7 @@ import { deriveAnalysisState } from "../../lib/analysis/state";
 import { BLUE_SKY, BORDER, NEON, NEON_D, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Card, Notice, Pill, WidgetHeader, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
 import { AnalysisStateBadge } from "../analysis/AnalysisStatus";
+import { GoalFields } from "./GoalFields";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -31,7 +32,7 @@ export default function SessionsPage({ sb }: { sb: SupabaseClient }) {
           <div className="text-[11px] font-bold font-mono tracking-widest uppercase" style={{ color: NEON }}>My sessions</div>
           <h1 className="text-xl font-bold text-white">Recorded practice and games</h1>
           <p className="text-xs mt-0.5" style={{ color: WHITE_DIM }}>
-            Create a session, upload one fixed-camera video, and review what the analysis could and could not measure.
+            Choose what to improve, upload a video, and review what the analysis could and could not measure.
           </p>
         </div>
         {!creating && (
@@ -86,7 +87,8 @@ function NewSessionForm({ sb, onCancel }: { sb: SupabaseClient; onCancel: () => 
   const navigate = useNavigate();
   const [form, setForm] = useState<NewSession>({
     title: "", session_date: today(), session_context: "practice", play_format: "singles",
-    performance_scope: "individual", notes: null,
+    performance_scope: "individual", notes: null, improvement_goals: [],
+    positioning_rating: null, shot_outcomes_rating: null, shot_technique_rating: null,
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -95,6 +97,7 @@ function NewSessionForm({ sb, onCancel }: { sb: SupabaseClient; onCancel: () => 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.title.trim()) return setError("Give the session a title.");
+    if (!form.improvement_goals.length) return setError("Choose at least one skill to improve.");
     setBusy(true);
     setError("");
     try {
@@ -143,9 +146,12 @@ function NewSessionForm({ sb, onCancel }: { sb: SupabaseClient; onCancel: () => 
           </select>
         </div>
         <div className="sm:col-span-2">
+          <GoalFields value={form} onChange={(goals) => setForm((current) => ({ ...current, ...goals }))} />
+        </div>
+        <div className="sm:col-span-2">
           <label className={labelClass} style={labelStyle} htmlFor="notes">Notes (optional)</label>
           <textarea id="notes" rows={2} maxLength={2000} value={form.notes ?? ""} onChange={(e) => set("notes", e.target.value)}
-            placeholder="Goal for the session, what to review…" className="w-full rounded-xl px-3 py-2 text-sm" style={fieldStyle} />
+            placeholder="What would you like the coach to pay attention to?" className="w-full rounded-xl px-3 py-2 text-sm" style={fieldStyle} />
         </div>
         {error && <div className="sm:col-span-2"><Notice tone="error">{error}</Notice></div>}
         <div className="sm:col-span-2 flex gap-2">

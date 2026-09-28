@@ -4,6 +4,7 @@ import testFixture from "../../../contracts/fixtures/analysis_result.test_fixtur
 import insufficient from "../../../contracts/fixtures/analysis_result.insufficient.v1.json";
 import { parseAnalysisResult } from "../../lib/analysis/contract";
 import { ResultView } from "./ResultView";
+import type { SessionRow } from "../../lib/api/types";
 
 afterEach(cleanup);
 
@@ -35,6 +36,18 @@ describe("ResultView", () => {
     expect(screen.getAllByText("INSUFFICIENT DATA").length).toBe(3); // overall status + heatmap + positioning
     expect(screen.getAllByText(/Court not calibrated/).length).toBeGreaterThan(0);
     expect(screen.queryByRole("img", { name: /Court heatmap/ })).toBeNull();
+  });
+
+  it("shows player goals separately from video findings", () => {
+    const session = {
+      improvement_goals: ["positioning", "shot_outcomes", "shot_technique"],
+      positioning_rating: 3, shot_outcomes_rating: 2, shot_technique_rating: null,
+    } as SessionRow;
+    render(<ResultView result={parseAnalysisResult(insufficient)} videoUrl={null} session={session} />);
+    expect(screen.getByText("Your goals and video evidence")).toBeTruthy();
+    expect(screen.getByText("Court positioning · cannot assess from this analysis")).toBeTruthy();
+    expect(screen.getByText("Shot outcomes · cannot assess from this analysis")).toBeTruthy();
+    expect(screen.getByText(/Ball observations alone do not establish contact/)).toBeTruthy();
   });
 
   it("plays and stops the same evidence-based advice shown on screen", () => {

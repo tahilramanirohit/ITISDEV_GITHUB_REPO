@@ -26,14 +26,34 @@ export function VideoOverlayPlayer({
   positions,
   ballPositions = [],
   selectedTrackId,
+  onSelectTrack,
 }: {
   src: string | null;
   positions: PositionSnapshot[];
   ballPositions?: BallSnapshot[];
   selectedTrackId?: number | null;
+  onSelectTrack?: (trackId: number, timeSeconds: number) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  function selectPlayer(event: React.MouseEvent<HTMLCanvasElement>) {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!onSelectTrack || !video || !canvas || !video.videoWidth) return;
+    const rect = canvas.getBoundingClientRect();
+    const scale = Math.min(canvas.width / video.videoWidth, canvas.height / video.videoHeight);
+    const offX = (canvas.width - video.videoWidth * scale) / 2;
+    const offY = (canvas.height - video.videoHeight * scale) / 2;
+    const x = ((event.clientX - rect.left) * canvas.width / rect.width - offX) / scale;
+    const y = ((event.clientY - rect.top) * canvas.height / rect.height - offY) / scale;
+    const matches = nearest(positions, video.currentTime)?.players.filter((player) => {
+      const [x1, y1, x2, y2] = player.bbox;
+      return player.track_id != null && x >= x1 && x <= x2 && y >= y1 && y <= y2;
+    }) ?? [];
+    if (matches.length !== 1 || matches[0].track_id == null) return;
+    onSelectTrack(matches[0].track_id, video.currentTime);
+  }
 
   const drawOverlay = useCallback(() => {
     const video = videoRef.current;
@@ -100,7 +120,8 @@ export function VideoOverlayPlayer({
       {src ? (
         <div className="relative w-full flex items-center justify-center">
           <video ref={videoRef} src={src} controls className="w-full max-h-[420px] object-contain block" onLoadedMetadata={drawOverlay} />
-          <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full pointer-events-none" />
+          <canvas ref={canvasRef} onClick={selectPlayer}
+            className={`absolute top-0 left-0 w-full h-full ${onSelectTrack ? "cursor-crosshair" : "pointer-events-none"}`} />
         </div>
       ) : (
         <p className="text-sm p-8 text-center" style={{ color: WHITE_DIM }}>Video preview unavailable.</p>

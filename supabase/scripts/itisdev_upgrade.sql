@@ -23,6 +23,10 @@ alter table public.sessions add column if not exists session_context text not nu
 alter table public.sessions add column if not exists play_format text not null default 'singles';
 alter table public.sessions add column if not exists performance_scope text not null default 'individual';
 alter table public.sessions add column if not exists updated_at timestamptz not null default now();
+alter table public.sessions add column if not exists improvement_goals text[] not null default '{}'::text[];
+alter table public.sessions add column if not exists positioning_rating smallint;
+alter table public.sessions add column if not exists shot_outcomes_rating smallint;
+alter table public.sessions add column if not exists shot_technique_rating smallint;
 alter table public.sessions alter column session_context drop default;
 alter table public.sessions alter column play_format drop default;
 
@@ -52,6 +56,19 @@ begin
   if not exists (select 1 from pg_constraint where conname = 'sessions_performance_scope_check') then
     alter table public.sessions add constraint sessions_performance_scope_check
       check (performance_scope in ('individual', 'pair'));
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'sessions_improvement_goals_check') then
+    alter table public.sessions add constraint sessions_improvement_goals_check
+      check (improvement_goals <@ array['positioning', 'shot_outcomes', 'shot_technique']::text[]);
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'sessions_positioning_rating_check') then
+    alter table public.sessions add constraint sessions_positioning_rating_check check (positioning_rating between 1 and 5);
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'sessions_shot_outcomes_rating_check') then
+    alter table public.sessions add constraint sessions_shot_outcomes_rating_check check (shot_outcomes_rating between 1 and 5);
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'sessions_shot_technique_rating_check') then
+    alter table public.sessions add constraint sessions_shot_technique_rating_check check (shot_technique_rating between 1 and 5);
   end if;
 end $$;
 

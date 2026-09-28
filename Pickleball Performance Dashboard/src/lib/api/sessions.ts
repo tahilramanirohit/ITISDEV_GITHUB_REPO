@@ -2,10 +2,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   AnalysisJobRow,
   AnalysisResultRow,
+  GoalValues,
+  ImprovementGoal,
   PerformanceScope,
   PlayFormat,
   SessionContext,
   SessionRow,
+  SelfRating,
   VideoAssetRow,
 } from "./types";
 import { buildStoragePath } from "../upload/validate";
@@ -98,10 +101,18 @@ export type NewSession = {
   play_format: PlayFormat;
   performance_scope: PerformanceScope;
   notes: string | null;
+  improvement_goals: ImprovementGoal[];
+  positioning_rating: SelfRating | null;
+  shot_outcomes_rating: SelfRating | null;
+  shot_technique_rating: SelfRating | null;
 };
 
 export async function createSession(sb: SupabaseClient, input: NewSession): Promise<SessionRow> {
   return check<SessionRow>(await sb.from("sessions").insert(input).select("*").single());
+}
+
+export async function updateSessionGoals(sb: SupabaseClient, sessionId: string, goals: GoalValues): Promise<SessionRow> {
+  return check<SessionRow>(await sb.from("sessions").update(goals).eq("id", sessionId).select("*").single());
 }
 
 export async function deleteSession(sb: SupabaseClient, bundle: SessionBundle): Promise<void> {

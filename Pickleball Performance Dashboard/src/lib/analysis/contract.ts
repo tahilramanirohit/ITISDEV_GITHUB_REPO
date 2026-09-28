@@ -21,7 +21,7 @@ export type MetricKey = (typeof METRIC_KEYS)[number];
 export type Metric = {
   status: MetricStatus;
   validation: ValidationLevel;
-  scope: "whole_clip";
+  scope: "whole_clip" | "selected_view";
   reason: string | null;
 };
 
@@ -95,6 +95,7 @@ export type AnalysisResultV1 = {
     fraction_of_video_analyzed: number | null;
     frames_with_detections: number;
     frames_with_ball_detections?: number;
+    selected_view_duration_s?: number | null;
   };
   calibration: {
     method: "manual_landmarks" | "auto_model_landmarks";
@@ -170,6 +171,7 @@ export function parseAnalysisResult(input: unknown): AnalysisResultV1 {
   num(cov.analyzed_duration_s, "coverage.analyzed_duration_s");
   num(cov.frames_analyzed, "coverage.frames_analyzed");
   if (cov.frames_with_ball_detections !== undefined) num(cov.frames_with_ball_detections, "coverage.frames_with_ball_detections");
+  if (cov.selected_view_duration_s != null) num(cov.selected_view_duration_s, "coverage.selected_view_duration_s");
   if (input.calibration !== null) {
     if (!isObj(input.calibration)) throw new ContractError("calibration: expected an object or null");
     oneOf(input.calibration.method, ["manual_landmarks", "auto_model_landmarks"] as const, "calibration.method");
@@ -184,6 +186,7 @@ export function parseAnalysisResult(input: unknown): AnalysisResultV1 {
     if (!isObj(m)) throw new ContractError(`metrics.${key}: missing`);
     oneOf(m.status, METRIC_STATUSES, `metrics.${key}.status`);
     oneOf(m.validation, VALIDATION_LEVELS, `metrics.${key}.validation`);
+    oneOf(m.scope, ["whole_clip", "selected_view"] as const, `metrics.${key}.scope`);
   }
   const heat = (metrics as Record<string, Record<string, unknown>>).court_heatmap;
   if (heat.status === "measured" && !isObj(heat.value)) {
