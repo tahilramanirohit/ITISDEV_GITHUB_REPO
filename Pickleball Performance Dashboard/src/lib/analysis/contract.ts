@@ -6,7 +6,7 @@ export const RESULT_STATUSES = ["ok", "insufficient_data"] as const;
 export const DATA_ORIGINS = ["measured", "test_fixture"] as const;
 export const METRIC_STATUSES = ["measured", "insufficient_data", "not_computed", "experimental"] as const;
 export const VALIDATION_LEVELS = ["not_evaluated", "synthetic_only", "evaluated_on_real_footage"] as const;
-export const METRIC_KEYS = ["court_heatmap", "zone_occupancy", "rally_segmentation", "shot_classification"] as const;
+export const METRIC_KEYS = ["court_heatmap", "zone_occupancy", "positioning", "rally_segmentation", "shot_classification"] as const;
 export const RESULT_KEYS = [
   "schema_version", "status", "data_origin", "message", "provenance", "video", "coverage", "calibration",
   "player_selection", "tracks", "player_positions", "ball_positions", "metrics", "warnings",
@@ -40,6 +40,24 @@ export type ZoneOccupancyValue = {
   zone_definitions: Record<string, string>;
   seconds: Record<string, number>;
   fraction_of_tracked_time: Record<string, number>;
+};
+
+export const POSITION_BANDS = ["behind_baseline", "baseline_area", "transition", "kitchen_line", "inside_kitchen"] as const;
+export type PositionBand = (typeof POSITION_BANDS)[number];
+
+export type PositioningValue = {
+  court_half: "near" | "far";
+  band_definitions: Record<string, string>;
+  seconds: Record<PositionBand, number>;
+  fraction_of_mapped_time: Record<PositionBand, number>;
+  mapped_time_s: number;
+  left_side_fraction: number | null;
+  transition_lingers: number;
+  longest_transition_linger_s: number | null;
+  approaches_to_kitchen_line: number;
+  median_approach_s: number | null;
+  retreats_to_baseline: number;
+  distance_covered_m: number;
 };
 
 export type PlayerBox = { track_id: number | null; bbox: [number, number, number, number]; confidence: number | null };
@@ -100,6 +118,7 @@ export type AnalysisResultV1 = {
   metrics: {
     court_heatmap: Metric & { value: HeatmapValue | null };
     zone_occupancy: Metric & { value: ZoneOccupancyValue | null };
+    positioning: Metric & { value: PositioningValue | null };
     rally_segmentation: Metric;
     shot_classification: Metric;
   };
@@ -126,6 +145,11 @@ function num(v: unknown, path: string): number {
  * Validate the parts of a result the UI relies on to describe it truthfully.
  * Unknown or malformed results are rejected rather than rendered as if valid.
  */
+const POSITIONING_NOT_COMPUTED = {
+  status: "not_computed", validation: "not_evaluated", scope: "whole_clip",
+  reason: "Positioning patterns were not computed for this result. Re-run analysis to add them.", value: null,
+};
+
 export function parseAnalysisResult(input: unknown): AnalysisResultV1 {
   if (!isObj(input)) throw new ContractError("result: expected an object");
   if (input.schema_version !== "1.0") {
@@ -151,15 +175,33 @@ export function parseAnalysisResult(input: unknown): AnalysisResultV1 {
     oneOf(input.calibration.method, ["manual_landmarks", "auto_model_landmarks"] as const, "calibration.method");
   }
   if (!isObj(input.metrics)) throw new ContractError("metrics: expected an object");
+  // Results saved before positioning existed are still valid; show them as not computed.
+  const metrics = input.metrics.positioning === undefined
+    ? { ...input.metrics, positioning: POSITIONING_NOT_COMPUTED }
+    : input.metrics;
   for (const key of METRIC_KEYS) {
-    const m = (input.metrics as Record<string, unknown>)[key];
+    const m = (metrics as Record<string, unknown>)[key];
     if (!isObj(m)) throw new ContractError(`metrics.${key}: missing`);
     oneOf(m.status, METRIC_STATUSES, `metrics.${key}.status`);
     oneOf(m.validation, VALIDATION_LEVELS, `metrics.${key}.validation`);
   }
-  const heat = (input.metrics as Record<string, Record<string, unknown>>).court_heatmap;
+  const heat = (metrics as Record<string, Record<string, unknown>>).court_heatmap;
   if (heat.status === "measured" && !isObj(heat.value)) {
     throw new ContractError("metrics.court_heatmap: measured without a value");
+  }
+  const positioning = (metrics as Record<string, Record<string, unknown>>).positioning;
+  if (positioning.status === "measured") {
+    const v = positioning.value;
+    if (!isObj(v) || !isObj(v.fraction_of_mapped_time) || !isObj(v.seconds)) {
+      throw new ContractError("metrics.positioning: measured without a value");
+    }
+    oneOf(v.court_half, ["near", "far"] as const, "metrics.positioning.value.court_half");
+    for (const band of POSITION_BANDS) {
+      num((v.fraction_of_mapped_time as Record<string, unknown>)[band], `metrics.positioning.value.fraction_of_mapped_time.${band}`);
+    }
+    num(v.mapped_time_s, "metrics.positioning.value.mapped_time_s");
+    num(v.transition_lingers, "metrics.positioning.value.transition_lingers");
+    num(v.approaches_to_kitchen_line, "metrics.positioning.value.approaches_to_kitchen_line");
   }
   if (!Array.isArray(input.player_positions) || !Array.isArray(input.tracks) || !Array.isArray(input.warnings)) {
     throw new ContractError("player_positions/tracks/warnings: expected arrays");
@@ -177,12 +219,13 @@ export function parseAnalysisResult(input: unknown): AnalysisResultV1 {
       ball.bbox.forEach((value) => num(value, "ball_positions.bbox"));
     }
   }
-  return input as unknown as AnalysisResultV1;
+  return { ...input, metrics } as unknown as AnalysisResultV1;
 }
 
 export const METRIC_LABELS: Record<MetricKey, string> = {
   court_heatmap: "Court heatmap (dwell time)",
   zone_occupancy: "Zone occupancy",
+  positioning: "Court positioning patterns",
   rally_segmentation: "Rally segmentation",
   shot_classification: "Shot classification",
 };

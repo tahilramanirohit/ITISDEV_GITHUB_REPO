@@ -362,6 +362,9 @@
         "zone_occupancy": {
           "$ref": "#/$defs/ZoneOccupancyMetric"
         },
+        "positioning": {
+          "$ref": "#/$defs/PositioningMetric"
+        },
         "rally_segmentation": {
           "$ref": "#/$defs/Metric"
         },
@@ -504,6 +507,175 @@
         "players"
       ],
       "title": "PositionSnapshot",
+      "type": "object"
+    },
+    "PositioningMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "measured",
+            "insufficient_data",
+            "not_computed",
+            "experimental"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "validation": {
+          "default": "not_evaluated",
+          "enum": [
+            "not_evaluated",
+            "synthetic_only",
+            "evaluated_on_real_footage"
+          ],
+          "title": "Validation",
+          "type": "string"
+        },
+        "scope": {
+          "const": "whole_clip",
+          "default": "whole_clip",
+          "title": "Scope",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Why the metric is missing, partial, or experimental.",
+          "title": "Reason"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PositioningValue"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "PositioningMetric",
+      "type": "object"
+    },
+    "PositioningValue": {
+      "additionalProperties": false,
+      "properties": {
+        "court_half": {
+          "description": "The selected player's side; depths are from this baseline.",
+          "enum": [
+            "near",
+            "far"
+          ],
+          "title": "Court Half",
+          "type": "string"
+        },
+        "band_definitions": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Band Definitions",
+          "type": "object"
+        },
+        "seconds": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Seconds",
+          "type": "object"
+        },
+        "fraction_of_mapped_time": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Fraction Of Mapped Time",
+          "type": "object"
+        },
+        "mapped_time_s": {
+          "title": "Mapped Time S",
+          "type": "number"
+        },
+        "left_side_fraction": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Share of in-court time on the player's own left half, facing the net.",
+          "title": "Left Side Fraction"
+        },
+        "transition_lingers": {
+          "description": "Continuous stays of at least 2 s in the transition band.",
+          "title": "Transition Lingers",
+          "type": "integer"
+        },
+        "longest_transition_linger_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Longest Transition Linger S"
+        },
+        "approaches_to_kitchen_line": {
+          "description": "Moves from the baseline bands to the kitchen-line bands.",
+          "title": "Approaches To Kitchen Line",
+          "type": "integer"
+        },
+        "median_approach_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Median time from last baseline-area sample to first kitchen-line sample.",
+          "title": "Median Approach S"
+        },
+        "retreats_to_baseline": {
+          "title": "Retreats To Baseline",
+          "type": "integer"
+        },
+        "distance_covered_m": {
+          "description": "Path length of the smoothed foot position; includes walking between points.",
+          "title": "Distance Covered M",
+          "type": "number"
+        }
+      },
+      "required": [
+        "court_half",
+        "band_definitions",
+        "seconds",
+        "fraction_of_mapped_time",
+        "mapped_time_s",
+        "transition_lingers",
+        "approaches_to_kitchen_line",
+        "retreats_to_baseline",
+        "distance_covered_m"
+      ],
+      "title": "PositioningValue",
       "type": "object"
     },
     "Provenance": {

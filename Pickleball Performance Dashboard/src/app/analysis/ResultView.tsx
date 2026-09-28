@@ -6,7 +6,7 @@ import {
 import { BLUE_SKY, BORDER, NEON, ORANGE, ORANGE_L, ROSE, VIOLET, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Card, Notice, Pill, WidgetHeader } from "../shell/primitives";
 import { CourtDwellHeatmap } from "./CourtDwellHeatmap";
-import { CoachingPanel } from "./CoachingPanel";
+import { CoachingPanel, type PreviousSession } from "./CoachingPanel";
 import { VideoOverlayPlayer } from "./VideoOverlayPlayer";
 
 const STATUS_COLORS: Record<MetricStatus, string> = {
@@ -44,7 +44,9 @@ function Row({ k, v }: { k: string; v: React.ReactNode }) {
   );
 }
 
-export function ResultView({ result, videoUrl }: { result: AnalysisResultV1; videoUrl: string | null }) {
+export function ResultView({ result, videoUrl, previous }: {
+  result: AnalysisResultV1; videoUrl: string | null; previous?: PreviousSession | null;
+}) {
   const c = result.coverage;
   const heat = result.metrics.court_heatmap;
   const zones = result.metrics.zone_occupancy;
@@ -79,7 +81,7 @@ export function ResultView({ result, videoUrl }: { result: AnalysisResultV1; vid
         )}
       </Card>
 
-      <CoachingPanel result={result} />
+      <CoachingPanel result={result} previous={previous} />
 
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
         <div className="space-y-4">

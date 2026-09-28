@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ArrowLeft, RefreshCw, Trash2, Upload } from "lucide-react";
 import {
-  deleteSession, finalizeUpload, getSessionBundle, registerVideo, removeVideo, requestReanalysis, signedVideoUrl,
+  deleteSession, finalizeUpload, findPreviousCoachableResult, getSessionBundle, registerVideo, removeVideo, requestReanalysis, signedVideoUrl,
   type SessionBundle,
 } from "../../lib/api/sessions";
 import { CONTEXT_LABELS, FORMAT_LABELS } from "../../lib/api/types";
@@ -16,6 +16,7 @@ import { BLUE_SKY, BORDER, NEON, NEON_D, ORANGE, WHITE_DIM, WHITE_SUB } from "..
 import { Card, Notice, WidgetHeader } from "../shell/primitives";
 import { AnalysisParamsForm, AnalysisStateBadge, ProgressBar, type AnalysisParams } from "../analysis/AnalysisStatus";
 import { ResultView } from "../analysis/ResultView";
+import type { PreviousSession } from "../analysis/CoachingPanel";
 
 const POLL_MS = 3000;
 
@@ -29,6 +30,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
   const [paramsError, setParamsError] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [previous, setPrevious] = useState<PreviousSession | null>(null);
   const uploadRef = useRef<UploadHandle | null>(null);
   const inFlight = useRef(false); // guards against double clicks before React re-renders
 
@@ -69,6 +71,22 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
       return { ok: false as const, error: e instanceof ContractError ? e.message : String(e) };
     }
   }, [bundle?.result]);
+
+  // Progress is optional context: a failed lookup just hides the comparison.
+  const currentSession = bundle?.session;
+  const hasResult = parsed?.ok === true;
+  const sessionKey = currentSession ? `${currentSession.id}|${currentSession.session_date}` : "";
+  useEffect(() => {
+    if (!currentSession || !hasResult) return setPrevious(null);
+    let cancelled = false;
+    findPreviousCoachableResult(sb, currentSession)
+      .then((found) => {
+        if (!cancelled) setPrevious(found ? { label: `${found.session.title} (${found.session.session_date})`, result: found.result } : null);
+      })
+      .catch(() => { if (!cancelled) setPrevious(null); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sessionKey tracks the fields used
+  }, [sb, sessionKey, hasResult]);
 
   async function onFileSelected(file: File) {
     if (!bundle || inFlight.current || !config.supabase || !params) return;
@@ -218,7 +236,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
         {error && <div className="mt-3"><Notice tone="error">{error}</Notice></div>}
       </Card>
 
-      {parsed?.ok && <ResultView result={parsed.result} videoUrl={videoUrl} />}
+      {parsed?.ok && <ResultView result={parsed.result} videoUrl={videoUrl} previous={previous} />}
       {parsed && !parsed.ok && (
         <Notice tone="error">The stored result could not be read ({parsed.error}). It is not shown to avoid presenting it incorrectly.</Notice>
       )}

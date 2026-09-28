@@ -160,9 +160,33 @@ class ZoneOccupancyMetric(Metric):
     value: Optional[ZoneOccupancyValue] = None
 
 
+class PositioningValue(_Model):
+    court_half: Literal["near", "far"] = Field(description="The selected player's side; depths are from this baseline.")
+    band_definitions: Dict[str, str]
+    seconds: Dict[str, float]
+    fraction_of_mapped_time: Dict[str, float]
+    mapped_time_s: float
+    left_side_fraction: Optional[float] = Field(
+        None, description="Share of in-court time on the player's own left half, facing the net.")
+    transition_lingers: int = Field(description="Continuous stays of at least 2 s in the transition band.")
+    longest_transition_linger_s: Optional[float] = None
+    approaches_to_kitchen_line: int = Field(description="Moves from the baseline bands to the kitchen-line bands.")
+    median_approach_s: Optional[float] = Field(
+        None, description="Median time from last baseline-area sample to first kitchen-line sample.")
+    retreats_to_baseline: int
+    distance_covered_m: float = Field(description="Path length of the smoothed foot position; includes walking between points.")
+
+
+class PositioningMetric(Metric):
+    value: Optional[PositioningValue] = None
+
+
 class Metrics(_Model):
     court_heatmap: CourtHeatmapMetric
     zone_occupancy: ZoneOccupancyMetric
+    # Defaulted so results stored before this metric existed still validate.
+    positioning: PositioningMetric = Field(default_factory=lambda: PositioningMetric(
+        status="not_computed", reason=POSITIONING_NOT_COMPUTED))
     rally_segmentation: Metric
     shot_classification: Metric
 
@@ -193,6 +217,7 @@ def not_computed(reason: str) -> Metric:
 
 
 # Reasons for metrics this pipeline deliberately does not produce yet.
+POSITIONING_NOT_COMPUTED = "Positioning patterns were not computed for this result."
 RALLY_NOT_COMPUTED = (
     "Rally segmentation is not implemented or validated. All metrics are whole-clip metrics."
 )

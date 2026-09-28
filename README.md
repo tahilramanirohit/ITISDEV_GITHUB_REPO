@@ -1,6 +1,6 @@
 # PicklePro thesis prototype
 
-PicklePro analyzes fixed-camera pickleball footage and reports player detections, court positions, and a dwell-time heatmap with coverage and provenance. Rally segmentation, shot classification, skill, and play-style estimates are not implemented. The old dashboard is only a labelled sample-data design preview in development.
+PicklePro analyzes fixed-camera pickleball footage and reports player detections, court positions, a dwell-time heatmap, and court-positioning patterns (depth-band time, transition stays, approaches) with coverage and provenance. When evidence is sufficient, it turns these into practice focus areas with drills and targets, and compares them with your previous session. Rally segmentation, shot classification, skill, and play-style estimates are not implemented. The old dashboard is only a labelled sample-data design preview in development.
 
 The application has two paths: **Sessions** uses Supabase email/password sign-in, private resumable uploads, queued analysis, and saved results; the **local prototype** sends a video directly to FastAPI without saving it. The hosted Sessions path was verified with a synthetic video in the dedicated `PickleProThesis-test` Supabase project. This does not establish accuracy on real footage; see [Supabase setup and verification](docs/SUPABASE_SETUP.md).
 

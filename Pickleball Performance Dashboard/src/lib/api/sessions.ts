@@ -9,6 +9,8 @@ import type {
   VideoAssetRow,
 } from "./types";
 import { buildStoragePath } from "../upload/validate";
+import { parseAnalysisResult, type AnalysisResultV1 } from "../analysis/contract";
+import { coachingBlocker } from "../analysis/coaching";
 
 export const VIDEO_BUCKET = "session-videos";
 
@@ -59,6 +61,34 @@ export async function getSessionBundle(sb: SupabaseClient, sessionId: string): P
     ? check<AnalysisResultRow | null>(await sb.from("analysis_results").select("*").eq("job_id", job.id).maybeSingle())
     : null;
   return { session, video, job, result };
+}
+
+export type PreviousResult = { session: SessionRow; result: AnalysisResultV1 };
+
+/**
+ * The most recent earlier session whose result supports coaching, used to show
+ * progress. Checks at most `limit` earlier sessions to keep page loads cheap.
+ */
+export async function findPreviousCoachableResult(
+  sb: SupabaseClient, current: SessionRow, limit = 5,
+): Promise<PreviousResult | null> {
+  const sessions = await listSessions(sb);
+  const earlier = sessions
+    .filter(({ session, result }) => session.id !== current.id && result?.data_origin === "measured" &&
+      (session.session_date < current.session_date ||
+        (session.session_date === current.session_date && session.created_at < current.created_at)))
+    .slice(0, limit);
+  for (const { session } of earlier) {
+    const bundle = await getSessionBundle(sb, session.id);
+    if (!bundle?.result) continue;
+    try {
+      const result = parseAnalysisResult(bundle.result.result);
+      if (!coachingBlocker(result) && result.metrics.positioning.status === "measured") return { session, result };
+    } catch {
+      // Unreadable older results are skipped, never compared.
+    }
+  }
+  return null;
 }
 
 export type NewSession = {

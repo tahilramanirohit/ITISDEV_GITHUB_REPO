@@ -21,6 +21,8 @@ from .contract import (
     DetectorInfo,
     HeatmapValue,
     Metrics,
+    PositioningMetric,
+    PositioningValue,
     PlayerBox,
     PlayerSelectionSummary,
     PositionSnapshot,
@@ -35,6 +37,7 @@ from .contract import (
 )
 from .court import COURT_MODEL, CourtCalibration
 from .detection import PlayerTracker
+from .positioning import positioning_patterns
 from .spatial import Selection, dwell_heatmap, select_player, zone_occupancy
 from .video_io import ReadStats, iter_frames, probe, sha256_of
 
@@ -164,7 +167,7 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
         frames_with_ball_detections=len(ball_snapshots),
     )
 
-    heatmap_metric, zone_metric, selection_summary, calib_summary = _court_metrics(
+    heatmap_metric, zone_metric, positioning_metric, selection_summary, calib_summary = _court_metrics(
         per_frame, frame_interval_s, analyzed_duration, calibration, calibration_method, opts, warnings
     )
 
@@ -209,6 +212,7 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
         metrics=Metrics(
             court_heatmap=heatmap_metric,
             zone_occupancy=zone_metric,
+            positioning=positioning_metric,
             rally_segmentation=not_computed(RALLY_NOT_COMPUTED),
             shot_classification=not_computed(SHOTS_NOT_COMPUTED),
         ),
@@ -224,9 +228,9 @@ def _court_metrics(per_frame, frame_interval_s, analyzed_duration, calibration, 
     )
     calib_summary = None
     if calibration is None:
-        return (CourtHeatmapMetric(status="insufficient_data",
-                                   reason="Court not calibrated: at least 4 court landmarks are required."),
-                zones_off, None, None)
+        reason = "Court not calibrated: at least 4 court landmarks are required."
+        return (CourtHeatmapMetric(status="insufficient_data", reason=reason),
+                zones_off, PositioningMetric(status="insufficient_data", reason=reason), None, None)
 
     calib_summary = CalibrationSummary(
         method=calibration_method, court_model=COURT_MODEL, landmarks_used=calibration.landmarks_used,
@@ -239,9 +243,9 @@ def _court_metrics(per_frame, frame_interval_s, analyzed_duration, calibration, 
 
     sel = opts.selection
     if sel is None:
-        return (CourtHeatmapMetric(status="insufficient_data",
-                                   reason="No player selected: choose a track id or a court half."),
-                zones_off, None, calib_summary)
+        reason = "No player selected: choose a track id or a court half."
+        return (CourtHeatmapMetric(status="insufficient_data", reason=reason),
+                zones_off, PositioningMetric(status="insufficient_data", reason=reason), None, calib_summary)
 
     track = select_player(per_frame, calibration, sel)
     tracked_time = track.observed * frame_interval_s
@@ -258,7 +262,7 @@ def _court_metrics(per_frame, frame_interval_s, analyzed_duration, calibration, 
         reason = (f"Selected player was tracked for {tracked_time:.1f}s ({fraction:.0%} of analyzed time); "
                   f"at least {opts.min_tracked_seconds:g}s and {opts.min_tracked_fraction:.0%} are required.")
         return (CourtHeatmapMetric(status="insufficient_data", reason=reason), zones_off,
-                selection_summary, calib_summary)
+                PositioningMetric(status="insufficient_data", reason=reason), selection_summary, calib_summary)
 
     heatmap = CourtHeatmapMetric(
         status="measured", validation="not_evaluated",
@@ -273,4 +277,12 @@ def _court_metrics(per_frame, frame_interval_s, analyzed_duration, calibration, 
                    "Kitchen-line presence is not computed.",
             value=ZoneOccupancyValue(**zone_occupancy(track, frame_interval_s)),
         )
-    return heatmap, zones, selection_summary, calib_summary
+    positions = positioning_patterns(track, frame_interval_s, sel.court_half if sel.method == "court_half" else None)
+    positioning = PositioningMetric(
+        status="measured", validation="synthetic_only",
+        reason="Depth bands, lingers and approaches from the selected player's smoothed foot position. Checked on "
+               "synthetic video only; includes time between rallies; describes position, not shot quality.",
+        value=PositioningValue(**positions),
+    ) if positions else PositioningMetric(
+        status="insufficient_data", reason="The selected player was never mapped inside their half of the court.")
+    return heatmap, zones, positioning, selection_summary, calib_summary

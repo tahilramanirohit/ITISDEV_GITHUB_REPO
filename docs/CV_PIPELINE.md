@@ -68,4 +68,17 @@ Use `--track-id N` instead of `--court-half near` when a player can be followed 
 
 The synthetic fixture previously produced roughly 3.2 cm median and 9.7 cm 90th-percentile foot-position error under ideal, known geometry. This is a development check, **not** an estimate of accuracy on real matches. Real-footage evaluation still needs permitted, labeled clips with varying lighting, occlusion, court views, players, and camera stability.
 
-The homography cannot infer height above the court, airborne ball arcs, ball speed, shot type, skill, or play style. The results screen offers preliminary position-based practice prompts only when a measured result has a person model, good court calibration, at least half the analyzed clip tracked for one player, and fewer than one in five frames ambiguous. Each prompt shows the observed whole-clip position pattern and a conditional drill to review; it does not assert a gameplay mistake or a skill rating. Sample data, motion-only detections, poor calibration, and insufficient tracking produce no personalized coaching. Browser speech synthesis reads the displayed prompts aloud when available. Real-match evaluation is still required before treating these prompts as validated coaching.
+The homography cannot infer height above the court, airborne ball arcs, ball speed, shot type, skill, or play style.
+
+### Positioning patterns and practice feedback
+
+`metrics.positioning` (validation `synthetic_only`) turns the selected player's smoothed foot positions into movement measures, counted from that player's own baseline:
+
+- time in five depth bands: behind the baseline, baseline area (first 1.5 m), transition area, kitchen-line area (1 m behind to 0.3 m past the kitchen line), and inside the kitchen;
+- transition stays: continuous stays of at least 2 s in the transition area;
+- approaches: moves from the baseline bands to the kitchen-line bands, with the median time taken. A tracking gap over 1 s breaks an approach;
+- the share of time on the player's own left half, and total distance covered.
+
+On the synthetic clip, band shares agree with the known path within 8 percentage points, and the single approach and retreat are counted. Band edges are coaching conventions, not validated thresholds. Walking between points is included, so an approach can also be a walk to the next serve.
+
+The results screen offers practice feedback only when a measured result has a person model, good court calibration, at least half the analyzed clip tracked for one player, and fewer than one in five frames ambiguous. It lists what went well and up to three focus areas. Each focus area has the observed measure, a named drill, a measurable target for the next session, and its evidence. Thresholds are defined in `src/lib/analysis/coaching.ts` (`THRESHOLDS`) and are practice goals, not validated benchmarks. On the Sessions page, the results are compared with the most recent earlier session that also supports coaching, and each measure is marked improved, worse, or about the same. Results saved before this metric existed get only basic heatmap feedback until they are re-analysed. Sample data, motion-only detections, poor calibration, and insufficient tracking produce no personalized feedback. Browser speech synthesis reads the displayed feedback aloud when available. Real-match evaluation is still required before treating this as validated coaching.

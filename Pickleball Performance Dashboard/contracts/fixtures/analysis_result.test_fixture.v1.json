@@ -4,7 +4,7 @@
   "data_origin": "test_fixture",
   "message": "TEST DATA: produced from a synthetic clip by the worker's test_fixture mode. It is not an analysis of your video.",
   "provenance": {
-    "pipeline_version": "0.4.0-dev",
+    "pipeline_version": "0.5.0-dev",
     "generated_at": "2026-01-01T00:00:00+00:00",
     "detector": {
       "name": "opencv-mog2-motion",
@@ -1303,6 +1303,44 @@
           "mid_court": 0.7071,
           "outside_court_lines": 0.0
         }
+      }
+    },
+    "positioning": {
+      "status": "measured",
+      "validation": "synthetic_only",
+      "scope": "whole_clip",
+      "reason": "Depth bands, lingers and approaches from the selected player's smoothed foot position. Checked on synthetic video only; includes time between rallies; describes position, not shot quality.",
+      "value": {
+        "court_half": "near",
+        "band_definitions": {
+          "behind_baseline": "Behind the player's own baseline (serving and returning happen here).",
+          "baseline_area": "Within 1.5 m inside the baseline.",
+          "transition": "Between the baseline area and the kitchen-line area (often called no-man's land).",
+          "kitchen_line": "From 1 m behind the kitchen line to 0.3 m past it: the usual ready position at the net.",
+          "inside_kitchen": "Further inside the non-volley zone, up to the net."
+        },
+        "seconds": {
+          "behind_baseline": 0.0,
+          "baseline_area": 3.2,
+          "transition": 6.8,
+          "kitchen_line": 4.4,
+          "inside_kitchen": 4.267
+        },
+        "fraction_of_mapped_time": {
+          "behind_baseline": 0.0,
+          "baseline_area": 0.1714,
+          "transition": 0.3643,
+          "kitchen_line": 0.2357,
+          "inside_kitchen": 0.2286
+        },
+        "mapped_time_s": 18.667,
+        "left_side_fraction": 0.3643,
+        "transition_lingers": 2,
+        "longest_transition_linger_s": 3.467,
+        "approaches_to_kitchen_line": 1,
+        "median_approach_s": 4.267,
+        "retreats_to_baseline": 1,
+        "distance_covered_m": 15.02
       }
     },
     "rally_segmentation": {

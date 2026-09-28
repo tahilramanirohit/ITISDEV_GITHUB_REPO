@@ -32,7 +32,7 @@ describe("ResultView", () => {
 
   it("explains insufficient data instead of showing a heatmap", () => {
     render(<ResultView result={parseAnalysisResult(insufficient)} videoUrl={null} />);
-    expect(screen.getAllByText("INSUFFICIENT DATA").length).toBe(2); // overall status + heatmap metric
+    expect(screen.getAllByText("INSUFFICIENT DATA").length).toBe(3); // overall status + heatmap + positioning
     expect(screen.getAllByText(/Court not calibrated/).length).toBeGreaterThan(0);
     expect(screen.queryByRole("img", { name: /Court heatmap/ })).toBeNull();
   });
@@ -57,12 +57,16 @@ describe("ResultView", () => {
     Object.defineProperty(window, "SpeechSynthesisUtterance", { configurable: true, value: Utterance });
     try {
       render(<ResultView result={parseAnalysisResult(result)} videoUrl={null} />);
-      expect(screen.getByText(/Position-based practice ideas from this video/)).toBeTruthy();
+      expect(screen.getByText(/focus areas? for your next practice/)).toBeTruthy();
+      expect(screen.getByText("Focus for your next session")).toBeTruthy();
+      expect(screen.getAllByText(/^Drill:/).length).toBeGreaterThan(0);
       fireEvent.click(screen.getByRole("button", { name: "Play audio coaching" }));
       expect(speak).toHaveBeenCalledOnce();
       const utterance = speak.mock.calls[0][0] as Utterance;
-      expect(utterance.text).toContain("The selected player spent about");
+      expect(utterance.text).toContain("Focus 1:");
+      expect(utterance.text).toContain("Next session:");
       expect(utterance.text).toContain("Position estimates have not been validated");
+      expect(screen.getByText(/Record and analyze another session/)).toBeTruthy();
       fireEvent.click(screen.getByRole("button", { name: "Stop audio coaching" }));
       expect(cancel).toHaveBeenCalled();
     } finally {
@@ -72,5 +76,24 @@ describe("ResultView", () => {
       if (originalUtterance) Object.defineProperty(window, "SpeechSynthesisUtterance", originalUtterance);
       else Reflect.deleteProperty(window, "SpeechSynthesisUtterance");
     }
+  });
+
+  it("shows progress against an earlier coachable session", () => {
+    const coachable = (kitchenLine: number) => {
+      const r = structuredClone(testFixture);
+      r.data_origin = "measured";
+      r.provenance.detector = { name: "ultralytics-yolov8-person", confidence_is_model_score: true };
+      const parsed = parseAnalysisResult(r);
+      const v = parsed.metrics.positioning.value!;
+      v.fraction_of_mapped_time = { ...v.fraction_of_mapped_time, kitchen_line: kitchenLine };
+      return parsed;
+    };
+    render(<ResultView result={coachable(0.45)} videoUrl={null}
+      previous={{ label: "Tuesday drills (2026-09-01)", result: coachable(0.2) }} />);
+    expect(screen.getByText("Progress since Tuesday drills (2026-09-01)")).toBeTruthy();
+    const row = screen.getByText("Time at the kitchen line").closest("tr")!;
+    expect(row.textContent).toContain("20%");
+    expect(row.textContent).toContain("45%");
+    expect(row.textContent).toContain("Improved");
   });
 });
