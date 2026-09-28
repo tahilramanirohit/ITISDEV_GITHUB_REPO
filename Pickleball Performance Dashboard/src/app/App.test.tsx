@@ -77,10 +77,19 @@ function fakeSupabase({ rpcError = null as { message: string } | null } = {}) {
 }
 
 describe("dev mode entry", () => {
-  it("is offered only in development builds", async () => {
+  it("is hidden in production builds by default", async () => {
     render(<App cfg={{ ...prodConfig, supabase: { url: "x", anonKey: "y" } }} sb={fakeSupabase() as unknown as SupabaseClient} />);
     await screen.findByText("SIGN IN →");
     expect(screen.queryByRole("button", { name: /Dev mode/ })).toBeNull();
+  });
+
+  it("offers guest testing on an explicitly enabled production preview", async () => {
+    const sb = fakeSupabase();
+    const previewConfig = getConfig({ DEV: false, PROD: true, VITE_ENABLE_DEV_MODE: "true" });
+    render(<App cfg={previewConfig} sb={sb as unknown as SupabaseClient} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Dev mode: enter with mock data/ }));
+    expect(await screen.findByText("Dev mode (mock data)")).toBeTruthy();
+    expect(sb.auth.signInAnonymously).toHaveBeenCalledOnce();
   });
 
   it("signs in as a guest, seeds mock sessions, and enters the app", async () => {

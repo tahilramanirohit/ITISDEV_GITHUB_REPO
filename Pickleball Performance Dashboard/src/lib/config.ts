@@ -11,7 +11,8 @@ export type AppConfig = {
   localPrototypeEnabled: boolean;
   /**
    * "Dev mode" button on the sign-in screen: enter as a Supabase anonymous user
-   * with generated mock sessions. Development builds only; never in production.
+   * with generated mock sessions. Enabled in local development or explicitly
+   * for a dedicated testing deployment.
    */
   devModeEnabled: boolean;
 };
@@ -35,7 +36,7 @@ export function getConfig(env: EnvLike): AppConfig {
     cvBackendUrl: String(env.VITE_CV_BACKEND_URL ?? "http://localhost:8000").replace(/\/+$/, ""),
     designPreviewEnabled: dev || env.VITE_ENABLE_DESIGN_PREVIEW === "true",
     localPrototypeEnabled: dev || env.VITE_ENABLE_LOCAL_PROTOTYPE === "true",
-    devModeEnabled: dev,
+    devModeEnabled: dev || env.VITE_ENABLE_DEV_MODE === "true",
   };
 }
 

@@ -6,7 +6,7 @@ import { Notice, PickleProLogo, fieldStyle, labelClass, labelStyle } from "../sh
 
 type Mode = "sign_in" | "sign_up";
 
-/** Development builds only: enter as an anonymous user with generated mock sessions. */
+/** Testing deployments: enter as an anonymous user with generated mock sessions. */
 export type DevModeEntry = { onEnter: () => void; busy: boolean; error: string };
 
 /** Supabase email + password authentication. Replaces the former hard-coded demo account. */
@@ -90,7 +90,7 @@ export function AuthScreen({ sb, devMode }: { sb: SupabaseClient; devMode?: DevM
                 {devMode.busy ? "Creating mock data…" : "Dev mode: enter with mock data"}
               </button>
               <p className="text-[11px] mt-1.5 text-center" style={{ color: WHITE_SUB }}>
-                Development builds only. Signs in as a temporary guest with sample sessions.
+                Testing mode. Signs in as a temporary guest with sample sessions.
               </p>
               {devMode.error && <div className="mt-2"><Notice tone="error">{devMode.error}</Notice></div>}
             </div>

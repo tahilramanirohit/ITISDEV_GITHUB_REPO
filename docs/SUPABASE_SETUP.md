@@ -37,9 +37,9 @@ WORKER_RESULT_MODE=test_fixture
 
 Never place the service-role key in a `VITE_` setting or browser code. The worker bypasses row-level security and must run on a trusted machine.
 
-## Dev mode (development builds only)
+## Dev mode (local development or an explicit testing deployment)
 
-`npm run dev` shows a **Dev mode: enter with mock data** button under Sign in. It signs in as a Supabase anonymous user and creates four `[Dev mock]` sessions, including three weeks of improving practice and one unusable clip, so the results, feedback and progress screens can be tested without uploading a video. Mock results carry `provenance.pipeline_version = "dev-mock"` and are labelled **DEV MOCK DATA — NOT A REAL ANALYSIS**. The button is not in production builds.
+`npm run dev` shows a **Dev mode: enter with mock data** button under Sign in. A dedicated testing deployment can also show it by building with `VITE_ENABLE_DEV_MODE=true`. The button is hidden by default in production builds. It signs in as a Supabase anonymous user and creates four `[Dev mock]` sessions, including three weeks of improving practice and one unusable clip, so the results, feedback and progress screens can be tested without uploading a video. Mock results carry `provenance.pipeline_version = "dev-mock"` and are labelled **DEV MOCK DATA — NOT A REAL ANALYSIS**.
 
 One-time setup on the test project:
 
