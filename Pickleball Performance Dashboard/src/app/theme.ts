@@ -1,22 +1,22 @@
 // ── Palette ────────────────────────────────────────────────────────────────
-export const BLUE_DEEP = "#071a3e";   // page background
-export const BLUE_MID  = "#0d2554";   // card background
-export const BLUE_POP  = "#1a5fb4";   // bright interactive blue
-export const BLUE_SKY  = "#38bdf8";   // sky blue highlight
-export const NEON      = "#b8f523";   // pickleball neon green
-export const NEON_D    = "#3d6000";   // dark text on neon bg
-export const ORANGE    = "#f97316";   // orange accent
-export const ORANGE_L  = "#fed7aa";   // light orange for text on dark
+export const BLUE_DEEP = "#f6f5ef";
+export const BLUE_MID  = "#ffffff";
+export const BLUE_POP  = "#293df2";
+export const BLUE_SKY  = "#293df2";
+export const NEON      = "#293df2";
+export const NEON_D    = "#ffffff";
+export const ORANGE    = "#a94318";
+export const ORANGE_L  = "#a94318";
 export const WHITE     = "#ffffff";
-export const WHITE_DIM = "rgba(255,255,255,0.65)";
-export const WHITE_SUB = "rgba(255,255,255,0.40)";
-export const BORDER    = "rgba(100,160,255,0.18)";
-export const CARD_GLOW = "0 0 0 1px rgba(100,160,255,0.15), 0 4px 24px rgba(7,26,62,0.5)";
-export const VIOLET    = "#a78bfa";
-export const ROSE      = "#f43f5e";
+export const WHITE_DIM = "#4d5664";
+export const WHITE_SUB = "#66707c";
+export const BORDER    = "#d6d5ce";
+export const CARD_GLOW = "0 3px 14px rgba(16,24,39,0.04)";
+export const VIOLET    = "#6543a4";
+export const ROSE      = "#ad2545";
 export const PAPER     = "#f6f5ef";   // editorial introduction surface
 export const INK       = "#101827";
 export const COBALT    = "#293df2";
 
-export const PAGE_BG = "linear-gradient(160deg, #071a3e 0%, #0a2258 50%, #071a3e 100%)";
+export const PAGE_BG = PAPER;
 export const DISPLAY_FONT = "'Barlow Condensed',sans-serif";

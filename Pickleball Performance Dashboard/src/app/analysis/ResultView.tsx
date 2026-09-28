@@ -6,7 +6,7 @@ import {
 } from "../../lib/analysis/contract";
 import { GOAL_LABELS, type SessionRow } from "../../lib/api/types";
 import { buildCoachingReport } from "../../lib/analysis/coaching";
-import { BLUE_SKY, BORDER, NEON, ORANGE, ORANGE_L, ROSE, VIOLET, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
+import { BLUE_SKY, BORDER, INK, NEON, ORANGE, ORANGE_L, ROSE, VIOLET, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Card, Notice, Pill, WidgetHeader } from "../shell/primitives";
 import { CourtDwellHeatmap } from "./CourtDwellHeatmap";
 import { CoachingPanel, type PreviousSession } from "./CoachingPanel";
@@ -52,7 +52,7 @@ function Row({ k, v }: { k: string; v: React.ReactNode }) {
   return (
     <div className="flex justify-between gap-3 py-1 border-b text-xs" style={{ borderColor: BORDER }}>
       <span style={{ color: WHITE_DIM }}>{k}</span>
-      <span className="font-mono text-right" style={{ color: WHITE }}>{v}</span>
+      <span className="font-mono text-right" style={{ color: INK }}>{v}</span>
     </div>
   );
 }
@@ -80,14 +80,14 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack 
       )}
 
       <Card accent={result.status === "ok" ? NEON : ORANGE}>
-        <h2 className="mb-3 text-xl font-bold text-white">What PicklePro could assess</h2>
+        <h2 className="mb-3 text-xl font-bold text-[#101827]">What PicklePro could assess</h2>
         <div className="flex flex-wrap items-center gap-2 mb-2">
           <OriginBadge origin={result.data_origin} devMock={devMock} />
           <Pill color={devMock ? ORANGE : result.status === "ok" ? NEON : ORANGE}>
             {devMock ? "SAMPLE" : result.status === "ok" ? "RESULT" : "INSUFFICIENT DATA"}
           </Pill>
         </div>
-        <p className="text-sm text-white">{devMock ? "This sample shows the kind of practice plan PicklePro can display. It is not feedback about your play." : result.message}</p>
+        <p className="text-sm text-[#101827]">{devMock ? "This sample shows the kind of practice plan PicklePro can display. It is not feedback about your play." : result.message}</p>
         {warnings.length > 0 && (
           <ul className="mt-3 space-y-1">
             {warnings.map((w) => (
@@ -98,6 +98,44 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack 
           </ul>
         )}
       </Card>
+
+      {result.data_origin === "measured" && !devMock && <section aria-label="What the video analysis found" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          {
+            label: "Players",
+            value: c.frames_with_detections > 0 ? `${c.frames_with_detections} frames` : "None observed",
+            detail: result.provenance.detector.confidence_is_model_score
+              ? "Person model observations; check the boxes in your video."
+              : "Movement observations only; these are not confirmed people.",
+          },
+          {
+            label: "Court",
+            value: heat.status === "measured" ? "Position measured" : result.calibration ? "Landmarks found" : "Not mapped",
+            detail: result.calibration
+              ? `${result.calibration.method === "auto_model_landmarks" ? "Automatic" : "Manual"} landmarks; usable positioning depends on player tracking.`
+              : "A court model or manual landmarks are needed for positioning.",
+          },
+          {
+            label: "Ball",
+            value: result.provenance.ball_detector
+              ? `${c.frames_with_ball_detections ?? 0} frames`
+              : "Model not set up",
+            detail: "Ball boxes are observations, not a verified flight path or shot result.",
+          },
+          {
+            label: "Shot types",
+            value: result.metrics.shot_classification.status === "not_computed"
+              ? "Not available" : STATUS_TEXT[result.metrics.shot_classification.status],
+            detail: result.metrics.shot_classification.reason ?? "Shot classification is still in development.",
+          },
+        ].map((item) => (
+          <div key={item.label} className="rounded-2xl border bg-white p-4" style={{ borderColor: BORDER }}>
+            <p className="text-xs font-bold uppercase tracking-widest" style={{ color: BLUE_SKY }}>{item.label}</p>
+            <p className="mt-2 text-lg font-bold" style={{ color: INK }}>{item.value}</p>
+            <p className="mt-1 text-xs leading-relaxed" style={{ color: WHITE_DIM }}>{item.detail}</p>
+          </div>
+        ))}
+      </section>}
 
       {session?.improvement_goals?.length ? (
         <Card accent={BLUE_SKY}>
@@ -111,7 +149,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack 
                   ? "Shot outcomes cannot be assessed yet. Ball observations alone do not establish contact, landing, or point result."
                   : "Technique cannot be assessed yet. The current analysis does not measure body and paddle mechanics.";
               return <li key={goal} className="rounded-xl p-3 text-xs" style={{ border: `1px solid ${BORDER}` }}>
-                <p className="font-semibold text-white">{GOAL_LABELS[goal]} · {observed ? "video feedback available" : "cannot assess from this analysis"}</p>
+                <p className="font-semibold text-[#101827]">{GOAL_LABELS[goal]} · {observed ? "video feedback available" : "cannot assess from this analysis"}</p>
                 <p className="mt-1" style={{ color: WHITE_DIM }}>Your starting rating: {rating ? `${rating}/5` : "not set"}</p>
                 <p className="mt-1" style={{ color: observed ? NEON : ORANGE_L }}>{reason}</p>
               </li>;
@@ -125,13 +163,13 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack 
 
       <section aria-labelledby="video-heading" className="space-y-3">
         <div>
-          <h2 id="video-heading" className="text-lg font-bold text-white">Watch your video</h2>
+          <h2 id="video-heading" className="text-lg font-bold text-[#101827]">Watch your video</h2>
           <p className="text-sm" style={{ color: WHITE_DIM }}>Use the player to check what the analysis could see.</p>
         </div>
         {videoUrl && onSelectTrack && result.tracks.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={() => setSelectingPlayer((value) => !value)}
-              className="rounded-lg px-3 py-2 text-xs font-semibold" style={{ background: BLUE_SKY, color: "#071a3e" }}>
+              className="rounded-lg px-3 py-2 text-xs font-semibold" style={{ background: BLUE_SKY, color: "#ffffff" }}>
               {selectingPlayer ? "Cancel player selection" : "Select yourself in the video"}
             </button>
             {selectingPlayer && <p className="text-xs" style={{ color: WHITE_DIM }}>Pause on a frame where you are visible, then click your blue box. This re-runs the analysis for that track.</p>}
@@ -156,9 +194,9 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack 
                 {METRIC_KEYS.map((key: MetricKey) => {
                   const m = result.metrics[key];
                   return (
-                    <li key={key} className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>
+                    <li key={key} className="rounded-xl p-3" style={{ background: "rgba(41,61,242,0.025)", border: `1px solid ${BORDER}` }}>
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-sm font-semibold text-white">{METRIC_LABELS[key]}</span>
+                        <span className="text-sm font-semibold text-[#101827]">{METRIC_LABELS[key]}</span>
                         <Pill color={STATUS_COLORS[m.status]}>{STATUS_TEXT[m.status].toUpperCase()}</Pill>
                         {m.status !== "not_computed" && <Pill color={WHITE_SUB}>{VALIDATION_LABELS[m.validation]}</Pill>}
                       </div>
@@ -189,7 +227,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack 
               {zones.status === "experimental" && zones.value && (
                 <div className="mt-4">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-semibold text-white">Zone occupancy</span>
+                    <span className="text-xs font-semibold text-[#101827]">Zone occupancy</span>
                     <Pill color={VIOLET}>EXPERIMENTAL</Pill>
                   </div>
                   {Object.entries(zones.value.fraction_of_tracked_time).map(([zone, f]) => (

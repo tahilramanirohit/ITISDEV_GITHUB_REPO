@@ -81,7 +81,7 @@ export default function SessionsPage({ sb }: { sb: SupabaseClient }) {
         <div className="flex flex-wrap items-end justify-between gap-2 border-b pb-4" style={{ borderColor: BORDER }}>
           <div>
             <p className="text-xs font-bold uppercase tracking-widest" style={{ color: BLUE_SKY }}>Your history</p>
-            <h2 id="sessions-heading" className="mt-1 text-3xl font-bold text-white" style={{ fontFamily: DISPLAY_FONT }}>Your sessions</h2>
+            <h2 id="sessions-heading" className="mt-1 text-3xl font-bold text-[#101827]" style={{ fontFamily: DISPLAY_FONT }}>Your sessions</h2>
             <p className="text-sm" style={{ color: WHITE_DIM }}>Pick up where you left off or review an earlier result.</p>
           </div>
           {items && <span className="font-mono text-sm" style={{ color: WHITE_DIM }}>{items.length} total</span>}
@@ -90,7 +90,7 @@ export default function SessionsPage({ sb }: { sb: SupabaseClient }) {
           <p className="text-sm" style={{ color: WHITE_SUB }}>Loading your sessions…</p>
         ) : items.length === 0 ? (
           <Card>
-            <h3 className="text-base font-semibold text-white">No sessions yet</h3>
+            <h3 className="text-base font-semibold text-[#101827]">No sessions yet</h3>
             <p className="text-sm mt-1" style={{ color: WHITE_DIM }}>Start with one skill you want to improve. You can add a video in the next step.</p>
           </Card>
         ) : (
@@ -104,7 +104,7 @@ export default function SessionsPage({ sb }: { sb: SupabaseClient }) {
                     <span className="font-mono text-sm font-bold" style={{ color: BLUE_SKY }}>{String(index + 1).padStart(2, "0")}</span>
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
-                        <h3 className="text-lg font-semibold text-white">{item.session.title}</h3>
+                        <h3 className="text-lg font-semibold text-[#101827]">{item.session.title}</h3>
                         <p className="text-sm mt-1" style={{ color: WHITE_DIM }}>
                           {item.session.session_date} · {CONTEXT_LABELS[item.session.session_context]} · {FORMAT_LABELS[item.session.play_format]}
                         </p>
@@ -158,7 +158,7 @@ function NewSessionForm({ sb, onCancel }: { sb: SupabaseClient; onCancel: () => 
     <Card accent={BLUE_SKY}>
       <div className="mb-5">
         <p className="text-xs font-bold uppercase tracking-widest" style={{ color: BLUE_SKY }}>Step 1 of 3</p>
-        <h2 className="text-xl font-bold text-white mt-1">What would you like to improve?</h2>
+        <h2 className="text-xl font-bold text-[#101827] mt-1">What would you like to improve?</h2>
         <p className="text-sm mt-1" style={{ color: WHITE_DIM }}>Pick at least one focus. Your rating is optional and only reflects how you see your current level.</p>
       </div>
       <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
@@ -183,22 +183,22 @@ function NewSessionForm({ sb, onCancel }: { sb: SupabaseClient; onCancel: () => 
               <label className={labelClass} style={labelStyle} htmlFor="context">Context</label>
               <select id="context" value={form.session_context} onChange={(e) => set("session_context", e.target.value as SessionContext)}
                 className="w-full rounded-xl px-3 py-2 text-sm" style={fieldStyle}>
-                {SESSION_CONTEXTS.map((c) => <option key={c} value={c} className="bg-[#071a3e]">{CONTEXT_LABELS[c]}</option>)}
+                {SESSION_CONTEXTS.map((c) => <option key={c} value={c} className="bg-white">{CONTEXT_LABELS[c]}</option>)}
               </select>
             </div>
             <div>
               <label className={labelClass} style={labelStyle} htmlFor="format">Format</label>
               <select id="format" value={form.play_format} onChange={(e) => set("play_format", e.target.value as PlayFormat)}
                 className="w-full rounded-xl px-3 py-2 text-sm" style={fieldStyle}>
-                {PLAY_FORMATS.map((f) => <option key={f} value={f} className="bg-[#071a3e]">{FORMAT_LABELS[f]}</option>)}
+                {PLAY_FORMATS.map((f) => <option key={f} value={f} className="bg-white">{FORMAT_LABELS[f]}</option>)}
               </select>
             </div>
             <div>
               <label className={labelClass} style={labelStyle} htmlFor="scope">Performance scope</label>
               <select id="scope" value={form.performance_scope} onChange={(e) => set("performance_scope", e.target.value as PerformanceScope)}
                 className="w-full rounded-xl px-3 py-2 text-sm" style={fieldStyle}>
-                <option value="individual" className="bg-[#071a3e]">Individual</option>
-                <option value="pair" className="bg-[#071a3e]">Pair</option>
+                <option value="individual" className="bg-white">Individual</option>
+                <option value="pair" className="bg-white">Pair</option>
               </select>
             </div>
             <div className="sm:col-span-2">

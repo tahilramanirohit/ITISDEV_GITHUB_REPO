@@ -7,18 +7,18 @@ import { Card, WidgetHeader } from "../shell/primitives";
 
 export type PreviousSession = { label: string; result: AnalysisResultV1 };
 
-const itemStyle = { background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` };
+const itemStyle = { background: "rgba(41,61,242,0.025)", border: `1px solid ${BORDER}` };
 
 function FocusItem({ item, index }: { item: CoachingItem; index: number }) {
   return (
     <li className="rounded-xl p-3" style={itemStyle}>
-      <p className="text-sm font-semibold text-white">{index + 1}. {item.title}</p>
-      <p className="mt-1 text-sm text-white">{item.observation}</p>
+      <p className="text-sm font-semibold text-[#101827]">{index + 1}. {item.title}</p>
+      <p className="mt-1 text-sm text-[#101827]">{item.observation}</p>
       {item.why && <p className="mt-1 text-xs" style={{ color: WHITE_DIM }}>{item.why}</p>}
       {item.drill && (
-        <div className="mt-2 rounded-lg p-2" style={{ background: "rgba(255,255,255,0.04)" }}>
+        <div className="mt-2 rounded-lg p-2" style={{ background: "rgba(41,61,242,0.04)" }}>
           <p className="text-xs font-semibold" style={{ color: NEON }}>Drill: {item.drill.name}</p>
-          <p className="mt-0.5 text-xs text-white">{item.drill.how}</p>
+          <p className="mt-0.5 text-xs text-[#101827]">{item.drill.how}</p>
         </div>
       )}
       {item.target && (
@@ -40,7 +40,7 @@ const CHANGE = {
 function ProgressTable({ rows, label }: { rows: ProgressRow[]; label: string }) {
   return (
     <div className="mt-4">
-      <p className="text-xs font-semibold text-white">Progress since {label}</p>
+      <p className="text-xs font-semibold text-[#101827]">Progress since {label}</p>
       <table className="mt-1 w-full text-xs">
         <thead>
           <tr style={{ color: WHITE_DIM }}>
@@ -55,9 +55,9 @@ function ProgressTable({ rows, label }: { rows: ProgressRow[]; label: string }) 
             const { color, text, Icon } = CHANGE[row.change];
             return (
               <tr key={row.label} className="border-t" style={{ borderColor: BORDER }}>
-                <td className="py-1 text-white">{row.label}</td>
+                <td className="py-1 text-[#101827]">{row.label}</td>
                 <td className="py-1 text-right font-mono" style={{ color: WHITE_DIM }}>{row.before}</td>
-                <td className="py-1 text-right font-mono text-white">{row.after}</td>
+                <td className="py-1 text-right font-mono text-[#101827]">{row.after}</td>
                 <td className="py-1 text-right" style={{ color }}>
                   <span className="inline-flex items-center gap-1"><Icon size={12} /> {text}</span>
                 </td>
@@ -111,20 +111,20 @@ export function CoachingPanel({ result, previous }: { result: AnalysisResultV1; 
           <button type="button" onClick={toggleAudio} disabled={!speechAvailable}
             aria-label={playing ? "Stop audio coaching" : "Play audio coaching"}
             className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold disabled:opacity-50"
-            style={{ color: "#071a3e", background: NEON }}>
+            style={{ color: "#ffffff", background: NEON }}>
             {playing ? <Square size={14} /> : <Play size={14} />}
             {playing ? "Stop audio" : "Play audio coaching"}
             <Volume2 size={14} />
           </button>
         )}
       </div>
-      <p className="text-sm text-white">{devMock ? "Example only: these findings do not describe your play." : report.introduction}</p>
+      <p className="text-sm text-[#101827]">{devMock ? "Example only: these findings do not describe your play." : report.introduction}</p>
       {report.strengths.length > 0 && (
         <div className="mt-3">
-          <p className="text-xs font-semibold text-white">What's working</p>
+          <p className="text-xs font-semibold text-[#101827]">What's working</p>
           <ul className="mt-1 space-y-1">
             {report.strengths.map((item) => (
-              <li key={item.title} className="flex gap-2 text-sm text-white">
+              <li key={item.title} className="flex gap-2 text-sm text-[#101827]">
                 <CheckCircle2 size={14} className="mt-0.5 flex-shrink-0" style={{ color: NEON }} />
                 <span><strong>{item.title}.</strong> {item.observation}</span>
               </li>
@@ -134,7 +134,7 @@ export function CoachingPanel({ result, previous }: { result: AnalysisResultV1; 
       )}
       {report.focus.length > 0 && (
         <div className="mt-3">
-          <p className="text-xs font-semibold text-white">Focus for your next session</p>
+          <p className="text-xs font-semibold text-[#101827]">Focus for your next session</p>
           <ol className="mt-1 space-y-3">
             {report.focus.map((item, index) => <FocusItem key={item.title} item={item} index={index} />)}
           </ol>

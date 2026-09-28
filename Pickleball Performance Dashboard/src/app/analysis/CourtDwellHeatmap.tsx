@@ -26,25 +26,25 @@ export function CourtDwellHeatmap({ value }: { value: HeatmapValue }) {
     <figure style={{ maxWidth: 260, margin: "0 auto" }}>
       <svg viewBox={`0 0 ${vw} ${vh}`} width="100%" role="img"
         aria-label="Court heatmap of time spent per area, near baseline at the bottom">
-        <rect x={0} y={0} width={vw} height={vh} fill="#0a2258" />
+        <rect x={0} y={0} width={vw} height={vh} fill="#eef0f9" />
         {value.dwell_seconds.map((row, ri) =>
           row.map((sec, ci) =>
             sec > 0 ? (
               <rect key={`${ri}-${ci}`} x={sx(xs[ci])} y={sy(ys[ri + 1])} width={xs[ci + 1] - xs[ci]}
-                height={ys[ri + 1] - ys[ri]} fill="#b8f523" fillOpacity={0.15 + 0.85 * (sec / max)}>
+                height={ys[ri + 1] - ys[ri]} fill="#293df2" fillOpacity={0.15 + 0.75 * (sec / max)}>
                 <title>{`${sec.toFixed(1)} s`}</title>
               </rect>
             ) : null,
           ),
         )}
-        <g fill="none" stroke="#e8f4ff" strokeWidth={0.05}>
+        <g fill="none" stroke="#526179" strokeWidth={0.05}>
           <rect x={sx(0)} y={sy(L)} width={W} height={L} />
           <line x1={sx(0)} x2={sx(W)} y1={sy(NET - KITCHEN)} y2={sy(NET - KITCHEN)} />
           <line x1={sx(0)} x2={sx(W)} y1={sy(NET + KITCHEN)} y2={sy(NET + KITCHEN)} />
           <line x1={sx(W / 2)} x2={sx(W / 2)} y1={sy(0)} y2={sy(NET - KITCHEN)} />
           <line x1={sx(W / 2)} x2={sx(W / 2)} y1={sy(NET + KITCHEN)} y2={sy(L)} />
         </g>
-        <line x1={sx(-0.3)} x2={sx(W + 0.3)} y1={sy(NET)} y2={sy(NET)} stroke="#f97316" strokeWidth={0.08} />
+        <line x1={sx(-0.3)} x2={sx(W + 0.3)} y1={sy(NET)} y2={sy(NET)} stroke="#a94318" strokeWidth={0.08} />
       </svg>
       <figcaption className="text-[10px] mt-2 text-center" style={{ color: WHITE_SUB }}>
         Near baseline (camera side) at bottom · cell {value.cell_size_m.toFixed(2)} m · brightest cell = {max.toFixed(1)} s

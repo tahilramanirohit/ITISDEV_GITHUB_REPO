@@ -68,9 +68,9 @@ export function AuthScreen({ sb, devMode }: { sb: SupabaseClient; devMode?: DevM
           </p>
         </section>
 
-        <section aria-labelledby="auth-title" className="p-6 sm:p-8" style={{ background: BLUE_MID, color: "white", border: `1px solid ${BORDER}` }}>
+        <section aria-labelledby="auth-title" className="p-6 sm:p-8" style={{ background: BLUE_MID, color: INK, border: `1px solid ${BORDER}` }}>
           <p className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: NEON }}>Get started</p>
-          <h2 id="auth-title" className="text-white mb-1" style={{ fontFamily: DISPLAY_FONT, letterSpacing: "0.02em", fontSize: "2rem", fontWeight: 700 }}>
+          <h2 id="auth-title" className="text-[#101827] mb-1" style={{ fontFamily: DISPLAY_FONT, letterSpacing: "0.02em", fontSize: "2rem", fontWeight: 700 }}>
             {mode === "sign_in" ? "Sign in" : "Create an account"}
           </h2>
           <p className="text-sm mb-6" style={{ color: WHITE_DIM }}>

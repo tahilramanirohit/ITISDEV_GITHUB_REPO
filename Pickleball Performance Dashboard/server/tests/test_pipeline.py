@@ -149,6 +149,34 @@ def test_manual_map_is_discarded_after_view_moves(synthetic_clip, monkeypatch):
     assert any("manual court map was discarded" in warning for warning in result.warnings)
 
 
+def test_track_ids_do_not_cross_camera_cuts(synthetic_clip, monkeypatch):
+    class ReusedTrackId:
+        confidence_is_model_score = True
+        detector_name = "test-person-model"
+
+        def __init__(self, **_kwargs):
+            pass
+
+        def update(self, _frame):
+            return [{"track_id": 7, "bbox": [20, 20, 40, 70], "confidence": 0.9}]
+
+    calls = 0
+
+    def cut_once(_previous, _current):
+        nonlocal calls
+        calls += 1
+        return calls == 20
+
+    monkeypatch.setattr("picklepro.pipeline.PlayerTracker", ReusedTrackId)
+    monkeypatch.setattr("picklepro.pipeline.likely_scene_cut", cut_once)
+    result = analyze_video(synthetic_clip.path, _opts(synthetic_clip, max_seconds=5))
+    assert len(result.tracks) == 2
+    first_id, second_id = [track.track_id for track in result.tracks]
+    assert first_id != second_id
+    assert result.player_positions[0].players[0].track_id == first_id
+    assert result.player_positions[-1].players[0].track_id == second_id
+
+
 def test_result_round_trips_through_contract(synthetic_clip):
     r = analyze_video(synthetic_clip.path, _opts(synthetic_clip, max_seconds=3))
     assert AnalysisResultV1.model_validate_json(r.model_dump_json()) == r

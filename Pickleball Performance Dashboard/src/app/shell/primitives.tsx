@@ -1,13 +1,13 @@
 import type { ReactNode } from "react";
 import {
-  BLUE_MID, BORDER, CARD_GLOW, COBALT, DISPLAY_FONT, INK, NEON, NEON_D, ORANGE, ORANGE_L, VIOLET, WHITE, WHITE_DIM, WHITE_SUB,
+  BLUE_MID, BORDER, CARD_GLOW, COBALT, DISPLAY_FONT, INK, NEON, NEON_D, ORANGE, VIOLET, WHITE, WHITE_DIM, WHITE_SUB,
 } from "../theme";
 
 // ── Card ──────────────────────────────────────────────────────────────────
 export function Card({ children, className = "", accent }: { children: ReactNode; className?: string; accent?: string }) {
   return (
     <div
-      className={`rounded-2xl p-5 ${className}`}
+        className={`rounded-2xl p-5 text-[#101827] ${className}`}
       style={{
         background: BLUE_MID,
         boxShadow: CARD_GLOW,
@@ -28,7 +28,7 @@ export function SectionBanner({ n, eyebrow, title, subtitle, bg, accent, badge }
     <div className="rounded-2xl px-6 py-4 mb-5 flex items-start gap-4" style={{ background: bg, border: `1px solid ${accent}40` }}>
       <div
         className="rounded-xl w-12 h-12 flex items-center justify-center flex-shrink-0 font-mono font-bold text-lg"
-        style={{ background: accent, color: accent === NEON ? NEON_D : WHITE }}
+        style={{ background: accent, color: WHITE }}
       >
         {n}
       </div>
@@ -37,7 +37,7 @@ export function SectionBanner({ n, eyebrow, title, subtitle, bg, accent, badge }
           <div className="text-xs font-bold tracking-widest mb-0.5" style={{ color: accent }}>{eyebrow}</div>
           {badge && <Pill color={ORANGE}>{badge}</Pill>}
         </div>
-        <div className="font-bold text-lg text-white" style={{ fontFamily: DISPLAY_FONT, letterSpacing: "0.04em" }}>{title}</div>
+        <div className="font-bold text-lg text-[#101827]" style={{ fontFamily: DISPLAY_FONT, letterSpacing: "0.04em" }}>{title}</div>
         <div className="text-xs mt-0.5" style={{ color: WHITE_DIM }}>{subtitle}</div>
       </div>
     </div>
@@ -48,7 +48,7 @@ export function SectionBanner({ n, eyebrow, title, subtitle, bg, accent, badge }
 export function WidgetHeader({ title, subtitle, accent }: { title: string; subtitle: string; accent?: string }) {
   return (
     <div className="mb-4">
-      <h3 className="font-semibold text-sm text-white mb-0.5" style={{ fontSize: "0.9rem" }}>{title}</h3>
+      <h3 className="font-semibold text-sm text-[#101827] mb-0.5" style={{ fontSize: "0.9rem" }}>{title}</h3>
       {accent
         ? <div className="flex items-center gap-1.5 mt-1">
             <div className="h-0.5 w-4 rounded" style={{ background: accent }} />
@@ -66,13 +66,13 @@ export function ChartTip({ active, payload, label, suffix = "" }: {
 }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-xl border px-3 py-2 text-xs shadow-2xl" style={{ background: "#0a1f4e", borderColor: BORDER }}>
-      {label && <div className="font-bold mb-1.5 text-white">{label}</div>}
+    <div className="rounded-xl border px-3 py-2 text-xs shadow-lg" style={{ background: WHITE, borderColor: BORDER }}>
+      {label && <div className="font-bold mb-1.5 text-[#101827]">{label}</div>}
       {payload.map(p => (
         <div key={p.name} className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full" style={{ background: p.color ?? NEON }} />
           <span style={{ color: WHITE_DIM }}>{p.name}:</span>
-          <span className="font-bold text-white">{typeof p.value === "number" ? `${p.value.toFixed(p.value < 10 ? 1 : 0)}${suffix}` : p.value}</span>
+          <span className="font-bold text-[#101827]">{typeof p.value === "number" ? `${p.value.toFixed(p.value < 10 ? 1 : 0)}${suffix}` : p.value}</span>
         </div>
       ))}
     </div>
@@ -93,12 +93,12 @@ export function Pill({ children, color = VIOLET, title }: { children: ReactNode;
 }
 
 export function Notice({ tone = "info", children }: { tone?: "info" | "warn" | "error"; children: ReactNode }) {
-  const color = tone === "error" ? "#f87171" : tone === "warn" ? ORANGE : "#38bdf8";
+  const color = tone === "error" ? "#ad2545" : tone === "warn" ? ORANGE : COBALT;
   return (
     <div
       role={tone === "error" ? "alert" : "status"}
       className="rounded-xl px-4 py-2.5 text-xs leading-relaxed"
-      style={{ background: `${color}18`, border: `1px solid ${color}50`, color: tone === "info" ? WHITE_DIM : ORANGE_L }}
+      style={{ background: `${color}0d`, border: `1px solid ${color}50`, color }}
     >
       {children}
     </div>
@@ -132,9 +132,9 @@ export function PickleProLogo({ size = "md", tone = "dark" }: { size?: "sm" | "m
 }
 
 export const fieldStyle = {
-  background: "rgba(255,255,255,0.06)",
+  background: WHITE,
   border: `1px solid ${BORDER}`,
-  color: WHITE,
+  color: INK,
 } as const;
 
 export const labelClass = "block text-xs font-semibold mb-1.5";

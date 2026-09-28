@@ -21,6 +21,10 @@ describe("ResultView", () => {
     const measured = { ...structuredClone(testFixture), data_origin: "measured" };
     render(<ResultView result={parseAnalysisResult(measured)} videoUrl={null} />);
     expect(screen.getByText("MEASURED FROM THIS VIDEO")).toBeTruthy();
+    expect(screen.getByRole("region", { name: "What the video analysis found" })).toBeTruthy();
+    expect(screen.getByText("Model not set up")).toBeTruthy();
+    expect(screen.getByText("Shot types")).toBeTruthy();
+    expect(screen.getByText("Not available")).toBeTruthy();
     fireEvent.click(screen.getByText("Detailed measurements and analysis notes"));
     expect(screen.getByText(testFixture.provenance.pipeline_version)).toBeTruthy();
     expect(screen.getByText("Share of video analyzed")).toBeTruthy();

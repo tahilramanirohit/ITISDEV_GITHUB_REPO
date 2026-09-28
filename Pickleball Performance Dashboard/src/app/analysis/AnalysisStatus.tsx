@@ -20,7 +20,7 @@ export function AnalysisStateBadge({ state }: { state: AnalysisUiState }) {
 
 export function ProgressBar({ fraction }: { fraction: number }) {
   return (
-    <div className="h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}
+    <div className="h-2 rounded-full overflow-hidden" style={{ background: "rgba(41,61,242,0.08)" }}
       role="progressbar" aria-valuenow={Math.round(fraction * 100)} aria-valuemin={0} aria-valuemax={100}>
       <div className="h-full rounded-full transition-all" style={{ width: `${Math.round(fraction * 100)}%`, background: BLUE_SKY }} />
     </div>
@@ -75,10 +75,10 @@ export function AnalysisParamsForm({ onChange }: { onChange: (params: AnalysisPa
         <label className={labelClass} style={labelStyle} htmlFor="player-selection">Player to analyze</label>
         <select id="player-selection" value={mode} className="w-full rounded-xl px-3 py-2 text-sm" style={fieldStyle}
           onChange={(e) => { const v = e.target.value as typeof mode; setMode(v); emit({ mode: v }); }}>
-          <option value="none" className="bg-[#071a3e]">Not selected (no court metrics)</option>
-          <option value="near" className="bg-[#071a3e]">The single player on the near half</option>
-          <option value="far" className="bg-[#071a3e]">The single player on the far half</option>
-          <option value="track" className="bg-[#071a3e]">A specific track id</option>
+          <option value="none" className="bg-white">Not selected (no court metrics)</option>
+          <option value="near" className="bg-white">The single player on the near half</option>
+          <option value="far" className="bg-white">The single player on the far half</option>
+          <option value="track" className="bg-white">A specific track id</option>
         </select>
         {mode === "track" && (
           <input aria-label="Track id" inputMode="numeric" value={trackId} placeholder="e.g. 3"

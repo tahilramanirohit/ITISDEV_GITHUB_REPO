@@ -82,7 +82,7 @@ export function VideoOverlayPlayer({
     for (const player of snapshot?.players ?? []) {
       const [x1, y1, x2, y2] = player.bbox;
       const selected = selectedTrackId != null && player.track_id === selectedTrackId;
-      const color = selected ? "#b8f523" : "#38bdf8";
+      const color = selected ? "#293df2" : "#ffffff";
       const bx = offX + x1 * scale;
       const by = offY + y1 * scale;
       ctx.strokeStyle = color;
@@ -91,13 +91,13 @@ export function VideoOverlayPlayer({
       const label = player.track_id != null ? `Track #${player.track_id}` : "Detection";
       ctx.fillStyle = color;
       ctx.fillRect(bx, Math.max(0, by - 20), ctx.measureText(label).width + 10, 20);
-      ctx.fillStyle = "#071a3e";
+      ctx.fillStyle = selected ? "#ffffff" : "#101827";
       ctx.fillText(label, bx + 5, Math.max(14, by - 6));
     }
     const ball = nearest(ballPositions, t);
     if (ball) {
       const [x1, y1, x2, y2] = ball.bbox;
-      ctx.strokeStyle = "#fbbf24";
+      ctx.strokeStyle = "#a94318";
       ctx.lineWidth = 2;
       ctx.strokeRect(offX + x1 * scale, offY + y1 * scale,
         Math.max(4, (x2 - x1) * scale), Math.max(4, (y2 - y1) * scale));
@@ -116,7 +116,7 @@ export function VideoOverlayPlayer({
   }, [src, drawOverlay]);
 
   return (
-    <div className="relative rounded-2xl border border-white/10 bg-black overflow-hidden min-h-[220px] flex items-center justify-center">
+    <div className={`relative rounded-2xl border overflow-hidden min-h-[220px] flex items-center justify-center ${src ? "border-[#d6d5ce] bg-black" : "border-[#d6d5ce] bg-white"}`}>
       {src ? (
         <div className="relative w-full flex items-center justify-center">
           <video ref={videoRef} src={src} controls className="w-full max-h-[420px] object-contain block" onLoadedMetadata={drawOverlay} />

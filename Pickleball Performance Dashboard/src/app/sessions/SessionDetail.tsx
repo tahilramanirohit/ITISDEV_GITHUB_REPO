@@ -210,7 +210,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
                 setGoalDraft(null);
               })}
               className="rounded-lg px-3 py-2 text-xs font-semibold disabled:opacity-40"
-              style={{ background: BLUE_SKY, color: "#071a3e" }}>Save goals</button>
+              style={{ background: BLUE_SKY, color: "#ffffff" }}>Save goals</button>
             <button type="button" onClick={() => setGoalDraft(null)} className="text-xs px-3 py-2" style={{ color: WHITE_DIM }}>Cancel</button>
           </div>
         </Card>
@@ -218,7 +218,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
 
       <Card accent={BLUE_SKY}>
         <p className="text-xs font-bold uppercase tracking-widest" style={{ color: BLUE_SKY }}>{hasFeedback ? "Step 3 of 3" : "Step 2 of 3"}</p>
-        <h2 className="text-xl font-bold text-white mt-1">{stepTitle}</h2>
+        <h2 className="text-xl font-bold text-[#101827] mt-1">{stepTitle}</h2>
         <p className="text-sm mt-2 mb-4" style={{ color: WHITE_DIM }}>{state ? stateDescription(state, job) : ""}</p>
         {hasFeedback && (
           <button type="button" onClick={() => document.getElementById("feedback")?.scrollIntoView({ behavior: "smooth", block: "start" })}
@@ -282,7 +282,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
               <button type="button" disabled={busy || !params}
                 onClick={() => void run(() => requestReanalysis(sb, job.id, params as Record<string, unknown>))}
                 className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold disabled:opacity-40"
-                style={{ background: BLUE_SKY, color: "#071a3e" }}>
+                style={{ background: BLUE_SKY, color: "#ffffff" }}>
                 <RefreshCw size={14} /> Re-run analysis
               </button>
               <p className="text-[11px]" style={{ color: WHITE_SUB }}>The current result is replaced when the new run finishes.</p>

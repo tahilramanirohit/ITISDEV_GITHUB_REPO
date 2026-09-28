@@ -62,10 +62,10 @@ export default function LocalPrototype() {
         and the result reports how much of the video was covered.
       </Notice>
       <Card accent={BLUE_SKY}>
-        <WidgetHeader title="Analyze a local video" subtitle="Fixed-camera footage you have permission to use." accent={BLUE_SKY} />
+        <WidgetHeader title="Analyze a local video" subtitle="Use a handheld or fixed-camera video you have permission to analyze." accent={BLUE_SKY} />
         <div className="space-y-3">
           <input type="file" accept="video/*" aria-label="Video file"
-            className="w-full text-sm text-white bg-slate-900 rounded-lg border border-slate-800 p-3 cursor-pointer"
+            className="w-full text-sm rounded-lg border p-3 cursor-pointer" style={fieldStyle}
             onChange={(e) => {
               const f = e.target.files?.[0] ?? null;
               const check = f ? validateVideoFile(f, 150 * 1024 * 1024) : null;
@@ -81,7 +81,7 @@ export default function LocalPrototype() {
           </label>
           {paramsError && <Notice tone="error">{paramsError}</Notice>}
           <button type="button" onClick={analyze} disabled={!file || !params || phase === "processing"}
-            className="rounded-xl px-4 py-2 text-sm font-bold disabled:opacity-40" style={{ background: BLUE_SKY, color: "#071a3e" }}>
+            className="rounded-xl px-4 py-2 text-sm font-bold disabled:opacity-40" style={{ background: BLUE_SKY, color: "#ffffff" }}>
             {phase === "processing" ? "Analyzing…" : "Analyze"}
           </button>
           {error && <Notice tone="error">{error}</Notice>}

@@ -20,8 +20,8 @@ export function GoalFields({ value, onChange }: { value: GoalValues; onChange: (
           const ratingKey = `${goal}_rating` as const;
           const selected = value.improvement_goals.includes(goal);
           return (
-            <div key={goal} className="rounded-xl p-4" style={{ border: `1px solid ${selected ? NEON : BORDER}`, background: selected ? `${NEON}0b` : "rgba(255,255,255,0.025)" }}>
-              <label className="flex items-start gap-3 text-sm text-white cursor-pointer">
+            <div key={goal} className="rounded-xl p-4" style={{ border: `1px solid ${selected ? NEON : BORDER}`, background: selected ? `${NEON}0b` : "rgba(41,61,242,0.025)" }}>
+              <label className="flex items-start gap-3 text-sm text-[#101827] cursor-pointer">
                 <input type="checkbox" aria-label={GOAL_LABELS[goal]} checked={selected} className="mt-1 h-4 w-4" style={{ accentColor: NEON }} onChange={() => onChange({
                   ...value,
                   improvement_goals: selected ? value.improvement_goals.filter((g) => g !== goal) : [...value.improvement_goals, goal],

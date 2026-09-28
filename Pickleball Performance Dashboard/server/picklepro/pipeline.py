@@ -106,6 +106,8 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
     snapshots: List[PositionSnapshot] = []
     ball_snapshots: List[BallSnapshot] = []
     tracks: Dict[int, List[float]] = {}  # id -> [first, last, count]
+    view_track_ids: Dict[tuple[int, int], int] = {}
+    next_view_track_id = 1
     frames_with_detections = 0
     expected = props.container_duration_s
 
@@ -126,6 +128,17 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
             frame_calibration = None if manual_view_lost else calibration
         per_frame_calibration.append(frame_calibration)
         detections = tracker.update(frame)
+        # Tracker IDs are local to a camera view. A cut cannot establish that
+        # a person in the new view is the same player as before the cut.
+        for detection in detections:
+            raw_id = detection.get("track_id")
+            if raw_id is None:
+                continue
+            key = (segment, raw_id)
+            if key not in view_track_ids:
+                view_track_ids[key] = next_view_track_id
+                next_view_track_id += 1
+            detection["track_id"] = view_track_ids[key]
         if ball_detector is not None:
             ball = ball_detector.detect(frame)
             if ball is not None:

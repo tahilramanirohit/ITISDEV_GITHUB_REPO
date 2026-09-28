@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
-import { BORDER, INK, PAPER, PAGE_BG, WHITE, WHITE_SUB } from "../theme";
+import { BORDER, INK, PAPER, PAGE_BG, WHITE_SUB } from "../theme";
 import { PickleProLogo } from "./primitives";
 
 export function AppShell({ children, right, nav }: { children: ReactNode; right?: ReactNode; nav?: ReactNode }) {
   return (
-    <div style={{ background: PAGE_BG, minHeight: "100vh", color: WHITE, fontFamily: "'Inter',sans-serif" }}>
+    <div style={{ background: PAGE_BG, minHeight: "100vh", color: INK, fontFamily: "'Inter',sans-serif" }}>
       <header className="sticky top-0 z-20 border-b" style={{ background: PAPER, borderColor: "#d6d5ce" }}>
         <div className="max-w-6xl mx-auto px-6 py-3 flex flex-wrap items-center justify-between gap-4">
           <div className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-2">
