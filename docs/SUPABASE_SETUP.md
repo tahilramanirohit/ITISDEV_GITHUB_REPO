@@ -68,6 +68,8 @@ From `Pickleball Performance Dashboard/`, run `npm ci && npm run dev`. In anothe
 4. Interrupt a TUS upload, reselect the same file, and confirm it resumes. Test an invalid file and a missing upload before finalize. Check the job's error message and retry behavior for an unreadable video in measured mode.
 5. Review Supabase security and performance advisors after migration, and record any findings. The local PostgreSQL policy harness can be rerun with `bash supabase/tests/run_local_rls_tests.sh`; it does not replace these hosted checks.
 
+On Windows, double-click `Pickleball Performance Dashboard/server/start_worker.bat` instead: it creates `.venv`, installs the requirements, creates `server/.env` for you to fill in, and starts the measured worker (`start_worker.bat test_fixture` for the fixture worker).
+
 The fixture worker stores a canned result without analyzing the uploaded file. For actual processing, stop it and start `.venv/bin/python -m picklepro.worker --mode measured`. The worker selects the near player by default. See [MODEL_SETUP.md](MODEL_SETUP.md) for optional court, player, and ball models and [CV_PIPELINE.md](CV_PIPELINE.md) for result interpretation. Results may legitimately say `insufficient_data`.
 
 [Supabase migration deployment](https://supabase.com/docs/guides/deployment/database-migrations) · [Supabase resumable uploads](https://supabase.com/docs/guides/storage/uploads/resumable-uploads)
