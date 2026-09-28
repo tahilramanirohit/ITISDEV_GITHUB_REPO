@@ -37,6 +37,7 @@ for f in "$MIGRATIONS"/*.sql; do
 done
 "${PSQL[@]}" -f "$HERE/local/05_helpers.sql"
 "${PSQL[@]}" -f "$HERE/local/10_access_and_jobs.sql" 2>&1 >/dev/null | sed -e 's/^psql:[^ ]* NOTICE:  /  /'
+"${PSQL[@]}" -f "$HERE/local/20_dev_mock_data.sql" 2>&1 >/dev/null | sed -e 's/^psql:[^ ]* NOTICE:  /  /'
 
 # Concurrency: 20 simultaneous finalize calls (double clicks, two tabs) → one job.
 "${PSQL[@]}" <<'SQL'

@@ -37,6 +37,17 @@ WORKER_RESULT_MODE=test_fixture
 
 Never place the service-role key in a `VITE_` setting or browser code. The worker bypasses row-level security and must run on a trusted machine.
 
+## Dev mode (development builds only)
+
+`npm run dev` shows a **Dev mode: enter with mock data** button under Sign in. It signs in as a Supabase anonymous user and creates four `[Dev mock]` sessions, including three weeks of improving practice and one unusable clip, so the results, feedback and progress screens can be tested without uploading a video. Mock results carry `provenance.pipeline_version = "dev-mock"` and are labelled **DEV MOCK DATA — NOT A REAL ANALYSIS**. The button is not in production builds.
+
+One-time setup on the test project:
+
+1. Authentication → Sign In / Providers → turn on **Allow anonymous sign-ins**. This is a project setting, not SQL.
+2. In the SQL editor, run `supabase/migrations/20260928000100_dev_mock_data.sql`. It adds `seed_dev_mock_data()`, which only anonymous users may call, only writes the caller's own rows, and replaces that user's earlier mock sessions.
+
+Each Dev mode entry creates a new anonymous user; **Exit dev mode** signs it out. Delete old anonymous users under Authentication → Users when they pile up. Do not enable anonymous sign-ins on a production project without reviewing abuse limits.
+
 ## Verify the full flow
 
 From `Pickleball Performance Dashboard/`, run `npm ci && npm run dev`. In another terminal, from `Pickleball Performance Dashboard/server/`, install the Python requirements and start one fixture worker:

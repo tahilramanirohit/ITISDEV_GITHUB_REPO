@@ -1,12 +1,16 @@
 import { useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { BLUE_MID, BLUE_POP, BORDER, DISPLAY_FONT, NEON, NEON_D, PAGE_BG, WHITE_DIM, WHITE_SUB } from "../theme";
+import { FlaskConical } from "lucide-react";
+import { BLUE_MID, BLUE_POP, BORDER, DISPLAY_FONT, NEON, NEON_D, ORANGE, PAGE_BG, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Notice, PickleProLogo, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
 
 type Mode = "sign_in" | "sign_up";
 
+/** Development builds only: enter as an anonymous user with generated mock sessions. */
+export type DevModeEntry = { onEnter: () => void; busy: boolean; error: string };
+
 /** Supabase email + password authentication. Replaces the former hard-coded demo account. */
-export function AuthScreen({ sb }: { sb: SupabaseClient }) {
+export function AuthScreen({ sb, devMode }: { sb: SupabaseClient; devMode?: DevModeEntry }) {
   const [mode, setMode] = useState<Mode>("sign_in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -77,6 +81,20 @@ export function AuthScreen({ sb }: { sb: SupabaseClient }) {
               {busy ? "PLEASE WAIT…" : mode === "sign_in" ? "SIGN IN →" : "CREATE ACCOUNT →"}
             </button>
           </form>
+          {devMode && (
+            <div className="mt-3">
+              <button type="button" onClick={devMode.onEnter} disabled={devMode.busy || busy}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold disabled:opacity-60"
+                style={{ color: ORANGE, border: `1px dashed ${ORANGE}`, background: "transparent" }}>
+                <FlaskConical size={14} />
+                {devMode.busy ? "Creating mock data…" : "Dev mode: enter with mock data"}
+              </button>
+              <p className="text-[11px] mt-1.5 text-center" style={{ color: WHITE_SUB }}>
+                Development builds only. Signs in as a temporary guest with sample sessions.
+              </p>
+              {devMode.error && <div className="mt-2"><Notice tone="error">{devMode.error}</Notice></div>}
+            </div>
+          )}
           <p className="text-center text-[11px] mt-6" style={{ color: WHITE_SUB }}>
             {mode === "sign_in" ? "No account yet? " : "Already registered? "}
             <button type="button" className="font-semibold" style={{ color: NEON }}

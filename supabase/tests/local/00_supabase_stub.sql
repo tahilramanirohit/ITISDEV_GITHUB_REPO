@@ -15,6 +15,11 @@ create function auth.uid() returns uuid language sql stable as $$
   select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
 $$;
 
+-- Supabase exposes the full request JWT (including "is_anonymous") as auth.jwt().
+create function auth.jwt() returns jsonb language sql stable as $$
+  select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb
+$$;
+
 create schema storage;
 create table storage.buckets (
   id text primary key,
@@ -40,6 +45,7 @@ $$;
 
 grant usage on schema public, auth, storage to anon, authenticated, service_role;
 grant execute on function auth.uid() to anon, authenticated, service_role;
+grant execute on function auth.jwt() to anon, authenticated, service_role;
 grant execute on function storage.foldername(text) to anon, authenticated, service_role;
 grant select, insert, update, delete on storage.objects to anon, authenticated, service_role;
 grant select on storage.buckets to anon, authenticated;

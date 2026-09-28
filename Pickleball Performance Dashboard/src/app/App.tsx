@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState } from "react";
 import { HashRouter, Route, Routes } from "react-router";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { config as defaultConfig, type AppConfig } from "../lib/config";
@@ -52,19 +52,58 @@ function NotAvailable() {
   );
 }
 
+function devModeErrorText(message: string): string {
+  if (/anonymous sign-ins are disabled/i.test(message)) {
+    return "Anonymous sign-ins are off in this Supabase project. Turn on Authentication → Sign In / Providers → Allow anonymous sign-ins, then try again.";
+  }
+  if (/seed_dev_mock_data|could not find the function/i.test(message)) {
+    return "The mock-data function is missing. Run supabase/migrations/20260928000100_dev_mock_data.sql in the Supabase SQL editor, then try again.";
+  }
+  return message;
+}
+
 function SignedInApp({ sb, cfg }: { sb: SupabaseClient; cfg: AppConfig }) {
   const auth = useAuth(sb);
+  const [devBusy, setDevBusy] = useState(false);
+  const [devError, setDevError] = useState("");
+
+  async function enterDevMode() {
+    setDevBusy(true);
+    setDevError("");
+    try {
+      const { error: signInError } = await sb.auth.signInAnonymously();
+      if (signInError) throw signInError;
+      const { buildMockSessions } = await import("./dev/mockSessions");
+      const { error: seedError } = await sb.rpc("seed_dev_mock_data", { p_sessions: buildMockSessions() });
+      if (seedError) {
+        await sb.auth.signOut();
+        throw seedError;
+      }
+    } catch (e) {
+      setDevError(devModeErrorText(e instanceof Error ? e.message : String((e as { message?: string })?.message ?? e)));
+    } finally {
+      setDevBusy(false);
+    }
+  }
+
   if (auth.status === "loading") return <Loading />;
-  if (auth.status === "signed_out") return <AuthScreen sb={sb} />;
+  if (auth.status === "signed_out") {
+    return <AuthScreen sb={sb} devMode={cfg.devModeEnabled ? { onEnter: () => void enterDevMode(), busy: devBusy, error: devError } : undefined} />;
+  }
+  // Signed in, but the mock sessions are still being written.
+  if (devBusy) return <p className="p-8 text-sm" style={{ color: WHITE_SUB }}>Creating mock data…</p>;
   const user = auth.session.user;
   return (
     <AppShell
       nav={<><a href="#/" style={{ color: BLUE_SKY }}>Sessions</a><DevLinks cfg={cfg} /></>}
       right={
         <div className="flex items-center gap-3 text-xs">
-          <span style={{ color: WHITE_DIM }}>{user.email}</span>
+          <span style={{ color: user.is_anonymous ? ORANGE : WHITE_DIM }}>
+            {user.is_anonymous ? "Dev mode (mock data)" : user.email}
+          </span>
           <button type="button" onClick={() => void sb.auth.signOut()} className="px-3 py-1.5 rounded-lg"
-            style={{ color: WHITE_DIM, border: `1px solid ${BORDER}` }}>Sign out</button>
+            title={user.is_anonymous ? "Leaves this temporary guest. Dev mode creates fresh mock data next time." : undefined}
+            style={{ color: WHITE_DIM, border: `1px solid ${BORDER}` }}>{user.is_anonymous ? "Exit dev mode" : "Sign out"}</button>
         </div>
       }
     >

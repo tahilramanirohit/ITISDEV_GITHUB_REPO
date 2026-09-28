@@ -15,6 +15,11 @@ describe("getConfig", () => {
     expect(getConfig({ DEV: false, VITE_ENABLE_LOCAL_PROTOTYPE: "true" }).localPrototypeEnabled).toBe(true);
   });
 
+  it("offers dev mode only in development builds", () => {
+    expect(getConfig({ DEV: true }).devModeEnabled).toBe(true);
+    expect(getConfig({ DEV: false, PROD: true, VITE_ENABLE_DESIGN_PREVIEW: "true" }).devModeEnabled).toBe(false);
+  });
+
   it("requires both Supabase URL and anon key", () => {
     expect(getConfig({ VITE_SUPABASE_URL: "https://x.supabase.co" }).supabase).toBeNull();
     expect(getConfig({ VITE_SUPABASE_URL: "https://x.supabase.co/", VITE_SUPABASE_ANON_KEY: "anon" }).supabase)

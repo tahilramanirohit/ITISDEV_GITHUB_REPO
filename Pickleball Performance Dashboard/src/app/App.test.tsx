@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import App from "./App";
 import { getConfig } from "../lib/config";
 
@@ -46,5 +47,59 @@ describe("application entry point", () => {
     render(<App cfg={devConfig} sb={null} />);
     expect(await screen.findByText(/DESIGN PREVIEW — sample data/, {}, { timeout: 5000 })).toBeTruthy();
     expect(screen.getAllByText("SAMPLE DATA").length).toBeGreaterThanOrEqual(4);
+  });
+});
+
+// Minimal stand-in for the Supabase client: signed out until signInAnonymously().
+function fakeSupabase({ rpcError = null as { message: string } | null } = {}) {
+  let listener: ((event: string, session: unknown) => void) | null = null;
+  const empty = { data: [], error: null };
+  const query: any = new Proxy({}, {
+    get: (_t, prop) => prop === "then" ? (resolve: (v: unknown) => void) => resolve(empty) : () => query,
+  });
+  const sb = {
+    auth: {
+      getSession: vi.fn(async () => ({ data: { session: null } })),
+      onAuthStateChange: vi.fn((cb: typeof listener) => {
+        listener = cb;
+        return { data: { subscription: { unsubscribe: () => {} } } };
+      }),
+      signInAnonymously: vi.fn(async () => {
+        listener?.("SIGNED_IN", { user: { id: "guest", is_anonymous: true } });
+        return { error: null };
+      }),
+      signOut: vi.fn(async () => { listener?.("SIGNED_OUT", null); return { error: null }; }),
+    },
+    rpc: vi.fn(async () => ({ data: 4, error: rpcError })),
+    from: vi.fn(() => query),
+  };
+  return sb;
+}
+
+describe("dev mode entry", () => {
+  it("is offered only in development builds", async () => {
+    render(<App cfg={{ ...prodConfig, supabase: { url: "x", anonKey: "y" } }} sb={fakeSupabase() as unknown as SupabaseClient} />);
+    await screen.findByText("SIGN IN →");
+    expect(screen.queryByRole("button", { name: /Dev mode/ })).toBeNull();
+  });
+
+  it("signs in as a guest, seeds mock sessions, and enters the app", async () => {
+    const sb = fakeSupabase();
+    render(<App cfg={devConfig} sb={sb as unknown as SupabaseClient} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Dev mode: enter with mock data/ }));
+    expect(await screen.findByText("Dev mode (mock data)")).toBeTruthy();
+    expect(sb.auth.signInAnonymously).toHaveBeenCalledOnce();
+    const [fn, args] = sb.rpc.mock.calls[0] as unknown as [string, { p_sessions: unknown[] }];
+    expect(fn).toBe("seed_dev_mock_data");
+    expect(args.p_sessions.length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Exit dev mode" })).toBeTruthy();
+  });
+
+  it("explains how to fix a missing database function and stays signed out", async () => {
+    const sb = fakeSupabase({ rpcError: { message: "Could not find the function public.seed_dev_mock_data" } });
+    render(<App cfg={devConfig} sb={sb as unknown as SupabaseClient} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Dev mode: enter with mock data/ }));
+    expect(await screen.findByText(/Run supabase\/migrations\/20260928000100_dev_mock_data.sql/)).toBeTruthy();
+    await waitFor(() => expect(sb.auth.signOut).toHaveBeenCalled());
   });
 });
