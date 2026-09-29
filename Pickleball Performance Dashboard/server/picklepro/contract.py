@@ -59,8 +59,11 @@ class Provenance(_Model):
 
 
 class VideoInfo(_Model):
-    width: int
+    width: int = Field(description="Width of the analyzed picture (after rotation_applied_deg).")
     height: int
+    rotation_applied_deg: Literal[0, 90, 180, 270] = Field(
+        0, description="Clockwise turn applied to the stored pixels before analysis; box coordinates refer to the "
+                       "turned picture.")
     fps: float
     frame_count_reported: Optional[int] = Field(
         None, description="Frame count from the container header; may be approximate."
@@ -181,7 +184,7 @@ class PositioningMetric(Metric):
     value: Optional[PositioningValue] = None
 
 
-ShotClass = Literal["serve", "return", "overhead", "volley", "dink", "drive", "lob", "unclassified"]
+ShotClass = Literal["serve", "return", "overhead", "volley", "dink", "drop", "drive", "lob", "unclassified"]
 CourtSide = Literal["near", "far"]
 
 

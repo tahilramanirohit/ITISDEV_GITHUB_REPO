@@ -25,6 +25,8 @@ from typing import Dict, List, Optional, Sequence
 
 import cv2
 
+from .video_io import ROTATE_CODES
+
 from .shots import SHOT_CLASSES
 
 LABEL_FIELDS = ("time_seconds", "side", "shot_class", "notes")
@@ -139,6 +141,7 @@ def export_review(video: Path, result: dict, out_dir: Path, trail_s: float = 0.4
         raise ValueError("The result has no shot contacts to review.")
     out_dir.mkdir(parents=True, exist_ok=True)
     balls = result.get("ball_positions") or []
+    rotation = int((result.get("video") or {}).get("rotation_applied_deg") or 0)
     cap = cv2.VideoCapture(str(video))
     if not cap.isOpened():
         raise ValueError(f"cannot open {video}")
@@ -150,6 +153,8 @@ def export_review(video: Path, result: dict, out_dir: Path, trail_s: float = 0.4
             ok, frame = cap.read()
             if not ok:
                 continue
+            if rotation in ROTATE_CODES:  # boxes refer to the turned picture
+                frame = cv2.rotate(frame, ROTATE_CODES[rotation])
             for b in balls:
                 if abs(b["time_seconds"] - t) <= trail_s:
                     x1, y1, x2, y2 = b["bbox"]

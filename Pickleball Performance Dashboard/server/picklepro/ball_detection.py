@@ -7,7 +7,7 @@ a trajectory or infer hits, speed, height, or shot type.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 from .detection import DetectorUnavailable
 
@@ -37,14 +37,23 @@ class BallDetector:
         self.class_id = ball_class_id(getattr(model, "names", {}))
 
     def detect(self, frame) -> Optional[dict]:
+        found = self.detect_candidates(frame, limit=1)
+        return found[0] if found else None
+
+    def detect_candidates(self, frame, limit: int = 3) -> List[dict]:
+        """Up to ``limit`` ball boxes, highest score first. Keeping more than one lets
+        the tracker skip a light or reflection that outscores the real ball."""
         results = self.model.predict(frame, classes=[self.class_id], conf=0.15, verbose=False)
         if not results or results[0].boxes is None or len(results[0].boxes) == 0:
-            return None
-        best = max(results[0].boxes, key=lambda box: float(box.conf[0]))
-        coords = best.xyxy[0]
-        if hasattr(coords, "cpu"):
-            coords = coords.cpu()
-        box = [int(round(float(v))) for v in coords]
-        if box[2] <= box[0] or box[3] <= box[1]:
-            return None
-        return {"bbox": box, "confidence": round(float(best.conf[0]), 3)}
+            return []
+        out: List[dict] = []
+        for b in sorted(results[0].boxes, key=lambda box: -float(box.conf[0])):
+            coords = b.xyxy[0]
+            if hasattr(coords, "cpu"):
+                coords = coords.cpu()
+            box = [int(round(float(v))) for v in coords]
+            if box[2] > box[0] and box[3] > box[1]:
+                out.append({"bbox": box, "confidence": round(float(b.conf[0]), 3)})
+            if len(out) >= limit:
+                break
+        return out

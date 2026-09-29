@@ -74,7 +74,7 @@ def _cmd_analyze(args) -> int:
     opts = AnalysisOptions(
         detector=args.detector, yolo_weights=args.yolo_weights, court_weights=args.court_weights,
         ball_weights=args.ball_weights,
-        target_fps=args.target_fps, ball_fps=args.ball_fps,
+        target_fps=args.target_fps, ball_fps=args.ball_fps, rotation=args.rotation,
         max_seconds=args.max_seconds, calibration=calibration, selection=selection,
         experimental_zones=args.experimental_zones, include_positions=not args.no_positions,
         min_tracked_seconds=args.min_tracked_seconds, min_tracked_fraction=args.min_tracked_fraction,
@@ -182,6 +182,8 @@ def build_parser() -> argparse.ArgumentParser:
     an.add_argument("--ball-weights", help="Local YOLO weights with a pickleball/ball class for observed ball boxes")
     an.add_argument("--target-fps", type=float, default=10.0, help="Player sample rate (default 10)")
     an.add_argument("--ball-fps", type=float, default=30.0, help="Ball sample rate (default 30, i.e. every frame)")
+    an.add_argument("--rotation", type=int, choices=[0, 90, 180, 270],
+                    help="Turn frames clockwise by this much (default: detect with the court model)")
     an.add_argument("--max-seconds", type=float, help="Stop after this many seconds (reported in coverage)")
     an.add_argument("--min-tracked-seconds", type=float, default=10.0)
     an.add_argument("--min-tracked-fraction", type=float, default=0.25)

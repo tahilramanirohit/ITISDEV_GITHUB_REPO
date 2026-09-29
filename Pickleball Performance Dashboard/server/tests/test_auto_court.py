@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 import numpy as np
 
-from picklepro.auto_court import MODEL_LANDMARKS, calibration_from_pose, detect_court
+from picklepro.auto_court import MODEL_LANDMARKS, calibration_from_pose, detect_court, detect_orientation
 from picklepro.court import LANDMARKS_M, calibration_from_dict
 from picklepro.fixtures import court_to_image_homography, project
 from picklepro.pipeline import AnalysisOptions, analyze_video
@@ -46,10 +46,7 @@ def test_video_analysis_uses_detected_court_without_manual_json(synthetic_clip, 
         def predict(self, _frame, verbose=False):
             return [_result(_pose())]
 
-    import picklepro.auto_court as auto_court
-    real_detect = auto_court.detect_court
-    monkeypatch.setattr("picklepro.pipeline.detect_court", lambda path, props, weights, seconds_to_scan:
-                        real_detect(path, props, weights, model=FakeCourtModel(), seconds_to_scan=seconds_to_scan))
+    monkeypatch.setattr("picklepro.pipeline.load_court_model", lambda _weights: FakeCourtModel())
     result = analyze_video(synthetic_clip.path, AnalysisOptions(
         court_weights="supplied-by-operator.pt", selection=Selection("court_half", court_half="near"),
         compute_sha256=False))
@@ -57,6 +54,7 @@ def test_video_analysis_uses_detected_court_without_manual_json(synthetic_clip, 
     assert result.calibration.method == "auto_model_landmarks"
     assert result.metrics.court_heatmap.status == "measured"
     assert result.player_selection.tracked_fraction > 0.8
+    assert result.video.rotation_applied_deg == 0
 
 
 def test_detection_returns_none_when_model_sees_no_court(synthetic_clip):
@@ -75,3 +73,42 @@ def test_manual_calibration_takes_priority_over_optional_model(synthetic_clip):
         compute_sha256=False))
     assert result.status == "ok"
     assert result.calibration.method == "manual_landmarks"
+
+
+class GradientCourtModel:
+    """Sees an upright court only in wide frames that are dark at the top (the far end)."""
+
+    def predict(self, frame, verbose=False):
+        h, w = frame.shape[:2]
+        upright = w > h and frame[: h // 4].mean() < frame[-h // 4:].mean()
+        pose = _pose()
+        if not upright:
+            pose[:, 2] = 0.05
+        return [_result(pose)]
+
+
+def _gradient_video(path, rotate=None):
+    import cv2
+
+    frame = np.repeat(np.linspace(0, 255, 90, dtype=np.uint8)[:, None], 160, axis=1)
+    frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+    if rotate is not None:
+        frame = cv2.rotate(frame, rotate)
+    h, w = frame.shape[:2]
+    writer = cv2.VideoWriter(str(path), cv2.VideoWriter_fourcc(*"mp4v"), 10, (w, h))
+    for _ in range(40):
+        writer.write(frame)
+    writer.release()
+    return path
+
+
+def test_orientation_turns_sideways_pixels_upright_and_leaves_upright_video_alone(tmp_path):
+    import cv2
+
+    upright = _gradient_video(tmp_path / "upright.mp4")
+    assert detect_orientation(upright, probe(upright), GradientCourtModel(), sample_times=(0.5, 2.0)) == 0
+    # Stored rotated 90 degrees clockwise -> needs 270 clockwise to come back.
+    sideways = _gradient_video(tmp_path / "sideways.mp4", cv2.ROTATE_90_CLOCKWISE)
+    assert detect_orientation(sideways, probe(sideways), GradientCourtModel(), sample_times=(0.5, 2.0)) == 270
+    flipped = _gradient_video(tmp_path / "flipped.mp4", cv2.ROTATE_180)
+    assert detect_orientation(flipped, probe(flipped), GradientCourtModel(), sample_times=(0.5, 2.0)) == 180

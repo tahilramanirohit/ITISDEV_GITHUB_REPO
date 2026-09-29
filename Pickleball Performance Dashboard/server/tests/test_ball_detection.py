@@ -55,11 +55,14 @@ def test_court_player_and_ball_paths_produce_one_honest_result(synthetic_clip, m
                         BallDetector("operator-weights.pt", model=FakeBallModel()))
     monkeypatch.setattr("picklepro.pipeline.detect_court", lambda *_args, **_kwargs:
                         calibration_from_dict(synthetic_clip.calibration))
+    monkeypatch.setattr("picklepro.pipeline.load_court_model", lambda _weights: None)
     result = analyze_video(synthetic_clip.path, AnalysisOptions(
         court_weights="court.pt", ball_weights="object.pt",
         selection=Selection("court_half", court_half="near"), compute_sha256=False))
     assert result.status == "ok"
     assert result.calibration.method == "auto_model_landmarks"
     assert result.coverage.frames_with_detections > 0
-    assert result.coverage.frames_with_ball_detections > 0
+    # The fake "ball" sits in the same place for the whole clip, like a light: it is ignored.
+    assert result.coverage.frames_with_ball_detections == 0
+    assert any("kept appearing in the same place" in w for w in result.warnings)
     assert result.metrics.court_heatmap.status == "measured"

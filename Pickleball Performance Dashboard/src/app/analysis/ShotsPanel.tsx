@@ -8,12 +8,12 @@ import { Card, Pill, WidgetHeader } from "../shell/primitives";
 
 export const SHOT_LABELS: Record<ShotClass, string> = {
   serve: "Serve", return: "Return", overhead: "Overhead", volley: "Volley",
-  dink: "Dink", drive: "Drive", lob: "Lob", unclassified: "Unclassified",
+  dink: "Dink", drop: "Drop / reset", drive: "Drive", lob: "Lob", unclassified: "Unclassified",
 };
 
 const SHOT_COLORS: Record<ShotClass, string> = {
   serve: NEON, return: BLUE_SKY, overhead: ORANGE, volley: VIOLET,
-  dink: "#34d399", drive: "#f472b6", lob: "#facc15", unclassified: WHITE_SUB,
+  dink: "#34d399", drop: "#2dd4bf", drive: "#f472b6", lob: "#facc15", unclassified: WHITE_SUB,
 };
 
 const fmtT = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, "0")}`;
@@ -130,7 +130,7 @@ export function ShotsPanel({ result, onSeek }: { result: AnalysisResultV1; onSee
         <ul className="mt-1 space-y-1">
           {SHOT_CLASSES.map((c) => (
             <li key={c} className="text-xs" style={{ color: WHITE_DIM }}>
-              <strong style={{ color: WHITE }}>{SHOT_LABELS[c]}:</strong> {v.class_definitions[c]}
+              <strong style={{ color: WHITE }}>{SHOT_LABELS[c]}:</strong> {v.class_definitions[c] ?? "Not used by the rule version that made this result. Re-run analysis to include it."}
             </li>
           ))}
         </ul>

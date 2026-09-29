@@ -27,6 +27,15 @@ def path(*legs):
     return obs
 
 
+def arc(t0, t1, a, b, apex_y):
+    """A smooth flight from a to b whose highest image point is apex_y (a lob)."""
+    n = int(round((t1 - t0) * FPS))
+    ts = np.array([0.0, 0.5, 1.0])
+    ys = np.polyfit(ts, [a[1], apex_y, b[1]], 2)
+    return [BallObservation(t0 + i * DT, a[0] + (b[0] - a[0]) * i / n, float(np.polyval(ys, i / n)), 0.9)
+            for i in range(n)]
+
+
 def players(t_end, near=NEAR_BOX, far=FAR_BOX):
     return [PlayerFrame(t, [{"track_id": 1, "bbox": list(near)}, {"track_id": 2, "bbox": list(far)}])
             for t in np.arange(0, t_end, 0.1)]
@@ -76,7 +85,10 @@ def serve_return_rally():
 def test_serve_return_and_volleys_in_an_observed_rally():
     track, events, rallies, shots = run(serve_return_rally(), 9.0)
     assert len(rallies) == 1 and rallies[0].complete
-    assert classes(shots) == [("near", "serve"), ("far", "return"), ("near", "volley"), ("far", "volley")]
+    assert classes(shots)[:2] == [("near", "serve"), ("far", "return")]
+    # Two-bounce rule: the 3rd shot is played off the bounce, so only the 4th can be a volley.
+    assert shots[2].contact.side == "near" and shots[2].shot_class != "volley"
+    assert classes(shots)[3] == ("far", "volley")
     assert shots[0].evidence == "weak"            # no court calibration to check the baseline
     assert all(s.contact.side_source == "ball_direction" for s in shots)
 
@@ -105,12 +117,11 @@ def test_a_bounce_before_the_hit_prevents_a_volley():
 
 
 def test_ball_above_the_head_is_an_overhead():
-    obs = path(
-        (2.0, 3.0, (300, 280), (320, 100)),
-        (3.0, 4.2, (320, 100), (305, 170)),    # far return arrives above the near player's head
-        (4.2, 5.2, (305, 170), (325, 95)),     # near player hits it from above the box top
-        (5.2, 6.2, (325, 95), (300, 300)),
-    )
+    obs = (path((2.0, 2.8, (300, 280), (320, 90)),
+                (2.8, 3.0, (320, 90), (320, 100)))                 # serve bounces in front of the far player
+           + arc(3.0, 4.2, (320, 100), (305, 170), apex_y=5)       # far player lobs; it drops above the near head
+           + path((4.2, 4.4, (305, 170), (325, 80)),               # near player smashes it back
+                  (4.4, 5.4, (325, 80), (300, 300))))
     _, _, _, shots = run(obs, 9.0)
     assert ("near", "overhead") in classes(shots)
 
@@ -192,3 +203,29 @@ def test_labels_with_unknown_classes_are_rejected(tmp_path):
     bad.write_text("time_seconds,side,shot_class\n1.0,near,smash\n")
     with pytest.raises(ValueError, match="smash"):
         read_labels(bad)
+
+
+def test_static_detections_are_found_but_a_moving_ball_is_not():
+    from picklepro.scene import static_mask
+
+    light = [(i * DT, (50.0 + (i % 2), 20.0)) for i in range(0, 300, 2)]  # same spot, every other frame, 10 s
+    ball = [(t * DT, (100 + 10 * t, 300 - 4 * t)) for t in range(30)]     # moving
+    times = [t for t, _ in light + ball]
+    mask = static_mask(times, [p for _, p in light + ball], H)
+    assert all(mask[: len(light)]) and not any(mask[len(light):])
+
+
+def test_cuts_split_rallies_and_are_found_from_large_picture_changes():
+    from picklepro.scene import find_cuts
+
+    times = [i * 0.1 for i in range(100)]
+    diffs = [None] + [1.0] * 49 + [30.0] + [1.2] * 49
+    assert find_cuts(times, diffs) == [5.0]
+
+    obs = serve_return_rally()                      # 2.0 - 6.2 s
+    track = build_ball_track(obs, H, DT)
+    events = detect_events(track, players(9.0))
+    whole = segment_rallies(track, events, 0.0, 9.0)
+    split = segment_rallies(track, events, 0.0, 9.0, cuts=[4.0])
+    assert len(whole) == 1 and len(split) == 2
+    assert not split[0].complete and not split[1].complete   # both touch the cut

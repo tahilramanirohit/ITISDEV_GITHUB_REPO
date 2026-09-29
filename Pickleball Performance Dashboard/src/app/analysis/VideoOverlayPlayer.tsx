@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Pause, Play } from "lucide-react";
 import type { BallSnapshot, PositionSnapshot, ShotContact } from "../../lib/analysis/contract";
 import { WHITE_DIM } from "../theme";
 
@@ -28,6 +29,7 @@ export function VideoOverlayPlayer({
   selectedTrackId,
   contacts = [],
   seek = null,
+  rotation = 0,
 }: {
   src: string | null;
   positions: PositionSnapshot[];
@@ -36,9 +38,25 @@ export function VideoOverlayPlayer({
   contacts?: ShotContact[];
   /** Jump request; `n` changes on every request so the same time can be sought twice. */
   seek?: { t: number; n: number } | null;
+  /** Clockwise turn the analysis applied to the stored pixels; the player shows the video the same way. */
+  rotation?: 0 | 90 | 180 | 270;
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const boxRef = useRef<HTMLDivElement | null>(null);
+  const turned = rotation % 180 === 90;
+  const [box, setBox] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
+  const [aspect, setAspect] = useState<number | null>(null); // width / height as displayed
+  const [playing, setPlaying] = useState(false);
+  const [time, setTime] = useState({ t: 0, d: 0 });
+
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!rotation || !el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => setBox({ w: el.clientWidth, h: el.clientHeight }));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [rotation, src]);
 
   const drawOverlay = useCallback(() => {
     const video = videoRef.current;
@@ -47,18 +65,23 @@ export function VideoOverlayPlayer({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Match canvas dimensions to rendered video display size
-    if (canvas.width !== video.clientWidth || canvas.height !== video.clientHeight) {
-      canvas.width = video.clientWidth;
-      canvas.height = video.clientHeight;
+    // Match canvas dimensions to the displayed picture (the turned box when rotated).
+    const shownW = rotation ? canvas.clientWidth : video.clientWidth;
+    const shownH = rotation ? canvas.clientHeight : video.clientHeight;
+    if (canvas.width !== shownW || canvas.height !== shownH) {
+      canvas.width = shownW;
+      canvas.height = shownH;
     }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if ((!positions.length && !ballPositions.length && !contacts.length) || !video.videoWidth) return;
 
-    // object-contain letterboxing: compute the drawn video rectangle.
-    const scale = Math.min(canvas.width / video.videoWidth, canvas.height / video.videoHeight);
-    const offX = (canvas.width - video.videoWidth * scale) / 2;
-    const offY = (canvas.height - video.videoHeight * scale) / 2;
+    // Boxes refer to the analyzed (turned) picture. object-contain letterboxing:
+    // compute the drawn video rectangle.
+    const picW = turned ? video.videoHeight : video.videoWidth;
+    const picH = turned ? video.videoWidth : video.videoHeight;
+    const scale = Math.min(canvas.width / picW, canvas.height / picH);
+    const offX = (canvas.width - picW * scale) / 2;
+    const offY = (canvas.height - picH * scale) / 2;
 
     const t = video.currentTime;
     const snapshot = nearest(positions, t);
@@ -99,7 +122,7 @@ export function VideoOverlayPlayer({
       ctx.fillStyle = c.shot_class === "unclassified" ? "#cbd5e1" : "#b8f523";
       ctx.fillText(label, lx, ly);
     }
-  }, [positions, ballPositions, selectedTrackId, contacts]);
+  }, [positions, ballPositions, selectedTrackId, contacts, rotation, turned]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -108,6 +131,18 @@ export function VideoOverlayPlayer({
     video.scrollIntoView?.({ behavior: "smooth", block: "center" });
     void video.play?.()?.catch(() => undefined);
   }, [seek]);
+
+  const onMeta = () => {
+    const v = videoRef.current;
+    if (v?.videoWidth) setAspect(turned ? v.videoHeight / v.videoWidth : v.videoWidth / v.videoHeight);
+    drawOverlay();
+  };
+  const toggle = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) void v.play?.()?.catch(() => undefined);
+    else v.pause();
+  };
 
   // Request Animation Frame loop for smooth box animation while video plays
   useEffect(() => {
@@ -122,7 +157,31 @@ export function VideoOverlayPlayer({
 
   return (
     <div className="relative rounded-2xl border border-white/10 bg-black overflow-hidden min-h-[220px] flex items-center justify-center">
-      {src ? (
+      {src && rotation ? (
+        <div className="w-full">
+          {/* The stored pixels are sideways: show the picture turned the same way the analysis turned it. */}
+          <div ref={boxRef} className="relative mx-auto overflow-hidden"
+            style={{ width: aspect ? `min(100%, ${Math.round(420 * aspect)}px)` : "100%", aspectRatio: aspect ? String(aspect) : "16 / 9" }}>
+            <video ref={videoRef} src={src} className="absolute object-contain block" onLoadedMetadata={onMeta}
+              onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
+              onTimeUpdate={(e) => setTime({ t: e.currentTarget.currentTime, d: e.currentTarget.duration || 0 })}
+              style={{
+                left: "50%", top: "50%",
+                width: turned ? box.h : box.w, height: turned ? box.w : box.h,
+                transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
+              }} />
+            <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full pointer-events-none" />
+          </div>
+          <div className="flex items-center gap-2 px-3 py-2">
+            <button type="button" onClick={toggle} aria-label={playing ? "Pause" : "Play"} className="p-1 rounded text-white">
+              {playing ? <Pause size={16} /> : <Play size={16} />}
+            </button>
+            <input type="range" min={0} max={time.d || 0} step={0.05} value={time.t} aria-label="Seek" className="flex-1"
+              onChange={(e) => { const v = videoRef.current; if (v) v.currentTime = Number(e.target.value); }} />
+            <span className="font-mono text-[11px]" style={{ color: WHITE_DIM }}>{time.t.toFixed(1)} s</span>
+          </div>
+        </div>
+      ) : src ? (
         <div className="relative w-full flex items-center justify-center">
           <video ref={videoRef} src={src} controls className="w-full max-h-[420px] object-contain block" onLoadedMetadata={drawOverlay} />
           <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full pointer-events-none" />

@@ -883,6 +883,7 @@
             "overhead",
             "volley",
             "dink",
+            "drop",
             "drive",
             "lob",
             "unclassified"
@@ -1083,6 +1084,7 @@
               "overhead",
               "volley",
               "dink",
+              "drop",
               "drive",
               "lob",
               "unclassified"
@@ -1242,11 +1244,24 @@
       "additionalProperties": false,
       "properties": {
         "width": {
+          "description": "Width of the analyzed picture (after rotation_applied_deg).",
           "title": "Width",
           "type": "integer"
         },
         "height": {
           "title": "Height",
+          "type": "integer"
+        },
+        "rotation_applied_deg": {
+          "default": 0,
+          "description": "Clockwise turn applied to the stored pixels before analysis; box coordinates refer to the turned picture.",
+          "enum": [
+            0,
+            90,
+            180,
+            270
+          ],
+          "title": "Rotation Applied Deg",
           "type": "integer"
         },
         "fps": {

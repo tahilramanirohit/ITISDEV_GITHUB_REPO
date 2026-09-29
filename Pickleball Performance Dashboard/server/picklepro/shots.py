@@ -31,22 +31,27 @@ from __future__ import annotations
 import bisect
 import math
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 
 from .ball_track import BallObservation, BallTrack
 from .court import COURT_LENGTH_M, KITCHEN_DEPTH_M, NET_Y_M, CourtCalibration, foot_point
 
-RULE_VERSION = "shots-rules-0.2-unvalidated"
-SHOT_CLASSES = ("serve", "return", "overhead", "volley", "dink", "drive", "lob", "unclassified")
+RULE_VERSION = "shots-rules-0.4-unvalidated"
+SHOT_CLASSES = ("serve", "return", "overhead", "volley", "dink", "drop", "drive", "lob", "unclassified")
 CLASS_DEFINITIONS = {
     "serve": "First contact of a rally whose start was observed (ball out of play for at least 1 s before). "
              "With a court calibration the server must also be behind their baseline.",
     "return": "Second contact of a rally, by the other side, after the serve (the two-bounce rule means it follows a bounce).",
-    "overhead": "Contact with the ball clearly above the top of the hitter's box (above head height). Not a serve.",
-    "volley": "Contact after an opponent's hit, with the ball continuously observed in between and no bounce candidate.",
+    "overhead": "Hard hit with the ball clearly above the top of the hitter's box (above head height), usually the "
+                "answer to a lob or a high ball. Not a serve.",
+    "volley": "Hit before the ball bounces: the 4th shot of a rally or later (the two-bounce rule means the serve, "
+              "return and 3rd shot are all played off the bounce), with the ball seen continuously since the "
+              "opponent's hit and no bounce candidate.",
     "dink": "Slow contact by a player at their kitchen line that lands (or is next played) in the opponent's kitchen area.",
+    "drop": "Soft shot from behind the kitchen line (baseline or transition zone), such as a third-shot drop or a "
+            "reset, that lands in (or is next played from) the opponent's kitchen area. Needs a court calibration.",
     "drive": "Fast, flat ball after contact (image-space speed and arc proxies).",
     "lob": "High, long ball after contact: the image path rises well above the straight line to where it ends.",
     "unclassified": "Missing or weak ball evidence, ambiguous contact, truncated rally context or conflicting rules.",
@@ -59,7 +64,8 @@ RULES: Dict[str, float] = {
     "smooth_window_s": 0.25,         # a smooth curve over +/- this window means flight, not an event
     "smooth_max_rms_h": 0.004,       # max RMS residual of that curve, as a share of frame height
     "min_event_speed_h": 0.15,       # frame heights / s; slower balls are not in flight
-    "event_merge_s": 0.25,           # events closer than this are one event
+    "event_merge_s": 0.25,           # same-side events closer than this are one event
+    "min_exchange_s": 0.15,          # opposite-side hits at least this far apart are both kept
     "max_occlusion_gap_s": 0.60,     # contact hidden behind the player
     "player_pad_x": 0.5,             # box widths added left/right when matching a contact
     "player_pad_top": 0.4,           # box heights added above the head (reach)
@@ -74,11 +80,15 @@ RULES: Dict[str, float] = {
     "serve_max_depth_m": 0.30,
     "serve_start_window_s": 0.40,    # first contact this close to the rally start can be a serve       # server's foot at most this far inside the baseline
     "return_min_gap_s": 0.5,
-    "overhead_top_margin": 0.15,     # ball centre at least this share of box height above the box top
+    "overhead_top_margin": 0.15,
+    "overhead_min_speed_ph": 3.0,    # an overhead is hit hard
+    "overhead_incoming_rise": 1.0,   # incoming ball rose at least one box height above the hitter's head
+    "max_plausible_speed_ph": 16.0,  # ~60 mph for a 1.7 m player; faster means a tracking error     # ball centre at least this share of box height above the box top
     "volley_min_observed": 0.70,     # observed share of the interval since the opponent's hit
     "volley_max_gap_s": 0.15,
     "dink_max_speed_ph": 3.5,        # player heights / s, measured just after contact
     "dink_min_depth_m": NET_Y_M - KITCHEN_DEPTH_M - 1.0,   # hitter's foot within 1 m of the kitchen line or inside
+    "drop_max_speed_ph": 4.5,        # soft ball from deeper in the court
     "drive_min_speed_ph": 5.0,
     "drive_max_arc": 0.35,           # arc height / chord length
     "lob_min_arc": 0.60,
@@ -243,9 +253,19 @@ def _pick_hitter(x: float, y: float, detections: List[dict], sides: List[Optiona
     return best
 
 
-def detect_events(track: BallTrack, players: Sequence[PlayerFrame],
-                  calibration: Optional[CourtCalibration] = None) -> List[Event]:
-    """Contacts and bounce candidates from observed (not interpolated) ball samples."""
+def _calibration_at(calibration) -> Callable[[float], Optional[CourtCalibration]]:
+    """Accept one calibration, None, or a function of time (a camera-segment timeline)."""
+    if calibration is None or isinstance(calibration, CourtCalibration):
+        return lambda _t: calibration
+    return calibration
+
+
+def detect_events(track: BallTrack, players: Sequence[PlayerFrame], calibration=None) -> List[Event]:
+    """Contacts and bounce candidates from observed (not interpolated) ball samples.
+
+    ``calibration`` is one calibration, None, or a function giving the calibration
+    at a time (the court moves in the image when the camera moves)."""
+    cal_at = _calibration_at(calibration)
     obs = track.observations
     times = [o.t for o in obs]
     h = float(track.frame_height)
@@ -263,12 +283,12 @@ def detect_events(track: BallTrack, players: Sequence[PlayerFrame],
         if not occluded and _smooth_flight(obs, times, t, h):
             return
         dets = _players_at(players, ptimes, t, RULES["player_match_s"])
-        sides = _box_sides(dets, calibration)
+        sides = _box_sides(dets, cal_at(t))
         want = _direction_side(vb, va, h)
         hit = _pick_hitter(x, y, dets, sides, want, h) if turn >= RULES["min_turn_deg"] else None
         if hit is not None:
             d, box_side = hit
-            side, source = (want, "ball_direction") if want else (box_side, "court_calibration" if calibration else "image_layout")
+            side, source = (want, "ball_direction") if want else (box_side, "court_calibration" if cal_at(t) else "image_layout")
             raw.append(Event("contact", t, x, y, turn, vb, va, occluded=occluded, track_id=d.get("track_id"), bbox=list(d["bbox"]),
                              side=side, side_source=source if side else None))
             return
@@ -295,20 +315,25 @@ def detect_events(track: BallTrack, players: Sequence[PlayerFrame],
         if va is None or math.hypot(*va) < min_speed:
             continue
         dets = _players_at(players, ptimes, o.t, RULES["player_match_s"])
-        sides = _box_sides(dets, calibration)
+        sides = _box_sides(dets, cal_at(o.t))
         want = "near" if va[1] < -0.1 * h else "far" if va[1] > 0.1 * h else None
         hit = _pick_hitter(o.x, o.y, dets, sides, want, h, scale=1.5)
         if hit is not None:
             d, box_side = hit
-            side, source = (want, "ball_direction") if want else (box_side, "court_calibration" if calibration else "image_layout")
+            side, source = (want, "ball_direction") if want else (box_side, "court_calibration" if cal_at(o.t) else "image_layout")
             raw.append(Event("contact", o.t, o.x, o.y, 0.0, (0.0, 0.0), va, occluded=True, first_sight=True,
                              track_id=d.get("track_id"), bbox=list(d["bbox"]), side=side, side_source=source if side else None))
 
-    # Non-maximum suppression: one event per burst, contacts win over bounces.
+    # Non-maximum suppression: one event per burst, contacts win over bounces. Hits by
+    # opposite sides can be only 0.25-0.35 s apart in a fast exchange at the net, so
+    # those are kept apart once they are more than min_exchange_s apart.
     raw.sort(key=lambda e: e.t)
     events: List[Event] = []
     for e in raw:
-        if events and e.t - events[-1].t < RULES["event_merge_s"]:
+        prev = events[-1] if events else None
+        exchange = (prev is not None and e.kind == prev.kind == "contact" and e.side and prev.side
+                    and e.side != prev.side and e.t - prev.t >= RULES["min_exchange_s"])
+        if prev is not None and not exchange and e.t - prev.t < RULES["event_merge_s"]:
             prev = events[-1]
             if (e.kind == "contact") > (prev.kind == "contact") or (e.kind == prev.kind and (
                     e.first_sight > prev.first_sight or (e.first_sight == prev.first_sight and e.turn_deg > prev.turn_deg))):
@@ -329,21 +354,29 @@ def detect_events(track: BallTrack, players: Sequence[PlayerFrame],
                 and math.hypot(*a.v_after) < math.hypot(*a.v_before)):
             a.kind, a.track_id, a.bbox, a.side, a.side_source = "bounce", None, None, None, None
 
-    if calibration is not None:
-        for e in events:
+    for e in events:
+        cal = cal_at(e.t)
+        if cal is not None:
             point = foot_point(e.bbox) if e.kind == "contact" and e.bbox is not None else (e.x, e.y)
-            cx, cy = calibration.image_to_court([point])[0]
+            cx, cy = cal.image_to_court([point])[0]
             e.court_xy_m = (float(cx), float(cy))
     return events
 
 
-def segment_rallies(track: BallTrack, events: Sequence[Event], clip_start: float, clip_end: float) -> List[Rally]:
+def segment_rallies(track: BallTrack, events: Sequence[Event], clip_start: float, clip_end: float,
+                    cuts: Sequence[float] = ()) -> List[Rally]:
+    """Rallies never span a camera cut; a cut counts as a clip edge for completeness."""
     obs = track.observations
     if not obs:
         return []
+    edges = [clip_start] + sorted(c for c in cuts if clip_start < c < clip_end) + [clip_end]
+
+    def segment(t: float) -> int:
+        return min(len(edges) - 2, max(0, bisect.bisect_right(edges, t) - 1))
+
     groups: List[List[BallObservation]] = [[obs[0]]]
     for o in obs[1:]:
-        if o.t - groups[-1][-1].t > RULES["rally_gap_s"]:
+        if o.t - groups[-1][-1].t > RULES["rally_gap_s"] or segment(o.t) != segment(groups[-1][-1].t):
             groups.append([o])
         else:
             groups[-1].append(o)
@@ -356,7 +389,11 @@ def segment_rallies(track: BallTrack, events: Sequence[Event], clip_start: float
         if not contacts:
             continue
         margin = RULES["rally_edge_margin_s"]
-        complete = start - clip_start >= margin and clip_end - end >= margin
+        seg = segment(start)
+        complete = start - edges[seg] >= margin and edges[seg + 1] - end >= margin
+        contacts = [e for e in contacts if segment(e.t) == seg]
+        if not contacts:
+            continue
         observed = min(1.0, len(g) * track.sample_interval_s / max(end - start, track.sample_interval_s))
         rallies.append(Rally(len(rallies), start, end, complete, observed, contacts))
     return rallies
@@ -458,33 +495,50 @@ def classify_shots(track: BallTrack, rallies: Sequence[Rally], events: Sequence[
                                       "Second contact after an observed serve, by the other side."
                                       + ("" if strong else " The returner's side could not be determined.")))
                     continue
-            # overhead
-            if c.bbox is not None and not c.occluded:
+            # A ball track that jumps (e.g. to a light) produces speeds no paddle can.
+            if speed is not None and speed > RULES["max_plausible_speed_ph"]:
+                shots.append(shot("unclassified", "weak", "Implausible ball speed after contact: the ball track "
+                                                          "probably jumped to another object."))
+                continue
+            # overhead: the answer to a high ball, hit hard back over the net. From a low camera
+            # any ball in the air looks "above the head", so the incoming arc and the hit
+            # direction must both agree.
+            if c.bbox is not None and not c.occluded and prev is not None and c.side_source == "ball_direction":
                 top, box_h = c.bbox[1], max(1, c.bbox[3] - c.bbox[1])
-                if c.y <= top - RULES["overhead_top_margin"] * box_h:
-                    shots.append(shot("overhead", "weak", "Ball clearly above the hitter's head at contact."))
+                incoming = _flight(obs, times, prev.t, c.t)
+                apex = min((p.y for p in incoming), default=c.y)
+                high_ball = top - apex >= RULES["overhead_incoming_rise"] * box_h or (
+                    bool(shots) and shots[-1].shot_class == "lob")
+                if c.y <= top - RULES["overhead_top_margin"] * box_h and high_ball and speed is not None \
+                        and speed >= RULES["overhead_min_speed_ph"]:
+                    shots.append(shot("overhead", "weak", "Hard hit back over the net with the ball above the "
+                                                          "hitter's head, answering a high ball."))
                     continue
             # volley
-            if prev is not None and k >= 2 and c.side is not None and prev.side is not None and c.side != prev.side:
+            # Two-bounce rule: shots 1-3 are played off the bounce, so a volley is shot 4 (k = 3) or later.
+            if prev is not None and k >= 3 and c.side is not None and prev.side is not None and c.side != prev.side:
                 share, max_gap = _interval_observation(track, prev.t, c.t)
                 bounced = any(prev.t < b.t < c.t for b in bounces)
                 if share >= RULES["volley_min_observed"] and max_gap <= RULES["volley_max_gap_s"] and not bounced:
                     shots.append(shot("volley", "strong" if share >= 0.9 else "weak",
                                       f"Ball observed {share:.0%} of the time since the opponent's hit, with no bounce candidate."))
                     continue
-            # dink
-            if speed is not None and speed <= RULES["dink_max_speed_ph"] and depth is not None \
-                    and depth >= RULES["dink_min_depth_m"]:
+            # dink (from the kitchen line) and drop (from deeper): soft balls into the opponent's kitchen
+            soft_max = RULES["dink_max_speed_ph"] if depth is not None and depth >= RULES["dink_min_depth_m"] \
+                else RULES["drop_max_speed_ph"]
+            if speed is not None and speed <= soft_max and depth is not None:
+                cls, where = ("dink", "the kitchen line") if depth >= RULES["dink_min_depth_m"] \
+                    else ("drop", "behind the kitchen line")
                 if landing is not None and landing.court_xy_m is not None \
                         and abs(landing.court_xy_m[1] - NET_Y_M) <= KITCHEN_DEPTH_M \
                         and (landing.court_xy_m[1] > NET_Y_M) == (c.side == "near"):
-                    shots.append(shot("dink", "strong", "Slow ball from the kitchen line landing in the opponent's kitchen."))
+                    shots.append(shot(cls, "strong", f"Soft ball from {where} landing in the opponent's kitchen."))
                     continue
                 nxt = cs[k + 1] if k + 1 < len(cs) else None
                 nd = _depth_from_own_baseline(nxt) if nxt is not None else None
                 if nd is not None and nd >= RULES["dink_min_depth_m"] and nxt.side != c.side:
-                    shots.append(shot("dink", "weak", "Slow ball from the kitchen line, next played by an opponent at "
-                                                      "their kitchen line; landing not observed."))
+                    shots.append(shot(cls, "weak", f"Soft ball from {where}, next played by an opponent at their "
+                                                   "kitchen line; landing not observed."))
                     continue
             # drive
             if speed is not None and speed >= RULES["drive_min_speed_ph"] and arc is not None and arc <= RULES["drive_max_arc"]:

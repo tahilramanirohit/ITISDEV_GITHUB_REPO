@@ -60,7 +60,7 @@ export type PositioningValue = {
   distance_covered_m: number;
 };
 
-export const SHOT_CLASSES = ["serve", "return", "overhead", "volley", "dink", "drive", "lob", "unclassified"] as const;
+export const SHOT_CLASSES = ["serve", "return", "overhead", "volley", "dink", "drop", "drive", "lob", "unclassified"] as const;
 export type ShotClass = (typeof SHOT_CLASSES)[number];
 
 export type RallySummary = {
@@ -130,6 +130,7 @@ export type AnalysisResultV1 = {
   video: {
     width: number;
     height: number;
+    rotation_applied_deg?: 0 | 90 | 180 | 270;
     fps: number;
     frame_count_reported: number | null;
     container_duration_s: number | null;
@@ -260,7 +261,12 @@ export function parseAnalysisResult(input: unknown): AnalysisResultV1 {
     if (!isObj(v) || !Array.isArray(v.contacts) || !isObj(v.counts)) {
       throw new ContractError("metrics.shot_classification.value: expected contacts and counts");
     }
-    for (const cls of SHOT_CLASSES) num((v.counts as Record<string, unknown>)[cls], `metrics.shot_classification.value.counts.${cls}`);
+    // Classes added by later rule versions are missing from older results: count them as 0.
+    for (const cls of SHOT_CLASSES) {
+      const counts = v.counts as Record<string, unknown>;
+      if (counts[cls] === undefined) counts[cls] = 0;
+      num(counts[cls], `metrics.shot_classification.value.counts.${cls}`);
+    }
     for (const c of v.contacts) {
       if (!isObj(c)) throw new ContractError("metrics.shot_classification.value.contacts: invalid contact");
       num(c.time_seconds, "shot contact time_seconds");

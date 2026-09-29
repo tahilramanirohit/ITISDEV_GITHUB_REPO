@@ -20,6 +20,9 @@ class VideoOpenError(ValueError):
     pass
 
 
+ROTATE_CODES = {90: cv2.ROTATE_90_CLOCKWISE, 180: cv2.ROTATE_180, 270: cv2.ROTATE_90_COUNTERCLOCKWISE}
+
+
 @dataclass(frozen=True)
 class VideoProperties:
     width: int
@@ -27,6 +30,12 @@ class VideoProperties:
     fps: float
     fps_reported: bool
     frame_count_reported: Optional[int]
+
+    def rotated(self, degrees: int) -> "VideoProperties":
+        """Properties of the frames after rotating them clockwise by ``degrees``."""
+        if degrees % 180 == 90:
+            return VideoProperties(self.height, self.width, self.fps, self.fps_reported, self.frame_count_reported)
+        return self
 
     @property
     def container_duration_s(self) -> Optional[float]:
@@ -68,8 +77,13 @@ def iter_frames(
     stats: ReadStats,
     max_seconds: Optional[float] = None,
     max_consecutive_failures: int = 10,
+    rotation: int = 0,
+    start_seconds: float = 0.0,
 ) -> Iterator[Tuple[int, float, np.ndarray]]:
     """Yield ``(frame_index, timestamp_s, frame)`` for every decodable frame.
+
+    ``rotation`` (0, 90, 180 or 270, clockwise) turns frames of a video whose
+    pixels were stored sideways the right way up before anything analyzes them.
 
     ``stats`` is updated in place so callers can report coverage even when they
     stop iterating early.
@@ -80,6 +94,9 @@ def iter_frames(
     total = cap.get(cv2.CAP_PROP_FRAME_COUNT)
     total = int(total) if total and total > 0 else None
     index = 0
+    if start_seconds > 0:
+        cap.set(cv2.CAP_PROP_POS_MSEC, start_seconds * 1000.0)
+        index = int(round(start_seconds * fps))
     consecutive_failures = 0
     try:
         while True:
@@ -109,6 +126,8 @@ def iter_frames(
                 return
             stats.frames_decoded += 1
             stats.last_timestamp_s = ts
+            if rotation in ROTATE_CODES:
+                frame = cv2.rotate(frame, ROTATE_CODES[rotation])
             yield index, ts, frame
             index += 1
     finally:

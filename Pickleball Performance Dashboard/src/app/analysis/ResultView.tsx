@@ -107,7 +107,8 @@ export function ResultView({ result, videoUrl, previous }: {
         <div className="space-y-4">
           <VideoOverlayPlayer src={videoUrl} positions={result.player_positions} ballPositions={result.ball_positions ?? []}
             selectedTrackId={sel?.method === "track_id" ? sel.track_id : null}
-            contacts={result.metrics.shot_classification.value?.contacts ?? []} seek={seek} />
+            contacts={result.metrics.shot_classification.value?.contacts ?? []} seek={seek}
+            rotation={result.video.rotation_applied_deg ?? 0} />
 
           <ShotsPanel result={result} onSeek={seekTo} />
 

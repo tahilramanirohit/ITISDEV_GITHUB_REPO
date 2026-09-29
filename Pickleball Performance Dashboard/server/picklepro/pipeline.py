@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import logging
+
+import numpy as np
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
 from . import PIPELINE_VERSION
-from .auto_court import detect_court
+from .auto_court import detect_court, detect_orientation, load_court_model
 from .ball_detection import BallDetector
 from .ball_track import BallObservation, build_ball_track
 from .contract import (
@@ -47,6 +49,7 @@ from .detection import PlayerTracker
 from .positioning import positioning_patterns
 from . import shots as shot_rules
 from .spatial import Selection, dwell_heatmap, select_player, zone_occupancy
+from .scene import CourtTimeline, find_cuts, static_mask, thumbnail
 from .video_io import ReadStats, iter_frames, probe, sha256_of
 
 logger = logging.getLogger(__name__)
@@ -71,38 +74,46 @@ class AnalysisOptions:
     include_positions: bool = True
     source_filename: Optional[str] = None
     compute_sha256: bool = True
+    rotation: Optional[int] = None  # clockwise degrees; None = detect with the court model
 
 
 def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
                   progress: Optional[ProgressFn] = None) -> AnalysisResultV1:
     opts = options or AnalysisOptions()
-    props = probe(path)
+    stored = probe(path)
+    court_model = load_court_model(opts.court_weights) if opts.court_weights and opts.calibration is None else None
+    rotation = opts.rotation
+    if rotation is None:
+        rotation = detect_orientation(path, stored, court_model) if court_model is not None else 0
+    if rotation not in (0, 90, 180, 270):
+        raise ValueError(f"rotation must be 0, 90, 180 or 270, not {rotation}")
+    props = stored.rotated(rotation)
     stride = max(1, round(props.fps / opts.target_fps)) if opts.target_fps > 0 else 1
     frame_interval_s = stride / props.fps
     warnings: List[str] = []
     if not props.fps_reported:
         warnings.append("The video did not report a frame rate; 30 fps was assumed for timing.")
+    if rotation:
+        warnings.append(f"The video's picture was stored sideways or upside down, so it was turned {rotation}° "
+                        "clockwise before analysis. Positions refer to the turned picture.")
+    elif stored.height > stored.width:
+        warnings.append("The video is portrait (taller than wide). Record in landscape so the whole court width "
+                        "is in view.")
 
-    calibration = opts.calibration
-    calibration_method = "manual_landmarks"
-    if calibration is None and opts.court_weights:
-        scan_seconds = min(5.0, opts.max_seconds) if opts.max_seconds is not None else 5.0
-        calibration = detect_court(path, props, opts.court_weights, seconds_to_scan=scan_seconds)
-        if calibration is None:
-            warnings.append("The court model could not find enough reliable landmarks in the opening video frames; provide manual calibration or check the camera view.")
-        else:
-            calibration_method = "auto_model_landmarks"
-    if calibration is not None and calibration.image_size != (props.width, props.height):
+    manual = opts.calibration
+    if manual is not None and manual.image_size != (props.width, props.height):
         warnings.append(
-            f"Calibration was made on a {calibration.image_size[0]}x{calibration.image_size[1]} image and "
+            f"Calibration was made on a {manual.image_size[0]}x{manual.image_size[1]} image and "
             f"rescaled to the {props.width}x{props.height} video; this assumes identical framing."
         )
-        calibration = calibration.scaled_to(props.width, props.height)
+        manual = manual.scaled_to(props.width, props.height)
 
     tracker = PlayerTracker(detector=opts.detector, yolo_weights=opts.yolo_weights)
     ball_detector = BallDetector(opts.ball_weights) if opts.ball_weights else None
     ball_stride = max(1, round(props.fps / opts.ball_fps)) if opts.ball_fps > 0 else stride
-    ball_obs: List[BallObservation] = []
+    ball_candidates: List[tuple] = []   # (t, [candidate dicts])
+    scene_diffs: List[Optional[float]] = []
+    previous_thumb = None
     if not tracker.confidence_is_model_score:
         warnings.append(
             "Motion-based detection finds moving objects, not specifically people: stationary players can be "
@@ -118,18 +129,19 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
     frames_with_detections = 0
     expected = props.container_duration_s
 
-    for index, ts, frame in iter_frames(path, props.fps, stats, max_seconds=opts.max_seconds):
+    for index, ts, frame in iter_frames(path, props.fps, stats, max_seconds=opts.max_seconds, rotation=rotation):
         if ball_detector is not None and index % ball_stride == 0:
-            ball = ball_detector.detect(frame)
-            if ball is not None:
-                ball_snapshots.append(BallSnapshot(time_seconds=round(ts, 3), **ball))
-                x1, y1, x2, y2 = ball["bbox"]
-                ball_obs.append(BallObservation(ts, (x1 + x2) / 2, (y1 + y2) / 2, ball["confidence"]))
+            found = ball_detector.detect_candidates(frame)
+            if found:
+                ball_candidates.append((ts, found))
         if index % stride:
             continue
         detections = tracker.update(frame)
         per_frame.append(detections)
         times.append(ts)
+        thumb = thumbnail(frame)
+        scene_diffs.append(None if previous_thumb is None else float(np.mean(np.abs(thumb - previous_thumb))))
+        previous_thumb = thumb
         if detections:
             frames_with_detections += 1
             if opts.include_positions:
@@ -147,6 +159,17 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
             t[2] += 1
         if progress and expected:
             progress(min(0.99, ts / expected))
+
+    ball_obs, ball_snapshots, static_dropped = _choose_ball(ball_candidates, props.height)
+    if static_dropped:
+        warnings.append(f"{static_dropped} ball detection(s) ignored because they kept appearing in the same "
+                        "place (lights, reflections or a ball at rest).")
+
+    cuts = find_cuts(times, scene_diffs)
+    if cuts:
+        warnings.append("The camera moved or the video was cut at " + ", ".join(f"{c:.1f} s" for c in cuts)
+                        + ". The court was located again for each part, and rallies do not span a cut.")
+    timeline, calibration_method = _court_timeline(path, props, rotation, manual, court_model, cuts, opts, warnings)
 
     frames_analyzed = len(per_frame)
     start = times[0] if times else 0.0
@@ -181,7 +204,7 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
     )
 
     heatmap_metric, zone_metric, positioning_metric, selection_summary, calib_summary = _court_metrics(
-        per_frame, frame_interval_s, analyzed_duration, calibration, calibration_method, opts, warnings
+        per_frame, times, frame_interval_s, analyzed_duration, timeline, calibration_method, opts, warnings, end
     )
 
     if ball_detector is None:
@@ -189,7 +212,7 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
         shot_metric = ShotMetric(status="not_computed", reason=SHOTS_NOT_COMPUTED)
     else:
         rally_metric, shot_metric = _shot_metrics(
-            ball_obs, per_frame, times, calibration, props, ball_stride / props.fps, start, end, opts)
+            ball_obs, per_frame, times, timeline, props, ball_stride / props.fps, start, end, opts)
 
     if frames_analyzed == 0:
         status, message = "insufficient_data", "No frames could be decoded from this video."
@@ -223,7 +246,7 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
                               sha256=sha256_of(path) if opts.compute_sha256 else None),
         ),
         video=VideoInfo(
-            width=props.width, height=props.height, fps=round(props.fps, 3),
+            width=props.width, height=props.height, fps=round(props.fps, 3), rotation_applied_deg=rotation,
             frame_count_reported=props.frame_count_reported,
             container_duration_s=round(expected, 3) if expected else None,
         ),
@@ -245,13 +268,58 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
     )
 
 
-def _court_metrics(per_frame, frame_interval_s, analyzed_duration, calibration, calibration_method,
-                   opts: AnalysisOptions, warnings):
+def _choose_ball(candidates, frame_h: int):
+    """Per frame, the highest-scoring ball candidate that is not a static false positive."""
+    flat = [(t, c) for t, cs in candidates for c in cs]
+    centers = [((c["bbox"][0] + c["bbox"][2]) / 2, (c["bbox"][1] + c["bbox"][3]) / 2) for _, c in flat]
+    static = static_mask([t for t, _ in flat], centers, frame_h)
+    chosen = {}
+    for (t, c), center, is_static in zip(flat, centers, static):
+        if not is_static and (t not in chosen or c["confidence"] > chosen[t][0]["confidence"]):
+            chosen[t] = (c, center)
+    obs, snaps = [], []
+    for t in sorted(chosen):
+        c, (x, y) = chosen[t]
+        snaps.append(BallSnapshot(time_seconds=round(t, 3), **c))
+        obs.append(BallObservation(t, x, y, c["confidence"]))
+    dropped_frames = len({t for (t, _), s in zip(flat, static) if s} - set(chosen))
+    return obs, snaps, dropped_frames
+
+
+def _court_timeline(path, props, rotation, manual, court_model, cuts, opts: AnalysisOptions, warnings):
+    """One calibration per camera segment (manual calibration applies to all of them)."""
+    if manual is not None:
+        if cuts:
+            warnings.append("A manual calibration was given but the camera moved; it is used for the whole video.")
+        return CourtTimeline.single(manual), "manual_landmarks"
+    if not opts.court_weights:
+        return CourtTimeline.single(None), "manual_landmarks"
+    starts = [0.0] + list(cuts)
+    limit = opts.max_seconds if opts.max_seconds is not None else float("inf")
+    calibrations = []
+    for i, s in enumerate(starts):
+        seg_end = min(starts[i + 1] if i + 1 < len(starts) else float("inf"), limit)
+        scan = max(0.5, min(5.0, seg_end - s))
+        calibrations.append(detect_court(path, props, opts.court_weights, model=court_model,
+                                         seconds_to_scan=scan, rotation=rotation, start_seconds=s))
+    missing = [f"{s:.1f} s" for s, c in zip(starts, calibrations) if c is None]
+    if missing and len(missing) == len(starts):
+        warnings.append("The court model could not find enough reliable landmarks in the opening video frames; "
+                        "provide manual calibration or check the camera view.")
+    elif missing:
+        warnings.append("The court could not be located in the part(s) starting at " + ", ".join(missing)
+                        + "; court-based measures skip those parts.")
+    return CourtTimeline(starts, calibrations), "auto_model_landmarks"
+
+
+def _court_metrics(per_frame, times, frame_interval_s, analyzed_duration, timeline, calibration_method,
+                   opts: AnalysisOptions, warnings, end_s):
     zones_off = ZoneOccupancyMetric(
         status="not_computed",
         reason="Zone occupancy is experimental and disabled by default (enable with experimental_zones).",
     )
     calib_summary = None
+    calibration = timeline.primary(end_s)
     if calibration is None:
         reason = "Court not calibrated: at least 4 court landmarks are required."
         return (CourtHeatmapMetric(status="insufficient_data", reason=reason),
@@ -272,7 +340,7 @@ def _court_metrics(per_frame, frame_interval_s, analyzed_duration, calibration, 
         return (CourtHeatmapMetric(status="insufficient_data", reason=reason),
                 zones_off, PositioningMetric(status="insufficient_data", reason=reason), None, calib_summary)
 
-    track = select_player(per_frame, calibration, sel)
+    track = select_player(per_frame, [timeline.at(t) for t in times], sel)
     tracked_time = track.observed * frame_interval_s
     fraction = tracked_time / analyzed_duration if analyzed_duration else 0.0
     selection_summary = PlayerSelectionSummary(
@@ -332,12 +400,12 @@ SHOT_REASON = (
 )
 
 
-def _shot_metrics(ball_obs, per_frame, times, calibration, props, ball_interval_s, start, end,
+def _shot_metrics(ball_obs, per_frame, times, timeline, props, ball_interval_s, start, end,
                   opts: AnalysisOptions):
     track = build_ball_track(ball_obs, props.height, ball_interval_s)
     players = [shot_rules.PlayerFrame(t, dets) for t, dets in zip(times, per_frame)]
-    events = shot_rules.detect_events(track, players, calibration)
-    rallies = shot_rules.segment_rallies(track, events, start, end)
+    events = shot_rules.detect_events(track, players, timeline.at)
+    rallies = shot_rules.segment_rallies(track, events, start, end, cuts=timeline.cuts)
     if not rallies:
         reason = ("No rally was found: the ball was not tracked in play next to a player. "
                   f"The ball was observed for {track.observed_s:.1f}s of the clip.")
