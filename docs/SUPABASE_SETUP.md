@@ -66,4 +66,10 @@ The fixture worker stores a canned result without analyzing the uploaded file. F
 
 The goals form needs `supabase/migrations/20260928000200_session_goals.sql` on a database already created from these migrations. For the existing ITISDEV project, re-run the idempotent `supabase/scripts/itisdev_upgrade.sql` in the SQL editor before deploying this web build. This changes only the selected project's schema; committing code does not run it. Older sessions receive empty goals and no self-ratings.
 
+## Revision 4 capture migration
+
+The current web build also needs `supabase/migrations/20260929000100_capture_and_consent.sql` applied to the **selected PicklePro project** before it is deployed. It adds private player profiles, participant check-ins, recovery logs, reflections, actual start times, the drill context, and versioned upload consent. Uploads are rejected by Storage until the uploader confirms consent in the app. Apply this migration through the normal Supabase migration workflow after reviewing the target project and a dry run. If the legacy ITISDEV upgrade script is run again afterward, its upload policy retains the consent check.
+
+The consent screen states the current retention behavior honestly: raw videos remain until session deletion. The 30-day automatic deletion process specified in revision 4 is not yet implemented. Do not present that period as an active retention guarantee.
+
 [Supabase migration deployment](https://supabase.com/docs/guides/deployment/database-migrations) · [Supabase resumable uploads](https://supabase.com/docs/guides/storage/uploads/resumable-uploads)

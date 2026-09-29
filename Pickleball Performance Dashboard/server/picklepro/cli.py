@@ -6,6 +6,9 @@
     python -m picklepro.cli make-synthetic demo.mp4 --calibration-out demo_calibration.json
     python -m picklepro.cli schema
 
+Models in server/models are found automatically (see picklepro.models);
+set PICKLEPRO_AUTO_MODELS=0 to disable that.
+
 ``analyze`` exits 0 when the result status is "ok", 3 when it is
 "insufficient_data" (a valid outcome, not a crash), 2 for bad input, 1 on errors.
 """
@@ -127,6 +130,10 @@ def _stderr_progress(fraction: float) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
+    from .models import load_dotenv, resolve_models
+
+    load_dotenv()
+    _models = resolve_models()
     p = argparse.ArgumentParser(prog="picklepro", description="PicklePro local video analysis")
     sub = p.add_subparsers(dest="command", required=True)
 
@@ -145,10 +152,13 @@ def build_parser() -> argparse.ArgumentParser:
     sel.add_argument("--track-id", type=int, help="Analyze this track id")
     sel.add_argument("--court-half", choices=["near", "far"],
                      help="Analyze the single player on this half (frames with >1 candidate are excluded)")
-    an.add_argument("--detector", choices=["motion", "yolo"], default="motion")
-    an.add_argument("--yolo-weights", help="Local YOLO weights file (detector=yolo)")
-    an.add_argument("--court-weights", help="Local 14-keypoint YOLO court pose weights for automatic calibration")
-    an.add_argument("--ball-weights", help="Local YOLO weights with a pickleball/ball class for observed ball boxes")
+    an.add_argument("--detector", choices=["motion", "yolo"], default=_models.detector,
+                    help=f"Default found automatically: {_models.detector}")
+    an.add_argument("--yolo-weights", default=_models.yolo_weights, help="Local YOLO weights file (detector=yolo)")
+    an.add_argument("--court-weights", default=_models.court_weights,
+                    help="Local 14-keypoint YOLO court pose weights for automatic calibration")
+    an.add_argument("--ball-weights", default=_models.ball_weights,
+                    help="Local YOLO weights with a pickleball/ball class for observed ball boxes")
     an.add_argument("--target-fps", type=float, default=10.0, help="Analysis sample rate (default 10)")
     an.add_argument("--max-seconds", type=float, help="Stop after this many seconds (reported in coverage)")
     an.add_argument("--min-tracked-seconds", type=float, default=10.0)

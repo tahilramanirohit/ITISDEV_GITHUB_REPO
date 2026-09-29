@@ -18,6 +18,7 @@ from .contract import (
     BallSnapshot,
     CalibrationSummary,
     CourtHeatmapMetric,
+    CourtLinesSnapshot,
     Coverage,
     DetectorInfo,
     HeatmapValue,
@@ -28,17 +29,21 @@ from .contract import (
     PlayerSelectionSummary,
     PositionSnapshot,
     Provenance,
+    RallySegmentationMetric,
+    RallyValue,
+    ShotClassificationMetric,
+    ShotsValue,
     SourceInfo,
     TrackSummary,
     VideoInfo,
     ZoneOccupancyMetric,
     ZoneOccupancyValue,
-    not_computed,
     utc_now_iso,
 )
 from .court import COURT_MODEL, CourtCalibration
 from .detection import PlayerTracker
 from .positioning import positioning_patterns
+from .shots import FrameObs, analyze_shots, court_line_segments
 from .spatial import Selection, dwell_heatmap, select_player, zone_occupancy
 from .video_io import ReadStats, iter_frames, probe, sha256_of
 
@@ -103,7 +108,6 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
     manual_reference = None
     manual_view_lost = False
     times: List[float] = []
-    snapshots: List[PositionSnapshot] = []
     ball_snapshots: List[BallSnapshot] = []
     tracks: Dict[int, List[float]] = {}  # id -> [first, last, count]
     view_track_ids: Dict[tuple[int, int], int] = {}
@@ -147,12 +151,6 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
         times.append(ts)
         if detections:
             frames_with_detections += 1
-            if opts.include_positions:
-                snapshots.append(PositionSnapshot(
-                    time_seconds=round(ts, 3),
-                    players=[PlayerBox(track_id=d.get("track_id"), bbox=[int(v) for v in d["bbox"]],
-                                       confidence=d.get("confidence")) for d in detections],
-                ))
         for d in detections:
             tid = d.get("track_id")
             if tid is None:
@@ -214,21 +212,42 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
         selected_view_duration_s=round(selected_view_duration, 3) if selected_view_duration is not None else None,
     )
 
-    heatmap_metric, zone_metric, positioning_metric, selection_summary, calib_summary = _court_metrics(
+    heatmap_metric, zone_metric, positioning_metric, selection_summary, calib_summary, selected = _court_metrics(
         per_frame, frame_interval_s, analyzed_duration, per_frame_calibration,
         representative_calibration, calibration_method, opts, warnings,
         selected_view=segment > 0, selected_view_duration=selected_view_duration
     )
 
+    selected_indices = selected.indices if selected is not None else [None] * frames_analyzed
+    snapshots: List[PositionSnapshot] = []
+    if opts.include_positions:
+        for ts, detections, chosen in zip(times, per_frame, selected_indices):
+            if detections:
+                snapshots.append(PositionSnapshot(
+                    time_seconds=round(ts, 3),
+                    players=[PlayerBox(track_id=d.get("track_id"), bbox=[int(v) for v in d["bbox"]],
+                                       confidence=d.get("confidence"), selected=i == chosen)
+                             for i, d in enumerate(detections)],
+                ))
+    court_lines = _court_line_snapshots(times, per_frame_calibration) if opts.include_positions else []
+    shot_metric, rally_metric = _shot_metrics(
+        ball_detector is not None, ball_snapshots, times, per_frame, per_frame_calibration, selected_indices,
+        props.height, frame_interval_s, "selected_view" if segment > 0 else "whole_clip")
+
     if frames_analyzed == 0:
         status, message = "insufficient_data", "No frames could be decoded from this video."
     elif frames_with_detections == 0:
-        status, message = "insufficient_data", "No moving players were detected in the analyzed frames."
+        status, message = "insufficient_data", ("No players were detected in the analyzed frames."
+                                                if tracker.confidence_is_model_score else
+                                                "No moving players were detected in the analyzed frames.")
     elif heatmap_metric.status == "measured":
         status = "ok"
         reference = selected_view_duration if selected_view_duration is not None else analyzed_duration
-        message = (f"Court heatmap measured for the selected player over {selection_summary.tracked_time_s:.1f}s "
-                   f"of tracked time ({selection_summary.tracked_fraction:.0%} of the applicable {reference:.1f}s view).")
+        message = (f"PicklePro followed the selected player for {selection_summary.tracked_time_s:.0f} seconds "
+                   f"({selection_summary.tracked_fraction:.0%} of the {reference:.0f}-second "
+                   f"{'camera view' if selected_view_duration is not None else 'video'}) and mapped where they stood on the court.")
+        if shot_metric.value is not None:
+            message += f" {len(shot_metric.value.shots)} hits were estimated from the ball's flight."
     else:
         status = "insufficient_data"
         message = f"Detections are available for review, but court metrics were not produced: {heatmap_metric.reason}"
@@ -259,12 +278,13 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
                              observed_frames=int(v[2])) for k, v in sorted(tracks.items())],
         player_positions=snapshots,
         ball_positions=ball_snapshots,
+        court_lines=court_lines,
         metrics=Metrics(
             court_heatmap=heatmap_metric,
             zone_occupancy=zone_metric,
             positioning=positioning_metric,
-            rally_segmentation=not_computed(RALLY_NOT_COMPUTED),
-            shot_classification=not_computed(SHOTS_NOT_COMPUTED),
+            rally_segmentation=rally_metric,
+            shot_classification=shot_metric,
         ),
         warnings=warnings,
     )
@@ -282,7 +302,7 @@ def _court_metrics(per_frame, frame_interval_s, analyzed_duration, per_frame_cal
     if calibration is None:
         reason = "Court not calibrated: at least 4 court landmarks are required."
         return (CourtHeatmapMetric(status="insufficient_data", scope=scope, reason=reason),
-                zones_off, PositioningMetric(status="insufficient_data", scope=scope, reason=reason), None, None)
+                zones_off, PositioningMetric(status="insufficient_data", scope=scope, reason=reason), None, None, None)
 
     calib_summary = CalibrationSummary(
         method=calibration_method, court_model=COURT_MODEL, landmarks_used=calibration.landmarks_used,
@@ -297,7 +317,7 @@ def _court_metrics(per_frame, frame_interval_s, analyzed_duration, per_frame_cal
     if sel is None:
         reason = "No player selected: choose a track id or a court half."
         return (CourtHeatmapMetric(status="insufficient_data", scope=scope, reason=reason),
-                zones_off, PositioningMetric(status="insufficient_data", scope=scope, reason=reason), None, calib_summary)
+                zones_off, PositioningMetric(status="insufficient_data", scope=scope, reason=reason), None, calib_summary, None)
 
     track = select_player(per_frame, per_frame_calibration, sel)
     tracked_time = track.observed * frame_interval_s
@@ -315,7 +335,7 @@ def _court_metrics(per_frame, frame_interval_s, analyzed_duration, per_frame_cal
         reason = (f"Selected player was tracked for {tracked_time:.1f}s ({fraction:.0%} of the applicable view); "
                   f"at least {opts.min_tracked_seconds:g}s and {opts.min_tracked_fraction:.0%} are required.")
         return (CourtHeatmapMetric(status="insufficient_data", scope=scope, reason=reason), zones_off,
-                PositioningMetric(status="insufficient_data", scope=scope, reason=reason), selection_summary, calib_summary)
+                PositioningMetric(status="insufficient_data", scope=scope, reason=reason), selection_summary, calib_summary, track)
 
     heatmap = CourtHeatmapMetric(
         status="measured", scope=scope, validation="not_evaluated",
@@ -338,4 +358,56 @@ def _court_metrics(per_frame, frame_interval_s, analyzed_duration, per_frame_cal
         value=PositioningValue(**positions),
     ) if positions else PositioningMetric(
         status="insufficient_data", scope=scope, reason="The selected player was never mapped inside their half of the court.")
-    return heatmap, zones, positioning, selection_summary, calib_summary
+    return heatmap, zones, positioning, selection_summary, calib_summary, track
+
+
+def _court_line_snapshots(times, calibrations) -> List[CourtLinesSnapshot]:
+    """Court lines per sampled frame, stored only when they move by more than a few pixels."""
+    out: List[CourtLinesSnapshot] = []
+    previous = None
+    for ts, cal in zip(times, calibrations):
+        lines = court_line_segments(cal) if cal is not None else []
+        if previous is not None and len(lines) == len(previous) and (
+                not lines or max(abs(a - b) for la, lb in zip(lines, previous) for a, b in zip(la, lb)) <= 3):
+            continue
+        out.append(CourtLinesSnapshot(time_seconds=round(ts, 3), lines=lines))
+        previous = lines
+    return out
+
+
+SHOTS_REASON = ("Estimated from observed ball direction changes near players and the mapped court. Rule-based and "
+                "not yet evaluated on labelled real footage: treat each label as a suggestion to check in the video.")
+MIN_BALL_FRAMES_FOR_SHOTS = 15
+
+
+def _shot_metrics(ball_model: bool, ball_snapshots, times, per_frame, calibrations, selected_indices,
+                  frame_h: int, frame_interval_s: float, scope: str):
+    if not ball_model:
+        return (ShotClassificationMetric(status="not_computed", scope=scope,
+                                         reason="No ball model is set up, so hits and shot types cannot be found."),
+                RallySegmentationMetric(status="not_computed", scope=scope, reason=RALLY_NOT_COMPUTED))
+    if len(ball_snapshots) < MIN_BALL_FRAMES_FOR_SHOTS:
+        reason = (f"The ball was seen in only {len(ball_snapshots)} sampled frames; at least "
+                  f"{MIN_BALL_FRAMES_FOR_SHOTS} are needed to follow its flight.")
+        return (ShotClassificationMetric(status="insufficient_data", scope=scope, reason=reason),
+                RallySegmentationMetric(status="insufficient_data", scope=scope, reason=reason))
+    if not any(c is not None for c in calibrations):
+        return (ShotClassificationMetric(status="insufficient_data", scope=scope, reason=SHOTS_NOT_COMPUTED),
+                RallySegmentationMetric(status="insufficient_data", scope=scope, reason=SHOTS_NOT_COMPUTED))
+    frames = [FrameObs(t, dets, cal, idx) for t, dets, cal, idx in zip(times, per_frame, calibrations, selected_indices)]
+    found = analyze_shots([(b.time_seconds, b.bbox) for b in ball_snapshots], frames, frame_h, frame_interval_s)
+    if not found["shots"]:
+        reason = "The ball was seen, but no hits near a player were detected."
+        return (ShotClassificationMetric(status="insufficient_data", scope=scope, reason=reason),
+                RallySegmentationMetric(status="insufficient_data", scope=scope, reason=reason))
+    shots = ShotClassificationMetric(
+        status="experimental", scope=scope, validation="not_evaluated", reason=SHOTS_REASON,
+        value=ShotsValue(type_definitions=found["type_definitions"], shots=found["shots"], bounces=found["bounces"],
+                         counts_by_type=found["counts_by_type"],
+                         selected_player_counts_by_type=found["selected_player_counts_by_type"]))
+    rallies = RallySegmentationMetric(
+        status="experimental", scope=scope, validation="not_evaluated",
+        reason="A rally is a run of detected hits less than 3.5 s apart. Missed hits can split or merge rallies.",
+        value=RallyValue(rallies=found["rallies"],
+                         rally_time_s=round(sum(r["end_s"] - r["start_s"] for r in found["rallies"]), 3)))
+    return shots, rallies

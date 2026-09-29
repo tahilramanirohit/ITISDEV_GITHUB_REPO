@@ -62,7 +62,7 @@ export function stateDescription(state: AnalysisUiState, job: AnalysisJobRow | n
       return "The upload did not finish. Select the same file to resume, or remove it and start over.";
     case "queued":
       return job && job.attempts > 0 && job.error_code
-        ? `Waiting to retry (attempt ${job.attempts + 1} of ${job.max_attempts}). Last error: ${job.error_code}.`
+        ? `Trying again (attempt ${job.attempts + 1} of ${job.max_attempts}). Last time: ${failureHelp(job.error_code).title.toLowerCase()}.`
         : "Your video is waiting for analysis. During development, keep the analyzer running on your computer.";
     case "processing":
       return "PicklePro is checking the video now. This page will update when the result is ready.";
@@ -71,6 +71,34 @@ export function stateDescription(state: AnalysisUiState, job: AnalysisJobRow | n
     case "insufficient_data":
       return "PicklePro checked the video, but could not reliably measure every skill. See what it could and could not assess below.";
     case "failed":
-      return job?.error_message ?? "Analysis failed.";
+      return failureHelp(job?.error_code).action;
   }
+}
+
+/** What a failed job means for the player, and what to do next, without error codes. */
+export const FAILURE_HELP: Record<string, { title: string; action: string }> = {
+  video_missing: { title: "We couldn't find your video", action: "Upload the video again." },
+  unreadable_video: {
+    title: "This video file couldn't be opened",
+    action: "Try saving or exporting it as an MP4 file, then upload it again.",
+  },
+  low_quality_video: {
+    title: "The original video does not meet the capture minimum",
+    action: "Use a landscape recording of at least 720p and 30 fps. Create a new session for the replacement video.",
+  },
+  invalid_parameters: {
+    title: "The analysis settings were not valid",
+    action: "Open \u201cRe-run analysis\u201d, keep the default settings, and try again.",
+  },
+  detector_unavailable: {
+    title: "The analyzer is not set up correctly",
+    action: "This is not a problem with your video. Ask the person running PicklePro to run \u201cpython -m picklepro.worker --check\u201d.",
+  },
+  download_failed: { title: "The video could not be downloaded for checking", action: "PicklePro will try again by itself." },
+  pipeline_error: { title: "Something went wrong while checking the video", action: "PicklePro will try again by itself." },
+  worker_interrupted: { title: "The analyzer was stopped part-way", action: "PicklePro will try again by itself." },
+};
+
+export function failureHelp(code: string | null | undefined): { title: string; action: string } {
+  return (code && FAILURE_HELP[code]) || { title: "Your video could not be analyzed", action: "Try re-running the analysis, or upload the video again." };
 }

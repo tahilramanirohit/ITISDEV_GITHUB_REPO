@@ -1,8 +1,8 @@
 # PicklePro thesis prototype
 
-PicklePro accepts handheld and fixed-camera pickleball footage. Players choose improvement goals and may record their own 1–5 starting ratings. With optional local court and player models, the worker reports player detections, court positions, a dwell-time heatmap, and court-positioning patterns (depth-band time, transition stays, approaches) with coverage and provenance. Automatic court mapping is checked on each sampled frame; missing views are excluded. When evidence is sufficient, positioning findings become practice focus areas with drills and targets. Shot outcomes, technique, rally segmentation, skill, and play-style estimates are not yet computed; the goal review says when video evidence cannot support a finding. The old dashboard is only a labelled sample-data design preview in development.
+PicklePro accepts handheld and fixed-camera pickleball footage. Players can create a session before play, record a private check-in, recovery log and reflection, and choose draft practice focuses with optional self-ratings. With optional local court and player models, the worker reports player detections, court positions and a dwell-time heatmap with coverage and provenance. Automatic court mapping is checked on each sampled frame; missing views are excluded. Positioning advice and shot labels are withheld from real-player reports until they pass evaluation on labelled real footage. The current worker still computes experimental hits, bounces, rallies and shot types for development, but those are not validated performance evidence. Technique, skill and play-style estimates are not computed. The old dashboard is only a labelled sample-data design preview in development.
 
-The application has two paths: **Sessions** uses Supabase email/password sign-in, private resumable uploads, queued analysis, and saved results; the **local prototype** sends a video directly to FastAPI without saving it. The hosted Sessions path was verified with a synthetic video in the dedicated `PickleProThesis-test` Supabase project. This does not establish accuracy on real footage; see [Supabase setup and verification](docs/SUPABASE_SETUP.md).
+The application has two paths: **Sessions** uses Supabase email/password sign-in, private resumable uploads, queued analysis, and saved results; the **local prototype** sends a video directly to FastAPI without saving it. The earlier hosted Sessions path was verified with a synthetic video in the dedicated `PickleProThesis-test` Supabase project. The revision-4 capture and consent migration has local database tests but has **not** been verified on that hosted project. None of these tests establish accuracy on real footage; see [revision-4 alignment status](docs/REV4_ALIGNMENT.md) and [Supabase setup and verification](docs/SUPABASE_SETUP.md).
 
 ## Start locally
 
@@ -26,6 +26,19 @@ python3 -m venv .venv
 ```
 
 Open `http://localhost:5173/#/local-prototype`. This development route is unavailable in production builds unless explicitly enabled. The API allows the local Vite origin by default.
+
+## Models are found automatically
+
+Put the court model (a `.pt` file with "court" in its name) and the player/ball model (any other `.pt`) in `Pickleball Performance Dashboard/server/models/`. The local API, the worker, and the CLI find them without any `.env` paths, and use the person model instead of motion detection when Ultralytics is installed. Environment variables still override this; `PICKLEPRO_AUTO_MODELS=0` turns it off. See [model setup](docs/MODEL_SETUP.md).
+
+Check the analyzer's setup before uploading:
+
+```sh
+cd "Pickleball Performance Dashboard/server"
+.venv/bin/python -m picklepro.worker --check
+```
+
+It lists the models in use and exits with an error when the worker and the web app point to different Supabase projects. In that case uploads wait forever, because the worker never sees them.
 
 ## Synthetic CLI example
 

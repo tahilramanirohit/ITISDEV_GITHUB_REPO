@@ -13,6 +13,41 @@ select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
 
 insert into public.sessions (id, title, session_context, play_format, improvement_goals, positioning_rating)
 values ('5a000000-0000-4000-8000-00000000000a', 'A practice', 'practice', 'singles', array['positioning'], 3);
+insert into public.profiles(id, display_name, dominant_hand, years_playing, usual_format, self_level)
+values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Player A', 'right', 2.5, 'singles', 'beginner');
+select tests.expect_count($$ select 1 from public.profiles where display_name = 'Player A' $$,
+  1, 'player can read own profile');
+select tests.expect_error($$
+  insert into public.profiles(id, display_name)
+  values ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'Spoofed B') $$,
+  'player cannot create another account profile');
+insert into public.sessions (id, title, session_context, play_format)
+values ('5a000000-0000-4000-8000-00000000000c', 'Wall drills', 'drill', 'wall_practice');
+select tests.expect_error($$
+  insert into public.video_assets (id, session_id, storage_path, original_filename, mime_type, byte_size)
+  values ('7a000000-0000-4000-8000-00000000000c', '5a000000-0000-4000-8000-00000000000c',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/5a000000-0000-4000-8000-00000000000c/7a000000-0000-4000-8000-00000000000c.mp4',
+    'wall.mp4', 'video/mp4', 1000) $$,
+  'logging-only session cannot register a video');
+select tests.expect_count($$ select 1 from public.session_participants where session_id = '5a000000-0000-4000-8000-00000000000a' and role = 'uploader' and link_status = 'accepted' $$,
+  1, 'session creates its uploader participant');
+insert into public.checkins(participant_id, warmup_done, sleep_hours, readiness)
+select id, true, 7.5, 4 from public.session_participants where session_id = '5a000000-0000-4000-8000-00000000000a';
+select tests.expect_count($$ select 1 from public.checkins where timing_status = 'unverified' $$,
+  1, 'check-in timing is unverified without an actual start');
+update public.sessions set actual_start_at = now() + interval '1 minute'
+  where id = '5a000000-0000-4000-8000-00000000000a';
+select tests.expect_count($$ select 1 from public.checkins where timing_status = 'pre_game' $$,
+  1, 'check-in is pre-game when captured before actual start');
+update public.sessions set actual_start_at = now() - interval '1 minute'
+  where id = '5a000000-0000-4000-8000-00000000000a';
+select tests.expect_count($$ select 1 from public.checkins where timing_status = 'retrospective' $$,
+  1, 'late check-in is relabelled against actual start');
+insert into public.recovery_logs(participant_id, exertion, soreness, cooldown_done)
+select id, 7, null, true from public.session_participants where session_id = '5a000000-0000-4000-8000-00000000000a';
+insert into public.reflections(participant_id, went_well, change_next)
+select id, 'Kept rallies going', 'Practice returns' from public.session_participants
+  where session_id = '5a000000-0000-4000-8000-00000000000a';
 
 select tests.expect_error($$
   insert into public.sessions (title, session_context, play_format, improvement_goals)
@@ -57,6 +92,13 @@ select tests.expect_error($$
     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/5a000000-0000-4000-8000-00000000000a/unregistered.mp4', '{"size": 1}') $$,
   'uploads only allowed for a registered pending video asset');
 
+select tests.expect_error($$
+  insert into storage.objects (bucket_id, name, metadata) values ('session-videos',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/5a000000-0000-4000-8000-00000000000a/7a000000-0000-4000-8000-00000000000a.mp4', '{"size": 12345}') $$,
+  'upload requires a recorded consent confirmation');
+insert into public.consent_records(player_id, policy_version, scope, retention_days)
+values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '2026-09-29-v4', 'recording_upload', 30);
+
 -- The storage object as the TUS upload would create it.
 insert into storage.objects (bucket_id, name, metadata) values ('session-videos',
   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/5a000000-0000-4000-8000-00000000000a/7a000000-0000-4000-8000-00000000000a.mp4',
@@ -91,7 +133,12 @@ set role authenticated;
 select set_config('request.jwt.claim.sub', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', false);
 
 select tests.expect_count($$ select 1 from public.sessions $$, 0, 'B sees no sessions of A');
+select tests.expect_count($$ select 1 from public.profiles $$, 0, 'B sees no profile of A');
 select tests.expect_count($$ select 1 from public.video_assets $$, 0, 'B sees no video assets of A');
+select tests.expect_count($$ select 1 from public.checkins $$, 0, 'B sees no check-in of A');
+select tests.expect_count($$ select 1 from public.recovery_logs $$, 0, 'B sees no recovery log of A');
+select tests.expect_count($$ select 1 from public.reflections $$, 0, 'B sees no reflection of A');
+select tests.expect_count($$ select 1 from public.consent_records $$, 0, 'B sees no consent record of A');
 select tests.expect_count($$ select 1 from public.analysis_jobs $$, 0, 'B sees no jobs of A');
 select tests.expect_count($$ select 1 from storage.objects $$, 0, 'B sees no storage objects of A');
 select tests.expect_rows($$ update public.sessions set title = 'hijacked' $$, 0, 'B cannot update A''s session');
@@ -117,6 +164,8 @@ insert into public.video_assets (id, session_id, storage_path, original_filename
 values ('7b000000-0000-4000-8000-00000000000b', '5b000000-0000-4000-8000-00000000000b',
         'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/5b000000-0000-4000-8000-00000000000b/7b000000-0000-4000-8000-00000000000b.mov',
         'b_match.mov', 'video/quicktime', 999);
+insert into public.consent_records(player_id, policy_version, scope, retention_days)
+values ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', '2026-09-29-v4', 'recording_upload', 30);
 insert into storage.objects (bucket_id, name, metadata) values ('session-videos',
   'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/5b000000-0000-4000-8000-00000000000b/7b000000-0000-4000-8000-00000000000b.mov',
   '{"size": 999}');
@@ -203,7 +252,7 @@ select tests.expect_error($$ delete from public.analysis_results $$, 'A cannot d
 select public.request_reanalysis((select id from public.analysis_jobs), '{"selection":{"method":"court_half","court_half":"near"}}');
 select tests.expect_count($$ select 1 from public.analysis_jobs where status = 'queued' and attempts = 0
   and params -> 'selection' ->> 'court_half' = 'near' $$, 1, 'owner can re-queue with new params');
-select tests.expect_count($$ select 1 from public.analysis_results $$, 0, 'stale result removed on reanalysis');
+select tests.expect_count($$ select 1 from public.analysis_results $$, 1, 'last published result survives reanalysis');
 
 reset role;
 set role authenticated;

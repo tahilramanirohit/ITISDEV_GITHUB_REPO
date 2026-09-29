@@ -28,7 +28,7 @@ export function JourneySteps({ current, tone = "dark" }: { current: 1 | 2 | 3; t
             </span>
             <span>
               <span className="block text-sm font-semibold" style={{ color: light ? INK : WHITE }}>{step.label}</span>
-              <span className="block text-xs mt-0.5" style={{ color: light ? "#596372" : "#c2cad9" }}>{step.detail}</span>
+              <span className="block text-sm mt-0.5" style={{ color: light ? "#596372" : "#c2cad9" }}>{step.detail}</span>
             </span>
           </li>
         );

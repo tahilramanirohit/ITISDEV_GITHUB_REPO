@@ -9,8 +9,9 @@ export const VALIDATION_LEVELS = ["not_evaluated", "synthetic_only", "evaluated_
 export const METRIC_KEYS = ["court_heatmap", "zone_occupancy", "positioning", "rally_segmentation", "shot_classification"] as const;
 export const RESULT_KEYS = [
   "schema_version", "status", "data_origin", "message", "provenance", "video", "coverage", "calibration",
-  "player_selection", "tracks", "player_positions", "ball_positions", "metrics", "warnings",
+  "player_selection", "tracks", "player_positions", "ball_positions", "court_lines", "metrics", "warnings",
 ] as const;
+export const SHOT_TYPES = ["serve", "return", "drive", "drop", "dink", "volley", "lob", "overhead", "unclassified"] as const;
 
 export type ResultStatus = (typeof RESULT_STATUSES)[number];
 export type DataOrigin = (typeof DATA_ORIGINS)[number];
@@ -60,7 +61,42 @@ export type PositioningValue = {
   distance_covered_m: number;
 };
 
-export type PlayerBox = { track_id: number | null; bbox: [number, number, number, number]; confidence: number | null };
+export type PlayerBox = {
+  track_id: number | null; bbox: [number, number, number, number]; confidence: number | null;
+  /** The player chosen for court feedback in this frame. Missing in older results. */
+  selected?: boolean;
+};
+/** Court lines in image pixels, valid from this time until the next snapshot. */
+export type CourtLinesSnapshot = { time_seconds: number; lines: [number, number, number, number][] };
+
+export type ShotType = (typeof SHOT_TYPES)[number];
+export type ShotEvent = {
+  time_seconds: number;
+  rally_index: number;
+  shot_number: number;
+  hitter_track_id: number | null;
+  hitter_side: "near" | "far" | null;
+  by_selected_player: boolean;
+  hitter_court_m: [number, number] | null;
+  shot_type: ShotType;
+  contact: "volley" | "after_bounce" | "unknown";
+  ground_speed_mps: number | null;
+  landing_court_m: [number, number] | null;
+  landed_in: boolean | null;
+  evidence: string;
+};
+export type BounceEvent = { time_seconds: number; court_m: [number, number] | null; in_court: boolean | null };
+export type ShotsValue = {
+  type_definitions: Record<string, string>;
+  shots: ShotEvent[];
+  bounces: BounceEvent[];
+  counts_by_type: Record<ShotType, number>;
+  selected_player_counts_by_type: Record<ShotType, number>;
+};
+export type RallyValue = {
+  rallies: { rally_index: number; start_s: number; end_s: number; shots: number }[];
+  rally_time_s: number;
+};
 export type PositionSnapshot = { time_seconds: number; players: PlayerBox[] };
 export type BallSnapshot = { time_seconds: number; bbox: [number, number, number, number]; confidence: number };
 
@@ -116,12 +152,13 @@ export type AnalysisResultV1 = {
   tracks: { track_id: number; first_seen_s: number; last_seen_s: number; observed_frames: number }[];
   player_positions: PositionSnapshot[];
   ball_positions?: BallSnapshot[];
+  court_lines?: CourtLinesSnapshot[];
   metrics: {
     court_heatmap: Metric & { value: HeatmapValue | null };
     zone_occupancy: Metric & { value: ZoneOccupancyValue | null };
     positioning: Metric & { value: PositioningValue | null };
-    rally_segmentation: Metric;
-    shot_classification: Metric;
+    rally_segmentation: Metric & { value?: RallyValue | null };
+    shot_classification: Metric & { value?: ShotsValue | null };
   };
   warnings: string[];
 };
@@ -222,6 +259,29 @@ export function parseAnalysisResult(input: unknown): AnalysisResultV1 {
       ball.bbox.forEach((value) => num(value, "ball_positions.bbox"));
     }
   }
+  if (input.court_lines !== undefined) {
+    if (!Array.isArray(input.court_lines)) throw new ContractError("court_lines: expected an array");
+    for (const snap of input.court_lines) {
+      if (!isObj(snap) || !Array.isArray(snap.lines)) throw new ContractError("court_lines: invalid snapshot");
+      num(snap.time_seconds, "court_lines.time_seconds");
+      for (const line of snap.lines) {
+        if (!Array.isArray(line) || line.length !== 4) throw new ContractError("court_lines: invalid line");
+        line.forEach((v) => num(v, "court_lines.lines"));
+      }
+    }
+  }
+  const shots = (metrics as Record<string, Record<string, unknown>>).shot_classification;
+  if (shots.value != null) {
+    const v = shots.value;
+    if (!isObj(v) || !Array.isArray(v.shots) || !Array.isArray(v.bounces) || !isObj(v.counts_by_type)) {
+      throw new ContractError("metrics.shot_classification: invalid value");
+    }
+    for (const shot of v.shots) {
+      if (!isObj(shot)) throw new ContractError("metrics.shot_classification: invalid shot");
+      num(shot.time_seconds, "metrics.shot_classification.shots.time_seconds");
+      oneOf(shot.shot_type, SHOT_TYPES, "metrics.shot_classification.shots.shot_type");
+    }
+  }
   return { ...input, metrics } as unknown as AnalysisResultV1;
 }
 
@@ -229,8 +289,8 @@ export const METRIC_LABELS: Record<MetricKey, string> = {
   court_heatmap: "Court heatmap (dwell time)",
   zone_occupancy: "Zone occupancy",
   positioning: "Court positioning patterns",
-  rally_segmentation: "Rally segmentation",
-  shot_classification: "Shot classification",
+  rally_segmentation: "Rallies (estimated)",
+  shot_classification: "Shot types (estimated)",
 };
 
 export const VALIDATION_LABELS: Record<ValidationLevel, string> = {

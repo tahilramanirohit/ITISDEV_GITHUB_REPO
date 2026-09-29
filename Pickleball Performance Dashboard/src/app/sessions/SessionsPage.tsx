@@ -43,7 +43,7 @@ export default function SessionsPage({ sb }: { sb: SupabaseClient }) {
   return (
     <div className="space-y-10">
       <section aria-labelledby="home-title" className="p-5 sm:p-8 lg:p-10" style={{ background: NAVY, color: "white" }}>
-        <div className="flex items-center justify-between gap-3 border-b pb-3 text-xs font-bold uppercase tracking-widest"
+        <div className="flex items-center justify-between gap-3 border-b pb-3 text-sm font-bold uppercase tracking-widest"
           style={{ borderColor: "#56617a", color: LAVENDER }}>
           <span>PicklePro / start here</span><span className="hidden sm:inline">Your game, made clearer</span>
         </div>
@@ -54,12 +54,12 @@ export default function SessionsPage({ sb }: { sb: SupabaseClient }) {
               Improve your<br /><span style={{ color: LAVENDER }}>pickleball game.</span>
             </h1>
             <p className="mt-6 max-w-2xl text-base leading-relaxed" style={{ color: "#d4d9e5" }}>
-              Choose a skill, upload your video, and get a practice plan from what PicklePro can measure.
+              Choose a focus, upload your video, and review the observations PicklePro can support.
             </p>
           </div>
           <div className="space-y-4">
             <p className="text-sm leading-relaxed" style={{ color: "#d4d9e5" }}>
-              <strong style={{ color: "white" }}>Available today:</strong> court positioning feedback. Shot feedback is still in development.
+              <strong style={{ color: "white" }}>Available today:</strong> a court-position report with clear evidence limits.
             </p>
             {!creating && (
               <button type="button" onClick={() => setCreating(true)}
@@ -80,7 +80,7 @@ export default function SessionsPage({ sb }: { sb: SupabaseClient }) {
       <section aria-labelledby="sessions-heading" className="space-y-4 bg-white p-5 sm:p-8">
         <div className="flex flex-wrap items-end justify-between gap-2 border-b pb-4" style={{ borderColor: BORDER }}>
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest" style={{ color: BLUE_SKY }}>Your history</p>
+            <p className="text-sm font-bold uppercase tracking-widest" style={{ color: BLUE_SKY }}>Your history</p>
             <h2 id="sessions-heading" className="mt-1 text-3xl font-bold text-[#101827]" style={{ fontFamily: DISPLAY_FONT }}>Your sessions</h2>
             <p className="text-sm" style={{ color: WHITE_DIM }}>Pick up where you left off or review an earlier result.</p>
           </div>
@@ -157,7 +157,7 @@ function NewSessionForm({ sb, onCancel }: { sb: SupabaseClient; onCancel: () => 
   return (
     <Card accent={BLUE_SKY}>
       <div className="mb-5">
-        <p className="text-xs font-bold uppercase tracking-widest" style={{ color: BLUE_SKY }}>Step 1 of 3</p>
+        <p className="text-sm font-bold uppercase tracking-widest" style={{ color: BLUE_SKY }}>Step 1 of 3</p>
         <h2 className="text-xl font-bold text-[#101827] mt-1">What would you like to improve?</h2>
         <p className="text-sm mt-1" style={{ color: WHITE_DIM }}>Pick at least one focus. Your rating is optional and only reflects how you see your current level.</p>
       </div>
@@ -172,7 +172,7 @@ function NewSessionForm({ sb, onCancel }: { sb: SupabaseClient; onCancel: () => 
         </div>
         <details className="sm:col-span-2 rounded-xl p-4" style={{ border: `1px solid ${BORDER}` }}>
           <summary className="text-sm font-semibold cursor-pointer" style={{ color: BLUE_SKY }}>Session details (optional)</summary>
-          <p className="text-xs mt-1" style={{ color: WHITE_DIM }}>Defaults to today's singles practice. Open to change the date, play format, or add notes.</p>
+          <p className="text-sm mt-1" style={{ color: WHITE_DIM }}>Defaults to today's singles practice. Open to change the date, play format, or add notes.</p>
           <div className="grid gap-4 sm:grid-cols-2 mt-4">
             <div>
               <label className={labelClass} style={labelStyle} htmlFor="date">Date</label>
@@ -198,7 +198,7 @@ function NewSessionForm({ sb, onCancel }: { sb: SupabaseClient; onCancel: () => 
               <select id="scope" value={form.performance_scope} onChange={(e) => set("performance_scope", e.target.value as PerformanceScope)}
                 className="w-full rounded-xl px-3 py-2 text-sm" style={fieldStyle}>
                 <option value="individual" className="bg-white">Individual</option>
-                <option value="pair" className="bg-white">Pair</option>
+                <option value="pair" className="bg-white">Pair (shared analysis planned)</option>
               </select>
             </div>
             <div className="sm:col-span-2">

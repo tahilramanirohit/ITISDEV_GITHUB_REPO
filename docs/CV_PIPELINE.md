@@ -70,7 +70,20 @@ Use `--track-id N` instead of `--court-half near` when a player can be followed 
 
 The synthetic fixture previously produced roughly 3.2 cm median and 9.7 cm 90th-percentile foot-position error under ideal, known geometry. This is a development check, **not** an estimate of accuracy on real matches. Real-footage evaluation still needs permitted, labeled clips with varying lighting, occlusion, court views, players, and camera stability.
 
-The homography cannot infer height above the court, airborne ball arcs, ball speed, shot type, skill, or play style.
+The homography cannot infer height above the court, airborne ball arcs, true ball speed, skill, or play style.
+
+## Experimental shot, bounce, and rally estimates
+
+`picklepro/shots.py` runs when a ball model is available, the ball is seen in at least 15 sampled frames, and at least part of the video has a court map. It never fills in missing ball samples.
+
+1. **Events.** A sharp change in the ball's image path next to a player is a *hit*. An upward kick that also slows the ball is a *bounce*, even beside a player's feet. From a camera behind the near baseline, the far player's strokes barely bend the ball's image path, so a far-side hit is the ball's closest approach to that player's usual contact point (about 1 m above the feet). A ball's apparent size must fit a ball beside the candidate player. This stops a far-court ball from "touching" the head of a near player in the image.
+2. **Where.** A bounce touches the ground, so its image point can be mapped onto the court. Landing position and in/out come from bounces only. The hitter's position comes from their feet.
+3. **Rallies.** Hits more than 3.5 s apart start a new rally.
+4. **Shot type**, in this order: serve (first hit, from behind or at the baseline); return (second hit, from the back); overhead (contact above the head); lob (the ball rises more than 3.5 m above the far-baseline image line, or it hangs at least 2 s over at least 8 m); near the kitchen line, a dink (ground travel under 6 m/s) or a volley (no bounce since the last hit); from the back, a drop (under 9 m/s) or a drive. Otherwise the hit is `unclassified`.
+
+*Ground travel* is horizontal court distance to the next bounce or hitter, divided by time. It is not ball speed. Thresholds are coaching conventions. On a physics-based synthetic rally (tests/test_shots.py), all six shot types, both hitters, and all five bounces are recovered. That shows the rules do what they claim. It is **not** an accuracy estimate; evaluate against hand-labelled real rallies before reporting shot statistics. Sampling at 10 fps can miss quick exchanges; a higher `target_fps` helps at a processing cost.
+
+The result also stores `court_lines` (the mapped court projected into each view) and marks the selected player's boxes. The video replay can then label **You**, other players, the ball trail, bounces, and each estimated shot.
 
 ### Improvement goals and self-ratings
 

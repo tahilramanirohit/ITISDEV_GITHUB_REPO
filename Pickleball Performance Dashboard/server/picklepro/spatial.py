@@ -54,6 +54,8 @@ class Selection:
 class SelectedTrack:
     """Per analyzed frame: the selected player's court position, or None."""
     positions_m: List[Optional[Tuple[float, float]]] = field(default_factory=list)
+    # Index of the chosen detection within that frame's detection list.
+    indices: List[Optional[int]] = field(default_factory=list)
     ambiguous_frames: int = 0
 
     @property
@@ -83,26 +85,32 @@ def select_player(
     for detections, court_map in zip(frames, calibrations):
         if court_map is None:
             out.positions_m.append(None)
+            out.indices.append(None)
             continue
         feet = [foot_point(d["bbox"]) for d in detections]
         court = court_map.image_to_court(feet) if feet else np.zeros((0, 2))
         candidates: List[Tuple[float, float]] = []
-        for det, (x, y) in zip(detections, court):
+        candidate_indices: List[int] = []
+        for index, (det, (x, y)) in enumerate(zip(detections, court)):
             x, y = float(x), float(y)
             if selection.method == "track_id":
                 if det.get("track_id") == selection.track_id:
                     candidates.append((x, y))
+                    candidate_indices.append(index)
             elif selection.method == "court_half":
                 if in_mapped_area(x, y) and court_half(y) == selection.court_half:
                     candidates.append((x, y))
+                    candidate_indices.append(index)
             else:
                 raise ValueError(f"Unknown selection method {selection.method}")
         if len(candidates) == 1:
             out.positions_m.append(candidates[0])
+            out.indices.append(candidate_indices[0])
         else:
             if len(candidates) > 1:
                 out.ambiguous_frames += 1
             out.positions_m.append(None)
+            out.indices.append(None)
     return out
 
 

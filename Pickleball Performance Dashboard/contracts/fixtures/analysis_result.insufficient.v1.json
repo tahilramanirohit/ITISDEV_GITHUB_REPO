@@ -65,7 +65,8 @@
             536,
             416
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -80,7 +81,8 @@
             582,
             413
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -95,7 +97,8 @@
             592,
             413
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -110,7 +113,8 @@
             604,
             410
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -125,7 +129,8 @@
             614,
             410
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -140,7 +145,8 @@
             624,
             407
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -155,7 +161,8 @@
             634,
             405
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -170,7 +177,8 @@
             640,
             400
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -185,7 +193,8 @@
             624,
             399
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         },
         {
           "track_id": 2,
@@ -195,7 +204,8 @@
             650,
             399
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -210,7 +220,8 @@
             616,
             394
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         },
         {
           "track_id": 2,
@@ -220,7 +231,8 @@
             656,
             395
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -235,7 +247,8 @@
             624,
             393
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         },
         {
           "track_id": 2,
@@ -245,7 +258,8 @@
             664,
             393
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -260,7 +274,8 @@
             638,
             389
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         },
         {
           "track_id": 2,
@@ -270,7 +285,8 @@
             670,
             389
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -285,7 +301,8 @@
             640,
             384
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         },
         {
           "track_id": 2,
@@ -295,7 +312,8 @@
             672,
             384
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -310,7 +328,8 @@
             654,
             381
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -325,7 +344,8 @@
             654,
             377
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         },
         {
           "track_id": 2,
@@ -335,7 +355,8 @@
             682,
             376
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -350,7 +371,8 @@
             686,
             375
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -365,7 +387,8 @@
             686,
             371
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -380,7 +403,8 @@
             686,
             365
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -395,7 +419,8 @@
             674,
             361
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -410,7 +435,8 @@
             672,
             357
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -425,7 +451,8 @@
             684,
             352
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -440,7 +467,8 @@
             683,
             349
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -455,7 +483,8 @@
             681,
             345
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -470,7 +499,8 @@
             680,
             341
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -485,7 +515,8 @@
             672,
             336
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -500,7 +531,8 @@
             670,
             331
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -515,7 +547,8 @@
             664,
             327
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -530,7 +563,8 @@
             660,
             323
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -545,7 +579,8 @@
             653,
             319
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -560,7 +595,8 @@
             648,
             316
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -575,7 +611,8 @@
             639,
             311
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -590,7 +627,8 @@
             632,
             307
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -605,7 +643,8 @@
             624,
             303
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -620,7 +659,8 @@
             616,
             299
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -635,7 +675,8 @@
             609,
             295
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -650,7 +691,8 @@
             600,
             291
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -665,7 +707,8 @@
             592,
             287
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -680,7 +723,8 @@
             582,
             283
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -695,7 +739,8 @@
             573,
             281
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -710,12 +755,19 @@
             566,
             277
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     }
   ],
   "ball_positions": [],
+  "court_lines": [
+    {
+      "time_seconds": 0.0,
+      "lines": []
+    }
+  ],
   "metrics": {
     "court_heatmap": {
       "status": "insufficient_data",
@@ -742,13 +794,15 @@
       "status": "not_computed",
       "validation": "not_evaluated",
       "scope": "whole_clip",
-      "reason": "Rally segmentation is not implemented or validated. All metrics are whole-clip metrics."
+      "reason": "Rallies are found from detected ball hits, which needs a ball model. All other metrics are whole-clip metrics.",
+      "value": null
     },
     "shot_classification": {
       "status": "not_computed",
       "validation": "not_evaluated",
       "scope": "whole_clip",
-      "reason": "Shot classification requires validated ball trajectories and a shot classifier; neither exists in this pipeline yet."
+      "reason": "No ball model is set up, so hits and shot types cannot be found.",
+      "value": null
     }
   },
   "warnings": [

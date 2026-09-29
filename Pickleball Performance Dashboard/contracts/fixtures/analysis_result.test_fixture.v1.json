@@ -86,7 +86,8 @@
             536,
             416
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -101,7 +102,8 @@
             582,
             413
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -116,7 +118,8 @@
             592,
             413
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -131,7 +134,8 @@
             604,
             410
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -146,7 +150,8 @@
             614,
             410
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -161,7 +166,8 @@
             624,
             407
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -176,7 +182,8 @@
             634,
             405
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -191,7 +198,8 @@
             640,
             400
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -206,7 +214,8 @@
             624,
             399
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         },
         {
           "track_id": 2,
@@ -216,7 +225,8 @@
             650,
             399
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -231,7 +241,8 @@
             616,
             394
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         },
         {
           "track_id": 2,
@@ -241,7 +252,8 @@
             656,
             395
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -256,7 +268,8 @@
             624,
             393
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         },
         {
           "track_id": 2,
@@ -266,7 +279,8 @@
             664,
             393
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -281,7 +295,8 @@
             638,
             389
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         },
         {
           "track_id": 2,
@@ -291,7 +306,8 @@
             670,
             389
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -306,7 +322,8 @@
             640,
             384
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         },
         {
           "track_id": 2,
@@ -316,7 +333,8 @@
             672,
             384
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -331,7 +349,8 @@
             654,
             381
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -346,7 +365,8 @@
             654,
             377
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         },
         {
           "track_id": 2,
@@ -356,7 +376,8 @@
             682,
             376
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -371,7 +392,8 @@
             686,
             375
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -386,7 +408,8 @@
             686,
             371
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -401,7 +424,8 @@
             686,
             365
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -416,7 +440,8 @@
             674,
             361
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -431,7 +456,8 @@
             672,
             357
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -446,7 +472,8 @@
             684,
             352
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -461,7 +488,8 @@
             683,
             349
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -476,7 +504,8 @@
             681,
             345
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -491,7 +520,8 @@
             680,
             341
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -506,7 +536,8 @@
             672,
             336
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -521,7 +552,8 @@
             670,
             331
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -536,7 +568,8 @@
             664,
             327
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -551,7 +584,8 @@
             660,
             323
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -566,7 +600,8 @@
             653,
             319
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -581,7 +616,8 @@
             648,
             316
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -596,7 +632,8 @@
             639,
             311
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -611,7 +648,8 @@
             632,
             307
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -626,7 +664,8 @@
             624,
             303
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -641,7 +680,8 @@
             616,
             299
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -656,7 +696,8 @@
             609,
             295
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -671,7 +712,8 @@
             600,
             291
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -686,7 +728,8 @@
             592,
             287
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -701,7 +744,8 @@
             582,
             283
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -716,7 +760,8 @@
             573,
             281
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     },
@@ -731,12 +776,74 @@
             566,
             277
           ],
-          "confidence": null
+          "confidence": null,
+          "selected": true
         }
       ]
     }
   ],
   "ball_positions": [],
+  "court_lines": [
+    {
+      "time_seconds": 0.0,
+      "lines": [
+        [
+          130,
+          500,
+          830,
+          500
+        ],
+        [
+          370,
+          90,
+          590,
+          90
+        ],
+        [
+          130,
+          500,
+          370,
+          90
+        ],
+        [
+          830,
+          500,
+          590,
+          90
+        ],
+        [
+          279,
+          245,
+          681,
+          245
+        ],
+        [
+          336,
+          147,
+          624,
+          147
+        ],
+        [
+          313,
+          188,
+          647,
+          188
+        ],
+        [
+          480,
+          500,
+          480,
+          245
+        ],
+        [
+          480,
+          147,
+          480,
+          90
+        ]
+      ]
+    }
+  ],
   "metrics": {
     "court_heatmap": {
       "status": "measured",
@@ -1348,13 +1455,15 @@
       "status": "not_computed",
       "validation": "not_evaluated",
       "scope": "whole_clip",
-      "reason": "Rally segmentation is not implemented or validated. All metrics are whole-clip metrics."
+      "reason": "Rallies are found from detected ball hits, which needs a ball model. All other metrics are whole-clip metrics.",
+      "value": null
     },
     "shot_classification": {
       "status": "not_computed",
       "validation": "not_evaluated",
       "scope": "whole_clip",
-      "reason": "Shot classification requires validated ball trajectories and a shot classifier; neither exists in this pipeline yet."
+      "reason": "No ball model is set up, so hits and shot types cannot be found.",
+      "value": null
     }
   },
   "warnings": [

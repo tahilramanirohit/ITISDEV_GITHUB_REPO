@@ -31,6 +31,49 @@
       "title": "BallSnapshot",
       "type": "object"
     },
+    "BounceEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "time_seconds": {
+          "title": "Time Seconds",
+          "type": "number"
+        },
+        "court_m": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Court M"
+        },
+        "in_court": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "In Court"
+        }
+      },
+      "required": [
+        "time_seconds"
+      ],
+      "title": "BounceEvent",
+      "type": "object"
+    },
     "CalibrationSummary": {
       "additionalProperties": false,
       "properties": {
@@ -142,6 +185,32 @@
         "status"
       ],
       "title": "CourtHeatmapMetric",
+      "type": "object"
+    },
+    "CourtLinesSnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "time_seconds": {
+          "title": "Time Seconds",
+          "type": "number"
+        },
+        "lines": {
+          "description": "Court lines as [x1, y1, x2, y2] image pixels, valid until the next snapshot; empty when the court was not mapped from this time on.",
+          "items": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "title": "Lines",
+          "type": "array"
+        }
+      },
+      "required": [
+        "time_seconds",
+        "lines"
+      ],
+      "title": "CourtLinesSnapshot",
       "type": "object"
     },
     "Coverage": {
@@ -320,58 +389,6 @@
       "title": "HeatmapValue",
       "type": "object"
     },
-    "Metric": {
-      "additionalProperties": false,
-      "properties": {
-        "status": {
-          "enum": [
-            "measured",
-            "insufficient_data",
-            "not_computed",
-            "experimental"
-          ],
-          "title": "Status",
-          "type": "string"
-        },
-        "validation": {
-          "default": "not_evaluated",
-          "enum": [
-            "not_evaluated",
-            "synthetic_only",
-            "evaluated_on_real_footage"
-          ],
-          "title": "Validation",
-          "type": "string"
-        },
-        "scope": {
-          "default": "whole_clip",
-          "enum": [
-            "whole_clip",
-            "selected_view"
-          ],
-          "title": "Scope",
-          "type": "string"
-        },
-        "reason": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Why the metric is missing, partial, or experimental.",
-          "title": "Reason"
-        }
-      },
-      "required": [
-        "status"
-      ],
-      "title": "Metric",
-      "type": "object"
-    },
     "Metrics": {
       "additionalProperties": false,
       "properties": {
@@ -385,10 +402,10 @@
           "$ref": "#/$defs/PositioningMetric"
         },
         "rally_segmentation": {
-          "$ref": "#/$defs/Metric"
+          "$ref": "#/$defs/RallySegmentationMetric"
         },
         "shot_classification": {
-          "$ref": "#/$defs/Metric"
+          "$ref": "#/$defs/ShotClassificationMetric"
         }
       },
       "required": [
@@ -435,6 +452,12 @@
           ],
           "default": null,
           "title": "Confidence"
+        },
+        "selected": {
+          "default": false,
+          "description": "True when this box is the player chosen for court feedback in this frame.",
+          "title": "Selected",
+          "type": "boolean"
         }
       },
       "required": [
@@ -738,6 +761,381 @@
       "title": "Provenance",
       "type": "object"
     },
+    "RallySegmentationMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "measured",
+            "insufficient_data",
+            "not_computed",
+            "experimental"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "validation": {
+          "default": "not_evaluated",
+          "enum": [
+            "not_evaluated",
+            "synthetic_only",
+            "evaluated_on_real_footage"
+          ],
+          "title": "Validation",
+          "type": "string"
+        },
+        "scope": {
+          "default": "whole_clip",
+          "enum": [
+            "whole_clip",
+            "selected_view"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Why the metric is missing, partial, or experimental.",
+          "title": "Reason"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RallyValue"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "RallySegmentationMetric",
+      "type": "object"
+    },
+    "RallySummary": {
+      "additionalProperties": false,
+      "properties": {
+        "rally_index": {
+          "title": "Rally Index",
+          "type": "integer"
+        },
+        "start_s": {
+          "title": "Start S",
+          "type": "number"
+        },
+        "end_s": {
+          "title": "End S",
+          "type": "number"
+        },
+        "shots": {
+          "title": "Shots",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "rally_index",
+        "start_s",
+        "end_s",
+        "shots"
+      ],
+      "title": "RallySummary",
+      "type": "object"
+    },
+    "RallyValue": {
+      "additionalProperties": false,
+      "properties": {
+        "rallies": {
+          "items": {
+            "$ref": "#/$defs/RallySummary"
+          },
+          "title": "Rallies",
+          "type": "array"
+        },
+        "rally_time_s": {
+          "title": "Rally Time S",
+          "type": "number"
+        }
+      },
+      "required": [
+        "rallies",
+        "rally_time_s"
+      ],
+      "title": "RallyValue",
+      "type": "object"
+    },
+    "ShotClassificationMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "measured",
+            "insufficient_data",
+            "not_computed",
+            "experimental"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "validation": {
+          "default": "not_evaluated",
+          "enum": [
+            "not_evaluated",
+            "synthetic_only",
+            "evaluated_on_real_footage"
+          ],
+          "title": "Validation",
+          "type": "string"
+        },
+        "scope": {
+          "default": "whole_clip",
+          "enum": [
+            "whole_clip",
+            "selected_view"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Why the metric is missing, partial, or experimental.",
+          "title": "Reason"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ShotsValue"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "ShotClassificationMetric",
+      "type": "object"
+    },
+    "ShotEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "time_seconds": {
+          "title": "Time Seconds",
+          "type": "number"
+        },
+        "rally_index": {
+          "title": "Rally Index",
+          "type": "integer"
+        },
+        "shot_number": {
+          "description": "1-based position of the shot within its rally.",
+          "title": "Shot Number",
+          "type": "integer"
+        },
+        "hitter_track_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Hitter Track Id"
+        },
+        "hitter_side": {
+          "anyOf": [
+            {
+              "enum": [
+                "near",
+                "far"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Hitter Side"
+        },
+        "by_selected_player": {
+          "default": false,
+          "title": "By Selected Player",
+          "type": "boolean"
+        },
+        "hitter_court_m": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Hitter Court M"
+        },
+        "shot_type": {
+          "enum": [
+            "serve",
+            "return",
+            "drive",
+            "drop",
+            "dink",
+            "volley",
+            "lob",
+            "overhead",
+            "unclassified"
+          ],
+          "title": "Shot Type",
+          "type": "string"
+        },
+        "contact": {
+          "default": "unknown",
+          "enum": [
+            "volley",
+            "after_bounce",
+            "unknown"
+          ],
+          "title": "Contact",
+          "type": "string"
+        },
+        "ground_speed_mps": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Horizontal ground distance to the next bounce or hitter divided by the time taken.",
+          "title": "Ground Speed Mps"
+        },
+        "landing_court_m": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Landing Court M"
+        },
+        "landed_in": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Whether the next observed bounce was inside the opponent's court.",
+          "title": "Landed In"
+        },
+        "evidence": {
+          "title": "Evidence",
+          "type": "string"
+        }
+      },
+      "required": [
+        "time_seconds",
+        "rally_index",
+        "shot_number",
+        "shot_type",
+        "evidence"
+      ],
+      "title": "ShotEvent",
+      "type": "object"
+    },
+    "ShotsValue": {
+      "additionalProperties": false,
+      "properties": {
+        "type_definitions": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Type Definitions",
+          "type": "object"
+        },
+        "shots": {
+          "items": {
+            "$ref": "#/$defs/ShotEvent"
+          },
+          "title": "Shots",
+          "type": "array"
+        },
+        "bounces": {
+          "items": {
+            "$ref": "#/$defs/BounceEvent"
+          },
+          "title": "Bounces",
+          "type": "array"
+        },
+        "counts_by_type": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Counts By Type",
+          "type": "object"
+        },
+        "selected_player_counts_by_type": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Selected Player Counts By Type",
+          "type": "object"
+        }
+      },
+      "required": [
+        "type_definitions",
+        "shots",
+        "bounces",
+        "counts_by_type",
+        "selected_player_counts_by_type"
+      ],
+      "title": "ShotsValue",
+      "type": "object"
+    },
     "SourceInfo": {
       "additionalProperties": false,
       "properties": {
@@ -1023,6 +1421,13 @@
         "$ref": "#/$defs/BallSnapshot"
       },
       "title": "Ball Positions",
+      "type": "array"
+    },
+    "court_lines": {
+      "items": {
+        "$ref": "#/$defs/CourtLinesSnapshot"
+      },
+      "title": "Court Lines",
       "type": "array"
     },
     "metrics": {

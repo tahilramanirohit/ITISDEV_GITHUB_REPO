@@ -7,6 +7,7 @@ error_code             retryable  meaning
 =====================  =========  ==============================================
 video_missing          no         The uploaded file is not in storage.
 unreadable_video       no         The file could not be decoded as video.
+low_quality_video      no         Original resolution or frame rate is below the capture minimum.
 invalid_parameters     no         Calibration / player selection is malformed.
 detector_unavailable   no         Worker misconfigured (e.g. YOLO weights missing).
 download_failed        yes        Transient storage/network error.
@@ -34,7 +35,7 @@ from ..court import CalibrationError, calibration_from_dict
 from ..detection import DetectorUnavailable
 from ..pipeline import AnalysisOptions, analyze_video
 from ..spatial import Selection
-from ..video_io import VideoOpenError
+from ..video_io import VideoOpenError, VideoProperties, probe
 from .store import Job, JobStore, LeaseLost, TransientStoreError, VideoMissing
 
 logger = logging.getLogger(__name__)
@@ -45,6 +46,23 @@ FIXTURE_PATH = Path(__file__).resolve().parents[3] / "contracts" / "fixtures" / 
 
 class Interrupted(RuntimeError):
     pass
+
+
+class SourceQualityError(ValueError):
+    pass
+
+
+def validate_source_quality(props: VideoProperties) -> None:
+    """Check the uploaded original before any analysis or possible resampling."""
+    if props.width <= props.height or props.height < 720:
+        raise SourceQualityError(
+            f"The original video is {props.width}x{props.height}; record in landscape at 720p or higher."
+        )
+    if not props.fps_reported or props.fps < 29.9:
+        rate = f"{props.fps:.2f}" if props.fps_reported else "unknown"
+        raise SourceQualityError(
+            f"The original frame rate is {rate} fps; record at 30 fps or higher."
+        )
 
 
 @dataclass
@@ -64,6 +82,7 @@ class WorkerConfig:
     court_weights: Optional[str] = None
     ball_weights: Optional[str] = None
     target_fps: float = 10.0
+    enforce_source_quality: bool = True
 
 
 def options_from_params(params: dict, cfg: WorkerConfig, filename: Optional[str]) -> AnalysisOptions:
@@ -153,6 +172,8 @@ def process_one(store: JobStore, cfg: WorkerConfig, stop: Optional[threading.Eve
                 store.download_video(job, video)
                 if stop is not None and stop.is_set():
                     raise Interrupted()
+                if cfg.enforce_source_quality:
+                    validate_source_quality(probe(video))
                 result = analyze_video(video, opts)
         except VideoMissing as exc:
             return fail("video_missing", f"The uploaded video was not found in storage ({exc}). Upload it again.", False)
@@ -160,6 +181,8 @@ def process_one(store: JobStore, cfg: WorkerConfig, stop: Optional[threading.Eve
             return fail("download_failed", f"Could not download the video; will retry. ({exc})", True)
         except VideoOpenError as exc:
             return fail("unreadable_video", f"The file could not be decoded as video. Try MP4 (H.264). ({exc})", False)
+        except SourceQualityError as exc:
+            return fail("low_quality_video", str(exc), False)
         except DetectorUnavailable as exc:
             return fail("detector_unavailable", f"Worker misconfiguration: {exc}", False)
         except Interrupted:

@@ -3,7 +3,7 @@ import schema from "../../../contracts/analysis_result.v1.schema.json";
 import testFixture from "../../../contracts/fixtures/analysis_result.test_fixture.v1.json";
 import insufficient from "../../../contracts/fixtures/analysis_result.insufficient.v1.json";
 import {
-  ContractError, DATA_ORIGINS, METRIC_KEYS, METRIC_STATUSES, RESULT_KEYS, RESULT_STATUSES, VALIDATION_LEVELS,
+  ContractError, DATA_ORIGINS, METRIC_KEYS, SHOT_TYPES, METRIC_STATUSES, RESULT_KEYS, RESULT_STATUSES, VALIDATION_LEVELS,
   parseAnalysisResult,
 } from "./contract";
 
@@ -18,9 +18,10 @@ describe("TypeScript contract mirrors the Python schema", () => {
   it("has the same enums", () => {
     expect([...RESULT_STATUSES]).toEqual(enumOf(s.properties.status));
     expect([...DATA_ORIGINS]).toEqual(enumOf(s.properties.data_origin));
-    expect([...METRIC_STATUSES]).toEqual(enumOf(s.$defs.Metric.properties.status));
-    expect([...VALIDATION_LEVELS]).toEqual(enumOf(s.$defs.Metric.properties.validation));
+    expect([...METRIC_STATUSES]).toEqual(enumOf(s.$defs.CourtHeatmapMetric.properties.status));
+    expect([...VALIDATION_LEVELS]).toEqual(enumOf(s.$defs.CourtHeatmapMetric.properties.validation));
     expect([...METRIC_KEYS].sort()).toEqual(Object.keys(s.$defs.Metrics.properties).sort());
+    expect([...SHOT_TYPES]).toEqual(enumOf(s.$defs.ShotEvent.properties.shot_type));
   });
 });
 

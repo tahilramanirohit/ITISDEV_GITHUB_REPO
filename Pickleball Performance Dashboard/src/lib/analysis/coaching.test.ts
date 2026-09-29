@@ -8,6 +8,8 @@ function measured(patch?: (v: PositioningValue) => void): AnalysisResultV1 {
   result.data_origin = "measured";
   result.provenance.detector = { name: "ultralytics-yolov8-person", confidence_is_model_score: true };
   const parsed = parseAnalysisResult(result);
+  parsed.metrics.positioning.validation = "evaluated_on_real_footage";
+  parsed.metrics.court_heatmap.validation = "evaluated_on_real_footage";
   if (patch && parsed.metrics.positioning.value) patch(parsed.metrics.positioning.value);
   return parsed;
 }
@@ -28,6 +30,15 @@ describe("gameplay feedback", () => {
     const motion = structuredClone(fixture);
     motion.data_origin = "measured";
     expect(buildCoachingReport(parseAnalysisResult(motion)).available).toBe(false);
+  });
+
+  it("withholds advice and speech for positioning evaluated only on synthetic footage", () => {
+    const candidate = measured();
+    candidate.metrics.positioning.validation = "synthetic_only";
+    const report = buildCoachingReport(candidate);
+    expect(report.available).toBe(false);
+    expect(report.introduction).toMatch(/labelled real footage/);
+    expect(coachingSpeechText(report)).toBe("");
   });
 
   it("withholds coaching when court calibration is poor", () => {
@@ -99,9 +110,8 @@ describe("gameplay feedback", () => {
     const result = parseAnalysisResult(old);
     expect(result.metrics.positioning.status).toBe("not_computed");
     const report = buildCoachingReport(result);
-    expect(report.available).toBe(true);
-    expect(report.introduction).toMatch(/Re-run analysis/);
-    expect(report.focus[0].observation).toMatch(/mapped court time/);
+    expect(report.available).toBe(false);
+    expect(report.introduction).toMatch(/labelled real footage/);
   });
 
   it("reads the drills and targets aloud", () => {

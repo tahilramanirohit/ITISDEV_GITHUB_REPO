@@ -3,7 +3,7 @@ import { HashRouter, Route, Routes } from "react-router";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { config as defaultConfig, type AppConfig } from "../lib/config";
 import { supabase as defaultSupabase } from "../lib/supabase";
-import { AuthScreen } from "./auth/AuthScreen";
+import { AuthScreen, PasswordRecoveryScreen } from "./auth/AuthScreen";
 import { useAuth } from "./auth/useAuth";
 import { AppShell } from "./shell/AppShell";
 import { Card, Notice, WidgetHeader } from "./shell/primitives";
@@ -15,6 +15,7 @@ const DesignPreview = lazy(() => import("./design-preview/DesignPreview"));
 const LocalPrototype = lazy(() => import("./local/LocalPrototype"));
 const SessionsPage = lazy(() => import("./sessions/SessionsPage"));
 const SessionDetail = lazy(() => import("./sessions/SessionDetail"));
+const ProfilePage = lazy(() => import("./profile/ProfilePage"));
 
 const Loading = () => <p className="p-8 text-sm" style={{ color: WHITE_SUB }}>Loading…</p>;
 
@@ -38,7 +39,7 @@ function SetupRequired({ cfg }: { cfg: AppConfig }) {
           <li>Set <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code> (public anon key only).</li>
           <li>Apply the migrations in <code>supabase/migrations</code> and restart <code>npm run dev</code>.</li>
         </ol>
-        <p className="text-xs mt-4" style={{ color: WHITE_SUB }}>See docs/SUPABASE_SETUP.md. No sample results are shown in place of real ones.</p>
+        <p className="text-sm mt-4" style={{ color: WHITE_SUB }}>See docs/SUPABASE_SETUP.md. No sample results are shown in place of real ones.</p>
       </Card>
     </AppShell>
   );
@@ -90,14 +91,15 @@ function SignedInApp({ sb, cfg }: { sb: SupabaseClient; cfg: AppConfig }) {
   if (auth.status === "signed_out") {
     return <AuthScreen sb={sb} devMode={cfg.devModeEnabled ? { onEnter: () => void enterDevMode(), busy: devBusy, error: devError } : undefined} />;
   }
+  if (auth.status === "recovery") return <PasswordRecoveryScreen sb={sb} />;
   // Signed in, but the mock sessions are still being written.
   if (devBusy) return <p className="p-8 text-sm" style={{ color: WHITE_SUB }}>Creating mock data…</p>;
   const user = auth.session.user;
   return (
     <AppShell
-      nav={<><a href="#/" style={{ color: WHITE }}>My sessions</a><DevLinks cfg={cfg} /></>}
+      nav={<><a href="#/" style={{ color: WHITE }}>My sessions</a><a href="#/profile" style={{ color: WHITE }}>Profile</a><DevLinks cfg={cfg} /></>}
       right={
-        <div className="flex items-center gap-3 text-xs">
+        <div className="flex items-center gap-3 text-sm">
           <span style={{ color: WHITE }}>
             {user.is_anonymous ? "Dev mode (mock data)" : user.email}
           </span>
@@ -111,6 +113,7 @@ function SignedInApp({ sb, cfg }: { sb: SupabaseClient; cfg: AppConfig }) {
         <Routes>
           <Route path="/" element={<SessionsPage sb={sb} />} />
           <Route path="/sessions/:sessionId" element={<SessionDetail sb={sb} userId={user.id} />} />
+          <Route path="/profile" element={<ProfilePage sb={sb} userId={user.id} />} />
           <Route path="*" element={<Notice tone="warn">Page not found.</Notice>} />
         </Routes>
       </Suspense>

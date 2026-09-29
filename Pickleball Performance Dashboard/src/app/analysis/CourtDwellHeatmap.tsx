@@ -46,7 +46,7 @@ export function CourtDwellHeatmap({ value }: { value: HeatmapValue }) {
         </g>
         <line x1={sx(-0.3)} x2={sx(W + 0.3)} y1={sy(NET)} y2={sy(NET)} stroke="#a94318" strokeWidth={0.08} />
       </svg>
-      <figcaption className="text-[10px] mt-2 text-center" style={{ color: WHITE_SUB }}>
+      <figcaption className="text-sm mt-2 text-center" style={{ color: WHITE_SUB }}>
         Near baseline (camera side) at bottom · cell {value.cell_size_m.toFixed(2)} m · brightest cell = {max.toFixed(1)} s
       </figcaption>
     </figure>

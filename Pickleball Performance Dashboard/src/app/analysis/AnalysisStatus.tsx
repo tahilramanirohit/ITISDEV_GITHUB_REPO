@@ -85,20 +85,20 @@ export function AnalysisParamsForm({ onChange }: { onChange: (params: AnalysisPa
             className="w-full rounded-xl px-3 py-2 text-sm mt-2" style={fieldStyle}
             onChange={(e) => { setTrackId(e.target.value); emit({ trackId: e.target.value }); }} />
         )}
-        <label className="flex items-center gap-2 text-xs mt-3" style={{ color: WHITE_DIM }}>
+        <label className="flex items-center gap-2 text-sm mt-3" style={{ color: WHITE_DIM }}>
           <input type="checkbox" checked={zones} onChange={(e) => { setZones(e.target.checked); emit({ zones: e.target.checked }); }} />
           Also compute experimental zone occupancy (not validated)
         </label>
       </div>
       <div>
-        <p className="text-xs" style={{ color: WHITE_DIM }}>
+        <p className="text-sm" style={{ color: WHITE_DIM }}>
           Court mapping runs automatically when a court model is configured on the analysis worker.
         </p>
         <details className="mt-2">
-          <summary className="text-xs cursor-pointer" style={{ color: BLUE_SKY }}>Manual court calibration (advanced fallback)</summary>
+          <summary className="text-sm cursor-pointer" style={{ color: BLUE_SKY }}>Manual court calibration (advanced fallback)</summary>
           <label className={labelClass} style={labelStyle} htmlFor="calibration-json">Court calibration JSON</label>
           <textarea id="calibration-json" rows={4} value={calibration} placeholder='{"image_width": 1920, "image_height": 1080, "points": [...]}'
-            className="w-full rounded-xl px-3 py-2 text-xs font-mono" style={{ ...fieldStyle, border: `1px solid ${BORDER}` }}
+            className="w-full rounded-xl px-3 py-2 text-sm font-mono" style={{ ...fieldStyle, border: `1px solid ${BORDER}` }}
             onChange={(e) => { setCalibration(e.target.value); emit({ calibration: e.target.value }); }} />
         </details>
       </div>

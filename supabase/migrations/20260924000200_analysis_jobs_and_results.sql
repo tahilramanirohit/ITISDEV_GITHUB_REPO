@@ -109,8 +109,8 @@ begin
   return j;
 end $$;
 
--- Re-run analysis (e.g. after adding calibration). Only for finished jobs; the
--- previous result is removed because it no longer matches the job's params.
+-- Re-run analysis (e.g. after adding calibration). Keep the last published
+-- result until the replacement is complete, so a failed retry cannot erase it.
 create function public.request_reanalysis(p_job_id uuid, p_params jsonb default null)
 returns public.analysis_jobs
 language plpgsql security definer set search_path = '' as $$
@@ -129,7 +129,6 @@ begin
   if j.status not in ('completed', 'failed') then
     raise exception 'job_not_finished' using errcode = 'P0001', hint = 'Wait for the current run to finish.';
   end if;
-  delete from public.analysis_results where job_id = j.id;
   update public.analysis_jobs
      set status = 'queued', attempts = 0, available_at = now(), params = coalesce(p_params, params),
          error_code = null, error_message = null, locked_by = null, lease_expires_at = null,

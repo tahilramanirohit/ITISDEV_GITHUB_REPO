@@ -289,7 +289,6 @@ begin
   if j.status not in ('completed', 'failed') then
     raise exception 'job_not_finished' using errcode = 'P0001', hint = 'Wait for the current run to finish.';
   end if;
-  delete from public.analysis_results where job_id = j.id;
   update public.analysis_jobs
      set status = 'queued', attempts = 0, available_at = now(), params = coalesce(p_params, params),
          error_code = null, error_message = null, locked_by = null, lease_expires_at = null,
@@ -428,6 +427,23 @@ grant execute on function public.fail_analysis_job(uuid, text, text, text, boole
 
 -- seed_dev_mock_data() from 20260928000100_dev_mock_data.sql is already on this
 -- project; it starts working once the tables above exist.
+
+-- When the revision-4 capture migration is present, preserve its upload
+-- consent gate while refreshing the legacy ITISDEV project.
+do $$ begin
+  if to_regclass('public.consent_records') is not null then
+    drop policy if exists session_videos_insert_own on storage.objects;
+    create policy session_videos_insert_own on storage.objects for insert to authenticated
+      with check (
+        bucket_id = 'session-videos'
+        and (storage.foldername(name))[1] = (select auth.uid())::text
+        and exists (select 1 from public.video_assets v
+          where v.storage_path = name and v.owner_id = (select auth.uid()) and v.upload_status = 'pending')
+        and exists (select 1 from public.consent_records c
+          where c.player_id = (select auth.uid()) and c.policy_version = '2026-09-29-v4')
+      );
+  end if;
+end $$;
 
 -- Refresh the API so the new tables and functions are visible immediately.
 notify pgrst, 'reload schema';

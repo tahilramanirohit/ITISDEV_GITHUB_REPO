@@ -16,7 +16,22 @@ def _job(job_id="job-1", max_attempts=3, params=None, path="u1/s1/v1.mp4"):
 
 
 def _cfg(mode="measured", worker="w1"):
-    return WorkerConfig(worker_id=worker, mode=mode, lease_seconds=60)
+    return WorkerConfig(worker_id=worker, mode=mode, lease_seconds=60, enforce_source_quality=False)
+
+
+def test_original_media_gate_requires_landscape_720p_and_reported_30fps():
+    from picklepro.video_io import VideoProperties
+
+    good = VideoProperties(1280, 720, 29.97, True, 300)
+    runner.validate_source_quality(good)
+    with pytest.raises(runner.SourceQualityError, match="720p"):
+        runner.validate_source_quality(VideoProperties(960, 540, 30, True, 300))
+    with pytest.raises(runner.SourceQualityError, match="landscape"):
+        runner.validate_source_quality(VideoProperties(720, 1280, 30, True, 300))
+    with pytest.raises(runner.SourceQualityError, match="30 fps"):
+        runner.validate_source_quality(VideoProperties(1280, 720, 25, True, 300))
+    with pytest.raises(runner.SourceQualityError, match="unknown"):
+        runner.validate_source_quality(VideoProperties(1280, 720, 30, False, 300))
 
 
 def test_no_job_returns_none():
@@ -51,6 +66,14 @@ def test_measured_mode_without_calibration_completes_as_insufficient(synthetic_c
     store.add_job(_job(), video_bytes=synthetic_clip.path.read_bytes())
     assert process_one(store, _cfg()).status == "completed"
     assert store.row("job-1").result["status"] == "insufficient_data"
+
+
+def test_worker_rejects_original_below_capture_minimum(synthetic_clip):
+    store = InMemoryJobStore()
+    store.add_job(_job(), video_bytes=synthetic_clip.path.read_bytes())
+    out = process_one(store, WorkerConfig(worker_id="w1", lease_seconds=60))
+    assert (out.status, out.error_code) == ("failed", "low_quality_video")
+    assert store.row("job-1").result is None
 
 
 def test_worker_defaults_to_near_player_and_passes_court_model():

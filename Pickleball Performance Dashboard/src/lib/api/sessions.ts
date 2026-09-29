@@ -78,6 +78,7 @@ export async function findPreviousCoachableResult(
   const sessions = await listSessions(sb);
   const earlier = sessions
     .filter(({ session, result }) => session.id !== current.id && result?.data_origin === "measured" &&
+      session.session_context === current.session_context && session.play_format === current.play_format &&
       (session.session_date < current.session_date ||
         (session.session_date === current.session_date && session.created_at < current.created_at)))
     .slice(0, limit);
@@ -165,7 +166,7 @@ export async function requestReanalysis(
 }
 
 export async function signedVideoUrl(sb: SupabaseClient, path: string): Promise<string> {
-  const { data, error } = await sb.storage.from(VIDEO_BUCKET).createSignedUrl(path, 60 * 60);
+  const { data, error } = await sb.storage.from(VIDEO_BUCKET).createSignedUrl(path, 5 * 60);
   if (error) throw new Error(error.message);
   return data.signedUrl;
 }

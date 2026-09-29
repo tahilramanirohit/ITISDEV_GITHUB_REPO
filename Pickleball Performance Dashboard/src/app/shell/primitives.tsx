@@ -34,11 +34,11 @@ export function SectionBanner({ n, eyebrow, title, subtitle, bg, accent, badge }
       </div>
       <div className="flex-1">
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="text-xs font-bold tracking-widest mb-0.5" style={{ color: accent }}>{eyebrow}</div>
+          <div className="text-sm font-bold tracking-widest mb-0.5" style={{ color: accent }}>{eyebrow}</div>
           {badge && <Pill color={ORANGE}>{badge}</Pill>}
         </div>
         <div className="font-bold text-lg text-[#101827]" style={{ fontFamily: DISPLAY_FONT, letterSpacing: "0.04em" }}>{title}</div>
-        <div className="text-xs mt-0.5" style={{ color: WHITE_DIM }}>{subtitle}</div>
+        <div className="text-sm mt-0.5" style={{ color: WHITE_DIM }}>{subtitle}</div>
       </div>
     </div>
   );
@@ -48,13 +48,13 @@ export function SectionBanner({ n, eyebrow, title, subtitle, bg, accent, badge }
 export function WidgetHeader({ title, subtitle, accent }: { title: string; subtitle: string; accent?: string }) {
   return (
     <div className="mb-4">
-      <h3 className="font-semibold text-sm text-[#101827] mb-0.5" style={{ fontSize: "0.9rem" }}>{title}</h3>
+      <h3 className="font-bold text-lg text-[#101827] mb-0.5">{title}</h3>
       {accent
         ? <div className="flex items-center gap-1.5 mt-1">
             <div className="h-0.5 w-4 rounded" style={{ background: accent }} />
-            <p className="text-xs" style={{ color: WHITE_DIM }}>{subtitle}</p>
+            <p className="text-sm" style={{ color: WHITE_DIM }}>{subtitle}</p>
           </div>
-        : <p className="text-xs" style={{ color: WHITE_DIM }}>{subtitle}</p>
+        : <p className="text-sm" style={{ color: WHITE_DIM }}>{subtitle}</p>
       }
     </div>
   );
@@ -66,7 +66,7 @@ export function ChartTip({ active, payload, label, suffix = "" }: {
 }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-xl border px-3 py-2 text-xs shadow-lg" style={{ background: WHITE, borderColor: BORDER }}>
+    <div className="rounded-xl border px-3 py-2 text-sm shadow-lg" style={{ background: WHITE, borderColor: BORDER }}>
       {label && <div className="font-bold mb-1.5 text-[#101827]">{label}</div>}
       {payload.map(p => (
         <div key={p.name} className="flex items-center gap-2">
@@ -84,7 +84,7 @@ export function Pill({ children, color = VIOLET, title }: { children: ReactNode;
   return (
     <span
       title={title}
-      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-mono text-[10px] font-bold tracking-wider"
+      className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold tracking-wide"
       style={{ background: `${color}25`, color, border: `1px solid ${color}60` }}
     >
       {children}
@@ -98,7 +98,7 @@ export function Notice({ tone = "info", onDark = false, children }: { tone?: "in
   return (
     <div
       role={tone === "error" ? "alert" : "status"}
-      className="rounded-xl px-4 py-2.5 text-xs leading-relaxed"
+      className="rounded-xl px-4 py-3 text-base leading-relaxed"
       style={onDark
         ? { background: "rgba(255,255,255,0.08)", border: `1px solid ${darkColor}70`, color: darkColor }
         : { background: `${color}0d`, border: `1px solid ${color}50`, color }}
@@ -140,6 +140,6 @@ export const fieldStyle = {
   color: INK,
 } as const;
 
-export const labelClass = "block text-xs font-semibold mb-1.5";
+export const labelClass = "block text-base font-semibold mb-1.5";
 export const labelStyle = { color: WHITE_DIM } as const;
 export const subtleText = { color: WHITE_SUB } as const;

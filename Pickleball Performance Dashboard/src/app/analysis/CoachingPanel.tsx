@@ -14,19 +14,19 @@ function FocusItem({ item, index }: { item: CoachingItem; index: number }) {
     <li className="rounded-xl p-3" style={itemStyle}>
       <p className="text-sm font-semibold text-[#101827]">{index + 1}. {item.title}</p>
       <p className="mt-1 text-sm text-[#101827]">{item.observation}</p>
-      {item.why && <p className="mt-1 text-xs" style={{ color: WHITE_DIM }}>{item.why}</p>}
+      {item.why && <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>{item.why}</p>}
       {item.drill && (
         <div className="mt-2 rounded-lg p-2" style={{ background: "rgba(41,61,242,0.04)" }}>
-          <p className="text-xs font-semibold" style={{ color: NEON }}>Drill: {item.drill.name}</p>
-          <p className="mt-0.5 text-xs text-[#101827]">{item.drill.how}</p>
+          <p className="text-sm font-semibold" style={{ color: NEON }}>Drill: {item.drill.name}</p>
+          <p className="mt-0.5 text-sm text-[#101827]">{item.drill.how}</p>
         </div>
       )}
       {item.target && (
-        <p className="mt-2 flex gap-1.5 text-xs font-semibold" style={{ color: BLUE_SKY }}>
+        <p className="mt-2 flex gap-1.5 text-sm font-semibold" style={{ color: BLUE_SKY }}>
           <Target size={12} className="mt-0.5 flex-shrink-0" /> {item.target}
         </p>
       )}
-      <p className="mt-1 text-xs" style={{ color: WHITE_DIM }}>Evidence: {item.evidence}</p>
+      <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Evidence: {item.evidence}</p>
     </li>
   );
 }
@@ -40,8 +40,8 @@ const CHANGE = {
 function ProgressTable({ rows, label }: { rows: ProgressRow[]; label: string }) {
   return (
     <div className="mt-4">
-      <p className="text-xs font-semibold text-[#101827]">Progress since {label}</p>
-      <table className="mt-1 w-full text-xs">
+      <p className="text-sm font-semibold text-[#101827]">Progress since {label}</p>
+      <table className="mt-1 w-full text-sm">
         <thead>
           <tr style={{ color: WHITE_DIM }}>
             <th className="py-1 text-left font-normal">Measure</th>
@@ -66,7 +66,7 @@ function ProgressTable({ rows, label }: { rows: ProgressRow[]; label: string }) 
           })}
         </tbody>
       </table>
-      <p className="mt-1 text-[11px]" style={{ color: WHITE_DIM }}>
+      <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>
         Differences can also come from the opponent, the format, or the camera angle, not only from your play.
       </p>
     </div>
@@ -110,7 +110,7 @@ export function CoachingPanel({ result, previous }: { result: AnalysisResultV1; 
         {report.available && (
           <button type="button" onClick={toggleAudio} disabled={!speechAvailable}
             aria-label={playing ? "Stop audio coaching" : "Play audio coaching"}
-            className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold disabled:opacity-50"
             style={{ color: "#ffffff", background: NEON }}>
             {playing ? <Square size={14} /> : <Play size={14} />}
             {playing ? "Stop audio" : "Play audio coaching"}
@@ -121,7 +121,7 @@ export function CoachingPanel({ result, previous }: { result: AnalysisResultV1; 
       <p className="text-sm text-[#101827]">{devMock ? "Example only: these findings do not describe your play." : report.introduction}</p>
       {report.strengths.length > 0 && (
         <div className="mt-3">
-          <p className="text-xs font-semibold text-[#101827]">What's working</p>
+          <p className="text-sm font-semibold text-[#101827]">What's working</p>
           <ul className="mt-1 space-y-1">
             {report.strengths.map((item) => (
               <li key={item.title} className="flex gap-2 text-sm text-[#101827]">
@@ -134,7 +134,7 @@ export function CoachingPanel({ result, previous }: { result: AnalysisResultV1; 
       )}
       {report.focus.length > 0 && (
         <div className="mt-3">
-          <p className="text-xs font-semibold text-[#101827]">Focus for your next session</p>
+          <p className="text-sm font-semibold text-[#101827]">Focus for your next session</p>
           <ol className="mt-1 space-y-3">
             {report.focus.map((item, index) => <FocusItem key={item.title} item={item} index={index} />)}
           </ol>
@@ -142,12 +142,12 @@ export function CoachingPanel({ result, previous }: { result: AnalysisResultV1; 
       )}
       {progress && previous && <ProgressTable rows={progress} label={previous.label} />}
       {report.available && !progress && (
-        <p className="mt-3 text-xs" style={{ color: WHITE_DIM }}>
+        <p className="mt-3 text-sm" style={{ color: WHITE_DIM }}>
           Record and analyze another session with a similar view and play format to track progress against these targets.
         </p>
       )}
-      <p className="mt-3 text-xs" style={{ color: WHITE_DIM }}>{report.limitation}</p>
-      {report.available && !speechAvailable && <p className="mt-2 text-xs" style={{ color: WHITE_DIM }}>Audio coaching is unavailable in this browser.</p>}
+      <p className="mt-3 text-sm" style={{ color: WHITE_DIM }}>{report.limitation}</p>
+      {report.available && !speechAvailable && <p className="mt-2 text-sm" style={{ color: WHITE_DIM }}>Audio coaching is unavailable in this browser.</p>}
     </Card>
   );
 }

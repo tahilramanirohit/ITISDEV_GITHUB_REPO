@@ -23,11 +23,14 @@ from picklepro import PIPELINE_VERSION
 from picklepro.contract import AnalysisResultV1
 from picklepro.court import CalibrationError, calibration_from_dict
 from picklepro.detection import DetectorUnavailable
+from picklepro.models import load_dotenv, log_setup, resolve_models
 from picklepro.pipeline import AnalysisOptions, analyze_video
 from picklepro.spatial import Selection
 from picklepro.video_io import VideoOpenError
 
 logger = logging.getLogger(__name__)
+load_dotenv()
+log_setup(resolve_models(), logger)
 
 app = FastAPI(title="PicklePro CV Backend (local prototype)", version=PIPELINE_VERSION)
 app.add_middleware(
@@ -46,8 +49,9 @@ MAX_SECONDS_LIMIT = float(os.getenv("LOCAL_API_MAX_SECONDS", "600"))
 
 
 @app.get("/health")
-async def health() -> Dict[str, str]:
-    return {"status": "ok", "pipeline_version": PIPELINE_VERSION}
+async def health() -> Dict[str, object]:
+    # Resolved on each call so newly added model files are picked up without a restart.
+    return {"status": "ok", "pipeline_version": PIPELINE_VERSION, "models": resolve_models().describe()}
 
 
 @app.post("/analyze/video", response_model=AnalysisResultV1)
@@ -97,12 +101,13 @@ def analyze_video_endpoint(
                 )
             tmp.write(chunk)
 
+    models = resolve_models()
     try:
         return analyze_video(tmp_path, AnalysisOptions(
             max_seconds=min(max_seconds, MAX_SECONDS_LIMIT), target_fps=target_fps,
             calibration=calib, selection=selection, source_filename=file.filename,
-            court_weights=os.getenv("PICKLEPRO_COURT_WEIGHTS"),
-            ball_weights=os.getenv("PICKLEPRO_BALL_WEIGHTS"),
+            detector=models.detector, yolo_weights=models.yolo_weights,
+            court_weights=models.court_weights, ball_weights=models.ball_weights,
         ))
     except VideoOpenError as exc:
         raise HTTPException(status_code=422, detail=str(exc))

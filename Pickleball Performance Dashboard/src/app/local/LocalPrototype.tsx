@@ -73,7 +73,7 @@ export default function LocalPrototype() {
               setFile(check?.ok ? f : null);
             }} />
           <AnalysisParamsForm onChange={(p, err) => { setParams(p); setParamsError(err); }} />
-          <label className="flex items-center gap-2 text-xs" style={{ color: WHITE_DIM }}>
+          <label className="flex items-center gap-2 text-sm" style={{ color: WHITE_DIM }}>
             Stop after
             <input type="number" min={5} max={600} value={maxSeconds} className="w-20 rounded-lg px-2 py-1" style={fieldStyle}
               onChange={(e) => setMaxSeconds(Math.max(5, Math.min(600, Number(e.target.value) || 120)))} />

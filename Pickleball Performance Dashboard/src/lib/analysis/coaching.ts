@@ -74,6 +74,11 @@ const secs = (s: number) => `${s.toFixed(1)} s`;
 /** Why coaching cannot be given for this result, or null when it can. */
 export function coachingBlocker(result: AnalysisResultV1): string | null {
   if (result.data_origin !== "measured") return "Coaching is unavailable for sample results. Analyze a real video first.";
+  const labelledDemo = result.provenance.pipeline_version === "dev-mock";
+  if (!labelledDemo && (result.metrics.positioning.validation !== "evaluated_on_real_footage" ||
+      result.metrics.court_heatmap.validation !== "evaluated_on_real_footage")) {
+    return "Practice advice is unavailable until these positioning measures pass evaluation on labelled real footage.";
+  }
   if (result.metrics.court_heatmap.status !== "measured" || !result.metrics.court_heatmap.value) {
     return "Coaching needs a measured court heatmap and enough tracked player time. Check the analysis warnings and camera view.";
   }

@@ -1,7 +1,7 @@
 // Row types for the tables in supabase/migrations. Hand-written until the team
 // can run `supabase gen types typescript` against a real project.
 
-export const SESSION_CONTEXTS = ["practice", "casual_match", "tournament", "leveling_game"] as const;
+export const SESSION_CONTEXTS = ["practice", "casual_match", "tournament", "leveling_game", "drill"] as const;
 export const PLAY_FORMATS = ["singles", "doubles", "wall_practice", "ball_machine", "drill_other"] as const;
 export const PERFORMANCE_SCOPES = ["individual", "pair"] as const;
 export const IMPROVEMENT_GOALS = ["positioning", "shot_outcomes", "shot_technique"] as const;
@@ -23,6 +23,7 @@ export const CONTEXT_LABELS: Record<SessionContext, string> = {
   casual_match: "Casual match",
   tournament: "Tournament",
   leveling_game: "Leveling game",
+  drill: "Drill",
 };
 export const FORMAT_LABELS: Record<PlayFormat, string> = {
   singles: "Singles",
@@ -37,6 +38,8 @@ export type SessionRow = {
   owner_id: string;
   title: string;
   session_date: string;
+  actual_start_at: string | null;
+  actual_end_at: string | null;
   session_context: SessionContext;
   play_format: PlayFormat;
   performance_scope: PerformanceScope;

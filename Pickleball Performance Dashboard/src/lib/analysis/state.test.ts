@@ -35,7 +35,9 @@ describe("deriveAnalysisState", () => {
   it("explains retries and failures with the stored error", () => {
     expect(stateDescription("queued", job("queued", { attempts: 1, error_code: "download_failed" })))
       .toContain("attempt 2 of 3");
-    expect(stateDescription("failed", job("failed", { error_message: "The uploaded video was not found" })))
-      .toBe("The uploaded video was not found");
+    // Players see a plain next step, not an error code.
+    expect(stateDescription("failed", job("failed", { error_code: "unreadable_video", error_message: "codec" })))
+      .toBe("Try saving or exporting it as an MP4 file, then upload it again.");
+    expect(stateDescription("failed", job("failed", { error_code: "something_new" }))).toMatch(/Try re-running/);
   });
 });

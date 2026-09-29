@@ -22,9 +22,10 @@ describe("ResultView", () => {
     render(<ResultView result={parseAnalysisResult(measured)} videoUrl={null} />);
     expect(screen.getByText("MEASURED FROM THIS VIDEO")).toBeTruthy();
     expect(screen.getByRole("region", { name: "What the video analysis found" })).toBeTruthy();
-    expect(screen.getByText("Model not set up")).toBeTruthy();
-    expect(screen.getByText("Shot types")).toBeTruthy();
+    expect(screen.getByText("Ball finder not set up")).toBeTruthy();
+    expect(screen.getByText("Court lines found")).toBeTruthy();
     expect(screen.getByText("Not available")).toBeTruthy();
+    expect(screen.getByText(/Shot labels need evaluation on labelled real footage/)).toBeTruthy();
     fireEvent.click(screen.getByText("Detailed measurements and analysis notes"));
     expect(screen.getByText(testFixture.provenance.pipeline_version)).toBeTruthy();
     expect(screen.getByText("Share of video analyzed")).toBeTruthy();
@@ -33,7 +34,8 @@ describe("ResultView", () => {
     expect(screen.getAllByText("Accuracy not yet evaluated").length).toBeGreaterThan(0);
     expect(screen.getAllByText("NOT COMPUTED").length).toBe(2); // rallies and shots
     expect(screen.getByText("WHOLE-CLIP METRICS")).toBeTruthy();
-    expect(screen.getByRole("img", { name: /Court heatmap/ })).toBeTruthy();
+    expect(screen.queryByRole("img", { name: /Court heatmap/ })).toBeNull();
+    expect(screen.getByText(/Hidden until positional accuracy passes evaluation/)).toBeTruthy();
   });
 
   it("explains insufficient data instead of showing a heatmap", () => {
@@ -52,13 +54,15 @@ describe("ResultView", () => {
     expect(screen.getByText("Your goals and video evidence")).toBeTruthy();
     expect(screen.getByText("Court positioning · cannot assess from this analysis")).toBeTruthy();
     expect(screen.getByText("Shot outcomes · cannot assess from this analysis")).toBeTruthy();
-    expect(screen.getByText(/Ball observations alone do not establish contact/)).toBeTruthy();
+    expect(screen.getByText(/Shot success and in\/out calls are outside this analysis scope/)).toBeTruthy();
   });
 
   it("plays and stops the same evidence-based advice shown on screen", () => {
     const result = structuredClone(testFixture);
     result.data_origin = "measured";
     result.provenance.detector = { name: "ultralytics-yolov8-person", confidence_is_model_score: true };
+    result.metrics.positioning.validation = "evaluated_on_real_footage";
+    result.metrics.court_heatmap.validation = "evaluated_on_real_footage";
     const speak = vi.fn();
     const cancel = vi.fn();
     class Utterance {
@@ -101,6 +105,8 @@ describe("ResultView", () => {
       const r = structuredClone(testFixture);
       r.data_origin = "measured";
       r.provenance.detector = { name: "ultralytics-yolov8-person", confidence_is_model_score: true };
+      r.metrics.positioning.validation = "evaluated_on_real_footage";
+      r.metrics.court_heatmap.validation = "evaluated_on_real_footage";
       const parsed = parseAnalysisResult(r);
       const v = parsed.metrics.positioning.value!;
       v.fraction_of_mapped_time = { ...v.fraction_of_mapped_time, kitchen_line: kitchenLine };
@@ -113,5 +119,27 @@ describe("ResultView", () => {
     expect(row.textContent).toContain("20%");
     expect(row.textContent).toContain("45%");
     expect(row.textContent).toContain("Improved");
+  });
+
+  it("lists estimated shots in plain words and jumps the video to one", () => {
+    const result = structuredClone(testFixture) as any;
+    result.data_origin = "measured";
+    const shot = (time: number, type: string, mine: boolean) => ({
+      time_seconds: time, rally_index: 0, shot_number: 1, hitter_track_id: mine ? 1 : 2, hitter_side: mine ? "near" : "far",
+      by_selected_player: mine, hitter_court_m: [3, 1], shot_type: type, contact: "after_bounce", ground_speed_mps: 4,
+      landing_court_m: null, landed_in: mine ? true : null, evidence: "soft shot from the back",
+    });
+    result.metrics.shot_classification = {
+      status: "experimental", validation: "not_evaluated", scope: "whole_clip", reason: "Rule-based estimate.",
+      value: {
+        type_definitions: {}, bounces: [],
+        shots: [shot(1, "serve", true), shot(2.5, "return", false), shot(4, "drop", true), shot(6, "dink", false)],
+        counts_by_type: {}, selected_player_counts_by_type: {},
+      },
+    };
+    render(<ResultView result={parseAnalysisResult(result)} videoUrl="/demo.mp4" />);
+    expect(screen.getByText(/Shot labels are unavailable until the detector and rules pass evaluation/)).toBeTruthy();
+    expect(screen.queryByText("Your shots")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Watch the/ })).toBeNull();
   });
 });

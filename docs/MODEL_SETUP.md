@@ -24,6 +24,8 @@ checksums below before using them:
 | `models/court_best.pt` | `c67cc2df5dbec2befe8b0c48297d9abb2345080357e57ebd8eaddcbf3d4d9aac` |
 | `models/ball,person,paddle.pt` | `05e01ebe77f3256426d0e54ffad83abf3da2d1fcadc2bcf10dbd5714fdded459` |
 
+**Automatic setup.** Put both files in `server/models/`. No environment variables are needed: the court model is the `.pt` file with "court" in its name, and the other `.pt` file supplies players and the ball. Run `.venv/bin/python -m picklepro.worker --check` to confirm what was found. The variables below still override automatic discovery.
+
 From `Pickleball Performance Dashboard/server/`, install the optional runtime
 from `requirements-yolo.txt`, then set the following in the ignored `server/.env`
 using absolute paths to the reviewed local weights:

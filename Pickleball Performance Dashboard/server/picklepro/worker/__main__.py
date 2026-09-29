@@ -18,37 +18,63 @@ import threading
 import uuid
 from pathlib import Path
 
+from ..models import SERVER_DIR, load_dotenv, log_setup, resolve_models
 from .runner import WorkerConfig, process_one
 from .supabase_store import SupabaseJobStore
 
 
-def _load_dotenv(path: Path) -> None:
-    if not path.is_file():
-        return
-    for line in path.read_text().splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+def _project_ref(url: str | None) -> str | None:
+    if not url:
+        return None
+    host = url.split("//", 1)[-1].split("/", 1)[0]
+    return host.split(".", 1)[0] or None
+
+
+def supabase_mismatch(worker_url: str | None, web_env: Path = SERVER_DIR.parent / ".env.local") -> str | None:
+    """Warn when the web app and the worker point at different Supabase projects.
+
+    Jobs created by the web app are then never seen by this worker.
+    """
+    if not web_env.is_file():
+        return None
+    web_url = next((line.split("=", 1)[1].strip().strip('"').strip("'")
+                    for line in web_env.read_text().splitlines()
+                    if line.strip().startswith("VITE_SUPABASE_URL=")), None)
+    web, worker = _project_ref(web_url), _project_ref(worker_url)
+    if web and worker and web != worker:
+        return (f"The web app uses Supabase project '{web}' but this worker uses '{worker}'. "
+                f"Uploaded videos will wait forever. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in server/.env "
+                f"to project '{web}'.")
+    return None
 
 
 def main(argv=None) -> int:
-    _load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+    load_dotenv()
+    models = resolve_models()
     p = argparse.ArgumentParser(prog="picklepro.worker")
     p.add_argument("--once", action="store_true", help="Process at most one job and exit")
     p.add_argument("--mode", choices=["measured", "test_fixture"], default=os.getenv("WORKER_RESULT_MODE", "measured"),
                    help="test_fixture records a clearly labelled canned result instead of analyzing the video")
     p.add_argument("--poll-interval", type=float, default=float(os.getenv("WORKER_POLL_INTERVAL_S", "5")))
     p.add_argument("--lease-seconds", type=int, default=int(os.getenv("WORKER_LEASE_SECONDS", "300")))
-    p.add_argument("--detector", choices=["motion", "yolo"], default=os.getenv("PICKLEPRO_DETECTOR", "motion"))
-    p.add_argument("--yolo-weights", default=os.getenv("PICKLEPRO_YOLO_WEIGHTS"))
-    p.add_argument("--court-weights", default=os.getenv("PICKLEPRO_COURT_WEIGHTS"))
-    p.add_argument("--ball-weights", default=os.getenv("PICKLEPRO_BALL_WEIGHTS"))
+    p.add_argument("--detector", choices=["motion", "yolo"], default=models.detector)
+    p.add_argument("--yolo-weights", default=models.yolo_weights)
+    p.add_argument("--court-weights", default=models.court_weights)
+    p.add_argument("--ball-weights", default=models.ball_weights)
+    p.add_argument("--check", action="store_true", help="Print the model and database setup, then exit")
     args = p.parse_args(argv)
 
     logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"), format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     log = logging.getLogger("picklepro.worker")
+    log_setup(models, log)
+    mismatch = supabase_mismatch(os.getenv("SUPABASE_URL"))
+    if mismatch:
+        log.error(mismatch)
+    if args.check:
+        print(f"supabase project: {_project_ref(os.getenv('SUPABASE_URL')) or 'not set'}")
+        for key, value in models.describe().items():
+            print(f"{key}: {value}")
+        return 1 if mismatch else 0
 
     try:
         store = SupabaseJobStore.from_env()

@@ -29,7 +29,7 @@ def test_custom_model_reports_highest_scored_ball_box():
     }
 
 
-def test_pipeline_records_ball_observations_without_claiming_shots(synthetic_clip, monkeypatch):
+def test_too_few_ball_frames_do_not_produce_shots(synthetic_clip, monkeypatch):
     monkeypatch.setattr("picklepro.pipeline.BallDetector", lambda _weights:
                         BallDetector("operator-weights.pt", model=FakeBallModel()))
     result = analyze_video(synthetic_clip.path, AnalysisOptions(
@@ -38,8 +38,10 @@ def test_pipeline_records_ball_observations_without_claiming_shots(synthetic_cli
     assert result.provenance.ball_detector.name == "ultralytics-yolo-ball"
     assert result.coverage.frames_with_ball_detections == len(result.ball_positions) > 0
     assert result.ball_positions[0].bbox == [100, 80, 110, 90]
-    assert result.metrics.shot_classification.status == "not_computed"
-    assert result.metrics.rally_segmentation.status == "not_computed"
+    # One second of sampled frames is too little ball flight to claim any shot.
+    assert result.metrics.shot_classification.status == "insufficient_data"
+    assert result.metrics.shot_classification.value is None
+    assert result.metrics.rally_segmentation.status == "insufficient_data"
 
 
 def test_court_player_and_ball_paths_produce_one_honest_result(synthetic_clip, monkeypatch):

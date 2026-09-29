@@ -118,6 +118,7 @@ class PlayerBox(_Model):
     track_id: Optional[int] = None
     bbox: List[int] = Field(min_length=4, max_length=4)
     confidence: Optional[float] = None
+    selected: bool = Field(False, description="True when this box is the player chosen for court feedback in this frame.")
 
 
 class PositionSnapshot(_Model):
@@ -129,6 +130,12 @@ class BallSnapshot(_Model):
     time_seconds: float
     bbox: List[int] = Field(min_length=4, max_length=4)
     confidence: float = Field(ge=0, le=1)
+
+
+class CourtLinesSnapshot(_Model):
+    time_seconds: float
+    lines: List[List[int]] = Field(description="Court lines as [x1, y1, x2, y2] image pixels, valid until the next snapshot; "
+                                               "empty when the court was not mapped from this time on.")
 
 
 class Metric(_Model):
@@ -184,14 +191,69 @@ class PositioningMetric(Metric):
     value: Optional[PositioningValue] = None
 
 
+ShotType = Literal["serve", "return", "drive", "drop", "dink", "volley", "lob", "overhead", "unclassified"]
+ContactType = Literal["volley", "after_bounce", "unknown"]
+
+
+class ShotEvent(_Model):
+    time_seconds: float
+    rally_index: int
+    shot_number: int = Field(description="1-based position of the shot within its rally.")
+    hitter_track_id: Optional[int] = None
+    hitter_side: Optional[Literal["near", "far"]] = None
+    by_selected_player: bool = False
+    hitter_court_m: Optional[List[float]] = Field(None, min_length=2, max_length=2)
+    shot_type: ShotType
+    contact: ContactType = "unknown"
+    ground_speed_mps: Optional[float] = Field(
+        None, description="Horizontal ground distance to the next bounce or hitter divided by the time taken.")
+    landing_court_m: Optional[List[float]] = Field(None, min_length=2, max_length=2)
+    landed_in: Optional[bool] = Field(None, description="Whether the next observed bounce was inside the opponent's court.")
+    evidence: str
+
+
+class BounceEvent(_Model):
+    time_seconds: float
+    court_m: Optional[List[float]] = Field(None, min_length=2, max_length=2)
+    in_court: Optional[bool] = None
+
+
+class ShotsValue(_Model):
+    type_definitions: Dict[str, str]
+    shots: List[ShotEvent]
+    bounces: List[BounceEvent]
+    counts_by_type: Dict[str, int]
+    selected_player_counts_by_type: Dict[str, int]
+
+
+class ShotClassificationMetric(Metric):
+    value: Optional[ShotsValue] = None
+
+
+class RallySummary(_Model):
+    rally_index: int
+    start_s: float
+    end_s: float
+    shots: int
+
+
+class RallyValue(_Model):
+    rallies: List[RallySummary]
+    rally_time_s: float
+
+
+class RallySegmentationMetric(Metric):
+    value: Optional[RallyValue] = None
+
+
 class Metrics(_Model):
     court_heatmap: CourtHeatmapMetric
     zone_occupancy: ZoneOccupancyMetric
     # Defaulted so results stored before this metric existed still validate.
     positioning: PositioningMetric = Field(default_factory=lambda: PositioningMetric(
         status="not_computed", reason=POSITIONING_NOT_COMPUTED))
-    rally_segmentation: Metric
-    shot_classification: Metric
+    rally_segmentation: RallySegmentationMetric
+    shot_classification: ShotClassificationMetric
 
 
 class AnalysisResultV1(_Model):
@@ -207,6 +269,7 @@ class AnalysisResultV1(_Model):
     tracks: List[TrackSummary]
     player_positions: List[PositionSnapshot]
     ball_positions: List[BallSnapshot] = Field(default_factory=list)
+    court_lines: List[CourtLinesSnapshot] = Field(default_factory=list)
     metrics: Metrics
     warnings: List[str]
 
@@ -222,10 +285,10 @@ def not_computed(reason: str) -> Metric:
 # Reasons for metrics this pipeline deliberately does not produce yet.
 POSITIONING_NOT_COMPUTED = "Positioning patterns were not computed for this result."
 RALLY_NOT_COMPUTED = (
-    "Rally segmentation is not implemented or validated. All metrics are whole-clip metrics."
+    "Rallies are found from detected ball hits, which needs a ball model. All other metrics are whole-clip metrics."
 )
 SHOTS_NOT_COMPUTED = (
-    "Shot classification requires validated ball trajectories and a shot classifier; neither exists in this pipeline yet."
+    "Shot types need a ball model and a mapped court; one of them was not available for this video."
 )
 
 

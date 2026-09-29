@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 
@@ -5,6 +6,12 @@ import pytest
 
 SERVER = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SERVER))
+
+# Keep results independent of model files and server/.env on this machine.
+os.environ["PICKLEPRO_AUTO_MODELS"] = "0"
+for _name in ("PICKLEPRO_COURT_WEIGHTS", "PICKLEPRO_YOLO_WEIGHTS", "PICKLEPRO_BALL_WEIGHTS"):
+    os.environ[_name] = ""
+os.environ["PICKLEPRO_DETECTOR"] = "motion"
 
 from picklepro.fixtures import write_synthetic_clip  # noqa: E402
 
