@@ -2,6 +2,8 @@
 
 Basis: `PicklePro_Requirements_and_Architecture_v4.pdf`, 29 September 2026. The PDF is a proposed design and verification plan. This file records implementation evidence, not approval of its C1/C2 scheduling assumptions. An item is complete only when its behavior and required evidence both exist.
 
+The [item-by-item audit](REV4_CHECKLIST_AUDIT.md) checks all 114 IDs. Its current tally is 10 locally met, 43 partial, 36 missing, 9 requiring external evidence, 14 planned for C2, and 2 stretch. None of these counts is a hosted release or real-footage accuracy claim. The linked test project still has only the two September 24 migrations.
+
 ## Implemented in this checkout
 
 | Requirement area | Current evidence | Limit |
@@ -9,7 +11,7 @@ Basis: `PicklePro_Requirements_and_Architecture_v4.pdf`, 29 September 2026. The 
 | A01 accounts | Supabase email sign-up/sign-in and password recovery UI. | Hosted recovery redirect still needs an end-to-end check. |
 | A02 private profile | `profiles` migration, self-only RLS, profile form for name, hand, experience, format and self-declared level. | Migration has passed local SQL tests; it is not deployed to the hosted project. |
 | A03 upload attestation | Versioned, timestamped uploader consent recorded before upload; Storage rejects browser uploads without it. | This attests to all visible players' consent; research footage requires the separate ethics process. |
-| C01–C04, H01–H02, G07 | Session check-in, actual start time, timing provenance, recovery and reflection forms; private participant rows and null for missing values. | The current report does not yet place these alongside metric trends. |
+| C01–C04, H01–H02, G07 | Session check-in, actual start time, timing provenance, recovery and reflection forms; private uploader rows and null for missing values. | Other participants cannot enter their own data, and the current report does not place these alongside metric trends. |
 | D01–D03, D06 partial, D07–D08, L01–L02 | Recording guide; resumable upload; context now includes drill; upload attaches to a session; queue states; original-file landscape 720p/30 fps gate; logging-only formats are blocked in the UI and database. | Full-court visibility checks remain. Free-plan video limit is 50 MB until a storage plan is selected. |
 | F11 safety gate | Unevaluated shot labels, heatmap and positional advice are hidden from measured reports. Dev mock is separately labelled. | Real-footage evaluation has not been completed; corresponding metrics remain unavailable. |
 | P02 partial, P04 partial | Atomic job claim and lease checks, private Storage RLS, five-minute signed video URLs. A reanalysis preserves the prior published report if the new attempt fails. | Runs and artifacts are not fully versioned; worker lease uses a worker ID rather than a per-attempt token. Sharing and revocation are not implemented. |

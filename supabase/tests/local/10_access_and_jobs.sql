@@ -43,6 +43,20 @@ update public.sessions set actual_start_at = now() - interval '1 minute'
   where id = '5a000000-0000-4000-8000-00000000000a';
 select tests.expect_count($$ select 1 from public.checkins where timing_status = 'retrospective' $$,
   1, 'late check-in is relabelled against actual start');
+select captured_at::text as checkin_before from public.checkins
+  where participant_id = (select id from public.session_participants
+    where session_id = '5a000000-0000-4000-8000-00000000000a') \gset
+select pg_sleep(0.02);
+update public.checkins set readiness = 5
+  where participant_id = (select id from public.session_participants
+    where session_id = '5a000000-0000-4000-8000-00000000000a');
+select tests.expect_count($$ select 1 from public.checkins where readiness = 5 and timing_status = 'retrospective'
+  and captured_at >= (select actual_start_at from public.sessions where id = '5a000000-0000-4000-8000-00000000000a') $$,
+  1, 'editing pre-game answers after start is retrospective');
+select tests.expect_true((select captured_at from public.checkins
+  where participant_id = (select id from public.session_participants
+    where session_id = '5a000000-0000-4000-8000-00000000000a')) > :'checkin_before'::timestamptz,
+  'editing an answer records a new capture time');
 insert into public.recovery_logs(participant_id, exertion, soreness, cooldown_done)
 select id, 7, null, true from public.session_participants where session_id = '5a000000-0000-4000-8000-00000000000a';
 insert into public.reflections(participant_id, went_well, change_next)

@@ -83,8 +83,16 @@ create function public.set_checkin_timing() returns trigger
 language plpgsql security definer set search_path = '' as $$
 declare start_time timestamptz;
 begin
-  if tg_op = 'INSERT' then new.captured_at := now(); end if;
-  if tg_op = 'UPDATE' then new.captured_at := old.captured_at; end if;
+  if tg_op = 'INSERT' then
+    new.captured_at := now();
+  elsif row(new.warmup_done, new.sleep_hours, new.readiness, new.focus)
+      is distinct from row(old.warmup_done, old.sleep_hours, old.readiness, old.focus) then
+    -- A changed answer is a new capture. A reclassification caused only by
+    -- correcting actual_start_at must retain the original capture time.
+    new.captured_at := now();
+  else
+    new.captured_at := old.captured_at;
+  end if;
   select s.actual_start_at into start_time from public.session_participants p
   join public.sessions s on s.id = p.session_id where p.id = new.participant_id;
   new.timing_status := case when start_time is null then 'unverified'
