@@ -81,6 +81,15 @@ describe("dev mode entry", () => {
     render(<App cfg={{ ...prodConfig, supabase: { url: "x", anonKey: "y" } }} sb={fakeSupabase() as unknown as SupabaseClient} />);
     await screen.findByRole("button", { name: "Sign in" });
     expect(screen.queryByRole("button", { name: /Try PicklePro with sample sessions/ })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Explore sample dashboard" })).toBeNull();
+  });
+
+  it("links to the labelled sample dashboard in a trial build", async () => {
+    const cfg = getConfig({ DEV: false, VITE_ENABLE_DESIGN_PREVIEW: "true", VITE_TRIAL_NO_WORKER: "true" });
+    render(<App cfg={cfg} sb={fakeSupabase() as unknown as SupabaseClient} />);
+    expect((await screen.findByRole("link", { name: "Explore sample dashboard" })).getAttribute("href"))
+      .toBe("#/design-preview");
+    expect(screen.getByText(/Video analysis is not running on this public trial/)).toBeTruthy();
   });
 
   it("offers guest testing on an explicitly enabled production preview", async () => {

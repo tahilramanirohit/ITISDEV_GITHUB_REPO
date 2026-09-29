@@ -4,14 +4,14 @@ Source: `PicklePro_Requirements_and_Architecture_v4.pdf`, pages 4–8 (114 stabl
 
 **Status key:** **Local** = behavior exists and has local code/test evidence, but is not a hosted release claim; **Partial** = some code exists but an acceptance condition is unmet; **Missing** = no matching workflow or data model; **Evidence** = implementation or evaluation cannot be verified without external input; **C2** or **Stretch** = planned later, not complete. A passing build is not proof of CV accuracy or a complete requirement.
 
-The linked test database was last confirmed to have only migrations `20260924000100` and `20260924000200`. Migrations `20260928000100`, `20260928000200`, `20260929000100` and `20260929000200` need hosted verification. The latest capture/profile and analysis-history UI therefore cannot be claimed to work on that hosted project yet.
+All six migrations through `20260929000200` were applied to the dedicated test database on 29 September. Test-account sign-in and a sessions API read succeeded afterward. The latest capture/profile and analysis-history flows still need browser-level hosted verification. The separate public trial pauses uploads because no worker runs online.
 
 ## A. Accounts, profile and privacy
 
 | ID | Status | Double-check finding |
 | --- | --- | --- |
 | A01 | Partial | Supabase sign-up, sign-in and reset UI exist; real email confirmation and recovery redirect have not been exercised end to end. |
-| A02 | Partial | Private `profiles` table and form cover the listed fields; new migration is not hosted. |
+| A02 | Partial | Private `profiles` table and form cover the listed fields; migration is on the test project, but the hosted form and access rules need browser checks. |
 | A03 | Partial | Uploader attestation is timestamped/versioned and upload-gated; accepted partner invitations do not exist. |
 | A04 | Partial | Owner-only RLS for personal data exists; report grants, peer-note permissions and revocation do not. |
 | A05 | Partial | Browser deletes a session, video and cascaded rows; no tracked deletion job, shared-report warning, linked-player removal or stale-baseline handling. |
@@ -151,7 +151,7 @@ Evidence: `server/picklepro/pipeline.py`, `detection.py`, `shots.py`, `video_io.
 
 | ID | Status | Double-check finding |
 | --- | --- | --- |
-| L01 | Local | A session requires context, including the added drill option; the new enum is pending on hosted DB. |
+| L01 | Local | A session requires context, including the added drill option; the migration is on the test database. |
 | L02 | Local | A session requires format, including singles, doubles, wall and ball machine. |
 | L03 | Missing | No context/format trend and baseline filters because those systems do not exist. |
 
@@ -223,6 +223,6 @@ Evidence: `server/picklepro/pipeline.py`, `detection.py`, `shots.py`, `video_io.
 - `npm run check`: typecheck, 60 frontend tests, production build passed.
 - `server/.venv/bin/python -m pytest -q`: 100 tests passed; one Starlette/httpx deprecation warning.
 - `bash supabase/tests/run_local_rls_tests.sh`: passed against temporary PostgreSQL, including two-account isolation, profile privacy, consent-gated Storage, logging-only rejection, lease loss, duplicate finalize, run history, active-run protection and legacy backfill.
-- Hosted `supabase migration list --linked`: only the two 24 September migrations are recorded remotely. Hosted Auth, Storage/TUS, new capture and profile flows, and recovery email remain to be checked after migration.
+- Hosted `supabase migration list --linked`: all six migrations are recorded remotely. Test-account sign-in and a sessions API read passed; hosted Storage/TUS, new capture and profile flows, run history, and recovery email remain to be checked.
 
 Before claiming C1 alignment, prioritize: (1) hosted migration and access verification; (2) revision 4 rally/coverage metrics plus labelled real-footage gates; (3) baseline and numeric-goal data model; (4) share grants/peer notes and negative permission tests; (5) retention and deletion jobs; (6) buddy safety workflow; (7) named-worker runtime and ethics/manuscript evidence. Record the adviser decision on the C1/C2 split and buddy scope before fixing release dates.

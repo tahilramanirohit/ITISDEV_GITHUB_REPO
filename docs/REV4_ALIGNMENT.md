@@ -2,19 +2,19 @@
 
 Basis: `PicklePro_Requirements_and_Architecture_v4.pdf`, 29 September 2026. The PDF is a proposed design and verification plan. This file records implementation evidence, not approval of its C1/C2 scheduling assumptions. An item is complete only when its behavior and required evidence both exist.
 
-The [item-by-item audit](REV4_CHECKLIST_AUDIT.md) checks all 114 IDs. Its original tally is 10 locally met, 43 partial, 36 missing, 9 requiring external evidence, 14 planned for C2, and 2 stretch. The versioned-run work below improves several partial items but does not make them complete. None of these counts is a hosted release or real-footage accuracy claim. The linked test project was last confirmed to have only the two September 24 migrations.
+The [item-by-item audit](REV4_CHECKLIST_AUDIT.md) checks all 114 IDs. Its original tally is 10 locally met, 43 partial, 36 missing, 9 requiring external evidence, 14 planned for C2, and 2 stretch. The versioned-run work below improves several partial items but does not make them complete. None of these counts is a real-footage accuracy claim. All six migrations are now applied to the dedicated test project, but the newer flows still need hosted end-to-end checks.
 
 ## Implemented in this checkout
 
 | Requirement area | Current evidence | Limit |
 | --- | --- | --- |
 | A01 accounts | Supabase email sign-up/sign-in and password recovery UI. | Hosted recovery redirect still needs an end-to-end check. |
-| A02 private profile | `profiles` migration, self-only RLS, profile form for name, hand, experience, format and self-declared level. | Migration has passed local SQL tests; it is not deployed to the hosted project. |
+| A02 private profile | `profiles` migration, self-only RLS, profile form for name, hand, experience, format and self-declared level. | Migration is deployed to the test project; the profile UI and policies need hosted browser checks. |
 | A03 upload attestation | Versioned, timestamped uploader consent recorded before upload; Storage rejects browser uploads without it. | This attests to all visible players' consent; research footage requires the separate ethics process. |
 | C01–C04, H01–H02, G07 | Session check-in, actual start time, timing provenance, recovery and reflection forms; private uploader rows and null for missing values. | Other participants cannot enter their own data, and the current report does not place these alongside metric trends. |
 | D01–D03, D06 partial, D07–D08, L01–L02 | Recording guide; resumable upload; context now includes drill; upload attaches to a session; queue states; original-file landscape 720p/30 fps gate; logging-only formats are blocked in the UI and database. | Full-court visibility checks remain. The Free pilot deliberately accepts short rally clips up to 50 decimal MB; full-match uploads remain unsupported. |
 | F11 safety gate | Unevaluated shot labels, heatmap and positional advice are hidden from measured reports. Dev mock is separately labelled. | Real-footage evaluation has not been completed; corresponding metrics remain unavailable. |
-| P02 partial, P04 partial | Atomic job claim and lease checks, private Storage RLS, five-minute signed video URLs. Migration `20260929000200` stores each reanalysis as a separate run, preserves earlier reports, and switches the session's active run only after a successful worker result. The session page shows run history and the last published report during processing. | This is local only. The worker lease still uses a worker ID rather than a per-attempt token, and run-specific media artifacts, sharing and revocation remain absent. |
+| P02 partial, P04 partial | Atomic job claim and lease checks, private Storage RLS, five-minute signed video URLs. Migration `20260929000200` stores each reanalysis as a separate run, preserves earlier reports, and switches the session's active run only after a successful worker result. The session page shows run history and the last published report during processing. | The schema is deployed to the test project but the full hosted run flow has not been checked. The worker lease still uses a worker ID rather than a per-attempt token, and run-specific media artifacts, sharing and revocation remain absent. |
 | F11–F12 foundation | `metric_results` records a per-player metric definition version, validation level, quality state and optional coverage/contact denominators. It rejects an available value without a real-footage validation level. | The prototype does not populate these rows; real-footage evaluation, metric-specific quality thresholds and rally-window measurements remain necessary. |
 
 ## Still missing for the proposed C1 target
@@ -39,4 +39,4 @@ Audio/RAG, pair view and pair goals, CSV export, rally-end proximity and a playe
 - Python worker suite: 100 tests.
 - PostgreSQL RLS and job-lifecycle harness, including two-account isolation, upload consent, profile privacy, logging-only rejection, lease loss, versioned-run publication and legacy-report backfill.
 
-These checks are local. The new migration and account flows need a deployment check in the chosen Supabase project. The accuracy, runtime, storage and ethics gates cannot be inferred from passing synthetic tests.
+The six migrations are on the dedicated test project, and test-account sign-in plus a sessions API read succeeded after the upgrade. The public trial is a labelled sample site with video uploads paused. The newer flows still need full hosted checks. Accuracy, runtime, storage and ethics gates cannot be inferred from passing synthetic tests.

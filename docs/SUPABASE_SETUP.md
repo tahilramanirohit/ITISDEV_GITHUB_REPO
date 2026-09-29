@@ -4,12 +4,14 @@ The hosted workflow was verified on September 24, 2026, with synthetic test mate
 
 ## Hosted verification record
 
-- The two September 24 migrations were applied to the new project and matched the remote history at the time of the original test. On September 29, the September 28 mock/goals migrations and September 29 capture migration were still pending remotely. Linked database lint of the original two migrations reported no schema errors.
+- All six migrations through `20260929000200` were applied to the dedicated test project on September 29. A local backup of the public schema was saved before the four newer migrations. Linked migration history matched afterward; the newer account/capture and versioned-run flows still need hosted end-to-end testing.
 - Two synthetic test accounts were used. In the browser, account A created a session, uploaded a synthetic H.264 clip through the resumable upload client to private Storage, saw the fixture worker complete a job, and recovered the result after a reload. The UI identified the fixture as **TEST DATA — NOT FROM YOUR VIDEO**.
 - Account A could read its session, video, job, result, and private video object. Account B could read none of A's records or video and could not finalize A's upload. Twenty simultaneous finalize calls for A's video returned the same single job.
 - The same uploaded clip was requeued and processed with the measured worker. It downloaded the private video, stored a measured heatmap and coverage, and the browser displayed **MEASURED FROM THIS VIDEO**. Private video playback loaded successfully.
 
 These checks used synthetic footage and programmatically created confirmed test accounts. Real footage accuracy, the normal email confirmation flow, an interrupted and resumed upload, and invalid-file/error cases remain unverified. Security and performance advisors were not run because the installed Supabase CLI did not expose that command and the connected Supabase account cannot access this project. Review those advisors in the project's dashboard before broader use.
+
+The [public trial](https://picklepro-free-trial.vercel.app) is a separate Vercel site using this test project. Its labelled design preview is open without an account. Account, session and check-in screens are available; upload and reanalysis controls are paused because there is no always-on hosted worker. Anonymous sign-ins are disabled in the test project, so the guest mock-session button is not enabled. The existing `picklepro-itisdev-preview` site still points to the older ITISDEV project and was not changed.
 
 ## Prepare the test project
 

@@ -89,7 +89,8 @@ function SignedInApp({ sb, cfg }: { sb: SupabaseClient; cfg: AppConfig }) {
 
   if (auth.status === "loading") return <Loading />;
   if (auth.status === "signed_out") {
-    return <AuthScreen sb={sb} devMode={cfg.devModeEnabled ? { onEnter: () => void enterDevMode(), busy: devBusy, error: devError } : undefined} />;
+    return <AuthScreen sb={sb} samplePreviewEnabled={cfg.designPreviewEnabled} trialNoWorker={cfg.trialNoWorker}
+      devMode={cfg.devModeEnabled ? { onEnter: () => void enterDevMode(), busy: devBusy, error: devError } : undefined} />;
   }
   if (auth.status === "recovery") return <PasswordRecoveryScreen sb={sb} />;
   // Signed in, but the mock sessions are still being written.

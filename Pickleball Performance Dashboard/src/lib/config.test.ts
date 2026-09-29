@@ -31,4 +31,9 @@ describe("getConfig", () => {
     expect(getConfig({ VITE_MAX_UPLOAD_MB: "9999" }).maxUploadBytes).toBe(FREE_MAX_UPLOAD_MB * 1_000_000);
     expect(getConfig({ VITE_MAX_UPLOAD_MB: "nope" }).maxUploadBytes).toBe(DEFAULT_MAX_UPLOAD_MB * 1_000_000);
   });
+
+  it("keeps public trial mode off unless explicitly enabled", () => {
+    expect(getConfig({}).trialNoWorker).toBe(false);
+    expect(getConfig({ VITE_TRIAL_NO_WORKER: "true" }).trialNoWorker).toBe(true);
+  });
 });

@@ -13,6 +13,7 @@ import {
   BLUE_MID, BLUE_POP, BLUE_SKY, BORDER, NEON, NEON_D, ORANGE, ORANGE_L, VIOLET, WHITE, WHITE_DIM, WHITE_SUB,
 } from "../theme";
 import { Card, ChartTip, SectionBanner, WidgetHeader } from "../shell/primitives";
+import { config } from "../../lib/config";
 import {
   SAMPLE_KPIS, SAMPLE_PLAYER, SUMMARY_DURATION_S, SUMMARY_TEXT, WAVE_BARS, allRallyData, dinkData, forecastData,
   heatGrid, playStyleData,
@@ -900,7 +901,9 @@ export default function DesignPreview() {
         <Card accent={BLUE_SKY}>
           <WidgetHeader
             title="Video analysis is not part of this preview"
-            subtitle="Uploading and analyzing footage happens in Sessions, where every result shows its origin, coverage and per-metric status."
+            subtitle={config.trialNoWorker
+              ? "Video upload is paused on this public trial. The numbers on this page are examples, not analyzed player footage."
+              : "Uploading and analyzing footage happens in Sessions, where every result shows its origin, coverage and per-metric status."}
             accent={BLUE_SKY}
           />
           <a href="#/" className="text-xs font-bold" style={{ color: BLUE_SKY }}>Go to Sessions →</a>

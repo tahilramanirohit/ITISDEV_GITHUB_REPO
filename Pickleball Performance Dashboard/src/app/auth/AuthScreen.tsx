@@ -11,7 +11,9 @@ type Mode = "sign_in" | "sign_up" | "reset";
 export type DevModeEntry = { onEnter: () => void; busy: boolean; error: string };
 
 /** Supabase email + password authentication. Replaces the former hard-coded demo account. */
-export function AuthScreen({ sb, devMode }: { sb: SupabaseClient; devMode?: DevModeEntry }) {
+export function AuthScreen({ sb, devMode, samplePreviewEnabled = false, trialNoWorker = false }: {
+  sb: SupabaseClient; devMode?: DevModeEntry; samplePreviewEnabled?: boolean; trialNoWorker?: boolean;
+}) {
   const [mode, setMode] = useState<Mode>("sign_in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -71,11 +73,17 @@ export function AuthScreen({ sb, devMode }: { sb: SupabaseClient; devMode?: DevM
             See your game.<br /><span style={{ color: COBALT }}>Know what to practice.</span>
           </h1>
           <p className="mt-7 max-w-xl text-base leading-relaxed sm:text-lg" style={{ color: "#354052" }}>
-            Choose a practice focus, upload a video of your play, and review what PicklePro can measure with its evidence limits.
+            {trialNoWorker
+              ? "Explore the sample dashboard and try the account, session and check-in screens. Video analysis is not running on this public trial."
+              : "Choose a practice focus, upload a video of your play, and review what PicklePro can measure with its evidence limits."}
           </p>
           <p className="mt-5 max-w-xl text-sm leading-relaxed" style={{ color: "#4d5664" }}>
-            <strong>Court positions can be reviewed now.</strong> Personalized practice advice and shot labels await evaluation on real match footage.
+            {trialNoWorker
+              ? "The sample dashboard is clearly labelled and does not contain anyone's video results."
+              : <><strong>Court positions can be reviewed now.</strong> Personalized practice advice and shot labels await evaluation on real match footage.</>}
           </p>
+          {samplePreviewEnabled && <a href="#/design-preview" className="mt-6 inline-block rounded-xl px-5 py-3 text-sm font-bold"
+            style={{ background: COBALT, color: "white" }}>Explore sample dashboard</a>}
         </section>
 
         <section aria-labelledby="auth-title" className="p-6 sm:p-8" style={{ background: NAVY, color: "white", border: "1px solid #354262" }}>
@@ -133,11 +141,15 @@ export function AuthScreen({ sb, devMode }: { sb: SupabaseClient; devMode?: DevM
         <section aria-labelledby="how-it-works-title" className="lg:col-start-1 lg:row-start-2">
           <h2 id="how-it-works-title" className="text-sm font-bold uppercase tracking-widest" style={{ color: COBALT }}>How it works</h2>
           <ol className="mt-4 max-w-xl border-t" style={{ borderColor: "#bfc2c7" }}>
-            {[
+            {(trialNoWorker ? [
+              ["01", "Explore the sample", "Try the interactive dashboard with clearly labelled example data."],
+              ["02", "Create a session", "Try planning a session and recording a private check-in."],
+              ["03", "Return later for video", "Upload and analysis will open when an online worker is available."],
+            ] : [
               ["01", "Choose a focus", "Tell PicklePro what you want to work on."],
               ["02", "Upload your video", "Use a handheld or fixed-camera recording."],
               ["03", "Review feedback", "See observations, limits, and what to try next."],
-            ].map(([number, title, detail]) => (
+            ]).map(([number, title, detail]) => (
               <li key={number} className="grid grid-cols-[3.5rem_1fr] gap-3 border-b py-3" style={{ borderColor: "#bfc2c7" }}>
                 <span className="font-mono text-sm font-bold" style={{ color: COBALT }}>{number}</span>
                 <span><strong className="block text-sm">{title}</strong><span className="block text-sm mt-0.5" style={{ color: "#5a6471" }}>{detail}</span></span>

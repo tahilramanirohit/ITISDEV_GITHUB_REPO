@@ -15,6 +15,8 @@ export type AppConfig = {
    * for a dedicated testing deployment.
    */
   devModeEnabled: boolean;
+  /** Public sample site without an always-on analysis worker. */
+  trialNoWorker: boolean;
 };
 
 type EnvLike = Record<string, string | boolean | undefined>;
@@ -37,6 +39,7 @@ export function getConfig(env: EnvLike): AppConfig {
     designPreviewEnabled: dev || env.VITE_ENABLE_DESIGN_PREVIEW === "true",
     localPrototypeEnabled: dev || env.VITE_ENABLE_LOCAL_PROTOTYPE === "true",
     devModeEnabled: dev || env.VITE_ENABLE_DEV_MODE === "true",
+    trialNoWorker: env.VITE_TRIAL_NO_WORKER === "true",
   };
 }
 

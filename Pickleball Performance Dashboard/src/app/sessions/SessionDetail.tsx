@@ -285,7 +285,8 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
           </div>
         )}
 
-        {canChangeVideo && (
+        {canChangeVideo && config.trialNoWorker && <Notice tone="info">Video upload is paused on this public trial because analysis is not running online. You can explore the sample dashboard and try session planning and check-in.</Notice>}
+        {canChangeVideo && !config.trialNoWorker && (
           <div className="space-y-3">
             <details className="rounded-xl p-3" style={{ border: `1px solid ${BORDER}` }}>
               <summary className="cursor-pointer text-sm font-semibold" style={{ color: BLUE_SKY }}>How to record a usable match</summary>
@@ -330,7 +331,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
           </div>
         )}
 
-        {finished && job && (
+        {finished && job && !config.trialNoWorker && (
           <details className="mt-2">
             <summary className="text-sm font-semibold cursor-pointer" style={{ color: BLUE_SKY }}>Re-run analysis with different inputs</summary>
             <div className="mt-3 space-y-3">
@@ -365,7 +366,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
       {parsed?.ok && job?.status === "failed" && <Notice tone="warn">The reanalysis failed. The report below is from the last completed run.</Notice>}
       {parsed?.ok && (job?.status === "queued" || job?.status === "processing") && <Notice tone="info">A new analysis is in progress. The report below is the last published run.</Notice>}
       {parsed?.ok && <ResultView result={parsed.result} videoUrl={videoUrl} previous={previous} session={session}
-        onSelectTrack={job && finished ? (trackId, timeSeconds) => void run(() => requestReanalysis(sb, job.id, {
+        onSelectTrack={job && finished && !config.trialNoWorker ? (trackId, timeSeconds) => void run(() => requestReanalysis(sb, job.id, {
           ...job.params, selection: { method: "track_id", track_id: trackId }, selection_time_s: timeSeconds,
         })) : undefined} />}
       {parsed && !parsed.ok && (
