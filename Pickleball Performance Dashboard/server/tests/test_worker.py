@@ -163,13 +163,12 @@ def test_worker_uses_downloaded_models_only_when_none_are_configured(tmp_path, m
     (tmp_path / "ball,person,paddle.pt").write_bytes(b"x")
     (tmp_path / "court_best.pt").write_bytes(b"x")
     monkeypatch.setattr(worker_main, "MODELS_DIR", tmp_path)
-    monkeypatch.delenv("PICKLEPRO_DETECTOR", raising=False)
     args = Namespace(ball_weights=None, yolo_weights=None, court_weights=None, detector="motion")
     worker_main._use_downloaded_models(args)
     assert args.detector == "yolo"
     assert args.ball_weights == args.yolo_weights == str(tmp_path / "ball,person,paddle.pt")
     assert args.court_weights == str(tmp_path / "court_best.pt")
 
-    configured = Namespace(ball_weights="mine.pt", yolo_weights=None, court_weights="court.pt", detector="motion")
+    configured = Namespace(ball_weights="mine.pt", yolo_weights="people.pt", court_weights="court.pt", detector="yolo")
     worker_main._use_downloaded_models(configured)
-    assert (configured.ball_weights, configured.court_weights, configured.detector) == ("mine.pt", "court.pt", "motion")
+    assert (configured.ball_weights, configured.yolo_weights, configured.court_weights) == ("mine.pt", "people.pt", "court.pt")

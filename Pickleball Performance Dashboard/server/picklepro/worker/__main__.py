@@ -41,8 +41,9 @@ def _use_downloaded_models(args) -> None:
     obj, court = MODELS_DIR / "ball,person,paddle.pt", MODELS_DIR / "court_best.pt"
     if obj.is_file() and not args.ball_weights:
         args.ball_weights = str(obj)
-        if not os.getenv("PICKLEPRO_DETECTOR") and not args.yolo_weights:
-            args.detector, args.yolo_weights = "yolo", str(obj)
+    # Shot attribution needs real player boxes; the motion detector finds any moving blob.
+    if obj.is_file() and not args.yolo_weights:
+        args.detector, args.yolo_weights = "yolo", str(obj)
     if court.is_file() and not args.court_weights:
         args.court_weights = str(court)
 
