@@ -2,10 +2,8 @@ import type { AnalysisResultV1, PlayerSummary, ShotEvent, ShotType } from "./con
 
 /** Plain names and one-line meanings, written for players of any age or level. */
 export const SHOT_INFO: Record<ShotType, { name: string; meaning: string; color: string }> = {
-  serve: { name: "Serve", meaning: "The underhand first hit that starts the point.", color: "#293df2" },
+  serve: { name: "Serve", meaning: "The underhand first hit, from behind the baseline, diagonally past the kitchen.", color: "#293df2" },
   return: { name: "Return", meaning: "The reply to the serve, after it bounces.", color: "#4f5fd6" },
-  third_shot_drop: { name: "Third-shot drop", meaning: "Soft third shot into the kitchen so your team can move up.", color: "#1f7a4d" },
-  third_shot_drive: { name: "Third-shot drive", meaning: "Hard, low third shot instead of a drop.", color: "#b0421a" },
   drive: { name: "Drive", meaning: "A hard, flat shot.", color: "#a94318" },
   drop: { name: "Drop", meaning: "A soft shot from the back that lands near the net.", color: "#2c8a5a" },
   dink: { name: "Dink", meaning: "A soft, short shot from the kitchen line.", color: "#2f8f5b" },
@@ -19,8 +17,8 @@ export const SHOT_INFO: Record<ShotType, { name: string; meaning: string; color:
   unclassified: { name: "Hit", meaning: "A hit was seen, but the type was unclear.", color: "#66707c" },
 };
 
-export const SOFT_SHOTS: ShotType[] = ["dink", "drop", "third_shot_drop", "reset"];
-export const HARD_SHOTS: ShotType[] = ["drive", "third_shot_drive", "speed_up", "counter", "volley", "overhead"];
+export const SOFT_SHOTS: ShotType[] = ["dink", "drop", "reset"];
+export const HARD_SHOTS: ShotType[] = ["drive", "speed_up", "counter", "volley", "overhead"];
 
 export function formatClock(seconds: number): string {
   const s = Math.max(0, Math.floor(seconds));

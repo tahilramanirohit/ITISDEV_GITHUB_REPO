@@ -15,15 +15,21 @@ From `Pickleball Performance Dashboard/server/`, with the optional runtime insta
 .venv/bin/python -m picklepro.fetch_models
 ```
 
-It downloads three pinned files into `server/models/` and rejects any file whose SHA-256 differs:
+It downloads five pinned files into `server/models/` and rejects any file whose SHA-256 differs:
 
 | File | Used for | Source |
 | --- | --- | --- |
 | `court_best.pt` | court lines (14 keypoints) | pickleball-analysis, MIT |
 | `ball,person,paddle.pt` | the ball | pickleball-analysis, MIT |
+| `ball_kpp91302.pt` | the ball (second model) | kpp91302/Pickleball-Analytics `models/ball_tracking.pt`, revision `e4dfdc7`; no licence file, used at the team's direction |
+| `ball_5urabhi.pt` | the ball (third model) | 5urabhi/Pickle_ball_tracking `best.pt`, revision `3c0a678`; no licence file, used at the team's direction |
 | `yolo11n.pt` | players (COCO `person`) | Ultralytics release v8.3.0, AGPL-3.0 |
 
 `yolo11n.pt` has SHA-256 `0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1`. On the 29 September test clip, the pickleball model's own person class missed the far-side players and gave unstable confidence for near players. The COCO model found all four players and the referee at 0.8–0.9 confidence. Both detectors run at 1280 px because far players and the ball are small in 1080p video.
+
+**All ball models run together.** Every `.pt` file with "ball" in its name is a ball model. Their boxes are pooled for each frame: boxes from different models on the same spot are merged, and agreement raises the confidence. On the 29 September clip (14.5–34 s), the share of frames in which the tracker kept the real ball was about 38% with the pickleball-analysis model alone, 62–76% with the kpp91302 model and 76–87% with the 5urabhi model. Each extra model also reports its own look-alikes (neon shoes, a banner logo); the tracker drops most of them because they do not move like a ball in flight. Each extra model adds about the same CPU time as the first. To use fewer, remove the file from `server/models/` or list the ones you want in `PICKLEPRO_BALL_WEIGHTS`, separated by `;` on Windows or `:` elsewhere.
+
+`start_worker.bat` runs `fetch_models` every time it starts, so a missing or new model is downloaded and existing files are only checked.
 
 ## Candidate weights for local evaluation
 
@@ -42,7 +48,7 @@ checksums below before using them:
 | `models/court_best.pt` | `c67cc2df5dbec2befe8b0c48297d9abb2345080357e57ebd8eaddcbf3d4d9aac` |
 | `models/ball,person,paddle.pt` | `05e01ebe77f3256426d0e54ffad83abf3da2d1fcadc2bcf10dbd5714fdded459` |
 
-**Automatic setup.** Put both files in `server/models/`. No environment variables are needed: the court model is the `.pt` file with "court" in its name, and the other `.pt` file supplies players and the ball. Run `.venv/bin/python -m picklepro.worker --check` to confirm what was found. The variables below still override automatic discovery.
+**Automatic setup.** Put both files in `server/models/`. No environment variables are needed: the court model is the `.pt` file with "court" in its name, every `.pt` file with "ball" in its name is a ball model, and any other `.pt` file (`yolo11n.pt`) supplies players. Run `.venv/bin/python -m picklepro.worker --check` to confirm what was found. The variables below still override automatic discovery.
 
 From `Pickleball Performance Dashboard/server/`, install the optional runtime
 from `requirements-yolo.txt`, then set the following in the ignored `server/.env`

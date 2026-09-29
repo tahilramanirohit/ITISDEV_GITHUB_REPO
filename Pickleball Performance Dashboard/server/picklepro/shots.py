@@ -95,16 +95,14 @@ CONTACT_HEIGHT_FRAC = 0.59    # usual contact about 1 m up a 1.7 m player
 FAR_CONTACT_MAX_DIST = 0.5    # of player height
 FAR_CONTACT_WINDOW_S = 0.4
 
-SHOT_TYPES = ("serve", "return", "third_shot_drop", "third_shot_drive", "drive", "drop", "dink", "reset",
+SHOT_TYPES = ("serve", "return", "drive", "drop", "dink", "reset",
               "speed_up", "counter", "volley", "lob", "overhead", "erne", "unclassified")
 TYPE_DEFINITIONS = {
-    "serve": "First hit of a rally, struck underhand from behind the baseline.",
+    "serve": "First hit of a rally, struck underhand from outside the court behind the baseline. It must cross "
+             "diagonally into the opposite service court and must not land in the kitchen.",
     "return": "Second hit of a rally: the receiver's reply after the serve bounces, from the back of the court.",
-    "third_shot_drop": "Third hit of a rally, a soft shot from the back that drops into the opponents' kitchen so "
-                       "the serving team can move up to the net.",
-    "third_shot_drive": "Third hit of a rally, a hard, low shot from the back instead of a drop.",
     "drive": "A hard, flat shot that travels fast across the court.",
-    "drop": "A soft shot from the back or transition zone that lands near the net.",
+    "drop": "A soft shot from the back or transition zone that lands near the net (including the third-shot drop).",
     "dink": "A soft shot from the kitchen line that lands in or near the opponents' kitchen.",
     "reset": "A soft reply to a hard incoming ball that takes the pace off it (also called a block).",
     "speed_up": "A sudden fast attack from the kitchen line out of a soft exchange.",
@@ -115,8 +113,8 @@ TYPE_DEFINITIONS = {
     "erne": "A volley near the net hit with the feet outside the sideline, around the kitchen.",
     "unclassified": "A hit was detected, but there was not enough evidence to name the shot.",
 }
-SOFT_TYPES = {"dink", "drop", "third_shot_drop", "reset"}
-FAST_TYPES = {"drive", "third_shot_drive", "speed_up", "counter", "overhead"}
+SOFT_TYPES = {"dink", "drop", "reset"}
+FAST_TYPES = {"drive", "speed_up", "counter", "overhead"}
 
 
 @dataclass
@@ -375,6 +373,27 @@ def _inside(xy: Tuple[float, float], side: Optional[str] = None, margin: float =
     return side is None or court_half(y) == side
 
 
+def serve_landing(server_xy: Tuple[float, float], landing_xy: Tuple[float, float]) -> Tuple[bool, str]:
+    """Is a serve's first bounce inside the service court diagonally opposite the server?
+
+    The receiving service court lies past the kitchen line on the other side of
+    the net, on the other half of the court's width (court x runs across the
+    court the same way on both sides, so "diagonal" means the other x half).
+    """
+    sx, sy = server_xy
+    lx, ly = landing_xy
+    server_side = court_half(sy)
+    if court_half(ly) == server_side:
+        return False, "fault: the serve did not cross the net"
+    if abs(ly - NET_Y_M) < KITCHEN_DEPTH_M:
+        return False, "fault: the serve landed in the kitchen"
+    if not _inside(landing_xy):
+        return False, "fault: the serve landed out"
+    if (sx < COURT_WIDTH_M / 2) == (lx < COURT_WIDTH_M / 2):
+        return False, "fault: the serve did not cross diagonally"
+    return True, "landed in the diagonal service court"
+
+
 def _lob_rise_m(points: List[_Point], cal: Optional[CourtCalibration]) -> Optional[float]:
     """How far the ball rose above the image line of the far baseline (camera's far end).
 
@@ -416,9 +435,9 @@ def _classify(number, depth, contact, speed, soft, fast, pace, is_lob, rise, han
         return "erne", "volley near the net with the feet outside the sideline"
     if number == 3 and not at_net:
         if (soft or lands_in_kitchen) and not fast:
-            return "third_shot_drop", "third hit of the rally, soft" + (f" ({pace})" if pace else "") + " from the back"
+            return "drop", "third hit of the rally, soft" + (f" ({pace})" if pace else "") + " from the back"
         if fast:
-            return "third_shot_drive", f"third hit of the rally, fast ({pace}) from the back"
+            return "drive", f"third hit of the rally, fast ({pace}) from the back"
     if at_net:
         if soft:
             if incoming_fast:
@@ -549,6 +568,9 @@ def analyze_shots(ball: Sequence[Tuple[float, Sequence[int]]], frames: Sequence[
                                   box is not None and h.point.y < box[1], incoming_fast, incoming_soft,
                                   lands_in_kitchen, outside_sideline, court is None)
             reasons.append(why)
+            if shot == "serve" and court and landing_xy:
+                landed_in, verdict = serve_landing(court, landing_xy)
+                reasons.append(verdict)
             if contact == "volley" and shot not in ("volley", "serve", "counter", "erne"):
                 reasons.append("hit out of the air before the ball bounced")
 

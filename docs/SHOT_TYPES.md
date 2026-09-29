@@ -6,12 +6,10 @@ PicklePro names every detected hit with one of the shot types below. The names f
 
 | Type | What players mean by it | How PicklePro recognises it |
 | --- | --- | --- |
-| Serve | Underhand first hit of a point, from behind the baseline (volley serve or drop serve). | 1st hit of a rally, hitter within 1.2 m of their baseline. |
+| Serve | Underhand first hit of a point, from outside the court behind the baseline (volley serve or drop serve). It must cross diagonally into the opposite service court and must not land in the kitchen. | 1st hit of a rally, hitter behind or within 1.2 m of their baseline (allows for foot-position error). When its bounce is seen, the serve is marked in or a fault: did not cross the net, landed in the kitchen, landed out, or did not cross diagonally. |
 | Return | The receiver's reply to the serve, after it bounces; usually deep. | 2nd hit of a rally, from the back 2 m. |
-| Third-shot drop | Soft 3rd shot from the back into the opponents' kitchen so the serving team can move up. | 3rd hit, from behind the kitchen area, soft (< 6 m/s ground travel) or landing in the kitchen. |
-| Third-shot drive | Hard, low 3rd shot instead of a drop. | 3rd hit from the back, fast (≥ 9 m/s). |
 | Drive | Hard, flat shot. | Fast (≥ 9 m/s) after a bounce, when no more specific rule applies. |
-| Drop | Soft shot from the back or transition zone that lands near the net. | From behind the kitchen line, slower than 9 m/s or landing in the kitchen. |
+| Drop | Soft shot from the back or transition zone that lands near the net. This includes the third-shot drop, which is no longer a separate type. | From behind the kitchen line, slower than 9 m/s or landing in the kitchen. |
 | Dink | Soft shot from the kitchen line into the opponents' kitchen. | Hitter within about 1.1 m of their kitchen line, soft (< 6 m/s). |
 | Reset (block) | Soft reply that takes the pace off a hard incoming ball. | Soft reply at the kitchen line or in the transition zone when the incoming shot was fast. |
 | Speed-up | Sudden fast attack out of a soft (dinking) exchange. | Fast shot from the kitchen line after a soft incoming shot. |

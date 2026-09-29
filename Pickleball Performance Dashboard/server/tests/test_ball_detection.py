@@ -3,6 +3,7 @@
 from types import SimpleNamespace
 
 import numpy as np
+import pytest
 
 from picklepro.ball_detection import BallDetector
 from picklepro.court import calibration_from_dict
@@ -70,7 +71,27 @@ def test_court_player_and_ball_paths_produce_one_honest_result(synthetic_clip, m
         court_weights="court.pt", ball_weights="object.pt",
         selection=Selection("court_half", court_half="near"), compute_sha256=False))
     assert result.status == "ok"
-    assert result.calibration.method == "auto_model_landmarks"
+    assert result.calibration.method == "auto_painted_lines"
     assert result.coverage.frames_with_detections > 0
     assert result.coverage.frames_with_ball_detections > 0
     assert result.metrics.court_heatmap.status == "measured"
+
+
+class OneBallModel:
+    names = {0: "ball"}
+
+    def __init__(self, boxes):
+        self.boxes = boxes
+
+    def predict(self, _frame, **kwargs):
+        return [SimpleNamespace(boxes=[SimpleNamespace(xyxy=np.asarray([b]), conf=[c]) for b, c in self.boxes])]
+
+
+def test_several_ball_models_are_pooled_and_agreement_raises_confidence():
+    a = OneBallModel([([100, 80, 110, 90], 0.5), ([300, 40, 310, 50], 0.2)])
+    b = OneBallModel([([102, 81, 112, 91], 0.6)])  # same ball, seen by both
+    detector = BallDetector("", model=[a, b])
+    found = detector.candidates(np.zeros((120, 400, 3), dtype=np.uint8))
+    assert len(found) == 2
+    assert found[0]["bbox"] == [102, 81, 112, 91] and found[0]["confidence"] == pytest.approx(0.8)
+    assert found[1] == {"bbox": [300, 40, 310, 50], "confidence": 0.2}

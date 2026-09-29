@@ -12,9 +12,11 @@ export const RESULT_KEYS = [
   "player_selection", "players", "tracks", "player_positions", "ball_positions", "court_lines", "metrics", "warnings",
 ] as const;
 export const SHOT_TYPES = [
-  "serve", "return", "third_shot_drop", "third_shot_drive", "drive", "drop", "dink", "reset",
+  "serve", "return", "drive", "drop", "dink", "reset",
   "speed_up", "counter", "volley", "lob", "overhead", "erne", "unclassified",
 ] as const;
+
+const LEGACY_SHOT_TYPES: Record<string, string> = { third_shot_drop: "drop", third_shot_drive: "drive" };
 
 export type ResultStatus = (typeof RESULT_STATUSES)[number];
 export type DataOrigin = (typeof DATA_ORIGINS)[number];
@@ -153,7 +155,7 @@ export type AnalysisResultV1 = {
     selected_view_duration_s?: number | null;
   };
   calibration: {
-    method: "manual_landmarks" | "auto_model_landmarks";
+    method: "manual_landmarks" | "auto_model_landmarks" | "auto_painted_lines";
     court_model: string;
     landmarks_used: string[];
     reprojection_rmse_px: number;
@@ -232,7 +234,7 @@ export function parseAnalysisResult(input: unknown): AnalysisResultV1 {
   if (cov.selected_view_duration_s != null) num(cov.selected_view_duration_s, "coverage.selected_view_duration_s");
   if (input.calibration !== null) {
     if (!isObj(input.calibration)) throw new ContractError("calibration: expected an object or null");
-    oneOf(input.calibration.method, ["manual_landmarks", "auto_model_landmarks"] as const, "calibration.method");
+    oneOf(input.calibration.method, ["manual_landmarks", "auto_model_landmarks", "auto_painted_lines"] as const, "calibration.method");
   }
   if (!isObj(input.metrics)) throw new ContractError("metrics: expected an object");
   // Results saved before positioning existed are still valid; show them as not computed.
@@ -311,6 +313,10 @@ export function parseAnalysisResult(input: unknown): AnalysisResultV1 {
     }
     for (const shot of v.shots) {
       if (!isObj(shot)) throw new ContractError("metrics.shot_classification: invalid shot");
+      // Results saved before "third-shot drop/drive" were folded into drop and drive.
+      if (typeof shot.shot_type === "string" && Object.hasOwn(LEGACY_SHOT_TYPES, shot.shot_type)) {
+        shot.shot_type = LEGACY_SHOT_TYPES[shot.shot_type];
+      }
       num(shot.time_seconds, "metrics.shot_classification.shots.time_seconds");
       oneOf(shot.shot_type, SHOT_TYPES, "metrics.shot_classification.shots.shot_type");
     }

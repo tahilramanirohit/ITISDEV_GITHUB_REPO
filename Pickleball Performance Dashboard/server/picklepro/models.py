@@ -4,10 +4,12 @@ Resolution order for each model:
 
 1. An explicit environment variable (``PICKLEPRO_COURT_WEIGHTS``,
    ``PICKLEPRO_YOLO_WEIGHTS``, ``PICKLEPRO_BALL_WEIGHTS``) that points to an
-   existing file.
+   existing file. ``PICKLEPRO_BALL_WEIGHTS`` may list several files separated
+   by ``;`` on Windows or ``:`` elsewhere.
 2. A weights file in the models folder (``server/models`` or
    ``PICKLEPRO_MODELS_DIR``). The court model is a ``.pt`` file with "court" in
-   its name and the ball model one with "ball" in its name. Any other ``.pt``
+   its name and every ``.pt`` file with "ball" in its name is a ball model
+   (several ball models run together). Any other ``.pt``
    file (for example ``yolo11n.pt``) is the person model; without one, the
    ball model's own person class is used.
 
@@ -64,7 +66,8 @@ class ModelSetup:
             "player_detector": self.detector,
             "player_model": name(self.yolo_weights) if self.detector == "yolo" else None,
             "court_model": name(self.court_weights),
-            "ball_model": name(self.ball_weights),
+            "ball_model": ", ".join(Path(p).name for p in self.ball_weights.split(os.pathsep))
+        if self.ball_weights else None,
             "ultralytics_installed": self.ultralytics_installed,
             "can_map_court": bool(self.court_weights),
             "can_find_players": True,
@@ -89,19 +92,24 @@ def _existing(value: Optional[str], label: str, notes: List[str]) -> Optional[st
 
 
 def _discover(models_dir: Path) -> tuple[Optional[str], Optional[str], Optional[str]]:
-    """Return (court, person, ball) weights found in the models folder."""
+    """Return (court, person, ball) weights found in the models folder.
+
+    ``ball`` lists every ball model, separated by ``os.pathsep``.
+    """
     if not models_dir.is_dir():
         return None, None, None
     weights = sorted(p for p in models_dir.glob("*.pt") if p.is_file())
     court = next((p for p in weights if "court" in p.name.lower()), None)
-    ball = next((p for p in weights if p != court and "ball" in p.name.lower()), None)
-    others = [p for p in weights if p not in (court, ball)]
+    balls = [p for p in weights if p != court and "ball" in p.name.lower()]
+    others = [p for p in weights if p != court and p not in balls]
     person = next((p for p in others if any(k in p.name.lower() for k in ("person", "player"))), None) \
-        or (others[0] if others else None) or ball
-    if ball is None and others:
-        ball = others[0]
+        or (others[0] if others else None) \
+        or next((p for p in balls if "person" in p.name.lower()), None)
+    if not balls and others:
+        balls = [others[0]]
     path = lambda p: str(p.resolve()) if p else None  # noqa: E731
-    return path(court), path(person), path(ball)
+    ball = os.pathsep.join(str(p.resolve()) for p in balls) or None
+    return path(court), path(person), ball
 
 
 def resolve_models(env: Optional[Mapping[str, str]] = None) -> ModelSetup:
@@ -112,7 +120,10 @@ def resolve_models(env: Optional[Mapping[str, str]] = None) -> ModelSetup:
 
     court = _existing(env.get("PICKLEPRO_COURT_WEIGHTS"), "PICKLEPRO_COURT_WEIGHTS", notes)
     person = _existing(env.get("PICKLEPRO_YOLO_WEIGHTS"), "PICKLEPRO_YOLO_WEIGHTS", notes)
-    ball = _existing(env.get("PICKLEPRO_BALL_WEIGHTS"), "PICKLEPRO_BALL_WEIGHTS", notes)
+    ball = os.pathsep.join(
+        found for value in (env.get("PICKLEPRO_BALL_WEIGHTS") or "").split(os.pathsep)
+        if (found := _existing(value, "PICKLEPRO_BALL_WEIGHTS", notes))
+    ) or None
     if auto:
         found_court, found_person, found_ball = _discover(Path(env.get("PICKLEPRO_MODELS_DIR") or DEFAULT_MODELS_DIR))
         court = court or found_court

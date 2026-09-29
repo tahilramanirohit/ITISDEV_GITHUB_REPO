@@ -48,4 +48,17 @@ describe("parseAnalysisResult", () => {
     expect(() => parseAnalysisResult({ duration_seconds: 6, frame_count: 180, heatmap: [], message: "Analysis complete" }))
       .toThrow(ContractError);
   });
+
+  it("reads results saved before third-shot drop and drive became drop and drive", () => {
+    const old = structuredClone(testFixture) as Json;
+    const shot = (shot_type: string) => ({ time_seconds: 1, shot_type });
+    old.metrics.shot_classification = {
+      status: "experimental", validation: "not_evaluated", scope: "whole_clip", reason: null,
+      value: { shots: [shot("third_shot_drop"), shot("third_shot_drive"), shot("dink")], bounces: [], counts_by_type: {} },
+    };
+    const types = parseAnalysisResult(old).metrics.shot_classification.value?.shots.map((s) => s.shot_type);
+    expect(types).toEqual(["drop", "drive", "dink"]);
+    old.metrics.shot_classification.value.shots = [shot("toString")];
+    expect(() => parseAnalysisResult(old)).toThrow(ContractError);
+  });
 });

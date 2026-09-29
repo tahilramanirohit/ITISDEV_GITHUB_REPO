@@ -5,6 +5,8 @@ These do not establish accuracy on real match footage or validate any weights.
 
 from types import SimpleNamespace
 
+from conftest import write_constant_video
+
 import numpy as np
 
 from picklepro.auto_court import MODEL_LANDMARKS, calibration_from_pose, detect_court
@@ -54,27 +56,27 @@ def test_video_analysis_uses_detected_court_without_manual_json(synthetic_clip, 
         court_weights="supplied-by-operator.pt", selection=Selection("court_half", court_half="near"),
         compute_sha256=False))
     assert result.status == "ok"
-    assert result.calibration.method == "auto_model_landmarks"
+    assert result.calibration.method == "auto_painted_lines"
     assert result.metrics.court_heatmap.status == "measured"
     assert result.player_selection.tracked_fraction > 0.8
 
 
-def test_frames_without_visible_court_are_not_mapped(synthetic_clip, monkeypatch):
-    class IntermittentCourtDetector:
+def test_court_model_map_without_matching_painted_lines_is_rejected(tmp_path, synthetic_clip, monkeypatch):
+    """A model that "finds" a court in a picture with no court lines is not believed."""
+    class ConfidentCourtDetector:
         def __init__(self, _weights):
-            self.calls = 0
+            pass
 
         def calibrate_frame(self, frame):
-            self.calls += 1
-            return (calibration_from_pose(_result(_pose()), (frame.shape[1], frame.shape[0]))
-                    if self.calls <= 20 else None)
+            return calibration_from_pose(_result(_pose()), (frame.shape[1], frame.shape[0]))
 
-    monkeypatch.setattr("picklepro.pipeline.CourtPoseDetector", IntermittentCourtDetector)
-    result = analyze_video(synthetic_clip.path, AnalysisOptions(
-        court_weights="operator.pt", selection=Selection("court_half", court_half="near"),
-        compute_sha256=False, min_tracked_seconds=1))
-    assert result.player_selection.tracked_fraction < 0.2
-    assert any("excluded from court-position measures" in w for w in result.warnings)
+    blank = tmp_path / "blank.mp4"
+    write_constant_video(blank, frames=30, fps=15, size=(960, 540), value=90)
+    monkeypatch.setattr("picklepro.pipeline.CourtPoseDetector", ConfidentCourtDetector)
+    result = analyze_video(blank, AnalysisOptions(
+        court_weights="operator.pt", selection=Selection("court_half", court_half="near"), compute_sha256=False))
+    assert result.calibration is None
+    assert all(not snap.lines for snap in result.court_lines)
 
 
 def test_camera_cut_limits_court_feedback_to_selected_view(synthetic_clip, monkeypatch):

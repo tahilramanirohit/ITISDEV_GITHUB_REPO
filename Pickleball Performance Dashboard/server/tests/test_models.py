@@ -1,5 +1,8 @@
 """Automatic model discovery and setup checks (no model is loaded here)."""
 
+import os
+from pathlib import Path
+
 import pytest
 
 from picklepro import models
@@ -64,3 +67,14 @@ def test_worker_warns_when_web_app_uses_another_supabase_project(tmp_path):
     env.write_text("VITE_SUPABASE_URL=https://aaaa.supabase.co\n")
     assert "aaaa" in supabase_mismatch("https://bbbb.supabase.co", env)
     assert supabase_mismatch("https://aaaa.supabase.co", env) is None
+
+
+def test_every_ball_model_in_the_folder_is_used(models_dir, monkeypatch):
+    (models_dir / "yolo11n.pt").write_bytes(b"x")
+    (models_dir / "ball_kpp91302.pt").write_bytes(b"x")
+    monkeypatch.setattr(models, "_ultralytics_installed", lambda: True)
+    setup = models.resolve_models({"PICKLEPRO_MODELS_DIR": str(models_dir)})
+    names = [Path(p).name for p in setup.ball_weights.split(os.pathsep)]
+    assert names == ["ball,person,paddle.pt", "ball_kpp91302.pt"]
+    assert setup.yolo_weights.endswith("yolo11n.pt")
+    assert setup.describe()["ball_model"] == "ball,person,paddle.pt, ball_kpp91302.pt"

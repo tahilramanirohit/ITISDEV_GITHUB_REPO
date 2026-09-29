@@ -34,12 +34,11 @@ rem -- 3. Packages (quick when already installed)
 echo Checking Python packages ...
 "%PY%" -m pip install --disable-pip-version-check -q -r requirements.txt
 if errorlevel 1 goto :pipfail
-rem Court, ball and person models (about 75 MB, checked against pinned
-rem checksums). Without them the worker falls back to motion detection.
-if not exist "models\yolo11n.pt" (
-  echo Downloading the court, ball and person models ...
-  "%PY%" -m picklepro.fetch_models
-)
+rem Court, ball and person models (about 90 MB, checked against pinned
+rem checksums). Files already present are kept; only missing or new models
+rem are downloaded. Without them the worker falls back to motion detection.
+echo Checking the court, ball and person models ...
+"%PY%" -m picklepro.fetch_models
 if exist "models\*.pt" (
   echo Model files found in server\models - checking YOLO packages ^(large download the first time^) ...
   "%PY%" -m pip install --disable-pip-version-check -q -r requirements-yolo.txt

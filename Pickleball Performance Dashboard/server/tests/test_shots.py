@@ -105,12 +105,12 @@ def test_synthetic_rally_shot_types_hitters_and_bounces():
     assert [s["time_seconds"] for s in shots] == pytest.approx([0.0, 1.4, 2.8, 4.7, 6.2, 6.6])
     # A's fast shot at the kitchen line after B's dink is a speed-up; B's fast
     # volley straight back at it is a counter.
-    assert [s["shot_type"] for s in shots] == ["serve", "return", "third_shot_drop", "dink", "speed_up", "counter"]
+    assert [s["shot_type"] for s in shots] == ["serve", "return", "drop", "dink", "speed_up", "counter"]
     assert [s["hitter_track_id"] for s in shots] == [1, 2, 1, 2, 1, 2]
     assert [s["hitter_side"] for s in shots] == ["near", "far"] * 3
     assert shots[5]["contact"] == "volley" and shots[4]["contact"] == "after_bounce"
     assert [s["by_selected_player"] for s in shots] == [True, False] * 3
-    assert out["selected_player_counts_by_type"]["third_shot_drop"] == 1
+    assert out["selected_player_counts_by_type"]["drop"] == 1
     assert all(s["rally_index"] == 0 for s in shots)
     assert out["rallies"] == [{"rally_index": 0, "start_s": 0.0, "end_s": pytest.approx(7.5), "shots": 6}]
     # Bounces are on the ground, so their mapped court position is meaningful.
@@ -167,9 +167,9 @@ def _rule(**kw):
 @pytest.mark.parametrize("features, expected", [
     (dict(number=1, depth=-0.3), "serve"),
     (dict(number=2, depth=0.5), "return"),
-    (dict(number=3, depth=0.8, speed=4.0), "third_shot_drop"),
-    (dict(number=3, depth=0.8, speed=7.5, lands_in_kitchen=True), "third_shot_drop"),
-    (dict(number=3, depth=0.8, speed=15.0), "third_shot_drive"),
+    (dict(number=3, depth=0.8, speed=4.0), "drop"),
+    (dict(number=3, depth=0.8, speed=7.5, lands_in_kitchen=True), "drop"),
+    (dict(number=3, depth=0.8, speed=15.0), "drive"),
     (dict(depth=4.2, speed=3.0), "dink"),
     (dict(depth=4.2, speed=3.0, incoming_fast=True), "reset"),
     (dict(depth=3.0, speed=4.0, incoming_fast=True), "reset"),
@@ -191,3 +191,16 @@ def test_each_shot_rule(features, expected):
 
 def test_every_shot_type_has_a_definition():
     assert set(TYPE_DEFINITIONS) == set(SHOT_TYPES)
+
+
+@pytest.mark.parametrize("landing, ok, why", [
+    ((4.5, 11.0), True, "diagonal"),
+    ((4.5, 8.0), False, "kitchen"),       # within 7 ft of the net
+    ((1.5, 11.0), False, "diagonally"),   # straight ahead, same half as the server
+    ((4.5, 14.0), False, "out"),          # past the far baseline
+    ((4.5, 5.0), False, "cross the net"),
+])
+def test_serve_must_cross_diagonally_and_clear_the_kitchen(landing, ok, why):
+    from picklepro.shots import serve_landing
+    valid, verdict = serve_landing((2.0, -0.4), landing)
+    assert valid is ok and why in verdict

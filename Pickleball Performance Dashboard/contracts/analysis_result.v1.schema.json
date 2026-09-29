@@ -80,7 +80,8 @@
         "method": {
           "enum": [
             "manual_landmarks",
-            "auto_model_landmarks"
+            "auto_model_landmarks",
+            "auto_painted_lines"
           ],
           "title": "Method",
           "type": "string"
@@ -303,7 +304,7 @@
             }
           ],
           "default": null,
-          "description": "Sampled frames whose court map was carried from up to 1 s earlier, adjusted for camera motion.",
+          "description": "Sampled frames whose court map was followed from an earlier frame (camera motion), then confirmed against the painted lines.",
           "title": "Frames With Carried Court Map"
         },
         "selected_view_duration_s": {
@@ -1122,8 +1123,6 @@
           "enum": [
             "serve",
             "return",
-            "third_shot_drop",
-            "third_shot_drive",
             "drive",
             "drop",
             "dink",
@@ -1189,7 +1188,7 @@
             }
           ],
           "default": null,
-          "description": "Whether the next observed bounce was inside the opponent's court.",
+          "description": "Whether the next observed bounce was inside the opponent's court. For a serve: inside the service court diagonally opposite the server, past the kitchen line.",
           "title": "Landed In"
         },
         "evidence": {

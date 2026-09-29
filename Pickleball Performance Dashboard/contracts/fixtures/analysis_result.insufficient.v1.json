@@ -36,7 +36,7 @@
     "frames_with_detections": 145,
     "frames_with_ball_detections": 0,
     "ball_sample_stride": null,
-    "frames_with_carried_court_map": null,
+    "frames_with_carried_court_map": 0,
     "selected_view_duration_s": null
   },
   "calibration": null,
@@ -843,6 +843,7 @@
     }
   },
   "warnings": [
-    "Motion-based detection finds moving objects, not specifically people: stationary players can be missed and non-players (balls, shadows, passers-by) can be detected. Detection confidence is not available."
+    "Motion-based detection finds moving objects, not specifically people: stationary players can be missed and non-players (balls, shadows, passers-by) can be detected. Detection confidence is not available.",
+    "Court landmarks were usable in 0 of 150 sampled frames for this analysis. Other frames were excluded from court-position measures."
   ]
 }

@@ -86,14 +86,15 @@ class Coverage(_Model):
     frames_with_ball_detections: int = Field(0, description="Ball samples kept on the cleaned ball path.")
     ball_sample_stride: Optional[int] = Field(None, description="Every Nth decoded frame was searched for the ball.")
     frames_with_carried_court_map: Optional[int] = Field(
-        None, description="Sampled frames whose court map was carried from up to 1 s earlier, adjusted for camera motion.")
+        None, description="Sampled frames whose court map was followed from an earlier frame (camera motion), then "
+                          "confirmed against the painted lines.")
     selected_view_duration_s: Optional[float] = Field(
         None, description="Duration of the selected camera view when a cut was detected; null for a continuous video."
     )
 
 
 class CalibrationSummary(_Model):
-    method: Literal["manual_landmarks", "auto_model_landmarks"]
+    method: Literal["manual_landmarks", "auto_model_landmarks", "auto_painted_lines"]
     court_model: str
     landmarks_used: List[str]
     reprojection_rmse_px: float
@@ -206,7 +207,7 @@ class PositioningMetric(Metric):
     value: Optional[PositioningValue] = None
 
 
-ShotType = Literal["serve", "return", "third_shot_drop", "third_shot_drive", "drive", "drop", "dink", "reset",
+ShotType = Literal["serve", "return", "drive", "drop", "dink", "reset",
                    "speed_up", "counter", "volley", "lob", "overhead", "erne", "unclassified"]
 ContactType = Literal["volley", "after_bounce", "unknown"]
 
@@ -224,7 +225,9 @@ class ShotEvent(_Model):
     ground_speed_mps: Optional[float] = Field(
         None, description="Horizontal ground distance to the next bounce or hitter divided by the time taken.")
     landing_court_m: Optional[List[float]] = Field(None, min_length=2, max_length=2)
-    landed_in: Optional[bool] = Field(None, description="Whether the next observed bounce was inside the opponent's court.")
+    landed_in: Optional[bool] = Field(
+        None, description="Whether the next observed bounce was inside the opponent's court. For a serve: inside the "
+                          "service court diagonally opposite the server, past the kitchen line.")
     evidence: str
 
 
