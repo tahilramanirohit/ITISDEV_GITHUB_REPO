@@ -79,3 +79,24 @@ class SupabaseJobStore:
             "p_job_id": job_id, "p_worker_id": worker_id, "p_error_code": error_code,
             "p_error_message": error_message[:2000], "p_retryable": retryable,
         })
+
+    def delete_one_expired_video(self) -> bool:
+        """Delete one claimed raw object through Storage, then record completion.
+
+        A failed Storage call leaves the claim leased for retry by a later sweep.
+        """
+        rows = self._rpc("claim_expired_raw_video", {})
+        if not rows:
+            return False
+        video = rows[0]
+        try:
+            response = self._client.request(
+                "DELETE", f"{self._url}/storage/v1/object/{quote(video['storage_bucket'])}",
+                json={"prefixes": [video["storage_path"]]},
+            )
+        except httpx.HTTPError as exc:
+            raise TransientStoreError(f"raw video deletion: {exc}") from exc
+        if response.status_code >= 300:
+            raise TransientStoreError(f"raw video deletion: HTTP {response.status_code} {response.text[:300]}")
+        self._rpc("complete_raw_video_deletion", {"p_video_id": video["id"]})
+        return True

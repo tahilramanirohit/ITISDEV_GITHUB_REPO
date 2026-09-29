@@ -67,6 +67,21 @@ function SignedInApp({ sb, cfg }: { sb: SupabaseClient; cfg: AppConfig }) {
   const auth = useAuth(sb);
   const [devBusy, setDevBusy] = useState(false);
   const [devError, setDevError] = useState("");
+  const [guestBusy, setGuestBusy] = useState(false);
+  const [guestError, setGuestError] = useState("");
+
+  async function enterGuest() {
+    setGuestBusy(true);
+    setGuestError("");
+    try {
+      const { error } = await sb.auth.signInAnonymously();
+      if (error) throw error;
+    } catch (e) {
+      setGuestError(devModeErrorText(e instanceof Error ? e.message : String(e)));
+    } finally {
+      setGuestBusy(false);
+    }
+  }
 
   async function enterDevMode() {
     setDevBusy(true);
@@ -90,23 +105,25 @@ function SignedInApp({ sb, cfg }: { sb: SupabaseClient; cfg: AppConfig }) {
   if (auth.status === "loading") return <Loading />;
   if (auth.status === "signed_out") {
     return <AuthScreen sb={sb} samplePreviewEnabled={cfg.designPreviewEnabled} trialNoWorker={cfg.trialNoWorker}
+      guestMode={cfg.guestModeEnabled ? { onEnter: () => void enterGuest(), busy: guestBusy, error: guestError } : undefined}
       devMode={cfg.devModeEnabled ? { onEnter: () => void enterDevMode(), busy: devBusy, error: devError } : undefined} />;
   }
   if (auth.status === "recovery") return <PasswordRecoveryScreen sb={sb} />;
   // Signed in, but the mock sessions are still being written.
   if (devBusy) return <p className="p-8 text-sm" style={{ color: WHITE_SUB }}>Creating mock data…</p>;
   const user = auth.session.user;
+  const isGuest = !!user.is_anonymous && cfg.guestModeEnabled && !cfg.devModeEnabled;
   return (
     <AppShell
       nav={<><a href="#/" style={{ color: WHITE }}>My sessions</a><a href="#/profile" style={{ color: WHITE }}>Profile</a><DevLinks cfg={cfg} /></>}
       right={
         <div className="flex items-center gap-3 text-sm">
           <span style={{ color: WHITE }}>
-            {user.is_anonymous ? "Dev mode (mock data)" : user.email}
+            {user.is_anonymous ? (isGuest ? "Private guest" : "Dev mode (mock data)") : user.email}
           </span>
           <button type="button" onClick={() => void sb.auth.signOut()} className="px-3 py-1.5 rounded-lg"
-            title={user.is_anonymous ? "Leaves this temporary guest. Dev mode creates fresh mock data next time." : undefined}
-            style={{ color: WHITE, border: "1px solid #64718e" }}>{user.is_anonymous ? "Exit dev mode" : "Sign out"}</button>
+            title={user.is_anonymous ? "You may lose access to this guest's sessions after leaving or clearing browser data." : undefined}
+            style={{ color: WHITE, border: "1px solid #64718e" }}>{user.is_anonymous ? (isGuest ? "Leave guest session" : "Exit dev mode") : "Sign out"}</button>
         </div>
       }
     >

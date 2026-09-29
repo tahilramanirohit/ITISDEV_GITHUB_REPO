@@ -54,11 +54,14 @@ class SourceQualityError(ValueError):
 
 def validate_source_quality(props: VideoProperties) -> None:
     """Check the uploaded original before any analysis or possible resampling."""
-    if props.width <= props.height or props.height < 720:
+    # Portrait footage can still contain a fully visible court. Court mapping,
+    # rather than orientation alone, decides whether the view is usable.
+    if min(props.width, props.height) < 720:
         raise SourceQualityError(
-            f"The original video is {props.width}x{props.height}; record in landscape at 720p or higher."
+            f"The original video is {props.width}x{props.height}; record at 720p or higher."
         )
-    if not props.fps_reported or props.fps < 29.9:
+    # Phone MOV files often report an average slightly below nominal 30 fps.
+    if not props.fps_reported or props.fps < 29.5:
         rate = f"{props.fps:.2f}" if props.fps_reported else "unknown"
         raise SourceQualityError(
             f"The original frame rate is {rate} fps; record at 30 fps or higher."

@@ -15,6 +15,7 @@ import signal
 import socket
 import sys
 import threading
+import time
 import uuid
 from pathlib import Path
 
@@ -67,7 +68,8 @@ def main(argv=None) -> int:
     logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"), format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     log = logging.getLogger("picklepro.worker")
     log_setup(models, log)
-    mismatch = supabase_mismatch(os.getenv("SUPABASE_URL"))
+    web_env = Path(os.getenv("PICKLEPRO_WEB_ENV", str(SERVER_DIR.parent / ".env.local")))
+    mismatch = supabase_mismatch(os.getenv("SUPABASE_URL"), web_env)
     if mismatch:
         log.error(mismatch)
     if args.check:
@@ -98,7 +100,18 @@ def main(argv=None) -> int:
     signal.signal(signal.SIGINT, _handle)
     signal.signal(signal.SIGTERM, _handle)
 
+    next_retention_sweep = 0.0
     while not stop.is_set():
+        if time.monotonic() >= next_retention_sweep:
+            try:
+                deleted = 0
+                while not stop.is_set() and deleted < 20 and store.delete_one_expired_video():
+                    deleted += 1
+                if deleted:
+                    log.info("deleted %s expired raw videos", deleted)
+            except Exception:
+                log.exception("raw video retention sweep failed")
+            next_retention_sweep = time.monotonic() + 3600
         try:
             outcome = process_one(store, cfg, stop)
         except Exception:  # noqa: BLE001 - e.g. the database is unreachable; back off and retry

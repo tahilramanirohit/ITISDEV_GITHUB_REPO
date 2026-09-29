@@ -19,15 +19,16 @@ def _cfg(mode="measured", worker="w1"):
     return WorkerConfig(worker_id=worker, mode=mode, lease_seconds=60, enforce_source_quality=False)
 
 
-def test_original_media_gate_requires_landscape_720p_and_reported_30fps():
+def test_original_media_gate_requires_720p_and_reported_near_30fps():
     from picklepro.video_io import VideoProperties
 
     good = VideoProperties(1280, 720, 29.97, True, 300)
     runner.validate_source_quality(good)
     with pytest.raises(runner.SourceQualityError, match="720p"):
         runner.validate_source_quality(VideoProperties(960, 540, 30, True, 300))
-    with pytest.raises(runner.SourceQualityError, match="landscape"):
-        runner.validate_source_quality(VideoProperties(720, 1280, 30, True, 300))
+    runner.validate_source_quality(VideoProperties(720, 1280, 29.85, True, 300))
+    with pytest.raises(runner.SourceQualityError, match="720p"):
+        runner.validate_source_quality(VideoProperties(540, 960, 30, True, 300))
     with pytest.raises(runner.SourceQualityError, match="30 fps"):
         runner.validate_source_quality(VideoProperties(1280, 720, 25, True, 300))
     with pytest.raises(runner.SourceQualityError, match="unknown"):

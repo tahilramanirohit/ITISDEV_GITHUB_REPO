@@ -68,6 +68,10 @@ export type VideoAssetRow = {
   upload_status: "pending" | "uploaded";
   created_at: string;
   uploaded_at: string | null;
+  raw_video_expires_at: string | null;
+  raw_video_kept: boolean;
+  raw_video_deleting_at: string | null;
+  raw_video_deleted_at: string | null;
 };
 
 export type JobStatus = "queued" | "processing" | "completed" | "failed";

@@ -20,6 +20,11 @@ describe("getConfig", () => {
     expect(getConfig({ DEV: false, PROD: true, VITE_ENABLE_DESIGN_PREVIEW: "true" }).devModeEnabled).toBe(false);
   });
 
+  it("offers real guest mode only when explicitly enabled", () => {
+    expect(getConfig({ DEV: false }).guestModeEnabled).toBe(false);
+    expect(getConfig({ DEV: false, VITE_ENABLE_GUEST_MODE: "true" }).guestModeEnabled).toBe(true);
+  });
+
   it("requires both Supabase URL and anon key", () => {
     expect(getConfig({ VITE_SUPABASE_URL: "https://x.supabase.co" }).supabase).toBeNull();
     expect(getConfig({ VITE_SUPABASE_URL: "https://x.supabase.co/", VITE_SUPABASE_ANON_KEY: "anon" }).supabase)

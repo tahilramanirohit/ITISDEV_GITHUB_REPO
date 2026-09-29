@@ -172,6 +172,10 @@ export async function requestReanalysis(
   return check<AnalysisJobRow>(await sb.rpc("request_reanalysis", { p_job_id: jobId, p_params: params }));
 }
 
+export async function setRawVideoKeep(sb: SupabaseClient, videoId: string, keep: boolean): Promise<VideoAssetRow> {
+  return check<VideoAssetRow>(await sb.rpc("set_raw_video_keep", { p_video_id: videoId, p_keep: keep }));
+}
+
 export async function signedVideoUrl(sb: SupabaseClient, path: string): Promise<string> {
   const { data, error } = await sb.storage.from(VIDEO_BUCKET).createSignedUrl(path, 5 * 60);
   if (error) throw new Error(error.message);

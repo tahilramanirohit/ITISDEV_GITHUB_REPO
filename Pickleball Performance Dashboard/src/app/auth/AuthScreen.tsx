@@ -9,10 +9,11 @@ type Mode = "sign_in" | "sign_up" | "reset";
 
 /** Testing deployments: enter as an anonymous user with generated mock sessions. */
 export type DevModeEntry = { onEnter: () => void; busy: boolean; error: string };
+export type GuestModeEntry = { onEnter: () => void; busy: boolean; error: string };
 
 /** Supabase email + password authentication. Replaces the former hard-coded demo account. */
-export function AuthScreen({ sb, devMode, samplePreviewEnabled = false, trialNoWorker = false }: {
-  sb: SupabaseClient; devMode?: DevModeEntry; samplePreviewEnabled?: boolean; trialNoWorker?: boolean;
+export function AuthScreen({ sb, devMode, guestMode, samplePreviewEnabled = false, trialNoWorker = false }: {
+  sb: SupabaseClient; devMode?: DevModeEntry; guestMode?: GuestModeEntry; samplePreviewEnabled?: boolean; trialNoWorker?: boolean;
 }) {
   const [mode, setMode] = useState<Mode>("sign_in");
   const [email, setEmail] = useState("");
@@ -88,6 +89,18 @@ export function AuthScreen({ sb, devMode, samplePreviewEnabled = false, trialNoW
 
         <section aria-labelledby="auth-title" className="p-6 sm:p-8" style={{ background: NAVY, color: "white", border: "1px solid #354262" }}>
           <p className="text-sm font-bold uppercase tracking-widest mb-4" style={{ color: LAVENDER }}>Get started</p>
+          {guestMode && <div className="mb-6">
+            <button type="button" onClick={guestMode.onEnter} disabled={guestMode.busy || busy}
+              className="w-full rounded-xl py-3.5 text-sm font-bold disabled:opacity-60"
+              style={{ background: NEON, color: NEON_D }}>
+              {guestMode.busy ? "Opening your private session…" : "Try with my own video — no account needed"}
+            </button>
+            <p className="mt-2 text-sm" style={{ color: "#d4d9e5" }}>
+              Your guest sessions stay private in this browser. Keep this browser's data to return to them.
+            </p>
+            {guestMode.error && <div className="mt-2"><Notice tone="error" onDark>{guestMode.error}</Notice></div>}
+            <p className="mt-5 border-t pt-4 text-sm" style={{ borderColor: "#53617a", color: LAVENDER }}>Or use an account</p>
+          </div>}
           <h2 id="auth-title" className="text-white mb-1" style={{ fontFamily: DISPLAY_FONT, letterSpacing: "0.02em", fontSize: "2rem", fontWeight: 700 }}>
             {mode === "sign_in" ? "Sign in" : mode === "sign_up" ? "Create an account" : "Reset password"}
           </h2>

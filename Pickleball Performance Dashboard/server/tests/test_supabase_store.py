@@ -71,3 +71,38 @@ def test_download_streams_and_maps_missing(tmp_path):
     assert dest.read_bytes() == b"video-bytes"
     with pytest.raises(VideoMissing):
         _store(lambda r: httpx.Response(400, json={"statusCode": "404", "error": "not_found"})).download_video(job, dest)
+
+
+def test_retention_deletes_storage_before_marking_database():
+    calls = []
+
+    def handler(req):
+        calls.append((req.method, req.url.path))
+        if req.url.path.endswith("claim_expired_raw_video"):
+            return httpx.Response(200, json=[{"id": "v1", "storage_bucket": "session-videos", "storage_path": "u1/s1/v1.mp4"}])
+        if req.url.path == "/storage/v1/object/session-videos":
+            assert req.method == "DELETE"
+            assert json.loads(req.content) == {"prefixes": ["u1/s1/v1.mp4"]}
+            return httpx.Response(200, json=[])
+        assert req.url.path.endswith("complete_raw_video_deletion")
+        assert json.loads(req.content) == {"p_video_id": "v1"}
+        return httpx.Response(204)
+
+    assert _store(handler).delete_one_expired_video()
+    assert [path.rsplit("/", 1)[-1] for _, path in calls] == [
+        "claim_expired_raw_video", "session-videos", "complete_raw_video_deletion",
+    ]
+
+
+def test_retention_keeps_database_pending_when_storage_fails():
+    calls = []
+
+    def handler(req):
+        calls.append(req.url.path)
+        if req.url.path.endswith("claim_expired_raw_video"):
+            return httpx.Response(200, json=[{"id": "v1", "storage_bucket": "session-videos", "storage_path": "u1/s1/v1.mp4"}])
+        return httpx.Response(503, text="storage unavailable")
+
+    with pytest.raises(TransientStoreError):
+        _store(handler).delete_one_expired_video()
+    assert len(calls) == 2

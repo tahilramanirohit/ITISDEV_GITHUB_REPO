@@ -358,4 +358,42 @@ select tests.expect_count($$ select 1 from public.analysis_jobs where status = '
 reset role;
 select tests.expect_count($$ select 1 from storage.buckets where id = 'session-videos' and not public
   and file_size_limit = 524288000 $$, 1, 'bucket is private with a size limit');
+
+-- Raw-video retention is private, claims are worker-only, and deletion blocks replay.
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', false);
+select tests.expect_true((public.set_raw_video_keep('7a000000-0000-4000-8000-00000000000a', true)).raw_video_kept,
+  'owner can keep their raw video');
+select tests.expect_error($$ select * from public.claim_expired_raw_video() $$,
+  'player cannot claim videos for deletion');
+select set_config('request.jwt.claim.sub', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', false);
+select tests.expect_error($$ select public.set_raw_video_keep('7a000000-0000-4000-8000-00000000000a', false) $$,
+  'another player cannot change the keep choice');
+reset role;
+set role service_role;
+update public.video_assets set raw_video_expires_at = now() - interval '1 day'
+  where id = '7a000000-0000-4000-8000-00000000000a';
+select tests.expect_count($$ select * from public.claim_expired_raw_video() $$, 0,
+  'a kept video is excluded from expiry');
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', false);
+select tests.expect_true(not (public.set_raw_video_keep('7a000000-0000-4000-8000-00000000000a', false)).raw_video_kept,
+  'owner can resume automatic expiry');
+reset role;
+set role service_role;
+select tests.expect_count($$ select * from public.claim_expired_raw_video() $$, 1,
+  'worker claims an expired video');
+select public.complete_raw_video_deletion('7a000000-0000-4000-8000-00000000000a');
+select tests.expect_count($$ select 1 from public.video_assets where raw_video_deleted_at is not null
+  and id = '7a000000-0000-4000-8000-00000000000a' $$, 1,
+  'raw deletion is recorded without deleting the result row');
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', false);
+select tests.expect_error($$ select public.set_raw_video_keep('7a000000-0000-4000-8000-00000000000a', true) $$,
+  'deleted video cannot be kept');
+select tests.expect_error($$ select public.request_reanalysis((select id from public.analysis_jobs), null) $$,
+  'deleted raw video cannot be reanalyzed');
+reset role;
 \echo 'ALL ACCESS AND JOB TESTS PASSED'

@@ -77,6 +77,17 @@ function fakeSupabase({ rpcError = null as { message: string } | null } = {}) {
 }
 
 describe("dev mode entry", () => {
+  it("lets a public trial visitor enter a private guest session without seeding mock data", async () => {
+    const sb = fakeSupabase();
+    const cfg = getConfig({ DEV: false, VITE_ENABLE_GUEST_MODE: "true" });
+    render(<App cfg={cfg} sb={sb as unknown as SupabaseClient} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Try with my own video/ }));
+    expect(await screen.findByText("Private guest")).toBeTruthy();
+    expect(sb.auth.signInAnonymously).toHaveBeenCalledOnce();
+    expect(sb.rpc).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Leave guest session" })).toBeTruthy();
+  });
+
   it("is hidden in production builds by default", async () => {
     render(<App cfg={{ ...prodConfig, supabase: { url: "x", anonKey: "y" } }} sb={fakeSupabase() as unknown as SupabaseClient} />);
     await screen.findByRole("button", { name: "Sign in" });

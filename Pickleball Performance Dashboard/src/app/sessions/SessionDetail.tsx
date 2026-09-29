@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ArrowDown, ArrowLeft, RefreshCw, Trash2, Upload } from "lucide-react";
 import {
-  deleteSession, finalizeUpload, findPreviousCoachableResult, getSessionBundle, listAnalysisRuns, registerVideo, removeVideo, requestReanalysis, signedVideoUrl,
+  deleteSession, finalizeUpload, findPreviousCoachableResult, getSessionBundle, listAnalysisRuns, registerVideo, removeVideo, requestReanalysis, setRawVideoKeep, signedVideoUrl,
   updateSessionGoals, type SessionBundle,
 } from "../../lib/api/sessions";
 import { CONTEXT_LABELS, FORMAT_LABELS, GOAL_LABELS, type AnalysisRunSummary, type GoalValues, type ImprovementGoal } from "../../lib/api/types";
@@ -75,7 +75,8 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
     return () => window.clearInterval(id);
   }, [state, load]);
 
-  const uploadedPath = bundle?.video?.upload_status === "uploaded" ? bundle.video.storage_path : null;
+  const uploadedPath = bundle?.video?.upload_status === "uploaded" && !bundle.video.raw_video_deleted_at
+    && !bundle.video.raw_video_deleting_at ? bundle.video.storage_path : null;
   useEffect(() => {
     if (!uploadedPath) { setVideoUrl(null); return; }
     let active = true;
@@ -263,6 +264,18 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
             {job && job.attempts > 0 && ` · attempt ${job.attempts} of ${job.max_attempts}`}
           </p>
         )}
+        {video?.raw_video_deleted_at && <Notice tone="info">The raw recording has expired and was removed. Your saved report remains available.</Notice>}
+        {video?.raw_video_deleting_at && !video.raw_video_deleted_at && <Notice tone="info">The raw recording is being removed. Your saved report remains available.</Notice>}
+        {video?.raw_video_expires_at && !video.raw_video_deleted_at && !video.raw_video_deleting_at && (
+          <div className="mb-3 text-sm" style={{ color: WHITE_DIM }}>
+            <p>{video.raw_video_kept ? "You chose to keep this raw recording." : `Raw recording scheduled for deletion on ${new Date(video.raw_video_expires_at).toLocaleDateString()}.`}</p>
+            <button type="button" disabled={busy} className="mt-1 underline disabled:opacity-40"
+              style={{ color: BLUE_SKY }}
+              onClick={() => void run(() => setRawVideoKeep(sb, video.id, !video.raw_video_kept))}>
+              {video.raw_video_kept ? "Resume automatic deletion" : "Keep this recording"}
+            </button>
+          </div>
+        )}
         {localUpload && (
           <div className="space-y-1 mb-3">
             <ProgressBar fraction={localUpload.progress} />
@@ -300,7 +313,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
             {!consentConfirmed && <label className="flex items-start gap-2 text-sm" style={{ color: WHITE_DIM }}>
               <input type="checkbox" checked={consentChecked} onChange={(e) => setConsentChecked(e.target.checked)} />
               <span>I confirm that every person visible in this recording agreed to be recorded and uploaded for PicklePro analysis.
-                Raw video currently remains until I delete the session; a 30-day automatic retention limit is planned but not yet active.</span>
+                Raw video is automatically removed 30 days after analysis unless I choose to keep it. The report remains saved.</span>
             </label>}
             <label className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold cursor-pointer"
               style={{ background: params ? NEON : `${NEON}50`, color: NEON_D }}>
@@ -331,7 +344,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
           </div>
         )}
 
-        {finished && job && !config.trialNoWorker && (
+        {finished && job && !video?.raw_video_deleted_at && !video?.raw_video_deleting_at && !config.trialNoWorker && (
           <details className="mt-2">
             <summary className="text-sm font-semibold cursor-pointer" style={{ color: BLUE_SKY }}>Re-run analysis with different inputs</summary>
             <div className="mt-3 space-y-3">
@@ -366,7 +379,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
       {parsed?.ok && job?.status === "failed" && <Notice tone="warn">The reanalysis failed. The report below is from the last completed run.</Notice>}
       {parsed?.ok && (job?.status === "queued" || job?.status === "processing") && <Notice tone="info">A new analysis is in progress. The report below is the last published run.</Notice>}
       {parsed?.ok && <ResultView result={parsed.result} videoUrl={videoUrl} previous={previous} session={session}
-        onSelectTrack={job && finished && !config.trialNoWorker ? (trackId, timeSeconds) => void run(() => requestReanalysis(sb, job.id, {
+        onSelectTrack={job && finished && !video?.raw_video_deleted_at && !video?.raw_video_deleting_at && !config.trialNoWorker ? (trackId, timeSeconds) => void run(() => requestReanalysis(sb, job.id, {
           ...job.params, selection: { method: "track_id", track_id: trackId }, selection_time_s: timeSeconds,
         })) : undefined} />}
       {parsed && !parsed.ok && (
