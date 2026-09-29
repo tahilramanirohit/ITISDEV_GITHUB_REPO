@@ -35,6 +35,14 @@ describe("application entry point", () => {
     expect(screen.queryByText(/Demo account/i)).toBeNull();
   });
 
+  it("the shot labelling page works without Supabase or an account", async () => {
+    window.location.hash = "#/label";
+    render(<App cfg={prodConfig} sb={null} />);
+    expect(await screen.findByText("Label shots", { selector: "h2, h3, [class*='font']" })).toBeTruthy();
+    expect(screen.getByLabelText(/1\. Video/)).toBeTruthy();
+    expect(screen.queryByText("Supabase is not configured")).toBeNull();
+  });
+
   it("production builds refuse the design-preview route", async () => {
     window.location.hash = "#/design-preview";
     render(<App cfg={prodConfig} sb={null} />);

@@ -17,13 +17,14 @@ const LocalPrototype = lazy(() => import("./local/LocalPrototype"));
 const SessionsPage = lazy(() => import("./sessions/SessionsPage"));
 const SessionDetail = lazy(() => import("./sessions/SessionDetail"));
 const ProfilePage = lazy(() => import("./profile/ProfilePage"));
+const LabelPage = lazy(() => import("./labelling/LabelPage"));
 
 const Loading = () => <p className="p-8 text-sm" style={{ color: WHITE_SUB }}>Loading…</p>;
 
 function DevLinks({ cfg }: { cfg: AppConfig }) {
-  if (!cfg.designPreviewEnabled && !cfg.localPrototypeEnabled) return null;
   return (
     <>
+      <a href="#/label" style={{ color: LAVENDER }}>Label shots</a>
       {cfg.localPrototypeEnabled && <a href="#/local-prototype" style={{ color: LAVENDER }}>Local prototype</a>}
       {cfg.designPreviewEnabled && <a href="#/design-preview" style={{ color: LAVENDER }}>Design preview (sample data)</a>}
     </>
@@ -135,6 +136,8 @@ export default function App({ cfg = defaultConfig, sb = defaultSupabase }: { cfg
     <HashRouter>
       <Suspense fallback={<Loading />}>
         <Routes>
+          {/* Works without an account: videos and labels stay on this computer. */}
+          <Route path="/label" element={<AppShell nav={<><a href="#/" style={{ color: WHITE }}>Home</a><DevLinks cfg={cfg} /></>}><LabelPage /></AppShell>} />
           <Route path="/design-preview" element={cfg.designPreviewEnabled ? <DesignPreview /> : <NotAvailable />} />
           <Route
             path="/local-prototype"

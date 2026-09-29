@@ -44,6 +44,19 @@ The person model (`yolo11n.pt`, COCO person class) runs at 1280 px so that playe
 
 Very short sightings are folded into the matching player on the same side. People standing mostly off the court (a referee, spectators) are listed separately and never counted as hitters. The app shows a photo of each player so you can pick yourself; "My shots" then shows only your shots.
 
+## Labelling a clip
+
+Scores need hand labels. The web app has a labelling page at `#/label` (the **Label shots** link in the header; no account needed). The video is played from your own disk and never uploaded.
+
+1. Open a session's results and press **Download result (JSON)**. This file is optional, but with it the page draws each player's box and ID on the video, so labels use the same player numbers as PicklePro.
+2. On `#/label`, choose the video, then the result file. To continue an earlier file, also choose it under **Existing labels**.
+3. Pause on the frame where the paddle meets the ball. Use ← and → to step one frame, and Shift+← → for half a second.
+4. Press the player's number (1–9), then the shot's letter: **S** serve, **R** return, **D** dink, **P** drop, **I** drive, **E** reset, **U** speed-up, **C** counter, **V** volley, **L** lob, **O** overhead, **N** erne, **X** not a shot. **F** marks the selected shot as a fault, error or winner.
+5. Optionally, **Add PicklePro's detections as suggestions**. They appear dashed. Use ↑ and ↓ to jump between them, fix the player or type with the keys, and press Enter to confirm or Delete to remove. Unconfirmed suggestions are never saved into the file.
+6. Press **Download labels** and save the file in `eval/` next to the clip's name.
+
+Labels are saved in the browser as you go. The file keeps each shot's exact time (`time_resolution_s: 0.1`). `picklepro.evaluate` matches a frame-precise label to a detection within 0.35 s. Older whole-second labels stay marked `±1 s` until they are moved to their exact frame (**Move here** or **M**).
+
 ## Accuracy on `TestVideoKirk_REAL.mp4` (29 Sep 2026)
 
 This is a 51 s doubles clip, 1080p at 30 fps, filmed from behind the near baseline with a slightly moving handheld camera. A team member labelled every shot to the nearest second: 26 shots, plus 2 moments that are not shots (`eval/TestVideoKirk_REAL.labels.json`). Score a result with:

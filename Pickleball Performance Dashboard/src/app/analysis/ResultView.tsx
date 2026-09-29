@@ -31,6 +31,16 @@ const STATUS_TEXT: Record<MetricStatus, string> = {
 const fmtS = (s: number | null | undefined) => (s == null ? "unknown" : `${s.toFixed(1)} s`);
 const pct = (f: number | null | undefined) => (f == null ? "unknown" : `${Math.round(f * 100)}%`);
 
+function downloadResult(result: AnalysisResultV1) {
+  const name = (result.provenance.source.filename ?? "video").replace(/\.[^.]+$/, "");
+  const url = URL.createObjectURL(new Blob([JSON.stringify(result, null, 2)], { type: "application/json" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${name}.result.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 /** Results written by the development-only Dev mode button. */
 export const isDevMock = (result: AnalysisResultV1) => result.provenance.pipeline_version === "dev-mock";
 
@@ -124,6 +134,10 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack 
           <Pill color={devMock ? ORANGE : result.status === "ok" ? NEON : ORANGE}>
             {devMock ? "SAMPLE" : result.status === "ok" ? "RESULT" : "INSUFFICIENT DATA"}
           </Pill>
+          <button type="button" onClick={() => downloadResult(result)} className="ml-auto text-sm font-semibold underline"
+            style={{ color: BLUE_SKY }} title="For the Label shots page and for scoring shot detection">
+            Download result (JSON)
+          </button>
         </div>
         <p className="text-base text-[#101827]">{devMock ? "This sample shows the kind of practice plan PicklePro can display. It is not feedback about your play." : visibleMessage}</p>
         {warnings.length > 0 && (

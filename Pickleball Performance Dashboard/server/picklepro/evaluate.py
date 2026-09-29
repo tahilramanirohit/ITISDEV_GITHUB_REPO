@@ -2,9 +2,11 @@
 
     python -m picklepro.evaluate result.json ../eval/TestVideoKirk_REAL.labels.json
 
-Labels have whole-second times, so a detected shot matches a labelled one when
-it falls in that second (with a small margin). Matching keeps time order and
-prefers the labelled player. Reported:
+A frame-precise label (made on the app's Label shots page, ``#/label``)
+matches a detected shot within ``MARGIN_S`` of it. An older whole-second label
+("18" meaning 18.0-18.99 s, ``time_resolution_s`` or a shot's
+``resolution_s`` of 1) matches anywhere in that second, with the same margin.
+Matching keeps time order and prefers the labelled player. Reported:
 
 * hits found (recall) and detected hits that match a label (precision);
 * hitter accuracy and shot-type accuracy on matched shots;
@@ -23,6 +25,13 @@ MARGIN_S = 0.35
 ALIASES = {"third_shot_drop": "drop"}
 
 
+def _window(label: dict, file_resolution: float) -> tuple[float, float]:
+    res = float(label.get("resolution_s", file_resolution))
+    if res >= 0.5:
+        return label["t"] - MARGIN_S, label["t"] + res + MARGIN_S
+    return label["t"] - MARGIN_S, label["t"] + MARGIN_S
+
+
 def evaluate(result: dict, labels: dict) -> Dict[str, object]:
     shots = (result.get("metrics", {}).get("shot_classification", {}).get("value") or {}).get("shots", [])
     detected = sorted(shots, key=lambda s: s["time_seconds"])
@@ -32,7 +41,7 @@ def evaluate(result: dict, labels: dict) -> Dict[str, object]:
     used = set()
     matches = []
     for lab in real:
-        lo, hi = lab["t"] - MARGIN_S, lab["t"] + res + MARGIN_S
+        lo, hi = _window(lab, res)
         options = [i for i, s in enumerate(detected) if i not in used and lo <= s["time_seconds"] < hi]
         if not options:
             matches.append((lab, None))
@@ -47,7 +56,7 @@ def evaluate(result: dict, labels: dict) -> Dict[str, object]:
     confusion = Counter((l["type"], ALIASES.get(d["shot_type"], d["shot_type"])) for l, d in found
                         if ALIASES.get(d["shot_type"], d["shot_type"]) != l["type"])
     false_at_negatives = sum(1 for n in negatives
-                             if any(n["t"] - MARGIN_S <= s["time_seconds"] < n["t"] + res + MARGIN_S
+                             if any(_window(n, res)[0] <= s["time_seconds"] < _window(n, res)[1]
                                     for j, s in enumerate(detected) if j not in used))
     return {
         "labelled_shots": len(real),
@@ -81,7 +90,7 @@ def main(argv: List[str]) -> int:
         d = r["detected"]
         got = "MISSED" if d is None else f"{d['t']:6.2f}s P{d['player']} {d['type']}"
         mark = "" if d is None else ("  ok" if d["player"] == r["player"] and d["type"] == r["label"] else "  <-")
-        print(f"{r['t']:3d}s P{r['player']} {r['label']:10s} | {got}{mark}")
+        print(f"{r['t']:7.2f}s P{r['player']} {r['label']:10s} | {got}{mark}")
     return 0
 
 
