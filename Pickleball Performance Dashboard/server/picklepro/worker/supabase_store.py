@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 from urllib.parse import quote
 
 import httpx
@@ -57,7 +57,11 @@ class SupabaseJobStore:
         return bool(self._rpc("heartbeat_analysis_job",
                               {"p_job_id": job_id, "p_worker_id": worker_id, "p_lease_seconds": lease_seconds}))
 
-    def download_video(self, job: Job, dest: Path) -> None:
+    def report_progress(self, job_id: str, worker_id: str, progress: float, stage: str) -> bool:
+        return bool(self._rpc("update_analysis_progress", {
+            "p_job_id": job_id, "p_worker_id": worker_id, "p_progress": round(progress, 4), "p_stage": stage}))
+
+    def download_video(self, job: Job, dest: Path, progress: Optional[Callable[[float], None]] = None) -> None:
         url = f"{self._url}/storage/v1/object/{quote(job.storage_bucket)}/{quote(job.storage_path)}"
         try:
             with self._client.stream("GET", url, timeout=None) as r:
@@ -65,9 +69,14 @@ class SupabaseJobStore:
                     raise VideoMissing(f"{job.storage_path}: HTTP {r.status_code}")
                 if r.status_code >= 300:
                     raise TransientStoreError(f"download: HTTP {r.status_code}")
+                total = int(r.headers.get("content-length") or 0)
+                done = 0
                 with open(dest, "wb") as f:
                     for chunk in r.iter_bytes(1 << 20):
                         f.write(chunk)
+                        done += len(chunk)
+                        if progress and total:
+                            progress(min(1.0, done / total))
         except httpx.HTTPError as exc:
             raise TransientStoreError(f"download: {exc}") from exc
 

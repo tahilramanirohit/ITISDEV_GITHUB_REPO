@@ -1,6 +1,7 @@
 """Worker lifecycle against the in-memory store (mirrors the SQL lease semantics)."""
 
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 
 import pytest
 
@@ -60,6 +61,11 @@ def test_measured_mode_runs_pipeline_with_job_params(synthetic_clip):
     assert result["data_origin"] == "measured"
     assert result["status"] == "ok"
     assert result["metrics"]["court_heatmap"]["status"] == "measured"
+    stages = [stage for _p, stage in store.row("job-1").progress]
+    assert stages[0] == "downloading" and stages[-1] == "finishing"
+    assert [s for i, s in enumerate(stages) if i == 0 or stages[i - 1] != s] == ["downloading", "checking", "analyzing", "finishing"]
+    values = [p for p, _s in store.row("job-1").progress]
+    assert values == sorted(values) and 0 <= values[0] and values[-1] <= 1
 
 
 def test_measured_mode_without_calibration_completes_as_insufficient(synthetic_clip):
@@ -184,3 +190,42 @@ def test_retry_backoff_respects_available_at():
 def test_bad_selection_is_rejected(sel):
     with pytest.raises(ValueError):
         runner.options_from_params({"selection": sel}, _cfg(), None)
+
+
+def test_progress_is_reported_in_stages_and_throttled():
+    from picklepro.worker.runner import _Progress
+
+    class Store:
+        def __init__(self):
+            self.calls = []
+
+        def report_progress(self, job_id, worker_id, progress, stage):
+            self.calls.append((round(progress, 3), stage))
+            return True
+
+    clock = iter([0.0, 0.5, 1.0, 5.0, 5.5]).__next__
+    store = Store()
+    cfg = SimpleNamespace(worker_id="w1")
+    report = _Progress(store, "j1", cfg, clock=clock)
+    report("downloading")                 # t=0: reported
+    report.stage("downloading")(0.5)      # t=0.5: same stage, too soon
+    report("analyzing")                   # t=1: a new stage is always reported
+    report.stage("analyzing")(0.5)        # t=5: reported
+    report("finishing")                   # t=5.5
+    assert store.calls == [(0.0, "downloading"), (0.05, "analyzing"), (0.5, "analyzing"), (0.95, "finishing")]
+
+
+def test_progress_failures_never_fail_the_job_and_reporting_stops():
+    from picklepro.worker.runner import PROGRESS_MAX_FAILURES, _Progress
+
+    class Broken:
+        calls = 0
+
+        def report_progress(self, *args):
+            Broken.calls += 1
+            raise RuntimeError("update_analysis_progress: HTTP 404 PGRST202")
+
+    report = _Progress(Broken(), "j1", SimpleNamespace(worker_id="w1"), clock=iter(range(0, 100, 10)).__next__)
+    for stage in ("downloading", "checking", "analyzing", "finishing", "analyzing"):
+        report(stage)
+    assert Broken.calls == PROGRESS_MAX_FAILURES

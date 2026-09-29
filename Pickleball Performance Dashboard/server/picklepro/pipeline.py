@@ -126,6 +126,7 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
     view_track_ids: Dict[tuple[int, int], int] = {}
     next_view_track_id = 1
     expected = props.container_duration_s
+    progress_total = min(expected, opts.max_seconds) if expected and opts.max_seconds else expected
 
     for index, ts, frame in iter_frames(path, props.fps, stats, max_seconds=opts.max_seconds):
         player_frame = index % stride == 0
@@ -167,8 +168,8 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
         collector.observe(len(per_frame), ts, frame, detections, frame_calibration, segment)
         per_frame.append(detections)
         times.append(ts)
-        if progress and expected:
-            progress(min(0.99, ts / expected))
+        if progress and progress_total:
+            progress(min(0.99, ts / progress_total))
 
     frames_analyzed = len(per_frame)
     players, per_frame = _identify_players(collector, per_frame, opts.selection)

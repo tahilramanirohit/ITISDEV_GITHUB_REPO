@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AnalysisJobRow, VideoAssetRow } from "../api/types";
-import { deriveAnalysisState, shouldPoll, stateDescription } from "./state";
+import { analysisProgress, deriveAnalysisState, shouldPoll, stateDescription } from "./state";
 
 const video = (upload_status: VideoAssetRow["upload_status"]) => ({ upload_status }) as VideoAssetRow;
 const job = (status: AnalysisJobRow["status"], extra: Partial<AnalysisJobRow> = {}) =>
@@ -39,5 +39,39 @@ describe("deriveAnalysisState", () => {
     expect(stateDescription("failed", job("failed", { error_code: "unreadable_video", error_message: "codec" })))
       .toBe("Try saving or exporting it as an MP4 file, then upload it again.");
     expect(stateDescription("failed", job("failed", { error_code: "something_new" }))).toMatch(/Try re-running/);
+  });
+});
+
+describe("analysisProgress", () => {
+  const t0 = Date.parse("2026-09-30T10:00:00Z");
+  const at = (s: number) => new Date(t0 + s * 1000).toISOString();
+
+  it("shows a moving bar before the analyzer reports, or on a database without progress columns", () => {
+    const p = analysisProgress(job("processing", { started_at: at(0) }), t0 + 600_000);
+    expect(p).toEqual({ fraction: null, text: "Starting the analysis…", stale: false });
+  });
+
+  it("names the stage, the percentage and the time left from the pace so far", () => {
+    const p = analysisProgress(job("processing", {
+      started_at: at(0), progress: 0.25, progress_stage: "analyzing", progress_updated_at: at(120),
+    }), t0 + 120_000);
+    // A quarter done in 2 minutes: about 6 minutes to go.
+    expect(p.fraction).toBe(0.25);
+    expect(p.text).toBe("Finding the players, the court and the ball · 25% · about 6 min left");
+    expect(p.stale).toBe(false);
+  });
+
+  it("does not guess the time left from too little progress", () => {
+    const p = analysisProgress(job("processing", {
+      started_at: at(0), progress: 0.03, progress_stage: "downloading", progress_updated_at: at(5),
+    }), t0 + 5000);
+    expect(p.text).toBe("Downloading your video to the analyzer · 3%");
+  });
+
+  it("warns when a reporting analyzer has gone quiet", () => {
+    const p = analysisProgress(job("processing", {
+      started_at: at(0), progress: 0.5, progress_stage: "analyzing", progress_updated_at: at(60),
+    }), t0 + 60_000 + 4 * 60_000);
+    expect(p.stale).toBe(true);
   });
 });

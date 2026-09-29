@@ -18,11 +18,15 @@ export function AnalysisStateBadge({ state }: { state: AnalysisUiState }) {
   return <Pill color={STATE_COLORS[state]}>{STATE_LABELS[state].toUpperCase()}</Pill>;
 }
 
-export function ProgressBar({ fraction }: { fraction: number }) {
+/** A null fraction draws a moving bar: work is happening, but how much is done is unknown. */
+export function ProgressBar({ fraction, label }: { fraction: number | null; label?: string }) {
   return (
-    <div className="h-2 rounded-full overflow-hidden" style={{ background: "rgba(41,61,242,0.08)" }}
-      role="progressbar" aria-valuenow={Math.round(fraction * 100)} aria-valuemin={0} aria-valuemax={100}>
-      <div className="h-full rounded-full transition-all" style={{ width: `${Math.round(fraction * 100)}%`, background: BLUE_SKY }} />
+    <div className="h-3 rounded-full overflow-hidden" style={{ background: "rgba(41,61,242,0.1)" }}
+      role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100}
+      aria-valuenow={fraction === null ? undefined : Math.round(fraction * 100)}>
+      {fraction === null
+        ? <div className="h-full w-1/3 rounded-full animate-pulse" style={{ background: BLUE_SKY }} />
+        : <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.round(fraction * 100)}%`, background: BLUE_SKY }} />}
     </div>
   );
 }

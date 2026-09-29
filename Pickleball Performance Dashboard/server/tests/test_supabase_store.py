@@ -106,3 +106,25 @@ def test_retention_keeps_database_pending_when_storage_fails():
     with pytest.raises(TransientStoreError):
         _store(handler).delete_one_expired_video()
     assert len(calls) == 2
+
+
+def test_progress_calls_the_progress_rpc():
+    seen = {}
+
+    def handler(req: httpx.Request):
+        seen["url"], seen["body"] = str(req.url), json.loads(req.content)
+        return httpx.Response(200, json=True)
+
+    assert _store(handler).report_progress("j1", "w1", 0.123456, "analyzing") is True
+    assert seen["url"].endswith("/rest/v1/rpc/update_analysis_progress")
+    assert seen["body"] == {"p_job_id": "j1", "p_worker_id": "w1", "p_progress": 0.1235, "p_stage": "analyzing"}
+
+
+def test_download_reports_its_progress(tmp_path):
+    from picklepro.worker.store import Job
+    job = Job(**{k: v for k, v in JOB.items()})
+    body = b"x" * (3 << 20)
+    seen = []
+    _store(lambda r: httpx.Response(200, content=body, headers={"content-length": str(len(body))})).download_video(
+        job, tmp_path / "v.mp4", progress=seen.append)
+    assert seen and seen[-1] == 1.0 and seen == sorted(seen)

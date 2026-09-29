@@ -18,7 +18,7 @@ import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Protocol
+from typing import Any, Callable, Dict, List, Optional, Protocol, Tuple
 
 
 class LeaseLost(RuntimeError):
@@ -50,7 +50,8 @@ class Job:
 class JobStore(Protocol):
     def claim(self, worker_id: str, lease_seconds: int) -> Optional[Job]: ...
     def heartbeat(self, job_id: str, worker_id: str, lease_seconds: int) -> bool: ...
-    def download_video(self, job: Job, dest: Path) -> None: ...
+    def download_video(self, job: Job, dest: Path, progress: Optional[Callable[[float], None]] = None) -> None: ...
+    def report_progress(self, job_id: str, worker_id: str, progress: float, stage: str) -> bool: ...
     def complete(self, job_id: str, worker_id: str, result: Dict[str, Any]) -> None: ...
     def fail(self, job_id: str, worker_id: str, error_code: str, error_message: str, retryable: bool) -> str: ...
 
@@ -69,6 +70,7 @@ class _Row:
     error_code: Optional[str] = None
     error_message: Optional[str] = None
     result: Optional[Dict[str, Any]] = None
+    progress: List[Tuple[float, str]] = field(default_factory=list)
 
 
 class InMemoryJobStore:
@@ -136,11 +138,22 @@ class InMemoryJobStore:
             row.lease_expires_at = self._clock() + timedelta(seconds=lease_seconds)
             return True
 
-    def download_video(self, job: Job, dest: Path) -> None:
+    def download_video(self, job: Job, dest: Path, progress: Optional[Callable[[float], None]] = None) -> None:
         data = self._videos.get(f"{job.storage_bucket}/{job.storage_path}")
         if data is None:
             raise VideoMissing(job.storage_path)
         dest.write_bytes(data)
+        if progress:
+            progress(1.0)
+
+    def report_progress(self, job_id: str, worker_id: str, progress: float, stage: str) -> bool:
+        with self._lock:
+            try:
+                row = self._held(job_id, worker_id)
+            except LeaseLost:
+                return False
+            row.progress.append((round(min(1.0, max(0.0, progress)), 4), stage))
+            return True
 
     def complete(self, job_id: str, worker_id: str, result: Dict[str, Any]) -> None:
         with self._lock:

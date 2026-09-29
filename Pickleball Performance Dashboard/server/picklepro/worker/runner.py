@@ -26,6 +26,7 @@ import logging
 import math
 import tempfile
 import threading
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, Optional
@@ -148,6 +149,49 @@ class _Heartbeat:
         self._thread.join(timeout=5)
 
 
+# Share of the progress bar given to each stage. Analysis dominates the time.
+STAGE_SPANS = {"downloading": (0.0, 0.04), "checking": (0.04, 0.05), "analyzing": (0.05, 0.95), "finishing": (0.95, 0.99)}
+PROGRESS_MIN_INTERVAL_S = 3.0
+PROGRESS_MAX_FAILURES = 3
+
+
+class _Progress:
+    """Throttled progress reports for the session page's progress bar.
+
+    Progress is a courtesy to the player: a failed report never fails the job,
+    and after a few failures (for example the database migration that adds
+    update_analysis_progress is not applied yet) reporting simply stops.
+    """
+
+    def __init__(self, store: JobStore, job_id: str, cfg: WorkerConfig, clock=time.monotonic):
+        self._store, self._job_id, self._cfg, self._clock = store, job_id, cfg, clock
+        self._last_time = -1e9
+        self._last_stage: Optional[str] = None
+        self._failures = 0
+
+    def __call__(self, stage: str, fraction: float = 0.0) -> None:
+        if self._failures >= PROGRESS_MAX_FAILURES:
+            return
+        now = self._clock()
+        if stage == self._last_stage and now - self._last_time < PROGRESS_MIN_INTERVAL_S:
+            return
+        lo, hi = STAGE_SPANS[stage]
+        overall = lo + (hi - lo) * min(1.0, max(0.0, fraction))
+        try:
+            self._store.report_progress(self._job_id, self._cfg.worker_id, overall, stage)
+        except Exception as exc:  # noqa: BLE001 - progress must never break an analysis
+            self._failures += 1
+            if self._failures >= PROGRESS_MAX_FAILURES:
+                logger.warning("progress reporting stopped for %s (apply the latest Supabase migration?): %s",
+                               self._job_id, exc)
+            return
+        self._last_time, self._last_stage = now, stage
+
+    def stage(self, stage: str):
+        """A callback that reports fractions of one stage."""
+        return lambda fraction: self(stage, fraction)
+
+
 def process_one(store: JobStore, cfg: WorkerConfig, stop: Optional[threading.Event] = None) -> Optional[Outcome]:
     job = store.claim(cfg.worker_id, cfg.lease_seconds)
     if job is None:
@@ -162,6 +206,7 @@ def process_one(store: JobStore, cfg: WorkerConfig, stop: Optional[threading.Eve
             return Outcome(job.id, "lease_lost", code)
         return Outcome(job.id, new_status, code)
 
+    report = _Progress(store, job.id, cfg)
     with tempfile.TemporaryDirectory(prefix="picklepro-job-") as tmp, _Heartbeat(store, job.id, cfg) as hb:
         video = Path(tmp) / ("input" + (Path(job.storage_path).suffix or ".mp4"))
         try:
@@ -172,12 +217,16 @@ def process_one(store: JobStore, cfg: WorkerConfig, stop: Optional[threading.Eve
                     opts = options_from_params(job.params, cfg, job.original_filename)
                 except (CalibrationError, ValueError, KeyError, TypeError) as exc:
                     return fail("invalid_parameters", f"Calibration or player selection is invalid: {exc}", False)
-                store.download_video(job, video)
+                report("downloading")
+                store.download_video(job, video, progress=report.stage("downloading"))
                 if stop is not None and stop.is_set():
                     raise Interrupted()
+                report("checking")
                 if cfg.enforce_source_quality:
                     validate_source_quality(probe(video))
-                result = analyze_video(video, opts)
+                report("analyzing")
+                result = analyze_video(video, opts, progress=report.stage("analyzing"))
+                report("finishing")
         except VideoMissing as exc:
             return fail("video_missing", f"The uploaded video was not found in storage ({exc}). Upload it again.", False)
         except TransientStoreError as exc:

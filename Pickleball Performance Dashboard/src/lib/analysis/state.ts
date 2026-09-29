@@ -1,4 +1,4 @@
-import type { AnalysisJobRow, AnalysisResultRow, VideoAssetRow } from "../api/types";
+import type { AnalysisJobRow, AnalysisResultRow, ProgressStage, VideoAssetRow } from "../api/types";
 
 export type AnalysisUiState =
   | "not_uploaded"
@@ -39,6 +39,43 @@ export function deriveAnalysisState({ video, job, result, localUpload }: Inputs)
   }
 }
 
+const STAGE_TEXT: Record<ProgressStage, string> = {
+  downloading: "Downloading your video to the analyzer",
+  checking: "Checking the video",
+  analyzing: "Finding the players, the court and the ball",
+  finishing: "Saving your report",
+};
+const STALE_AFTER_MS = 3 * 60_000;
+
+export type AnalysisProgress = {
+  /** 0-1, or null when the analyzer has not reported progress (the bar then just moves). */
+  fraction: number | null;
+  text: string;
+  /** No report for a while: the analyzer may have stopped. */
+  stale: boolean;
+};
+
+/** What the progress bar shows while a job is processing. */
+export function analysisProgress(job: AnalysisJobRow, nowMs: number): AnalysisProgress {
+  const fraction = typeof job.progress === "number" && Number.isFinite(job.progress) ? Math.min(1, Math.max(0, job.progress)) : null;
+  const stage = job.progress_stage ?? null;
+  // Only an analyzer that reports progress can be said to have gone quiet.
+  const updated = Date.parse(job.progress_updated_at ?? "");
+  const stale = Number.isFinite(updated) && nowMs - updated > STALE_AFTER_MS;
+  if (fraction === null || !stage) {
+    return { fraction: null, text: "Starting the analysis…", stale };
+  }
+  let text = `${STAGE_TEXT[stage]} · ${Math.round(fraction * 100)}%`;
+  const started = Date.parse(job.started_at ?? "");
+  // Time left from the pace so far; only once there is enough to go on.
+  if (stage === "analyzing" && fraction >= 0.1 && Number.isFinite(started) && nowMs > started) {
+    const leftMs = ((nowMs - started) * (1 - fraction)) / fraction;
+    const minutes = Math.round(leftMs / 60_000);
+    text += minutes < 1 ? " · less than a minute left" : ` · about ${minutes} min left`;
+  }
+  return { fraction, text, stale };
+}
+
 export const shouldPoll = (s: AnalysisUiState) => s === "queued" || s === "processing";
 
 export const STATE_LABELS: Record<AnalysisUiState, string> = {
@@ -65,7 +102,7 @@ export function stateDescription(state: AnalysisUiState, job: AnalysisJobRow | n
         ? `Trying again (attempt ${job.attempts + 1} of ${job.max_attempts}). Last time: ${failureHelp(job.error_code).title.toLowerCase()}.`
         : "Your video is waiting for analysis. During development, keep the analyzer running on your computer.";
     case "processing":
-      return "PicklePro is checking the video now. This page will update when the result is ready.";
+      return "PicklePro is analyzing the video now. This page updates by itself; you can leave it open or come back later.";
     case "completed":
       return "Your result is ready. Review what the video shows and what to practice next.";
     case "insufficient_data":

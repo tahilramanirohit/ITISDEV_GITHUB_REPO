@@ -8,7 +8,7 @@ import {
 } from "../../lib/api/sessions";
 import { CONTEXT_LABELS, FORMAT_LABELS, GOAL_LABELS, type AnalysisRunSummary, type GoalValues, type ImprovementGoal } from "../../lib/api/types";
 import { ContractError, parseAnalysisResult } from "../../lib/analysis/contract";
-import { deriveAnalysisState, failureHelp, shouldPoll, stateDescription, STATE_LABELS, type LocalUpload } from "../../lib/analysis/state";
+import { analysisProgress, deriveAnalysisState, failureHelp, shouldPoll, stateDescription, STATE_LABELS, type LocalUpload } from "../../lib/analysis/state";
 import { config } from "../../lib/config";
 import { startResumableUpload, type UploadHandle } from "../../lib/upload/tusUpload";
 import { formatBytes, validateVideoFile } from "../../lib/upload/validate";
@@ -284,6 +284,21 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
             </p>
           </div>
         )}
+        {state === "processing" && job && job.status === "processing" && (() => {
+          const p = analysisProgress(job, Date.now());
+          return (
+            <div className="space-y-1 mb-3" data-testid="analysis-progress">
+              <ProgressBar fraction={p.fraction} label="Analysis progress" />
+              <p className="text-sm" style={{ color: WHITE_SUB }}>{p.text}</p>
+              {p.stale && (
+                <Notice tone="warn">
+                  No update from the analyzer for a few minutes. Check that the worker window (start_worker.bat) is still open;
+                  if it was closed, start it again and the analysis will be retried.
+                </Notice>
+              )}
+            </div>
+          );
+        })()}
         {state === "failed" && job?.error_code && (
           <div className="mb-3">
             <Notice tone="error">

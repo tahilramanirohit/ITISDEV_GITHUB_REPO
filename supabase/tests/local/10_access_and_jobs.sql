@@ -142,6 +142,8 @@ select tests.expect_error($$ update public.analysis_jobs set status = 'completed
   'players cannot change job status');
 select tests.expect_error($$ select public.claim_analysis_job('evil', 60) $$,
   'players cannot call worker functions');
+select tests.expect_error($$ select public.update_analysis_progress(id, 'evil', 1, 'finishing') from public.analysis_jobs $$,
+  'players cannot fake analysis progress');
 select tests.expect_error($$ select public.request_reanalysis(id) from public.analysis_jobs $$,
   'reanalysis refused while a job is queued');
 
@@ -215,6 +217,26 @@ select tests.expect_true(public.heartbeat_analysis_job(
 select tests.expect_true(not public.heartbeat_analysis_job(
   (select id from public.analysis_jobs where video_asset_id = '7a000000-0000-4000-8000-00000000000a'), 'w2', 60),
   'non-holder heartbeat is refused');
+select tests.expect_true(public.update_analysis_progress(
+  (select id from public.analysis_jobs where video_asset_id = '7a000000-0000-4000-8000-00000000000a'), 'w1', 0.42, 'analyzing'),
+  'lease holder can report progress');
+select tests.expect_true(not public.update_analysis_progress(
+  (select id from public.analysis_jobs where video_asset_id = '7a000000-0000-4000-8000-00000000000a'), 'w2', 0.9, 'analyzing'),
+  'non-holder cannot report progress');
+select tests.expect_error($$ select public.update_analysis_progress(
+  (select id from public.analysis_jobs where video_asset_id = '7a000000-0000-4000-8000-00000000000a'), 'w1', 0.5, 'dancing') $$,
+  'unknown progress stage is rejected');
+select tests.expect_count($$ select 1 from public.analysis_jobs
+  where video_asset_id = '7a000000-0000-4000-8000-00000000000a' and progress = 0.42::real and progress_stage = 'analyzing' $$,
+  1, 'progress is stored');
+-- B's job was claimed by w2; a takeover by another worker starts its bar over.
+select public.update_analysis_progress(
+  (select id from public.analysis_jobs where video_asset_id = '7b000000-0000-4000-8000-00000000000b'), 'w2', 0.7, 'analyzing');
+update public.analysis_jobs set locked_by = 'w9' where video_asset_id = '7b000000-0000-4000-8000-00000000000b';
+select tests.expect_count($$ select 1 from public.analysis_jobs
+  where video_asset_id = '7b000000-0000-4000-8000-00000000000b' and progress is null and progress_stage is null $$,
+  1, 'a new worker on the job starts the progress over');
+update public.analysis_jobs set locked_by = 'w2' where video_asset_id = '7b000000-0000-4000-8000-00000000000b';
 select tests.expect_error($$ select public.complete_analysis_job(
   (select id from public.analysis_jobs where video_asset_id = '7a000000-0000-4000-8000-00000000000a'), 'w2',
   '{"schema_version":"1.0","status":"ok","data_origin":"measured","provenance":{"pipeline_version":"t"}}') $$,
@@ -230,6 +252,11 @@ select public.complete_analysis_job(
     "provenance":{"pipeline_version":"0.2.0-dev"},
     "coverage":{"analyzed_duration_s":20.0,"fraction_of_video_analyzed":1.0},
     "video":{"container_duration_s":20.0}}');
+select tests.expect_count($$ select 1 from public.analysis_jobs where status = 'completed'
+  and progress = 1 and progress_stage is null $$, 1, 'a completed job shows a full progress bar');
+select tests.expect_true(not public.update_analysis_progress(
+  (select id from public.analysis_jobs where video_asset_id = '7a000000-0000-4000-8000-00000000000a'), 'w1', 0.1, 'analyzing'),
+  'progress cannot be written after completion');
 select tests.expect_count($$ select 1 from public.analysis_jobs where status = 'completed' and locked_by is null $$, 1,
   'job A completed');
 select tests.expect_count($$ select 1 from public.sessions s join public.analysis_runs r on r.id = s.active_run_id

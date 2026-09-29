@@ -11,7 +11,10 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import tempfile
+import threading
+import time
 from pathlib import Path
 from typing import Dict, Literal, Optional
 
@@ -48,6 +51,33 @@ ALLOWED_MIME_TYPES = ["video/mp4", "video/x-msvideo", "video/quicktime", "video/
 MAX_SECONDS_LIMIT = float(os.getenv("LOCAL_API_MAX_SECONDS", "600"))
 
 
+# Progress of analyses in this process, keyed by an id the browser chooses, so
+# the page can show a progress bar while the analysis request is still open.
+_PROGRESS: Dict[str, Dict[str, object]] = {}
+_PROGRESS_LOCK = threading.Lock()
+_PROGRESS_KEEP_S = 600
+_PROGRESS_ID = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
+
+
+def _set_progress(progress_id: Optional[str], stage: str, fraction: float) -> None:
+    if not progress_id:
+        return
+    now = time.time()
+    with _PROGRESS_LOCK:
+        for key in [k for k, v in _PROGRESS.items() if now - float(v["updated"]) > _PROGRESS_KEEP_S]:
+            del _PROGRESS[key]
+        _PROGRESS[progress_id] = {"stage": stage, "progress": round(min(1.0, max(0.0, fraction)), 4), "updated": now}
+
+
+@app.get("/analyze/progress/{progress_id}")
+def analysis_progress(progress_id: str) -> Dict[str, object]:
+    with _PROGRESS_LOCK:
+        entry = _PROGRESS.get(progress_id)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="No analysis with this id is running.")
+    return {"stage": entry["stage"], "progress": entry["progress"]}
+
+
 @app.get("/health")
 async def health() -> Dict[str, object]:
     # Resolved on each call so newly added model files are picked up without a restart.
@@ -62,7 +92,10 @@ def analyze_video_endpoint(
     court_half: Optional[Literal["near", "far"]] = Query(None),
     track_id: Optional[int] = Query(None),
     calibration: Optional[str] = Form(None, description="Calibration JSON (see `python -m picklepro.cli landmarks`)."),
+    progress_id: Optional[str] = Query(None, description="Poll GET /analyze/progress/{progress_id} while this runs."),
 ):
+    if progress_id is not None and not _PROGRESS_ID.match(progress_id):
+        raise HTTPException(status_code=422, detail="progress_id must be 8-64 letters, digits, - or _.")
     if file.content_type not in ALLOWED_MIME_TYPES:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
@@ -102,13 +135,16 @@ def analyze_video_endpoint(
             tmp.write(chunk)
 
     models = resolve_models()
+    _set_progress(progress_id, "analyzing", 0.0)
     try:
-        return analyze_video(tmp_path, AnalysisOptions(
+        result = analyze_video(tmp_path, AnalysisOptions(
             max_seconds=min(max_seconds, MAX_SECONDS_LIMIT), target_fps=target_fps,
             calibration=calib, selection=selection, source_filename=file.filename,
             detector=models.detector, yolo_weights=models.yolo_weights,
             court_weights=models.court_weights, ball_weights=models.ball_weights,
-        ))
+        ), progress=lambda f: _set_progress(progress_id, "analyzing", f))
+        _set_progress(progress_id, "finishing", 1.0)
+        return result
     except VideoOpenError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
     except DetectorUnavailable as exc:

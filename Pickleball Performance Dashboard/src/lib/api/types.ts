@@ -93,7 +93,13 @@ export type AnalysisJobRow = {
   updated_at: string;
   started_at: string | null;
   finished_at: string | null;
+  /** 0-1 while the worker is analysing; missing before the progress migration is applied. */
+  progress?: number | null;
+  progress_stage?: ProgressStage | null;
+  progress_updated_at?: string | null;
 };
+
+export type ProgressStage = "downloading" | "checking" | "analyzing" | "finishing";
 
 export type AnalysisResultRow = {
   id: string;

@@ -63,3 +63,19 @@ def test_rejects_bad_calibration(tmp_path):
 def test_undecodable_file_is_an_error_not_a_result():
     r = client.post("/analyze/video", files={"file": ("junk.mp4", b"not a video" * 100, "video/mp4")})
     assert r.status_code == 422
+
+
+def test_progress_can_be_polled_by_the_id_the_browser_chose(synthetic_clip):
+    assert client.get("/analyze/progress/abcdefgh1").status_code == 404
+    r = client.post(
+        "/analyze/video?court_half=near&max_seconds=600&progress_id=abcdefgh1",
+        files={"file": ("synthetic.mp4", synthetic_clip.path.read_bytes(), "video/mp4")},
+        data={"calibration": json.dumps(synthetic_clip.calibration)},
+    )
+    assert r.status_code == 200, r.text
+    assert client.get("/analyze/progress/abcdefgh1").json() == {"stage": "finishing", "progress": 1.0}
+
+
+def test_progress_id_is_validated(tmp_path):
+    r = client.post("/analyze/video?progress_id=../../etc", files={"file": ("a.mp4", b"x", "video/mp4")})
+    assert r.status_code == 422
