@@ -155,7 +155,8 @@ def test_court_lines_project_back_onto_the_court():
 def _rule(**kw):
     base = dict(number=5, depth=4.0, contact="after_bounce", speed=None, soft=False, fast=False, pace="",
                 is_lob=False, rise=None, hang=None, travel=None, above_head=False, incoming_fast=False,
-                incoming_soft=False, lands_in_kitchen=False, outside_sideline=False, unmapped=False)
+                incoming_soft=False, lands_in_kitchen=False, outside_sideline=False, unmapped=False,
+                incoming_speed_up=False)
     base.update(kw)
     if base["speed"] is not None:
         base["soft"] = base["speed"] < 6.0
@@ -175,8 +176,11 @@ def _rule(**kw):
     (dict(depth=3.0, speed=4.0, incoming_fast=True), "reset"),
     (dict(depth=1.0, speed=4.0, incoming_fast=True), "drop"),
     (dict(depth=4.2, speed=12.0, incoming_soft=True), "speed_up"),
-    (dict(depth=4.2, speed=12.0, incoming_fast=True, contact="volley"), "counter"),
+    (dict(depth=4.2, speed=12.0, contact="volley", incoming_speed_up=True), "counter"),
+    (dict(depth=4.2, speed=12.0, incoming_fast=True, contact="volley"), "volley"),  # hands battle
+    (dict(depth=4.2, speed=12.0, incoming_soft=True, contact="volley"), "speed_up"),
     (dict(depth=4.2, speed=7.0, contact="volley"), "volley"),
+    (dict(depth=4.2, contact="after_bounce"), "dink"),  # slow net exchange: bounced in the kitchen
     (dict(depth=4.2, contact="volley", outside_sideline=True), "erne"),
     (dict(depth=1.0, speed=16.0), "drive"),
     (dict(depth=1.0, speed=7.0), "drop"),
@@ -204,3 +208,42 @@ def test_serve_must_cross_diagonally_and_clear_the_kitchen(landing, ok, why):
     from picklepro.shots import serve_landing
     valid, verdict = serve_landing((2.0, -0.4), landing)
     assert valid is ok and why in verdict
+
+
+def _candidate(t, options, score=1.0):
+    from picklepro.shots import _Event, _Point
+    return _Event("hit", t, _Point(t, 0, 0, 0), score, None, next(iter(options.values()))[0],
+                  extras={"options": options})
+
+
+def test_hits_alternate_between_the_two_sides_of_the_net():
+    from picklepro.shots import _alternate
+    # The middle candidate is closest to a near player, but the hits before and
+    # after it are near hits too: the ball must have gone to the far side.
+    hits = [_candidate(0.0, {"near": (0, 0.1)}),
+            _candidate(0.8, {"near": (0, 0.1), "far": (2, 0.5)}),
+            _candidate(1.6, {"near": (1, 0.1)})]
+    kept = _alternate(hits)
+    assert [h.t for h in kept] == [0.0, 0.8, 1.6]
+    assert [h.hitter for h in kept] == [0, 2, 1]
+
+
+def test_same_side_candidate_without_another_option_is_dropped():
+    from picklepro.shots import _alternate
+    hits = [_candidate(0.0, {"near": (0, 0.1)}, score=1.5),
+            _candidate(0.8, {"near": (1, 0.6)}, score=0.2),  # weak, and the same side again
+            _candidate(1.6, {"far": (2, 0.1)}, score=1.5)]
+    assert [h.t for h in _alternate(hits)] == [0.0, 1.6]
+
+
+def test_unmapped_hits_do_not_constrain_the_alternation():
+    from picklepro.shots import _alternate
+    hits = [_candidate(0.0, {None: (0, 0.1)}), _candidate(0.8, {None: (1, 0.1)})]
+    assert len(_alternate(hits)) == 2
+
+
+def test_short_exchange_without_a_serve_is_not_play():
+    from picklepro.shots import _in_play
+    knock = [_candidate(0.0, {"near": (0, 0.1)}), _candidate(1.0, {"far": (1, 0.1)})]  # ball fed back
+    rally = [_candidate(10.0 + k, {"near": (0, 0.1)}) for k in range(4)]  # serve not seen, but a real exchange
+    assert [h.t for h in _in_play(knock + rally, 540)] == [10.0, 11.0, 12.0, 13.0]

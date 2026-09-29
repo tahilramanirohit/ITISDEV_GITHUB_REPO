@@ -5,13 +5,15 @@ that only look like a ball: a pickleball printed on a banner, a lamp, or a
 spare ball lying by the fence. This module keeps only observations that move
 like a ball in play:
 
-1. **Static objects are removed.** A candidate that reappears at the same
+1. **Boxes far too large for a ball are removed** (a player's head or a
+   bag, which some models report as a ball).
+2. **Static objects are removed.** A candidate that reappears at the same
    pixel position over a long time is scenery, not a ball in flight.
-2. **Candidates are linked into flights.** Each flight predicts where the ball
+3. **Candidates are linked into flights.** Each flight predicts where the ball
    should be next from its current velocity; a candidate is only joined to a
    flight inside a speed-dependent gate. Candidates that fit no flight start a
    new one.
-3. **Short or motionless flights are dropped**, and where two flights claim
+4. **Short or motionless flights are dropped**, and where two flights claim
    the same moment the stronger one (longer, more confident) wins.
 
 Only observed boxes are returned. Nothing is interpolated, so a missing
@@ -33,6 +35,7 @@ MAX_SPEED_PX_S = 6000.0       # fastest plausible image speed at 1920 px width
 BASE_GATE_PX = 45.0
 MIN_FLIGHT_POINTS = 3
 MIN_FLIGHT_TRAVEL_PX = 25.0
+MAX_BALL_BOX_PX = 70.0        # at 1920 px width; a ball is 10-40 px even when blurred
 
 
 @dataclass
@@ -93,6 +96,10 @@ def track_ball(frames: Sequence[Tuple[float, Sequence[BallCandidate]]], frame_wi
     """Return one observed ball box per time at most, plus counts for provenance."""
     scale = frame_width / REFERENCE_WIDTH
     everything = [c for _t, cands in frames for c in cands]
+    too_big = sum(1 for c in everything
+                  if max(c.bbox[2] - c.bbox[0], c.bbox[3] - c.bbox[1]) > MAX_BALL_BOX_PX * scale)
+    everything = [c for c in everything
+                  if max(c.bbox[2] - c.bbox[0], c.bbox[3] - c.bbox[1]) <= MAX_BALL_BOX_PX * scale]
     static = _static_mask(everything, STATIC_RADIUS_PX * scale)
     moving = [c for c, s in zip(everything, static) if not s]
     by_time: Dict[float, List[BallCandidate]] = {}
@@ -141,7 +148,8 @@ def track_ball(frames: Sequence[Tuple[float, Sequence[BallCandidate]]], frame_wi
                 chosen[p.time_s] = (s, p)
     path = [chosen[t][1] for t in sorted(chosen)]
     stats = {
-        "candidates": len(everything),
+        "candidates": len(everything) + too_big,
+        "too_big": too_big,
         "static_removed": sum(static),
         "flights": len(kept),
         "kept": len(path),

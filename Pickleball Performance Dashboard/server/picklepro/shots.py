@@ -1,8 +1,8 @@
 """Experimental hits, bounces, rallies, and shot types from observed ball boxes.
 
-This is a rule-based estimate, not a trained classifier, and it has not been
-evaluated against labelled real footage. Every output is reported as
-``experimental`` / ``not_evaluated``.
+This is a rule-based estimate, not a trained classifier. It has been scored on
+one hand-labelled clip only (docs/SHOT_TYPES.md; about a quarter of shot types
+right), so every output is reported as ``experimental`` / ``not_evaluated``.
 
 How it works
 ------------
@@ -89,11 +89,20 @@ LOB_MIN_TRAVEL_M = 8.0
 MIN_VOLLEY_BALL_COVERAGE = 0.6
 BALL_DIAMETER_M = 0.074
 MIN_BALL_PX = 3.0           # detectors rarely return smaller boxes
-BALL_SIZE_RATIO = (0.45, 2.2)  # observed / expected ball size beside a player
+# Observed / expected ball size beside a player. Detector boxes are padded and
+# blurred (about twice the true size in 1080p), so only gross mismatches count.
+BALL_SIZE_RATIO = (0.3, 4.0)
 BOUNCE_MAX_SPEED_RATIO = 0.9  # beside a player, a kick that loses speed is a bounce
 CONTACT_HEIGHT_FRAC = 0.59    # usual contact about 1 m up a 1.7 m player
 FAR_CONTACT_MAX_DIST = 0.5    # of player height
 FAR_CONTACT_WINDOW_S = 0.4
+REACH_SCALE = 0.8             # ball-to-player distance (in player heights) that halves a hit's score... roughly
+HIT_COST = 0.4               # a candidate must score more than this to be kept as a hit
+MIN_HIT_GAP_S = 0.3           # the ball cannot cross the net and come back faster
+FEET_CUT_OFF_FRAC = 0.012     # a box this close to the bottom edge has its feet out of the picture
+NET_VOLLEY_MAX_INTERVAL_S = 0.85  # kitchen line to kitchen line, a bounce needs longer than this
+DINK_MIN_INTERVAL_S = 1.1     # ... and a ball this slow lands in the kitchen, so it bounced
+MIN_HITS_WITHOUT_SERVE = 4    # an exchange this long is play even if its serve was missed
 
 SHOT_TYPES = ("serve", "return", "drive", "drop", "dink", "reset",
               "speed_up", "counter", "volley", "lob", "overhead", "erne", "unclassified")
@@ -178,19 +187,32 @@ def _depth_consistent(frame: FrameObs, box: Sequence[int], p: _Point) -> bool:
     return BALL_SIZE_RATIO[0] <= ratio <= BALL_SIZE_RATIO[1]
 
 
-def _in_reach(frame: Optional[FrameObs], p: _Point) -> Optional[int]:
+def _reach_options(frame: Optional[FrameObs], p: _Point, everyone: bool = False) -> Dict[Optional[str], Tuple[int, float]]:
+    """Closest player in reach on each side of the net: side -> (detection index, distance / height).
+
+    From behind a baseline, a near player's box covers much of the far court in
+    the image, so a ball can be "in reach" of players on both sides at once.
+    Which side really hit it is decided over the whole rally (see _alternate).
+    """
+    out: Dict[Optional[str], Tuple[int, float]] = {}
     if frame is None:
-        return None
-    best, best_d = None, math.inf
+        return out
     for i, det in enumerate(frame.detections):
         x1, y1, x2, y2 = det["bbox"]
-        w, h = x2 - x1, y2 - y1
-        if (x1 - 0.6 * w <= p.x <= x2 + 0.6 * w and y1 - 0.4 * h <= p.y <= y2 + 0.05 * h
+        w, h = x2 - x1, max(1.0, y2 - y1)
+        if (everyone or x1 - 0.6 * w <= p.x <= x2 + 0.6 * w and y1 - 0.4 * h <= p.y <= y2 + 0.05 * h
                 and _depth_consistent(frame, det["bbox"], p)):
-            d = math.hypot(p.x - (x1 + x2) / 2, p.y - (y1 + y2) / 2)
-            if d < best_d:
-                best, best_d = i, d
-    return best
+            d = math.hypot(p.x - (x1 + x2) / 2, p.y - (y1 + y2) / 2) / h
+            court = _to_court(frame.calibration, foot_point(det["bbox"]))
+            side = court_half(court[1]) if court else None
+            if side not in out or d < out[side][1]:
+                out[side] = (i, d)
+    return out
+
+
+def _in_reach(frame: Optional[FrameObs], p: _Point) -> Optional[int]:
+    options = _reach_options(frame, p)
+    return min(options.values(), key=lambda o: o[1])[0] if options else None
 
 
 def _segments(points: List[_Point]) -> List[List[_Point]]:
@@ -246,7 +268,7 @@ def _find_events(points: List[_Point], frames: Sequence[FrameObs], frame_h: int,
             frame = _nearest_frame(frames, a.t, tol)
             hitter = _in_reach(frame, a)
             if speed >= min_speed and hitter is not None:
-                events.append(_Event("hit", a.t, a, 0.5, frame, hitter))
+                events.append(_Event("hit", a.t, a, 0.5, frame, hitter, extras={"options": _reach_options(frame, a, everyone=True)}))
         for i in range(1, len(seg) - 1):
             a, p, b = seg[i - 1], seg[i], seg[i + 1]
             vin = np.array([p.x - a.x, p.y - a.y]) / max(1e-6, p.t - a.t)
@@ -266,7 +288,7 @@ def _find_events(points: List[_Point], frames: Sequence[FrameObs], frame_h: int,
                 events.append(_Event("bounce", p.t, p, turn / 180, frame, extras={"priority": 2}))
             elif hitter is not None and (turn >= MIN_TURN_DEG or ratio > 1.8 or ratio < 0.45):
                 events.append(_Event("hit", p.t, p, turn / 180 + min(1.0, abs(math.log(ratio))), frame, hitter,
-                                     extras={"priority": 3}))
+                                     extras={"priority": 3, "options": _reach_options(frame, p, everyone=True)}))
         events.extend(_far_side_contacts(seg, frames, tol))
     bounce_times = [e.t for e in events if e.kind == "bounce"]
     # A ball landing just in front of a far player passes their contact point in
@@ -320,7 +342,7 @@ def _far_side_contacts(seg: List[_Point], frames: Sequence[FrameObs], tol: float
                 continue
             window = [s[0] for s in samples if abs(s[2].t - p.t) <= FAR_CONTACT_WINDOW_S]
             if d <= min(window):
-                out.append(_Event("hit", p.t, p, 1.0 - d, frame, i, extras={"priority": 1}))
+                out.append(_Event("hit", p.t, p, 1.0 - d, frame, i, extras={"priority": 1, "options": {"far": (i, d)}}))
     return out
 
 
@@ -352,6 +374,95 @@ def _held_ball(e: _Event, points: List[_Point], frames: Sequence[FrameObs], tol:
                 and _depth_consistent(frame, dets[0]["bbox"], p)):
             close += 1
     return total >= HELD_MIN_POINTS and close / total >= HELD_MIN_SHARE
+
+
+def _alternate(hits: List[_Event]) -> List[_Event]:
+    """Choose hits and hitters so that, within a rally, the sides alternate.
+
+    Every shot must cross the net, so two hits in a row by the same side are
+    impossible (except a missed hit in between). Each candidate can be kept for
+    either side that had a player in reach, or dropped. The best-scoring
+    sequence wins: a hit scores more when the ball turned sharply and passed
+    close to the player; each kept hit costs HIT_COST, so weak candidates that
+    break the alternation are left out.
+    """
+    options = []
+    for e in hits:
+        # Side None: the court is not mapped here, so this hit cannot break the alternation.
+        opts = dict(e.extras.get("options", {}))
+        strength = 0.5 + min(float(e.score), 1.5)
+        options.append({side: (i, strength * math.exp(-(d / REACH_SCALE) ** 2)) for side, (i, d) in opts.items()})
+    n = len(hits)
+    best: List[Dict[Optional[str], float]] = [{} for _ in range(n)]
+    back: List[Dict[Optional[str], Optional[Tuple[int, Optional[str]]]]] = [{} for _ in range(n)]
+    for j in range(n):
+        for side, (_i, score) in options[j].items():
+            value, prev = score - HIT_COST, None  # first kept hit
+            for k in range(j):
+                gap = hits[j].t - hits[k].t
+                if gap < MIN_HIT_GAP_S:
+                    continue
+                for side_k, value_k in best[k].items():
+                    if gap <= RALLY_GAP_S and side is not None and side_k == side:
+                        continue
+                    if value_k + score - HIT_COST > value:
+                        value, prev = value_k + score - HIT_COST, (k, side_k)
+            best[j][side], back[j][side] = value, prev
+    ends = [(v, j, side) for j in range(n) for side, v in best[j].items()]
+    if not ends:
+        return []
+    _v, j, side = max(ends, key=lambda e: (e[0], e[1]))
+    if _v <= 0:
+        return []
+    chosen: List[_Event] = []
+    node: Optional[Tuple[int, Optional[str]]] = (j, side)
+    while node is not None:
+        j, side = node
+        hits[j].hitter = options[j][side][0]
+        chosen.append(hits[j])
+        node = back[j][side]
+    return chosen[::-1]
+
+
+def _feet_cut_off(e: _Event, frame_h: int) -> bool:
+    """The hitter's box reaches the bottom edge: they stand at or behind the visible court."""
+    if e.frame is None or e.hitter is None:
+        return False
+    return e.frame.detections[e.hitter]["bbox"][3] >= frame_h * (1 - FEET_CUT_OFF_FRAC)
+
+
+def _serve_position(e: _Event, frame_h: int) -> bool:
+    court = _hitter_court(e)
+    if court is None:
+        return False
+    side = court_half(court[1])
+    if side == "near" and _feet_cut_off(e, frame_h):
+        return True
+    return side is not None and depth_from_baseline(court[1], side) <= SERVE_MAX_DEPTH_M
+
+
+def _in_play(hits: List[_Event], frame_h: int) -> List[_Event]:
+    """Keep hits from a serve onward; drop balls knocked back between points.
+
+    A point starts with a serve from behind the baseline. Within each run of
+    hits (runs are split by RALLY_GAP_S), hits before the first serve-position
+    hit are dropped. A run without one is kept only when it is a long exchange,
+    since the serve itself may have been missed.
+    """
+    runs: List[List[_Event]] = []
+    for h in hits:
+        if runs and h.t - runs[-1][-1].t <= RALLY_GAP_S:
+            runs[-1].append(h)
+        else:
+            runs.append([h])
+    kept: List[_Event] = []
+    for run in runs:
+        start = next((i for i, h in enumerate(run) if _serve_position(h, frame_h)), None)
+        if start is not None:
+            kept.extend(run[start:])
+        elif len(run) >= MIN_HITS_WITHOUT_SERVE:
+            kept.extend(run)
+    return kept
 
 
 def _hitter_court(e: _Event) -> Optional[Tuple[float, float]]:
@@ -415,7 +526,7 @@ def _lob_rise_m(points: List[_Point], cal: Optional[CourtCalibration]) -> Option
 
 
 def _classify(number, depth, contact, speed, soft, fast, pace, is_lob, rise, hang, travel, above_head,
-              incoming_fast, incoming_soft, lands_in_kitchen, outside_sideline, unmapped):
+              incoming_fast, incoming_soft, lands_in_kitchen, outside_sideline, unmapped, incoming_speed_up=False):
     """Name one shot from its measured features; see TYPE_DEFINITIONS."""
     if number == 1 and depth is not None and depth <= SERVE_MAX_DEPTH_M:
         where = "behind the baseline" if depth < 0 else f"{depth:.1f} m inside the baseline"
@@ -439,20 +550,24 @@ def _classify(number, depth, contact, speed, soft, fast, pace, is_lob, rise, han
         if fast:
             return "drive", f"third hit of the rally, fast ({pace}) from the back"
     if at_net:
-        if soft:
+        if contact == "volley":
+            # Kitchen-line volley exchanges ("hands battles") are fast by
+            # nature; only a volley that changes the pace gets its own name.
+            if fast and incoming_soft:
+                return "speed_up", f"fast attack ({pace}) from the kitchen line out of a soft exchange"
+            if incoming_speed_up:
+                return "counter", "volley straight back at a speed-up"
+            if soft and incoming_fast:
+                return "reset", f"soft volley ({pace}) at the kitchen line that takes the pace off a fast ball"
+            return "volley", "hit out of the air at the kitchen line" + (f" ({pace})" if pace else "")
+        if soft or (speed is None and contact == "after_bounce"):
             if incoming_fast:
-                return "reset", f"soft reply ({pace}) at the kitchen line to a fast incoming ball"
-            return "dink", f"soft shot ({pace}) from the kitchen line"
+                return "reset", "soft reply" + (f" ({pace})" if pace else "") + " at the kitchen line to a fast incoming ball"
+            return "dink", "soft shot" + (f" ({pace})" if pace else "") + " from the kitchen line after the bounce"
         if fast:
-            if incoming_fast and contact == "volley":
-                return "counter", f"fast volley ({pace}) straight back at a fast incoming ball"
             if incoming_soft:
                 return "speed_up", f"fast attack ({pace}) from the kitchen line out of a soft exchange"
-            if contact == "volley":
-                return "volley", f"firm volley ({pace}) at the kitchen line"
             return "drive", f"fast shot ({pace}) from the kitchen line"
-        if contact == "volley":
-            return "volley", "hit out of the air at the kitchen line" + (f" ({pace})" if pace else "")
         if speed is not None:
             return "dink", f"controlled shot ({pace}) from the kitchen line"
         return "unclassified", "no next bounce or hitter was seen to measure the shot"
@@ -482,6 +597,7 @@ def analyze_shots(ball: Sequence[Tuple[float, Sequence[int]]], frames: Sequence[
     # The ball then stays inside the player's box instead of arriving and
     # leaving, so those direction changes are not strokes.
     hits = [e for e in events if e.kind == "hit" and not _held_ball(e, points, frames, tol)]
+    hits = _in_play(_alternate(hits), frame_h)
 
     # Same-side double hits within a second are one stroke seen twice.
     cleaned: List[_Event] = []
@@ -519,11 +635,23 @@ def analyze_shots(ball: Sequence[Tuple[float, Sequence[int]]], frames: Sequence[
             box = det["bbox"] if det else None
             reasons: List[str] = []
 
-            # Contact type: was a bounce seen since the previous hit, with good ball coverage?
+            # Contact type. Between two players at their kitchen lines, a ball
+            # that comes back within NET_VOLLEY_MAX_INTERVAL_S had no time to
+            # bounce, and a slow one lands in the kitchen, where it may not be
+            # volleyed. Otherwise: was a bounce seen, with good ball coverage?
             contact = "unknown"
             if same_rally_prev:
                 prev_t = hits[i - 1].t
-                if any(prev_t < b.t < h.t for b in bounces):
+                prev_court = hits[i - 1].extras.get("court")
+                prev_depth = (depth_from_baseline(prev_court[1], hits[i - 1].extras.get("side"))
+                              if prev_court and hits[i - 1].extras.get("side") else None)
+                here = h.extras.get("court")
+                here_depth = depth_from_baseline(here[1], side) if here and side else None
+                both_at_net = (prev_depth is not None and here_depth is not None
+                               and prev_depth >= NET_ZONE_DEPTH_M and here_depth >= NET_ZONE_DEPTH_M)
+                if both_at_net and h.t - prev_t <= NET_VOLLEY_MAX_INTERVAL_S:
+                    contact = "volley"
+                elif any(prev_t < b.t < h.t for b in bounces) or (both_at_net and h.t - prev_t >= DINK_MIN_INTERVAL_S):
                     contact = "after_bounce"
                 else:
                     expected = max(1, round((h.t - prev_t) / frame_interval_s) - 1)
@@ -551,6 +679,8 @@ def analyze_shots(ball: Sequence[Tuple[float, Sequence[int]]], frames: Sequence[
             is_lob = (rise is not None and rise >= LOB_MIN_RISE_M) or (
                 hang is not None and travel is not None and hang >= LOB_MIN_HANG_S and travel >= LOB_MIN_TRAVEL_M)
             depth = depth_from_baseline(court[1], side) if court and side else None
+            if number == 1 and side == "near" and _feet_cut_off(h, frame_h):
+                depth = min(depth, 0.0) if depth is not None else 0.0  # server's feet below the picture
 
             prev = shots[-1] if same_rally_prev and shots else None
             incoming = prev["ground_speed_mps"] if prev else None
@@ -566,7 +696,8 @@ def analyze_shots(ball: Sequence[Tuple[float, Sequence[int]]], frames: Sequence[
                                                       or court[0] > COURT_WIDTH_M + ERNE_SIDELINE_MARGIN_M)
             shot, why = _classify(number, depth, contact, speed, soft, fast, pace, is_lob, rise, hang, travel,
                                   box is not None and h.point.y < box[1], incoming_fast, incoming_soft,
-                                  lands_in_kitchen, outside_sideline, court is None)
+                                  lands_in_kitchen, outside_sideline, court is None,
+                                  prev is not None and prev["shot_type"] == "speed_up")
             reasons.append(why)
             if shot == "serve" and court and landing_xy:
                 landed_in, verdict = serve_landing(court, landing_xy)
