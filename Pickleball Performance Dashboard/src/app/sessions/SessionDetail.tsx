@@ -3,10 +3,10 @@ import { useNavigate, useParams } from "react-router";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ArrowDown, ArrowLeft, RefreshCw, Trash2, Upload } from "lucide-react";
 import {
-  deleteSession, finalizeUpload, findPreviousCoachableResult, getSessionBundle, registerVideo, removeVideo, requestReanalysis, signedVideoUrl,
+  deleteSession, finalizeUpload, findPreviousCoachableResult, getSessionBundle, listAnalysisRuns, registerVideo, removeVideo, requestReanalysis, signedVideoUrl,
   updateSessionGoals, type SessionBundle,
 } from "../../lib/api/sessions";
-import { CONTEXT_LABELS, FORMAT_LABELS, GOAL_LABELS, type GoalValues, type ImprovementGoal } from "../../lib/api/types";
+import { CONTEXT_LABELS, FORMAT_LABELS, GOAL_LABELS, type AnalysisRunSummary, type GoalValues, type ImprovementGoal } from "../../lib/api/types";
 import { ContractError, parseAnalysisResult } from "../../lib/analysis/contract";
 import { deriveAnalysisState, failureHelp, shouldPoll, stateDescription, STATE_LABELS, type LocalUpload } from "../../lib/analysis/state";
 import { config } from "../../lib/config";
@@ -35,6 +35,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [previous, setPrevious] = useState<PreviousSession | null>(null);
+  const [runHistory, setRunHistory] = useState<AnalysisRunSummary[]>([]);
   const [goalDraft, setGoalDraft] = useState<GoalValues | null>(null);
   const [consentConfirmed, setConsentConfirmed] = useState(false);
   const [consentChecked, setConsentChecked] = useState(false);
@@ -51,6 +52,15 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
 
   useEffect(() => { void load(); }, [load]);
   useEffect(() => { void hasUploadConsent(sb).then(setConsentConfirmed).catch(() => setConsentConfirmed(false)); }, [sb]);
+  const currentRunId = bundle?.job?.current_run_id;
+  const runStatus = bundle?.job?.status;
+  useEffect(() => {
+    if (!currentRunId) { setRunHistory([]); return; }
+    let active = true;
+    listAnalysisRuns(sb, sessionId).then((runs) => { if (active) setRunHistory(runs); })
+      .catch(() => { if (active) setRunHistory([]); });
+    return () => { active = false; };
+  }, [sb, sessionId, currentRunId, runStatus]);
   useEffect(() => () => uploadRef.current?.abort(), []);
 
   const state = bundle
@@ -341,8 +351,20 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
 
       <CapturePanel sb={sb} session={session} onSessionUpdated={() => void load()} />
 
+      {runHistory.length > 0 && <Card>
+        <h2 className="text-lg font-bold text-[#101827]">Analysis history</h2>
+        <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Each reanalysis is saved as a separate run. The active report changes only after a new run completes.</p>
+        <ul className="mt-3 space-y-2 text-sm">
+          {runHistory.map((run) => <li key={run.id} className="flex flex-wrap justify-between gap-2 border-b py-2" style={{ borderColor: BORDER }}>
+            <span>Run {run.run_number}{session.active_run_id === run.id ? " · active report" : ""}</span>
+            <span style={{ color: WHITE_DIM }}>{run.status}{run.result_status ? ` · ${run.result_status.replaceAll("_", " ")}` : ""} · {run.metric_definition_version}</span>
+          </li>)}
+        </ul>
+      </Card>}
+
       {parsed?.ok && job?.status === "failed" && <Notice tone="warn">The reanalysis failed. The report below is from the last completed run.</Notice>}
-      {parsed?.ok && job?.status !== "queued" && job?.status !== "processing" && <ResultView result={parsed.result} videoUrl={videoUrl} previous={previous} session={session}
+      {parsed?.ok && (job?.status === "queued" || job?.status === "processing") && <Notice tone="info">A new analysis is in progress. The report below is the last published run.</Notice>}
+      {parsed?.ok && <ResultView result={parsed.result} videoUrl={videoUrl} previous={previous} session={session}
         onSelectTrack={job && finished ? (trackId, timeSeconds) => void run(() => requestReanalysis(sb, job.id, {
           ...job.params, selection: { method: "track_id", track_id: trackId }, selection_time_s: timeSeconds,
         })) : undefined} />}

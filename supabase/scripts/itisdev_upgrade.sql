@@ -235,6 +235,9 @@ revoke all on public.analysis_jobs, public.analysis_results from anon, authentic
 grant select on public.analysis_jobs, public.analysis_results to authenticated;
 grant all on public.analysis_jobs, public.analysis_results to service_role;
 
+do $upgrade$ begin
+  if to_regclass('public.analysis_runs') is null then
+    execute $legacy$
 create or replace function public.finalize_video_upload(p_video_id uuid, p_params jsonb default '{}'::jsonb)
 returns public.analysis_jobs
 language plpgsql security definer set search_path = '' as $$
@@ -270,7 +273,13 @@ begin
   select * into j from public.analysis_jobs where video_asset_id = v.id;
   return j;
 end $$;
+$legacy$;
+  end if;
+end $upgrade$;
 
+do $upgrade$ begin
+  if to_regclass('public.analysis_runs') is null then
+    execute $legacy$
 create or replace function public.request_reanalysis(p_job_id uuid, p_params jsonb default null)
 returns public.analysis_jobs
 language plpgsql security definer set search_path = '' as $$
@@ -297,7 +306,13 @@ begin
   returning * into j;
   return j;
 end $$;
+$legacy$;
+  end if;
+end $upgrade$;
 
+do $upgrade$ begin
+  if to_regclass('public.analysis_runs') is null then
+    execute $legacy$
 create or replace function public.claim_analysis_job(p_worker_id text, p_lease_seconds int default 300)
 returns jsonb
 language plpgsql security definer set search_path = '' as $$
@@ -330,7 +345,13 @@ begin
     'storage_bucket', v.storage_bucket, 'storage_path', v.storage_path, 'original_filename', v.original_filename,
     'attempts', j.attempts, 'max_attempts', j.max_attempts, 'params', j.params);
 end $$;
+$legacy$;
+  end if;
+end $upgrade$;
 
+do $upgrade$ begin
+  if to_regclass('public.analysis_runs') is null then
+    execute $legacy$
 create or replace function public.heartbeat_analysis_job(p_job_id uuid, p_worker_id text, p_lease_seconds int default 300)
 returns boolean
 language plpgsql security definer set search_path = '' as $$
@@ -340,6 +361,9 @@ begin
    where id = p_job_id and status = 'processing' and locked_by = p_worker_id and lease_expires_at >= now();
   return found;
 end $$;
+$legacy$;
+  end if;
+end $upgrade$;
 
 create or replace function public._lock_held_job(p_job_id uuid, p_worker_id text)
 returns public.analysis_jobs
@@ -355,6 +379,9 @@ begin
   return j;
 end $$;
 
+do $upgrade$ begin
+  if to_regclass('public.analysis_runs') is null then
+    execute $legacy$
 create or replace function public.complete_analysis_job(p_job_id uuid, p_worker_id text, p_result jsonb)
 returns void
 language plpgsql security definer set search_path = '' as $$
@@ -388,7 +415,13 @@ begin
          error_message = null, finished_at = now(), updated_at = now()
    where id = j.id;
 end $$;
+$legacy$;
+  end if;
+end $upgrade$;
 
+do $upgrade$ begin
+  if to_regclass('public.analysis_runs') is null then
+    execute $legacy$
 create or replace function public.fail_analysis_job(p_job_id uuid, p_worker_id text, p_error_code text,
                                                     p_error_message text, p_retryable boolean)
 returns text
@@ -410,6 +443,9 @@ begin
    where id = j.id;
   return new_status;
 end $$;
+$legacy$;
+  end if;
+end $upgrade$;
 
 revoke all on function public.finalize_video_upload(uuid, jsonb) from public, anon, authenticated;
 revoke all on function public.request_reanalysis(uuid, jsonb) from public, anon, authenticated;

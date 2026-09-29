@@ -32,6 +32,9 @@ PSQL=(psql -h localhost -p "$PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -X
 
 "${PSQL[@]}" -f "$HERE/local/00_supabase_stub.sql"
 for f in "$MIGRATIONS"/*.sql; do
+  if [ "$(basename "$f")" = "20260929000200_versioned_analysis_runs.sql" ]; then
+    "${PSQL[@]}" -f "$HERE/local/04_legacy_run_fixture.sql"
+  fi
   echo "applying $(basename "$f")"
   "${PSQL[@]}" -f "$f"
 done
@@ -39,6 +42,7 @@ done
 # can be run again after the normal migrations without changing access tests.
 "${PSQL[@]}" -f "$HERE/../scripts/itisdev_upgrade.sql" >/dev/null 2>&1
 "${PSQL[@]}" -f "$HERE/local/05_helpers.sql"
+"${PSQL[@]}" -f "$HERE/local/06_legacy_run_assertions.sql" 2>&1 >/dev/null | sed -e 's/^psql:[^ ]* NOTICE:  /  /'
 "${PSQL[@]}" -f "$HERE/local/10_access_and_jobs.sql" 2>&1 >/dev/null | sed -e 's/^psql:[^ ]* NOTICE:  /  /'
 "${PSQL[@]}" -f "$HERE/local/20_dev_mock_data.sql" 2>&1 >/dev/null | sed -e 's/^psql:[^ ]* NOTICE:  /  /'
 

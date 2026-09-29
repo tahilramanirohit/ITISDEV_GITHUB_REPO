@@ -36,6 +36,7 @@ export const FORMAT_LABELS: Record<PlayFormat, string> = {
 export type SessionRow = {
   id: string;
   owner_id: string;
+  active_run_id?: string | null;
   title: string;
   session_date: string;
   actual_start_at: string | null;
@@ -73,6 +74,7 @@ export type JobStatus = "queued" | "processing" | "completed" | "failed";
 
 export type AnalysisJobRow = {
   id: string;
+  current_run_id?: string | null;
   owner_id: string;
   video_asset_id: string;
   session_id: string;
@@ -91,6 +93,7 @@ export type AnalysisJobRow = {
 
 export type AnalysisResultRow = {
   id: string;
+  run_id?: string | null;
   job_id: string;
   session_id: string;
   video_asset_id: string;
@@ -103,4 +106,16 @@ export type AnalysisResultRow = {
   fraction_analyzed: number | null;
   result: unknown;
   created_at: string;
+};
+
+export type AnalysisRunSummary = {
+  id: string;
+  session_id: string;
+  run_number: number;
+  status: JobStatus;
+  result_status: "ok" | "insufficient_data" | null;
+  pipeline_version: string | null;
+  metric_definition_version: string;
+  created_at: string;
+  published_at: string | null;
 };

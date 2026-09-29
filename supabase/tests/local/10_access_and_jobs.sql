@@ -122,6 +122,10 @@ insert into storage.objects (bucket_id, name, metadata) values ('session-videos'
 select public.finalize_video_upload('7a000000-0000-4000-8000-00000000000a', '{"selection":{"method":"court_half","court_half":"far"}}');
 select public.finalize_video_upload('7a000000-0000-4000-8000-00000000000a', '{"selection":{"method":"track_id","track_id":9}}');
 select tests.expect_count($$ select 1 from public.analysis_jobs $$, 1, 'double finalize creates exactly one job');
+select tests.expect_count($$ select 1 from public.analysis_runs where status = 'queued' and run_number = 1 $$,
+  1, 'first finalize creates one versioned run');
+select tests.expect_count($$ select 1 from public.analysis_jobs j join public.analysis_runs r on r.id = j.current_run_id $$,
+  1, 'job points to its queued run');
 select tests.expect_count($$ select 1 from public.analysis_jobs where params -> 'selection' ->> 'court_half' = 'far' $$, 1,
   'a repeated finalize does not overwrite the first params');
 select tests.expect_error($$ select public.finalize_video_upload('7a000000-0000-4000-8000-00000000000a', '[1]') $$,
@@ -154,6 +158,7 @@ select tests.expect_count($$ select 1 from public.recovery_logs $$, 0, 'B sees n
 select tests.expect_count($$ select 1 from public.reflections $$, 0, 'B sees no reflection of A');
 select tests.expect_count($$ select 1 from public.consent_records $$, 0, 'B sees no consent record of A');
 select tests.expect_count($$ select 1 from public.analysis_jobs $$, 0, 'B sees no jobs of A');
+select tests.expect_count($$ select 1 from public.analysis_runs $$, 0, 'B sees no runs of A');
 select tests.expect_count($$ select 1 from storage.objects $$, 0, 'B sees no storage objects of A');
 select tests.expect_rows($$ update public.sessions set title = 'hijacked' $$, 0, 'B cannot update A''s session');
 select tests.expect_rows($$ delete from public.sessions $$, 0, 'B cannot delete A''s session');
@@ -227,6 +232,39 @@ select public.complete_analysis_job(
     "video":{"container_duration_s":20.0}}');
 select tests.expect_count($$ select 1 from public.analysis_jobs where status = 'completed' and locked_by is null $$, 1,
   'job A completed');
+select tests.expect_count($$ select 1 from public.sessions s join public.analysis_runs r on r.id = s.active_run_id
+  where s.id = '5a000000-0000-4000-8000-00000000000a'
+    and r.status = 'completed' and r.run_number = 1 $$, 1, 'completed run is published on the session');
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', false);
+select tests.expect_error($$ update public.sessions set active_run_id = null
+  where id = '5a000000-0000-4000-8000-00000000000a' $$,
+  'player cannot change the published report pointer');
+reset role;
+set role service_role;
+select tests.expect_count($$ select 1 from public.analysis_results r join public.analysis_runs ar on ar.id = r.run_id
+  where r.session_id = '5a000000-0000-4000-8000-00000000000a'
+    and ar.run_number = 1 $$, 1, 'compatibility result names its immutable run');
+insert into public.metric_results(run_id, participant_id, metric_key, definition_version, quality_status)
+select s.active_run_id, p.id, 'kitchen_line_presence', 'v4-draft-2026-09-29', 'unvalidated'
+from public.sessions s join public.session_participants p on p.session_id = s.id and p.role = 'uploader'
+where s.id = '5a000000-0000-4000-8000-00000000000a';
+select tests.expect_error($$
+  insert into public.metric_results(run_id, participant_id, metric_key, definition_version,
+    validation_level, quality_status, value)
+  select s.active_run_id, p.id, 'zone_share_kitchen', 'v4-draft-2026-09-29',
+    'not_evaluated', 'available', 42
+  from public.sessions s join public.session_participants p on p.session_id = s.id and p.role = 'uploader'
+  where s.id = '5a000000-0000-4000-8000-00000000000a' $$,
+  'unvalidated metric cannot be published as available');
+select tests.expect_error($$
+  insert into public.metric_results(run_id, participant_id, metric_key, definition_version, quality_status)
+  select a.active_run_id, b.id, 'kitchen_line_presence', 'v4-draft-2026-09-29', 'unvalidated'
+  from public.sessions a join public.session_participants b
+    on b.session_id = '5b000000-0000-4000-8000-00000000000b' and b.role = 'uploader'
+  where a.id = '5a000000-0000-4000-8000-00000000000a' $$,
+  'metric participant must belong to the run session');
 
 -- B's worker (w2) dies: expire its lease and let w3 pick it up.
 reset role;
@@ -267,11 +305,51 @@ select public.request_reanalysis((select id from public.analysis_jobs), '{"selec
 select tests.expect_count($$ select 1 from public.analysis_jobs where status = 'queued' and attempts = 0
   and params -> 'selection' ->> 'court_half' = 'near' $$, 1, 'owner can re-queue with new params');
 select tests.expect_count($$ select 1 from public.analysis_results $$, 1, 'last published result survives reanalysis');
+select tests.expect_count($$ select 1 from public.analysis_runs where run_number = 2 and status = 'queued' $$,
+  1, 'reanalysis creates a new queued run');
+select tests.expect_count($$ select 1 from public.sessions s join public.analysis_runs r on r.id = s.active_run_id
+  where r.run_number = 1 $$, 1, 'old run remains active while replacement is queued');
+
+reset role;
+set role service_role;
+select public.claim_analysis_job('w6', 60);
+select tests.expect_true(public.fail_analysis_job(
+  (select id from public.analysis_jobs where video_asset_id = '7a000000-0000-4000-8000-00000000000a'),
+  'w6', 'test_failure', 'replacement failed', false) = 'failed',
+  'replacement run can fail without changing the published run');
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', false);
+select tests.expect_count($$ select 1 from public.analysis_runs where run_number = 2 and status = 'failed' $$,
+  1, 'failed replacement remains in run history');
+select tests.expect_count($$ select 1 from public.sessions s join public.analysis_runs r on r.id = s.active_run_id
+  where r.run_number = 1 $$, 1, 'failed replacement does not replace the active run');
+select public.request_reanalysis((select id from public.analysis_jobs), null);
+reset role;
+set role service_role;
+select public.claim_analysis_job('w7', 60);
+select public.complete_analysis_job(
+  (select id from public.analysis_jobs where video_asset_id = '7a000000-0000-4000-8000-00000000000a'), 'w7',
+  '{"schema_version":"1.0","status":"insufficient_data","data_origin":"test_fixture",
+    "provenance":{"pipeline_version":"0.3.0-dev","source":{"sha256":"abc"}},
+    "coverage":{"analyzed_duration_s":21.0,"fraction_of_video_analyzed":1.0},
+    "video":{"container_duration_s":21.0}}');
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', false);
+select tests.expect_count($$ select 1 from public.analysis_runs where status = 'completed' and run_number in (1, 3) $$,
+  2, 'successful replacement retains both completed run versions');
+select tests.expect_count($$ select 1 from public.sessions s join public.analysis_runs r on r.id = s.active_run_id
+  where r.run_number = 3 and r.source_sha256 = 'abc' $$, 1,
+  'successful replacement atomically switches the active run');
+select tests.expect_count($$ select 1 from public.analysis_results r join public.analysis_runs ar on ar.id = r.run_id
+  where ar.run_number = 3 $$, 1, 'compatibility result follows the new active run');
 
 reset role;
 set role authenticated;
 select set_config('request.jwt.claim.sub', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', false);
 select tests.expect_count($$ select 1 from public.analysis_results $$, 0, 'B cannot read A''s results');
+select tests.expect_count($$ select 1 from public.metric_results $$, 0, 'B cannot read A''s metric rows');
 select tests.expect_error($$ select public.request_reanalysis('00000000-0000-4000-8000-000000000000') $$,
   'unknown job is refused');
 select tests.expect_count($$ select 1 from public.analysis_jobs where status = 'failed' $$, 1,

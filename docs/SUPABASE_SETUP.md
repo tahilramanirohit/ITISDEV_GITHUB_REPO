@@ -15,7 +15,7 @@ These checks used synthetic footage and programmatically created confirmed test 
 
 1. Use the dedicated test project above, or create another disposable Supabase project and record its reference. Enable email/password sign-in. Set its site URL to the frontend origin you will use, such as `http://localhost:5173`, and allow any other development origin you actually use in Auth redirect URLs. The hosted email confirmation redirect has not yet been tested on this project.
 2. From the repository root, inspect your installed CLI (`supabase --version`, `supabase link --help`, `supabase db push --help`), then sign in and link **the test project** with `supabase login` and `supabase link --project-ref <test-project-ref>`. Verify the selected reference before applying migrations.
-3. Preview pending migrations with `supabase db push --dry-run`, then apply them with `supabase db push`. The migrations create sessions, private video storage, jobs, results, goals, profiles, participant capture, policies and worker functions. Do not use a remote database reset: it drops data.
+3. Preview pending migrations with `supabase db push --dry-run`, then apply them with `supabase db push`. The migrations create sessions, private video storage, jobs, results, goals, profiles, participant capture, versioned analysis runs, metric-result scaffolding, policies and worker functions. Do not use a remote database reset: it drops data.
 4. Check that the Data API is enabled for the project and that the migrated tables and functions are reachable with the intended roles. New Supabase projects no longer grant Data API access to new `public` tables automatically; these migrations include explicit grants for the required roles. RLS then limits which rows each signed-in user can access. See [the Supabase Data API change](https://supabase.com/changelog/45329-breaking-change-tables-not-exposed-to-data-and-graphql-api-automatically).
 5. Confirm that the private `session-videos` bucket exists and review the project's global upload size limit. The bucket allows 500 MiB, but Supabase Free caps the global per-file limit at 50 MB. See [LARGE_VIDEO_UPLOADS.md](LARGE_VIDEO_UPLOADS.md) before raising the frontend limit.
 
@@ -69,6 +69,10 @@ The goals form needs `supabase/migrations/20260928000200_session_goals.sql` on a
 ## Revision 4 capture migration
 
 The current web build also needs `supabase/migrations/20260929000100_capture_and_consent.sql` applied to the **selected PicklePro project** before it is deployed. It adds private player profiles, participant check-ins, recovery logs, reflections, actual start times, the drill context, and versioned upload consent. Uploads are rejected by Storage until the uploader confirms consent in the app. Apply this migration through the normal Supabase migration workflow after reviewing the target project and a dry run. If the legacy ITISDEV upgrade script is run again afterward, its upload policy retains the consent check.
+
+## Versioned analysis migration
+
+`supabase/migrations/20260929000200_versioned_analysis_runs.sql` adds run history and migrates existing reports into run 1. An in-progress reanalysis becomes a separate run while its earlier report remains active. A legacy job marked completed without a result is changed to failed with `missing_result`. Review those cases and back up the selected database before applying this data migration. After deployment, verify the session's active report, run history, a successful replacement, a failed replacement and cross-account access. The migration does not enable any revision-4 metric values by itself.
 
 The consent screen states the current retention behavior honestly: raw videos remain until session deletion. The 30-day automatic deletion process specified in revision 4 is not yet implemented. Do not present that period as an active retention guarantee.
 

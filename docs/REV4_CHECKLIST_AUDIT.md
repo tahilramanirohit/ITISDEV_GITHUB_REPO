@@ -1,10 +1,10 @@
 # Revision 4 checklist audit — 29 September 2026
 
-Source: `PicklePro_Requirements_and_Architecture_v4.pdf`, pages 4–8 (114 stable IDs). Checked against commit `03e5a99`, current local tests, and the linked `PickleProThesis-test` migration history. The PDF is a proposed specification, not an instruction to treat proposed thresholds or scope decisions as approved.
+Source: `PicklePro_Requirements_and_Architecture_v4.pdf`, pages 4–8 (114 stable IDs). Initial audit checked commit `03e5a99`; this document also reflects the local versioned-run upgrade of 29 September. The PDF is a proposed specification, not an instruction to treat proposed thresholds or scope decisions as approved.
 
 **Status key:** **Local** = behavior exists and has local code/test evidence, but is not a hosted release claim; **Partial** = some code exists but an acceptance condition is unmet; **Missing** = no matching workflow or data model; **Evidence** = implementation or evaluation cannot be verified without external input; **C2** or **Stretch** = planned later, not complete. A passing build is not proof of CV accuracy or a complete requirement.
 
-The linked test database currently has only migrations `20260924000100` and `20260924000200`. Migrations `20260928000100`, `20260928000200`, and `20260929000100` are pending there. The latest capture/profile UI therefore cannot be claimed to work on that hosted project yet.
+The linked test database was last confirmed to have only migrations `20260924000100` and `20260924000200`. Migrations `20260928000100`, `20260928000200`, `20260929000100` and `20260929000200` need hosted verification. The latest capture/profile and analysis-history UI therefore cannot be claimed to work on that hosted project yet.
 
 ## A. Accounts, profile and privacy
 
@@ -97,7 +97,7 @@ Evidence: `server/picklepro/pipeline.py`, `detection.py`, `shots.py`, `video_io.
 | F09 | C2 | Rally-end proximity is absent. |
 | F10 | Evidence | No manually labelled real-clip per-metric accuracy results. |
 | F11 | Partial | The UI suppresses unvalidated shots, heatmap and advice; full coverage/dependency gates for every metric and downstream use are absent. |
-| F12 | Missing | No per-metric valid/evaluable rally seconds, interpolation share or attributable-contact denominator. |
+| F12 | Partial | The new `metric_results` schema can hold valid/evaluable seconds and contact count, but the pipeline does not compute or populate them; interpolation share is absent. |
 
 ## G. Post-game report and dashboard
 
@@ -185,11 +185,11 @@ Evidence: `server/picklepro/pipeline.py`, `detection.py`, `shots.py`, `video_io.
 | ID | Status | Double-check finding |
 | --- | --- | --- |
 | P01 | Evidence | No 10-minute 1080p run on named hardware with separate queue and processing times. |
-| P02 | Partial | Atomic claim, heartbeat and stale-lease rejection exist; no per-attempt token, immutable run/versioned artifacts or atomic active-run switch. |
+| P02 | Partial | Atomic claim, heartbeat and stale-lease rejection exist. Separate run records preserve prior reports and successful publication switches the active run in one transaction. A per-attempt token and versioned private artifacts are still absent. |
 | P03 | Partial | Failures retry with backoff and error code, but default maximum is **three attempts**, versus the specified initial attempt plus one retry; stage is not tracked. |
 | P04 | Partial | Owner-only Storage and results plus five-minute raw-video URLs exist; no scoped share revocation or private run-specific artifact service. |
 | P05 | Partial | Responsive CSS and large-text control exist; phone-at-court usability has not been checked with people/devices. |
-| P06 | Partial | Result stores source hash, pipeline name/version and some calibration data; missing exact checkpoint hashes, code revision, metric definitions and full preprocessing/run config. |
+| P06 | Partial | Runs store params, source hash, pipeline version, schema version and a metric-definition version; exact checkpoint hashes, populated code revision and full preprocessing configuration are still missing. |
 | P07 | Evidence | Free-plan 50 MB limit is documented and enforced by default; storage plan for normal full-length clips has not been selected. |
 | P08 | Missing | No `video_expires_at`, keep choice or scheduled raw-video sweeper. `consent_records.retention_days = 30` records a proposed period despite no active 30-day deletion; UI correctly says deletion is manual. |
 
@@ -222,7 +222,7 @@ Evidence: `server/picklepro/pipeline.py`, `detection.py`, `shots.py`, `video_io.
 
 - `npm run check`: typecheck, 60 frontend tests, production build passed.
 - `server/.venv/bin/python -m pytest -q`: 100 tests passed; one Starlette/httpx deprecation warning.
-- `bash supabase/tests/run_local_rls_tests.sh`: passed against temporary PostgreSQL, including two-account isolation, profile privacy, consent-gated Storage, logging-only rejection, lease loss and duplicate finalize.
+- `bash supabase/tests/run_local_rls_tests.sh`: passed against temporary PostgreSQL, including two-account isolation, profile privacy, consent-gated Storage, logging-only rejection, lease loss, duplicate finalize, run history, active-run protection and legacy backfill.
 - Hosted `supabase migration list --linked`: only the two 24 September migrations are recorded remotely. Hosted Auth, Storage/TUS, new capture and profile flows, and recovery email remain to be checked after migration.
 
 Before claiming C1 alignment, prioritize: (1) hosted migration and access verification; (2) revision 4 rally/coverage metrics plus labelled real-footage gates; (3) baseline and numeric-goal data model; (4) share grants/peer notes and negative permission tests; (5) retention and deletion jobs; (6) buddy safety workflow; (7) named-worker runtime and ethics/manuscript evidence. Record the adviser decision on the C1/C2 split and buddy scope before fixing release dates.

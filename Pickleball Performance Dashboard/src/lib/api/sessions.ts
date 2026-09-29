@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   AnalysisJobRow,
   AnalysisResultRow,
+  AnalysisRunSummary,
   GoalValues,
   ImprovementGoal,
   PerformanceScope,
@@ -64,6 +65,12 @@ export async function getSessionBundle(sb: SupabaseClient, sessionId: string): P
     ? check<AnalysisResultRow | null>(await sb.from("analysis_results").select("*").eq("job_id", job.id).maybeSingle())
     : null;
   return { session, video, job, result };
+}
+
+export async function listAnalysisRuns(sb: SupabaseClient, sessionId: string): Promise<AnalysisRunSummary[]> {
+  return check<AnalysisRunSummary[]>(await sb.from("analysis_runs")
+    .select("id,session_id,run_number,status,result_status,pipeline_version,metric_definition_version,created_at,published_at")
+    .eq("session_id", sessionId).order("run_number", { ascending: false }).limit(20));
 }
 
 export type PreviousResult = { session: SessionRow; result: AnalysisResultV1 };
