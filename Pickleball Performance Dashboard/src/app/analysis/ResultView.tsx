@@ -72,6 +72,10 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack 
   const [jump, setJump] = useState<JumpRequest>(null);
   const shotMetric = result.metrics.shot_classification;
   const shotsValidated = shotMetric.validation === "evaluated_on_real_footage";
+  // Older saved reports included an experimental hit count in the summary.
+  // Keep that count hidden until the shot detector has real-footage evaluation.
+  const visibleMessage = shotsValidated ? result.message
+    : result.message.replace(/\s+\d+ hits? were estimated from the ball's flight\./, "");
   const shotCount = focusShots(result);
   const devMock = isDevMock(result);
   const heatValidated = devMock || heat.validation === "evaluated_on_real_footage";
@@ -95,7 +99,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack 
             {devMock ? "SAMPLE" : result.status === "ok" ? "RESULT" : "INSUFFICIENT DATA"}
           </Pill>
         </div>
-        <p className="text-base text-[#101827]">{devMock ? "This sample shows the kind of practice plan PicklePro can display. It is not feedback about your play." : result.message}</p>
+        <p className="text-base text-[#101827]">{devMock ? "This sample shows the kind of practice plan PicklePro can display. It is not feedback about your play." : visibleMessage}</p>
         {warnings.length > 0 && (
           <details className="mt-3">
             <summary className="cursor-pointer text-sm font-semibold" style={{ color: ORANGE_L }}>

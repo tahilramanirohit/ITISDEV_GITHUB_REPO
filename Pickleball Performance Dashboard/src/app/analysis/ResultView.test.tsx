@@ -137,7 +137,10 @@ describe("ResultView", () => {
         counts_by_type: {}, selected_player_counts_by_type: {},
       },
     };
+    result.message = "The selected player was tracked. 4 hits were estimated from the ball's flight.";
     render(<ResultView result={parseAnalysisResult(result)} videoUrl="/demo.mp4" />);
+    expect(screen.getByText("The selected player was tracked.")).toBeTruthy();
+    expect(screen.queryByText(/4 hits were estimated/)).toBeNull();
     expect(screen.getByText(/Shot labels are unavailable until the detector and rules pass evaluation/)).toBeTruthy();
     expect(screen.queryByText("Your shots")).toBeNull();
     expect(screen.queryByRole("button", { name: /Watch the/ })).toBeNull();

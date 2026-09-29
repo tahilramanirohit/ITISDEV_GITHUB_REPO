@@ -246,8 +246,6 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
         message = (f"PicklePro followed the selected player for {selection_summary.tracked_time_s:.0f} seconds "
                    f"({selection_summary.tracked_fraction:.0%} of the {reference:.0f}-second "
                    f"{'camera view' if selected_view_duration is not None else 'video'}) and mapped where they stood on the court.")
-        if shot_metric.value is not None:
-            message += f" {len(shot_metric.value.shots)} hits were estimated from the ball's flight."
     else:
         status = "insufficient_data"
         message = f"Detections are available for review, but court metrics were not produced: {heatmap_metric.reason}"

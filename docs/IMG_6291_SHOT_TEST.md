@@ -24,3 +24,13 @@ support a player baseline, skill label, success rate, forecast, recommendation,
 or buddy match. Those outputs stay unavailable on the real-results screen.
 Formal evaluation still needs independently annotated consented singles and
 doubles recordings with enough contacts and complete rallies.
+
+## Public-trial end-to-end check
+
+On 2026-09-29, the same clip was uploaded through the public trial as a private
+guest, without email sign-in. The worker downloaded it from private Storage and
+published a measured report. The site showed player tracking for 10 seconds
+(42% of the recording), video playback and overlays, an analysis history entry,
+and a raw-video deletion date 30 days later. The keep/resume-deletion control
+worked in both directions; automatic deletion was left active. Shot labels and
+shot statistics were unavailable on the public report pending validation.
