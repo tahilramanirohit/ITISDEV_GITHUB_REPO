@@ -107,8 +107,8 @@ def test_a_bounce_before_the_hit_prevents_a_volley():
 def test_ball_above_the_head_is_an_overhead():
     obs = path(
         (2.0, 3.0, (300, 280), (320, 100)),
-        (3.0, 4.2, (320, 100), (305, 185)),    # far return arrives above the near player's head
-        (4.2, 5.2, (305, 185), (325, 95)),     # near player hits it from above the box top
+        (3.0, 4.2, (320, 100), (305, 170)),    # far return arrives above the near player's head
+        (4.2, 5.2, (305, 170), (325, 95)),     # near player hits it from above the box top
         (5.2, 6.2, (325, 95), (300, 300)),
     )
     _, _, _, shots = run(obs, 9.0)

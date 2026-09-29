@@ -38,13 +38,13 @@ import numpy as np
 from .ball_track import BallObservation, BallTrack
 from .court import COURT_LENGTH_M, KITCHEN_DEPTH_M, NET_Y_M, CourtCalibration, foot_point
 
-RULE_VERSION = "shots-rules-0.1-unvalidated"
+RULE_VERSION = "shots-rules-0.2-unvalidated"
 SHOT_CLASSES = ("serve", "return", "overhead", "volley", "dink", "drive", "lob", "unclassified")
 CLASS_DEFINITIONS = {
     "serve": "First contact of a rally whose start was observed (ball out of play for at least 1 s before). "
              "With a court calibration the server must also be behind their baseline.",
     "return": "Second contact of a rally, by the other side, after the serve (the two-bounce rule means it follows a bounce).",
-    "overhead": "Contact with the ball at or above the top of the hitter's box (above head height). Not a serve.",
+    "overhead": "Contact with the ball clearly above the top of the hitter's box (above head height). Not a serve.",
     "volley": "Contact after an opponent's hit, with the ball continuously observed in between and no bounce candidate.",
     "dink": "Slow contact by a player at their kitchen line that lands (or is next played) in the opponent's kitchen area.",
     "drive": "Fast, flat ball after contact (image-space speed and arc proxies).",
@@ -56,12 +56,15 @@ RULES: Dict[str, float] = {
     "fit_window_s": 0.20,            # before/after windows for local velocity fits
     "min_fit_points": 3,
     "min_turn_deg": 45.0,            # direction change that counts as an event
+    "smooth_window_s": 0.25,         # a smooth curve over +/- this window means flight, not an event
+    "smooth_max_rms_h": 0.004,       # max RMS residual of that curve, as a share of frame height
     "min_event_speed_h": 0.15,       # frame heights / s; slower balls are not in flight
     "event_merge_s": 0.25,           # events closer than this are one event
     "max_occlusion_gap_s": 0.60,     # contact hidden behind the player
     "player_pad_x": 0.5,             # box widths added left/right when matching a contact
     "player_pad_top": 0.4,           # box heights added above the head (reach)
     "player_pad_bottom": 0.1,
+    "min_reach_h": 0.06,             # minimum reach around any box, as a share of frame height
     "player_match_s": 0.20,          # player boxes are sampled less often than the ball
     "bounce_min_dvy_h": 0.35,
     "same_side_bounce_s": 1.0,       # same-side "contact" this soon before another is a bounce        # drop in image-y velocity (frame heights / s)
@@ -71,7 +74,7 @@ RULES: Dict[str, float] = {
     "serve_max_depth_m": 0.30,
     "serve_start_window_s": 0.40,    # first contact this close to the rally start can be a serve       # server's foot at most this far inside the baseline
     "return_min_gap_s": 0.5,
-    "overhead_top_margin": 0.10,     # ball centre above box top + this share of box height
+    "overhead_top_margin": 0.15,     # ball centre at least this share of box height above the box top
     "volley_min_observed": 0.70,     # observed share of the interval since the opponent's hit
     "volley_max_gap_s": 0.15,
     "dink_max_speed_ph": 3.5,        # player heights / s, measured just after contact
@@ -142,6 +145,23 @@ def _fit(obs: Sequence[BallObservation], times: Sequence[float], t0: float, t1: 
     return vx, vy
 
 
+def _smooth_flight(obs: Sequence[BallObservation], times: Sequence[float], t: float, frame_h: float) -> bool:
+    """True when one smooth curve fits the ball path around ``t``: the top of an arc or a
+    ball curving in flight, not a hit or bounce (which leave a kink)."""
+    w = RULES["smooth_window_s"]
+    lo, hi = bisect.bisect_left(times, t - w), bisect.bisect_right(times, t + w)
+    pts = obs[lo:hi]
+    before = sum(p.t < t for p in pts)
+    if before < 3 or len(pts) - before < 3:
+        return False
+    ts = np.array([p.t for p in pts]) - t
+    worst = 0.0
+    for vals in (np.array([p.x for p in pts]), np.array([p.y for p in pts])):
+        fit = np.polyval(np.polyfit(ts, vals, 2), ts)
+        worst = max(worst, float(np.sqrt(np.mean((vals - fit) ** 2))))
+    return worst <= RULES["smooth_max_rms_h"] * frame_h
+
+
 def _angle(a: Tuple[float, float], b: Tuple[float, float]) -> float:
     na, nb = math.hypot(*a), math.hypot(*b)
     if na == 0 or nb == 0:
@@ -192,23 +212,32 @@ def _direction_side(vb, va, h: float) -> Optional[str]:
     return None
 
 
-def _within_reach(x: float, y: float, bbox: Sequence[int], scale: float = 1.0) -> Optional[float]:
+def _within_reach(x: float, y: float, bbox: Sequence[int], frame_h: float, scale: float = 1.0) -> Optional[float]:
     x1, y1, x2, y2 = bbox
     w, h = max(1, x2 - x1), max(1, y2 - y1)
-    if not (x1 - RULES["player_pad_x"] * w * scale <= x <= x2 + RULES["player_pad_x"] * w * scale
-            and y1 - RULES["player_pad_top"] * h * scale <= y <= y2 + RULES["player_pad_bottom"] * h):
+    # Far players are small in the image; give every box a minimum reach in pixels.
+    floor = RULES["min_reach_h"] * frame_h * scale
+    pad_x = max(RULES["player_pad_x"] * w * scale, floor)
+    pad_top = max(RULES["player_pad_top"] * h * scale, floor)
+    if not (x1 - pad_x <= x <= x2 + pad_x and y1 - pad_top <= y <= y2 + RULES["player_pad_bottom"] * h):
         return None
-    # Distance to the upper body, where the paddle usually meets the ball.
-    return math.hypot((x - (x1 + x2) / 2) / w, (y - (y1 + 0.35 * h)) / h)
+    # Pixel distance to the box itself (0 inside). Normalising by box size would let a
+    # player standing close to the camera, whose box fills much of the frame, claim
+    # hits made by a far player whose small box the ball actually touches.
+    return math.hypot(max(x1 - x, 0.0, x - x2), max(y1 - y, 0.0, y - y2))
+
+
+def _area(b: Sequence[int]) -> int:
+    return max(0, b[2] - b[0]) * max(0, b[3] - b[1])
 
 
 def _pick_hitter(x: float, y: float, detections: List[dict], sides: List[Optional[str]],
-                 want: Optional[str], scale: float = 1.0) -> Optional[Tuple[dict, Optional[str]]]:
+                 want: Optional[str], frame_h: float, scale: float = 1.0) -> Optional[Tuple[dict, Optional[str]]]:
     best, best_d = None, float("inf")
     for d, side in zip(detections, sides):
         if want is not None and side is not None and side != want:
             continue
-        dist = _within_reach(x, y, d["bbox"], scale)
+        dist = _within_reach(x, y, d["bbox"], frame_h, scale)
         if dist is not None and dist < best_d:
             best, best_d = (d, side), dist
     return best
@@ -231,10 +260,12 @@ def detect_events(track: BallTrack, players: Sequence[PlayerFrame],
         turn = _angle(vb, va)
         if turn < RULES["min_turn_deg"] / 3:
             return
+        if not occluded and _smooth_flight(obs, times, t, h):
+            return
         dets = _players_at(players, ptimes, t, RULES["player_match_s"])
         sides = _box_sides(dets, calibration)
         want = _direction_side(vb, va, h)
-        hit = _pick_hitter(x, y, dets, sides, want) if turn >= RULES["min_turn_deg"] else None
+        hit = _pick_hitter(x, y, dets, sides, want, h) if turn >= RULES["min_turn_deg"] else None
         if hit is not None:
             d, box_side = hit
             side, source = (want, "ball_direction") if want else (box_side, "court_calibration" if calibration else "image_layout")
@@ -242,7 +273,7 @@ def detect_events(track: BallTrack, players: Sequence[PlayerFrame],
                              side=side, side_source=source if side else None))
             return
         dvy = va[1] - vb[1]
-        anyone_close = _pick_hitter(x, y, dets, sides, None) is not None
+        anyone_close = _pick_hitter(x, y, dets, sides, None, h) is not None
         if not occluded and not anyone_close and dvy <= -RULES["bounce_min_dvy_h"] * h and vb[1] > -0.1 * h:
             raw.append(Event("bounce", t, x, y, turn, vb, va))
 
@@ -266,7 +297,7 @@ def detect_events(track: BallTrack, players: Sequence[PlayerFrame],
         dets = _players_at(players, ptimes, o.t, RULES["player_match_s"])
         sides = _box_sides(dets, calibration)
         want = "near" if va[1] < -0.1 * h else "far" if va[1] > 0.1 * h else None
-        hit = _pick_hitter(o.x, o.y, dets, sides, want, scale=1.5)
+        hit = _pick_hitter(o.x, o.y, dets, sides, want, h, scale=1.5)
         if hit is not None:
             d, box_side = hit
             side, source = (want, "ball_direction") if want else (box_side, "court_calibration" if calibration else "image_layout")
@@ -430,8 +461,8 @@ def classify_shots(track: BallTrack, rallies: Sequence[Rally], events: Sequence[
             # overhead
             if c.bbox is not None and not c.occluded:
                 top, box_h = c.bbox[1], max(1, c.bbox[3] - c.bbox[1])
-                if c.y <= top + RULES["overhead_top_margin"] * box_h:
-                    shots.append(shot("overhead", "weak", "Ball at or above the top of the hitter's box at contact."))
+                if c.y <= top - RULES["overhead_top_margin"] * box_h:
+                    shots.append(shot("overhead", "weak", "Ball clearly above the hitter's head at contact."))
                     continue
             # volley
             if prev is not None and k >= 2 and c.side is not None and prev.side is not None and c.side != prev.side:
