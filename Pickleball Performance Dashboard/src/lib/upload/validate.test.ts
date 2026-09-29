@@ -21,3 +21,8 @@ describe("validateVideoFile", () => {
 it("builds the storage path required by the database constraint", () => {
   expect(buildStoragePath("u", "s", "v", "mp4")).toBe("u/s/v.mp4");
 });
+
+it("accepts exactly 50 decimal MB and rejects 50 MiB on the Free plan", () => {
+  expect(validateVideoFile({ name: "clip.mov", size: 50_000_000, type: "video/quicktime" }, 50_000_000).ok).toBe(true);
+  expect(validateVideoFile({ name: "clip.mov", size: 50 * MB, type: "video/quicktime" }, 50_000_000).ok).toBe(false);
+});

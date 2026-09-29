@@ -190,7 +190,7 @@ Evidence: `server/picklepro/pipeline.py`, `detection.py`, `shots.py`, `video_io.
 | P04 | Partial | Owner-only Storage and results plus five-minute raw-video URLs exist; no scoped share revocation or private run-specific artifact service. |
 | P05 | Partial | Responsive CSS and large-text control exist; phone-at-court usability has not been checked with people/devices. |
 | P06 | Partial | Runs store params, source hash, pipeline version, schema version and a metric-definition version; exact checkpoint hashes, populated code revision and full preprocessing configuration are still missing. |
-| P07 | Evidence | Free-plan 50 MB limit is documented and enforced by default; storage plan for normal full-length clips has not been selected. |
+| P07 | Partial | The user chose a Free short-clip pilot. The app enforces exactly 50 decimal MB; the supplied 24.4-second sample is 27 MB, so ten minutes at that bitrate would exceed both the Free limit and current 500 MiB database/bucket caps. Full-length acceptance remains unmet. |
 | P08 | Missing | No `video_expires_at`, keep choice or scheduled raw-video sweeper. `consent_records.retention_days = 30` records a proposed period despite no active 30-day deletion; UI correctly says deletion is manual. |
 
 ## Q. Testing and evaluation

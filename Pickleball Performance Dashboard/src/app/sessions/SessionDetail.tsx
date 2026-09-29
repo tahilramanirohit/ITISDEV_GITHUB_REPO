@@ -309,7 +309,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
                 onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void onFileSelected(f); }} />
             </label>
             <p className="text-sm" style={{ color: WHITE_SUB }}>
-              MP4, MOV, WEBM or AVI up to {formatBytes(config.maxUploadBytes)}. If the recording is larger, trim it to the rally segment on your device before uploading. Keep the original at 720p, 30 fps or higher. Your upload is private.
+              MP4, MOV, WEBM or AVI up to {formatBytes(config.maxUploadBytes)}. On the Free plan, choose a short rally clip and trim it on your device before uploading. Keep the clip at 720p, 30 fps or higher. Full-match uploads are not supported yet. Your upload is private.
             </p>
             <details className="rounded-xl p-3" style={{ border: `1px solid ${BORDER}` }}>
               <summary className="text-sm font-semibold cursor-pointer" style={{ color: BLUE_SKY }}>Advanced analysis options</summary>

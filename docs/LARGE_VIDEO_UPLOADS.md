@@ -1,22 +1,30 @@
-# Larger match videos
+# Video storage decision — Free pilot
 
-The app currently allows 50 MiB in `VITE_MAX_UPLOAD_MB`. The private
-`session-videos` bucket and `video_assets.byte_size` constraint are already
-set to 500 MiB, and uploads use resumable chunks. The live project is recorded
-as a Supabase Free project. [Supabase's Storage limits](https://supabase.com/docs/guides/storage/uploads/file-limits)
-cap a Free project's global per-file size at 50 MB, regardless of a larger
-bucket setting. Raising the frontend number alone would allow the picker to
-start a video that Storage will reject.
+Decision recorded 29 September 2026: stay on Supabase Free for now and accept
+short rally clips only. Buddy matching can improve as the system is used; it is
+not a reason to change the storage plan. The app now caps uploads at exactly
+50,000,000 bytes, including when a larger `VITE_MAX_UPLOAD_MB` is configured.
+The private bucket and database still allow up to 500 MiB, but
+[Supabase's Free global limit](https://supabase.com/docs/guides/storage/uploads/file-limits)
+is 50 MB and takes precedence. Uploads use resumable chunks.
 
-For a paid Supabase project, set the project's **Global file size limit** in
-Storage Settings to at least 500 MiB. Confirm the private bucket still allows
-500 MiB, set `VITE_MAX_UPLOAD_MB=500` for the frontend build, redeploy or
-restart the frontend, and test a file above the old limit. The database and
-bucket would then still cap each video at 500 MiB. No database migration is
-needed for that target.
+The supplied `IMG_6291.MOV` is 26,969,939 bytes over 24.4 seconds at 1080p.
+At that average bitrate, 50 MB holds about 45 seconds and ten minutes would be
+about 663 MB. This is an estimate, not a guaranteed duration: bitrate varies
+by device and scene. The app must not promise a full ten-minute match upload on
+the Free plan. Keep useful rally segments at 720p and at least 30 fps; avoid
+aggressive compression that makes the ball or court lines hard to see.
 
-If staying on Free, the alternatives are a different video storage service or
-transcoding the source clip below the project's limit before upload. Both
-need an explicit product choice and end-to-end testing; neither is enabled by
-this repository. The local FastAPI prototype has its own separate 150 MB
-request limit and is not the hosted Sessions upload flow.
+The Free plan also includes 1 GB of total file storage
+([current pricing](https://supabase.com/pricing)). About 37 clips the size of
+the supplied sample would reach that amount before other files and overhead.
+Automatic raw-video expiry is not implemented, so review usage and delete
+unneeded sessions manually in the pilot. Do not state that footage is
+automatically removed after 30 days.
+
+If full-length uploads become necessary, revisit the plan. For this sample's
+bitrate, a ten-minute clip needs more than the existing 500 MiB bucket and
+database caps, so a paid-plan change alone would not be enough. The client,
+bucket, database and hosted global limits would all need coordinated changes
+and a large-file upload test. The local FastAPI prototype has its own separate
+150 MB request limit and is not the hosted Sessions upload flow.

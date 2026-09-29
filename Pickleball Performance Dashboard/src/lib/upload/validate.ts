@@ -9,9 +9,9 @@ const EXTENSIONS: Record<string, string> = {
 export type FileCheck = { ok: true; mimeType: string; extension: string } | { ok: false; error: string };
 
 export function formatBytes(n: number): string {
-  if (n >= 1024 * 1024 * 1024) return `${(n / 1024 / 1024 / 1024).toFixed(1)} GB`;
-  if (n >= 1024 * 1024) return `${(n / 1024 / 1024).toFixed(0)} MB`;
-  return `${Math.max(1, Math.round(n / 1024))} KB`;
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)} GB`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(0)} MB`;
+  return `${Math.max(1, Math.round(n / 1_000))} KB`;
 }
 
 export function validateVideoFile(file: { name: string; size: number; type: string }, maxBytes: number): FileCheck {

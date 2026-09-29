@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BUCKET_MAX_UPLOAD_MB, DEFAULT_MAX_UPLOAD_MB, getConfig } from "./config";
+import { DEFAULT_MAX_UPLOAD_MB, FREE_MAX_UPLOAD_MB, getConfig } from "./config";
 
 describe("getConfig", () => {
   it("disables sample-data preview and local prototype in production builds by default", () => {
@@ -26,9 +26,9 @@ describe("getConfig", () => {
       .toEqual({ url: "https://x.supabase.co", anonKey: "anon" });
   });
 
-  it("clamps the upload limit to the bucket limit", () => {
-    expect(getConfig({}).maxUploadBytes).toBe(DEFAULT_MAX_UPLOAD_MB * 1024 * 1024);
-    expect(getConfig({ VITE_MAX_UPLOAD_MB: "9999" }).maxUploadBytes).toBe(BUCKET_MAX_UPLOAD_MB * 1024 * 1024);
-    expect(getConfig({ VITE_MAX_UPLOAD_MB: "nope" }).maxUploadBytes).toBe(DEFAULT_MAX_UPLOAD_MB * 1024 * 1024);
+  it("enforces the Free plan's 50 decimal MB limit even with an oversized setting", () => {
+    expect(getConfig({}).maxUploadBytes).toBe(DEFAULT_MAX_UPLOAD_MB * 1_000_000);
+    expect(getConfig({ VITE_MAX_UPLOAD_MB: "9999" }).maxUploadBytes).toBe(FREE_MAX_UPLOAD_MB * 1_000_000);
+    expect(getConfig({ VITE_MAX_UPLOAD_MB: "nope" }).maxUploadBytes).toBe(DEFAULT_MAX_UPLOAD_MB * 1_000_000);
   });
 });

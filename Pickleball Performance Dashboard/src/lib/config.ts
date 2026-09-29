@@ -19,20 +19,20 @@ export type AppConfig = {
 
 type EnvLike = Record<string, string | boolean | undefined>;
 
-// Supabase Free plan's global upload limit. Raise VITE_MAX_UPLOAD_MB (up to the
-// bucket's 500 MiB) only after raising the project's storage limit.
+// This deployment stays on Supabase Free. Its global file limit is 50 decimal
+// MB, so never accept 50 MiB (52,428,800 bytes) in the browser.
 export const DEFAULT_MAX_UPLOAD_MB = 50;
-export const BUCKET_MAX_UPLOAD_MB = 500;
+export const FREE_MAX_UPLOAD_MB = 50;
 
 export function getConfig(env: EnvLike): AppConfig {
   const url = String(env.VITE_SUPABASE_URL ?? "").trim();
   const anonKey = String(env.VITE_SUPABASE_ANON_KEY ?? "").trim();
   const dev = env.DEV === true || env.DEV === "true";
   const mb = Number(env.VITE_MAX_UPLOAD_MB ?? DEFAULT_MAX_UPLOAD_MB);
-  const safeMb = Number.isFinite(mb) && mb > 0 ? Math.min(mb, BUCKET_MAX_UPLOAD_MB) : DEFAULT_MAX_UPLOAD_MB;
+  const safeMb = Number.isFinite(mb) && mb > 0 ? Math.min(mb, FREE_MAX_UPLOAD_MB) : DEFAULT_MAX_UPLOAD_MB;
   return {
     supabase: url && anonKey ? { url: url.replace(/\/+$/, ""), anonKey } : null,
-    maxUploadBytes: Math.round(safeMb * 1024 * 1024),
+    maxUploadBytes: Math.round(safeMb * 1_000_000),
     cvBackendUrl: String(env.VITE_CV_BACKEND_URL ?? "http://localhost:8000").replace(/\/+$/, ""),
     designPreviewEnabled: dev || env.VITE_ENABLE_DESIGN_PREVIEW === "true",
     localPrototypeEnabled: dev || env.VITE_ENABLE_LOCAL_PROTOTYPE === "true",
