@@ -741,13 +741,13 @@
       "status": "not_computed",
       "validation": "not_evaluated",
       "scope": "whole_clip",
-      "reason": "Rally segmentation is not implemented or validated. All metrics are whole-clip metrics."
+      "reason": "Rallies need ball tracking: configure a ball model on the worker (PICKLEPRO_BALL_WEIGHTS). All other metrics are whole-clip metrics."
     },
     "shot_classification": {
       "status": "not_computed",
       "validation": "not_evaluated",
       "scope": "whole_clip",
-      "reason": "Shot classification requires validated ball trajectories and a shot classifier; neither exists in this pipeline yet."
+      "reason": "Shot types need ball tracking: configure a ball model on the worker (PICKLEPRO_BALL_WEIGHTS) and a player model."
     }
   },
   "warnings": [

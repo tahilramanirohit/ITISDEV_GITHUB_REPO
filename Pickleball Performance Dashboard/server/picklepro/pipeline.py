@@ -10,6 +10,7 @@ from typing import Callable, Dict, List, Optional
 from . import PIPELINE_VERSION
 from .auto_court import detect_court
 from .ball_detection import BallDetector
+from .ball_track import BallObservation, build_ball_track
 from .contract import (
     RALLY_NOT_COMPUTED,
     SHOTS_NOT_COMPUTED,
@@ -27,17 +28,24 @@ from .contract import (
     PlayerSelectionSummary,
     PositionSnapshot,
     Provenance,
+    BounceCandidate,
+    RallyMetric,
+    RallySummary,
+    RallyValue,
+    ShotContact,
+    ShotMetric,
+    ShotValue,
     SourceInfo,
     TrackSummary,
     VideoInfo,
     ZoneOccupancyMetric,
     ZoneOccupancyValue,
-    not_computed,
     utc_now_iso,
 )
 from .court import COURT_MODEL, CourtCalibration
 from .detection import PlayerTracker
 from .positioning import positioning_patterns
+from . import shots as shot_rules
 from .spatial import Selection, dwell_heatmap, select_player, zone_occupancy
 from .video_io import ReadStats, iter_frames, probe, sha256_of
 
@@ -53,6 +61,7 @@ class AnalysisOptions:
     court_weights: Optional[str] = None
     ball_weights: Optional[str] = None
     target_fps: float = 10.0
+    ball_fps: float = 30.0          # ball tracking needs every frame of a 30 fps video
     max_seconds: Optional[float] = None
     calibration: Optional[CourtCalibration] = None
     selection: Optional[Selection] = None
@@ -92,6 +101,8 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
 
     tracker = PlayerTracker(detector=opts.detector, yolo_weights=opts.yolo_weights)
     ball_detector = BallDetector(opts.ball_weights) if opts.ball_weights else None
+    ball_stride = max(1, round(props.fps / opts.ball_fps)) if opts.ball_fps > 0 else stride
+    ball_obs: List[BallObservation] = []
     if not tracker.confidence_is_model_score:
         warnings.append(
             "Motion-based detection finds moving objects, not specifically people: stationary players can be "
@@ -108,13 +119,15 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
     expected = props.container_duration_s
 
     for index, ts, frame in iter_frames(path, props.fps, stats, max_seconds=opts.max_seconds):
-        if index % stride:
-            continue
-        detections = tracker.update(frame)
-        if ball_detector is not None:
+        if ball_detector is not None and index % ball_stride == 0:
             ball = ball_detector.detect(frame)
             if ball is not None:
                 ball_snapshots.append(BallSnapshot(time_seconds=round(ts, 3), **ball))
+                x1, y1, x2, y2 = ball["bbox"]
+                ball_obs.append(BallObservation(ts, (x1 + x2) / 2, (y1 + y2) / 2, ball["confidence"]))
+        if index % stride:
+            continue
+        detections = tracker.update(frame)
         per_frame.append(detections)
         times.append(ts)
         if detections:
@@ -171,6 +184,13 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
         per_frame, frame_interval_s, analyzed_duration, calibration, calibration_method, opts, warnings
     )
 
+    if ball_detector is None:
+        rally_metric = RallyMetric(status="not_computed", reason=RALLY_NOT_COMPUTED)
+        shot_metric = ShotMetric(status="not_computed", reason=SHOTS_NOT_COMPUTED)
+    else:
+        rally_metric, shot_metric = _shot_metrics(
+            ball_obs, per_frame, times, calibration, props, ball_stride / props.fps, start, end, opts)
+
     if frames_analyzed == 0:
         status, message = "insufficient_data", "No frames could be decoded from this video."
     elif frames_with_detections == 0:
@@ -178,7 +198,12 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
     elif heatmap_metric.status == "measured":
         status = "ok"
         message = (f"Court heatmap measured for the selected player over {selection_summary.tracked_time_s:.1f}s "
-                   f"of tracked time ({selection_summary.tracked_fraction:.0%} of the analyzed {analyzed_duration:.1f}s).")
+                   f"of tracked time ({selection_summary.tracked_fraction:.0%} of the analyzed {analyzed_duration:.1f}s)."
+                   + _shot_note(shot_metric, rally_metric))
+    elif shot_metric.value is not None:
+        status = "ok"
+        message = (_shot_note(shot_metric, rally_metric).strip()
+                   + f" Court metrics were not produced: {heatmap_metric.reason}")
     else:
         status = "insufficient_data"
         message = f"Detections are available for review, but court metrics were not produced: {heatmap_metric.reason}"
@@ -213,8 +238,8 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
             court_heatmap=heatmap_metric,
             zone_occupancy=zone_metric,
             positioning=positioning_metric,
-            rally_segmentation=not_computed(RALLY_NOT_COMPUTED),
-            shot_classification=not_computed(SHOTS_NOT_COMPUTED),
+            rally_segmentation=rally_metric,
+            shot_classification=shot_metric,
         ),
         warnings=warnings,
     )
@@ -286,3 +311,90 @@ def _court_metrics(per_frame, frame_interval_s, analyzed_duration, calibration, 
     ) if positions else PositioningMetric(
         status="insufficient_data", reason="The selected player was never mapped inside their half of the court.")
     return heatmap, zones, positioning, selection_summary, calib_summary
+
+
+def _shot_note(shot_metric: ShotMetric, rally_metric: RallyMetric) -> str:
+    if shot_metric.value is None or rally_metric.value is None:
+        return ""
+    n = len(shot_metric.value.contacts)
+    classified = n - shot_metric.value.counts.get("unclassified", 0)
+    return (f" Experimental shot types: {n} contacts in {len(rally_metric.value.rallies)} rallies, "
+            f"{classified} with a shot type.")
+
+
+RALLY_DEFINITION = (
+    "A run of ball activity with no gap longer than {gap:g} s. Complete only when the ball was seen out of play "
+    "for at least {edge:g} s inside the clip before and after it; rallies cut by the clip are truncated."
+)
+SHOT_REASON = (
+    "Rule-based shot types ({version}) from a single fixed camera. Speed and arc are image-space proxies. "
+    "Not yet compared with hand-labelled footage, so treat every count as unvalidated."
+)
+
+
+def _shot_metrics(ball_obs, per_frame, times, calibration, props, ball_interval_s, start, end,
+                  opts: AnalysisOptions):
+    track = build_ball_track(ball_obs, props.height, ball_interval_s)
+    players = [shot_rules.PlayerFrame(t, dets) for t, dets in zip(times, per_frame)]
+    events = shot_rules.detect_events(track, players, calibration)
+    rallies = shot_rules.segment_rallies(track, events, start, end)
+    if not rallies:
+        reason = ("No rally was found: the ball was not tracked in play next to a player. "
+                  f"The ball was observed for {track.observed_s:.1f}s of the clip.")
+        return (RallyMetric(status="insufficient_data", reason=reason),
+                ShotMetric(status="insufficient_data", reason=reason))
+
+    complete = [r for r in rallies if r.complete]
+    durations = [r.end_s - r.start_s for r in complete]
+    rally_metric = RallyMetric(
+        status="experimental", validation="not_evaluated",
+        reason="Rally boundaries come from ball visibility and have not been compared with labelled footage.",
+        value=RallyValue(
+            definition=RALLY_DEFINITION.format(gap=shot_rules.RULES["rally_gap_s"],
+                                               edge=shot_rules.RULES["rally_edge_margin_s"]),
+            rallies=[RallySummary(index=r.index, start_s=round(r.start_s, 3), end_s=round(r.end_s, 3),
+                                  complete=r.complete, contact_count=len(r.contacts),
+                                  ball_observed_fraction=round(r.observed_fraction, 3)) for r in rallies],
+            complete_count=len(complete), truncated_count=len(rallies) - len(complete),
+            mean_complete_duration_s=round(sum(durations) / len(durations), 3) if durations else None,
+            max_complete_duration_s=round(max(durations), 3) if durations else None,
+        ),
+    )
+
+    shots = shot_rules.classify_shots(track, rallies, events)
+    sel = opts.selection
+    if sel is not None and sel.method == "track_id":
+        label = f"track #{sel.track_id}"
+        mine = [s for s in shots if s.contact.track_id == sel.track_id]
+    elif sel is not None and sel.method == "court_half":
+        label = f"{sel.court_half} side (includes a doubles partner)"
+        mine = [s for s in shots if s.contact.side == sel.court_half]
+    else:
+        label, mine = None, []
+    summary = shot_rules.summarize(shots)
+    shot_metric = ShotMetric(
+        status="experimental", validation="not_evaluated",
+        reason=SHOT_REASON.format(version=shot_rules.RULE_VERSION),
+        value=ShotValue(
+            rule_version=shot_rules.RULE_VERSION,
+            class_definitions=dict(shot_rules.CLASS_DEFINITIONS),
+            precedence=list(shot_rules.SHOT_CLASSES),
+            counts=summary["counts"], shares=summary["shares"],
+            selected_player=label,
+            selected_player_counts=shot_rules.summarize(mine)["counts"] if label else None,
+            contacts=[ShotContact(
+                time_seconds=round(s.contact.t, 3), rally_index=s.rally_index, shot_class=s.shot_class,
+                evidence=s.evidence, reason=s.reason, side=s.contact.side, side_source=s.contact.side_source,
+                track_id=s.contact.track_id, ball_px=[round(s.contact.x, 1), round(s.contact.y, 1)],
+                ball_hidden_at_contact=s.contact.occluded,
+                speed_player_heights_per_s=s.speed_ph, arc_ratio=s.arc) for s in shots],
+            bounce_candidates=[BounceCandidate(
+                time_seconds=round(e.t, 3), ball_px=[round(e.x, 1), round(e.y, 1)],
+                court_xy_m=[round(v, 2) for v in e.court_xy_m] if e.court_xy_m else None)
+                for e in events if e.kind == "bounce"],
+            ball_observed_s=round(track.observed_s, 3),
+            ball_interpolated_s=round(track.interpolated_s, 3),
+            ball_detections_rejected=track.rejected + track.stationary,
+        ),
+    )
+    return rally_metric, shot_metric

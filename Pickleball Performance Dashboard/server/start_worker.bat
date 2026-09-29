@@ -33,6 +33,34 @@ if not exist ".venv\installed.txt" (
   echo ok> ".venv\installed.txt"
 )
 
+rem Ball, player and court models: needed for rallies and shot types.
+rem Set SKIP_MODELS=1 before running to use the basic motion detector only.
+if "%SKIP_MODELS%"=="1" goto :models_done
+if exist ".venv\models_installed.txt" goto :models_done
+echo.
+echo Installing the model runtime: PyTorch for NVIDIA GPUs plus Ultralytics.
+echo This is a large download, about 3 GB, and only happens once.
+for %%C in (cu130 cu128 cu126) do (
+  ".venv\Scripts\python.exe" -m pip install torch torchvision --index-url https://download.pytorch.org/whl/%%C && goto :torch_ok
+)
+echo No NVIDIA build of PyTorch could be installed; installing the standard build, which runs on the CPU and is slower.
+".venv\Scripts\python.exe" -m pip install torch torchvision
+if errorlevel 1 goto :models_failed
+:torch_ok
+".venv\Scripts\python.exe" -m pip install -r requirements-yolo.txt
+if errorlevel 1 goto :models_failed
+".venv\Scripts\python.exe" -m picklepro.fetch_models
+if errorlevel 1 goto :models_failed
+echo ok> ".venv\models_installed.txt"
+goto :models_done
+:models_failed
+echo.
+echo Setting up the models failed; see the error above. Run this again to retry,
+echo or set SKIP_MODELS=1 to start without ball tracking.
+goto :end
+:models_done
+".venv\Scripts\python.exe" -c "import torch; print('GPU for analysis:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'none, using the CPU')" 2>nul
+
 if not exist ".env" (
   copy ".env.example" ".env" >nul
   echo.

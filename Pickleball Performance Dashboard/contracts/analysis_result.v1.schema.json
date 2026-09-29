@@ -31,6 +31,47 @@
       "title": "BallSnapshot",
       "type": "object"
     },
+    "BounceCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "time_seconds": {
+          "title": "Time Seconds",
+          "type": "number"
+        },
+        "ball_px": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Ball Px",
+          "type": "array"
+        },
+        "court_xy_m": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Court Xy M"
+        }
+      },
+      "required": [
+        "time_seconds",
+        "ball_px"
+      ],
+      "title": "BounceCandidate",
+      "type": "object"
+    },
     "CalibrationSummary": {
       "additionalProperties": false,
       "properties": {
@@ -304,55 +345,6 @@
       "title": "HeatmapValue",
       "type": "object"
     },
-    "Metric": {
-      "additionalProperties": false,
-      "properties": {
-        "status": {
-          "enum": [
-            "measured",
-            "insufficient_data",
-            "not_computed",
-            "experimental"
-          ],
-          "title": "Status",
-          "type": "string"
-        },
-        "validation": {
-          "default": "not_evaluated",
-          "enum": [
-            "not_evaluated",
-            "synthetic_only",
-            "evaluated_on_real_footage"
-          ],
-          "title": "Validation",
-          "type": "string"
-        },
-        "scope": {
-          "const": "whole_clip",
-          "default": "whole_clip",
-          "title": "Scope",
-          "type": "string"
-        },
-        "reason": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Why the metric is missing, partial, or experimental.",
-          "title": "Reason"
-        }
-      },
-      "required": [
-        "status"
-      ],
-      "title": "Metric",
-      "type": "object"
-    },
     "Metrics": {
       "additionalProperties": false,
       "properties": {
@@ -366,10 +358,10 @@
           "$ref": "#/$defs/PositioningMetric"
         },
         "rally_segmentation": {
-          "$ref": "#/$defs/Metric"
+          "$ref": "#/$defs/RallyMetric"
         },
         "shot_classification": {
-          "$ref": "#/$defs/Metric"
+          "$ref": "#/$defs/ShotMetric"
         }
       },
       "required": [
@@ -714,6 +706,476 @@
         "source"
       ],
       "title": "Provenance",
+      "type": "object"
+    },
+    "RallyMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "measured",
+            "insufficient_data",
+            "not_computed",
+            "experimental"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "validation": {
+          "default": "not_evaluated",
+          "enum": [
+            "not_evaluated",
+            "synthetic_only",
+            "evaluated_on_real_footage"
+          ],
+          "title": "Validation",
+          "type": "string"
+        },
+        "scope": {
+          "const": "whole_clip",
+          "default": "whole_clip",
+          "title": "Scope",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Why the metric is missing, partial, or experimental.",
+          "title": "Reason"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RallyValue"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "RallyMetric",
+      "type": "object"
+    },
+    "RallySummary": {
+      "additionalProperties": false,
+      "properties": {
+        "index": {
+          "title": "Index",
+          "type": "integer"
+        },
+        "start_s": {
+          "title": "Start S",
+          "type": "number"
+        },
+        "end_s": {
+          "title": "End S",
+          "type": "number"
+        },
+        "complete": {
+          "description": "Ball absence was observed before and after the rally inside the clip.",
+          "title": "Complete",
+          "type": "boolean"
+        },
+        "contact_count": {
+          "title": "Contact Count",
+          "type": "integer"
+        },
+        "ball_observed_fraction": {
+          "description": "Share of the rally's duration with an observed ball.",
+          "title": "Ball Observed Fraction",
+          "type": "number"
+        }
+      },
+      "required": [
+        "index",
+        "start_s",
+        "end_s",
+        "complete",
+        "contact_count",
+        "ball_observed_fraction"
+      ],
+      "title": "RallySummary",
+      "type": "object"
+    },
+    "RallyValue": {
+      "additionalProperties": false,
+      "properties": {
+        "definition": {
+          "title": "Definition",
+          "type": "string"
+        },
+        "rallies": {
+          "items": {
+            "$ref": "#/$defs/RallySummary"
+          },
+          "title": "Rallies",
+          "type": "array"
+        },
+        "complete_count": {
+          "title": "Complete Count",
+          "type": "integer"
+        },
+        "truncated_count": {
+          "title": "Truncated Count",
+          "type": "integer"
+        },
+        "mean_complete_duration_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mean Complete Duration S"
+        },
+        "max_complete_duration_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Complete Duration S"
+        }
+      },
+      "required": [
+        "definition",
+        "rallies",
+        "complete_count",
+        "truncated_count"
+      ],
+      "title": "RallyValue",
+      "type": "object"
+    },
+    "ShotContact": {
+      "additionalProperties": false,
+      "properties": {
+        "time_seconds": {
+          "title": "Time Seconds",
+          "type": "number"
+        },
+        "rally_index": {
+          "title": "Rally Index",
+          "type": "integer"
+        },
+        "shot_class": {
+          "enum": [
+            "serve",
+            "return",
+            "overhead",
+            "volley",
+            "dink",
+            "drive",
+            "lob",
+            "unclassified"
+          ],
+          "title": "Shot Class",
+          "type": "string"
+        },
+        "evidence": {
+          "description": "Rule evidence, not an accuracy probability.",
+          "enum": [
+            "strong",
+            "weak"
+          ],
+          "title": "Evidence",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "side": {
+          "anyOf": [
+            {
+              "enum": [
+                "near",
+                "far"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Side"
+        },
+        "side_source": {
+          "anyOf": [
+            {
+              "enum": [
+                "ball_direction",
+                "court_calibration",
+                "image_layout"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Side Source"
+        },
+        "track_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Track Id"
+        },
+        "ball_px": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Ball Px",
+          "type": "array"
+        },
+        "ball_hidden_at_contact": {
+          "description": "The contact was inferred across a short gap in ball detections.",
+          "title": "Ball Hidden At Contact",
+          "type": "boolean"
+        },
+        "speed_player_heights_per_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Image speed after contact divided by the hitter's box height. A proxy, not km/h.",
+          "title": "Speed Player Heights Per S"
+        },
+        "arc_ratio": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Image-space rise of the ball path above its chord / chord length. Not ball height.",
+          "title": "Arc Ratio"
+        }
+      },
+      "required": [
+        "time_seconds",
+        "rally_index",
+        "shot_class",
+        "evidence",
+        "reason",
+        "ball_px",
+        "ball_hidden_at_contact"
+      ],
+      "title": "ShotContact",
+      "type": "object"
+    },
+    "ShotMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "measured",
+            "insufficient_data",
+            "not_computed",
+            "experimental"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "validation": {
+          "default": "not_evaluated",
+          "enum": [
+            "not_evaluated",
+            "synthetic_only",
+            "evaluated_on_real_footage"
+          ],
+          "title": "Validation",
+          "type": "string"
+        },
+        "scope": {
+          "const": "whole_clip",
+          "default": "whole_clip",
+          "title": "Scope",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Why the metric is missing, partial, or experimental.",
+          "title": "Reason"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ShotValue"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "ShotMetric",
+      "type": "object"
+    },
+    "ShotValue": {
+      "additionalProperties": false,
+      "properties": {
+        "rule_version": {
+          "title": "Rule Version",
+          "type": "string"
+        },
+        "class_definitions": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Class Definitions",
+          "type": "object"
+        },
+        "precedence": {
+          "items": {
+            "enum": [
+              "serve",
+              "return",
+              "overhead",
+              "volley",
+              "dink",
+              "drive",
+              "lob",
+              "unclassified"
+            ],
+            "type": "string"
+          },
+          "title": "Precedence",
+          "type": "array"
+        },
+        "counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Counts",
+          "type": "object"
+        },
+        "shares": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Share of all detected contacts; unclassified is in the denominator.",
+          "title": "Shares",
+          "type": "object"
+        },
+        "selected_player": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Which contacts selected_player_counts covers.",
+          "title": "Selected Player"
+        },
+        "selected_player_counts": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Selected Player Counts"
+        },
+        "contacts": {
+          "items": {
+            "$ref": "#/$defs/ShotContact"
+          },
+          "title": "Contacts",
+          "type": "array"
+        },
+        "bounce_candidates": {
+          "items": {
+            "$ref": "#/$defs/BounceCandidate"
+          },
+          "title": "Bounce Candidates",
+          "type": "array"
+        },
+        "ball_observed_s": {
+          "title": "Ball Observed S",
+          "type": "number"
+        },
+        "ball_interpolated_s": {
+          "title": "Ball Interpolated S",
+          "type": "number"
+        },
+        "ball_detections_rejected": {
+          "description": "Isolated or stationary ball detections dropped as not in play.",
+          "title": "Ball Detections Rejected",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "rule_version",
+        "class_definitions",
+        "precedence",
+        "counts",
+        "shares",
+        "contacts",
+        "bounce_candidates",
+        "ball_observed_s",
+        "ball_interpolated_s",
+        "ball_detections_rejected"
+      ],
+      "title": "ShotValue",
       "type": "object"
     },
     "SourceInfo": {

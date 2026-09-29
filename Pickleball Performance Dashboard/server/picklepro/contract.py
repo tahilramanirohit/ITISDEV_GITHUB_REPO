@@ -181,14 +181,82 @@ class PositioningMetric(Metric):
     value: Optional[PositioningValue] = None
 
 
+ShotClass = Literal["serve", "return", "overhead", "volley", "dink", "drive", "lob", "unclassified"]
+CourtSide = Literal["near", "far"]
+
+
+class RallySummary(_Model):
+    index: int
+    start_s: float
+    end_s: float
+    complete: bool = Field(description="Ball absence was observed before and after the rally inside the clip.")
+    contact_count: int
+    ball_observed_fraction: float = Field(description="Share of the rally's duration with an observed ball.")
+
+
+class RallyValue(_Model):
+    definition: str
+    rallies: List[RallySummary]
+    complete_count: int
+    truncated_count: int
+    mean_complete_duration_s: Optional[float] = None
+    max_complete_duration_s: Optional[float] = None
+
+
+class RallyMetric(Metric):
+    value: Optional[RallyValue] = None
+
+
+class ShotContact(_Model):
+    time_seconds: float
+    rally_index: int
+    shot_class: ShotClass
+    evidence: Literal["strong", "weak"] = Field(description="Rule evidence, not an accuracy probability.")
+    reason: str
+    side: Optional[CourtSide] = None
+    side_source: Optional[Literal["ball_direction", "court_calibration", "image_layout"]] = None
+    track_id: Optional[int] = None
+    ball_px: List[float] = Field(min_length=2, max_length=2)
+    ball_hidden_at_contact: bool = Field(description="The contact was inferred across a short gap in ball detections.")
+    speed_player_heights_per_s: Optional[float] = Field(
+        None, description="Image speed after contact divided by the hitter's box height. A proxy, not km/h.")
+    arc_ratio: Optional[float] = Field(
+        None, description="Image-space rise of the ball path above its chord / chord length. Not ball height.")
+
+
+class BounceCandidate(_Model):
+    time_seconds: float
+    ball_px: List[float] = Field(min_length=2, max_length=2)
+    court_xy_m: Optional[List[float]] = Field(None, min_length=2, max_length=2)
+
+
+class ShotValue(_Model):
+    rule_version: str
+    class_definitions: Dict[str, str]
+    precedence: List[ShotClass]
+    counts: Dict[str, int]
+    shares: Dict[str, float] = Field(description="Share of all detected contacts; unclassified is in the denominator.")
+    selected_player: Optional[str] = Field(None, description="Which contacts selected_player_counts covers.")
+    selected_player_counts: Optional[Dict[str, int]] = None
+    contacts: List[ShotContact]
+    bounce_candidates: List[BounceCandidate]
+    ball_observed_s: float
+    ball_interpolated_s: float
+    ball_detections_rejected: int = Field(description="Isolated or stationary ball detections dropped as not in play.")
+
+
+class ShotMetric(Metric):
+    value: Optional[ShotValue] = None
+
+
 class Metrics(_Model):
     court_heatmap: CourtHeatmapMetric
     zone_occupancy: ZoneOccupancyMetric
     # Defaulted so results stored before this metric existed still validate.
     positioning: PositioningMetric = Field(default_factory=lambda: PositioningMetric(
         status="not_computed", reason=POSITIONING_NOT_COMPUTED))
-    rally_segmentation: Metric
-    shot_classification: Metric
+    rally_segmentation: RallyMetric
+    shot_classification: ShotMetric
 
 
 class AnalysisResultV1(_Model):
@@ -219,10 +287,11 @@ def not_computed(reason: str) -> Metric:
 # Reasons for metrics this pipeline deliberately does not produce yet.
 POSITIONING_NOT_COMPUTED = "Positioning patterns were not computed for this result."
 RALLY_NOT_COMPUTED = (
-    "Rally segmentation is not implemented or validated. All metrics are whole-clip metrics."
+    "Rallies need ball tracking: configure a ball model on the worker (PICKLEPRO_BALL_WEIGHTS). "
+    "All other metrics are whole-clip metrics."
 )
 SHOTS_NOT_COMPUTED = (
-    "Shot classification requires validated ball trajectories and a shot classifier; neither exists in this pipeline yet."
+    "Shot types need ball tracking: configure a ball model on the worker (PICKLEPRO_BALL_WEIGHTS) and a player model."
 )
 
 

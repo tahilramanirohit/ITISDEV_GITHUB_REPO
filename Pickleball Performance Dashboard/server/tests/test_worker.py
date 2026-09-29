@@ -153,3 +153,23 @@ def test_retry_backoff_respects_available_at():
 def test_bad_selection_is_rejected(sel):
     with pytest.raises(ValueError):
         runner.options_from_params({"selection": sel}, _cfg(), None)
+
+
+def test_worker_uses_downloaded_models_only_when_none_are_configured(tmp_path, monkeypatch):
+    from argparse import Namespace
+
+    import picklepro.worker.__main__ as worker_main
+
+    (tmp_path / "ball,person,paddle.pt").write_bytes(b"x")
+    (tmp_path / "court_best.pt").write_bytes(b"x")
+    monkeypatch.setattr(worker_main, "MODELS_DIR", tmp_path)
+    monkeypatch.delenv("PICKLEPRO_DETECTOR", raising=False)
+    args = Namespace(ball_weights=None, yolo_weights=None, court_weights=None, detector="motion")
+    worker_main._use_downloaded_models(args)
+    assert args.detector == "yolo"
+    assert args.ball_weights == args.yolo_weights == str(tmp_path / "ball,person,paddle.pt")
+    assert args.court_weights == str(tmp_path / "court_best.pt")
+
+    configured = Namespace(ball_weights="mine.pt", yolo_weights=None, court_weights="court.pt", detector="motion")
+    worker_main._use_downloaded_models(configured)
+    assert (configured.ball_weights, configured.court_weights, configured.detector) == ("mine.pt", "court.pt", "motion")

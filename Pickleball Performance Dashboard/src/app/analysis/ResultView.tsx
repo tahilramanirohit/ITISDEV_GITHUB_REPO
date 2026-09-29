@@ -1,3 +1,4 @@
+import { useCallback, useState } from "react";
 import { AlertTriangle, FlaskConical, Info } from "lucide-react";
 import {
   METRIC_KEYS, METRIC_LABELS, VALIDATION_LABELS,
@@ -8,6 +9,7 @@ import { Card, Notice, Pill, WidgetHeader } from "../shell/primitives";
 import { CourtDwellHeatmap } from "./CourtDwellHeatmap";
 import { CoachingPanel, type PreviousSession } from "./CoachingPanel";
 import { VideoOverlayPlayer } from "./VideoOverlayPlayer";
+import { ShotsPanel } from "./ShotsPanel";
 
 const STATUS_COLORS: Record<MetricStatus, string> = {
   measured: NEON,
@@ -61,6 +63,8 @@ export function ResultView({ result, videoUrl, previous }: {
   const heat = result.metrics.court_heatmap;
   const zones = result.metrics.zone_occupancy;
   const sel = result.player_selection;
+  const [seek, setSeek] = useState<{ t: number; n: number } | null>(null);
+  const seekTo = useCallback((t: number) => setSeek((prev) => ({ t, n: (prev?.n ?? 0) + 1 })), []);
 
   return (
     <div className="space-y-4" data-testid="result-view">
@@ -102,10 +106,13 @@ export function ResultView({ result, videoUrl, previous }: {
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
         <div className="space-y-4">
           <VideoOverlayPlayer src={videoUrl} positions={result.player_positions} ballPositions={result.ball_positions ?? []}
-            selectedTrackId={sel?.method === "track_id" ? sel.track_id : null} />
+            selectedTrackId={sel?.method === "track_id" ? sel.track_id : null}
+            contacts={result.metrics.shot_classification.value?.contacts ?? []} seek={seek} />
+
+          <ShotsPanel result={result} onSeek={seekTo} />
 
           <Card>
-            <WidgetHeader title="Metrics" subtitle="Each metric reports its own status. Nothing here is a rally-level or shot-level finding." />
+            <WidgetHeader title="Metrics" subtitle="Each metric reports its own status and how far its accuracy has been checked." />
             <ul className="space-y-2">
               {METRIC_KEYS.map((key: MetricKey) => {
                 const m = result.metrics[key];

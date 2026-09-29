@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
-import type { BallSnapshot, PositionSnapshot } from "../../lib/analysis/contract";
+import type { BallSnapshot, PositionSnapshot, ShotContact } from "../../lib/analysis/contract";
 import { WHITE_DIM } from "../theme";
 
 function nearest<T extends { time_seconds: number }>(items: T[], time: number): T | null {
@@ -26,11 +26,16 @@ export function VideoOverlayPlayer({
   positions,
   ballPositions = [],
   selectedTrackId,
+  contacts = [],
+  seek = null,
 }: {
   src: string | null;
   positions: PositionSnapshot[];
   ballPositions?: BallSnapshot[];
   selectedTrackId?: number | null;
+  contacts?: ShotContact[];
+  /** Jump request; `n` changes on every request so the same time can be sought twice. */
+  seek?: { t: number; n: number } | null;
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -48,7 +53,7 @@ export function VideoOverlayPlayer({
       canvas.height = video.clientHeight;
     }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if ((!positions.length && !ballPositions.length) || !video.videoWidth) return;
+    if ((!positions.length && !ballPositions.length && !contacts.length) || !video.videoWidth) return;
 
     // object-contain letterboxing: compute the drawn video rectangle.
     const scale = Math.min(canvas.width / video.videoWidth, canvas.height / video.videoHeight);
@@ -82,7 +87,27 @@ export function VideoOverlayPlayer({
       ctx.strokeRect(offX + x1 * scale, offY + y1 * scale,
         Math.max(4, (x2 - x1) * scale), Math.max(4, (y2 - y1) * scale));
     }
-  }, [positions, ballPositions, selectedTrackId]);
+    // Shot label next to the ball for half a second around each detected hit.
+    for (const c of contacts) {
+      if (Math.abs(c.time_seconds - t) > 0.5) continue;
+      const label = c.shot_class.toUpperCase();
+      const lx = offX + c.ball_px[0] * scale + 10;
+      const ly = offY + c.ball_px[1] * scale - 10;
+      ctx.font = "bold 13px Inter, sans-serif";
+      ctx.fillStyle = "rgba(7,26,62,0.85)";
+      ctx.fillRect(lx - 4, ly - 14, ctx.measureText(label).width + 8, 18);
+      ctx.fillStyle = c.shot_class === "unclassified" ? "#cbd5e1" : "#b8f523";
+      ctx.fillText(label, lx, ly);
+    }
+  }, [positions, ballPositions, selectedTrackId, contacts]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!seek || !video) return;
+    video.currentTime = Math.max(0, seek.t - 1.0);
+    video.scrollIntoView?.({ behavior: "smooth", block: "center" });
+    void video.play?.()?.catch(() => undefined);
+  }, [seek]);
 
   // Request Animation Frame loop for smooth box animation while video plays
   useEffect(() => {

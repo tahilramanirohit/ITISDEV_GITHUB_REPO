@@ -60,6 +60,57 @@ export type PositioningValue = {
   distance_covered_m: number;
 };
 
+export const SHOT_CLASSES = ["serve", "return", "overhead", "volley", "dink", "drive", "lob", "unclassified"] as const;
+export type ShotClass = (typeof SHOT_CLASSES)[number];
+
+export type RallySummary = {
+  index: number;
+  start_s: number;
+  end_s: number;
+  complete: boolean;
+  contact_count: number;
+  ball_observed_fraction: number;
+};
+
+export type RallyValue = {
+  definition: string;
+  rallies: RallySummary[];
+  complete_count: number;
+  truncated_count: number;
+  mean_complete_duration_s: number | null;
+  max_complete_duration_s: number | null;
+};
+
+export type ShotContact = {
+  time_seconds: number;
+  rally_index: number;
+  shot_class: ShotClass;
+  evidence: "strong" | "weak";
+  reason: string;
+  side: "near" | "far" | null;
+  side_source: "ball_direction" | "court_calibration" | "image_layout" | null;
+  track_id: number | null;
+  ball_px: [number, number];
+  ball_hidden_at_contact: boolean;
+  speed_player_heights_per_s: number | null;
+  arc_ratio: number | null;
+};
+
+export type ShotValue = {
+  rule_version: string;
+  class_definitions: Record<string, string>;
+  precedence: ShotClass[];
+  counts: Record<ShotClass, number>;
+  shares: Record<ShotClass, number>;
+  selected_player: string | null;
+  selected_player_counts: Record<ShotClass, number> | null;
+  contacts: ShotContact[];
+  bounce_candidates: { time_seconds: number; ball_px: [number, number]; court_xy_m: [number, number] | null }[];
+  ball_observed_s: number;
+  ball_interpolated_s: number;
+  ball_detections_rejected: number;
+};
+
 export type PlayerBox = { track_id: number | null; bbox: [number, number, number, number]; confidence: number | null };
 export type PositionSnapshot = { time_seconds: number; players: PlayerBox[] };
 export type BallSnapshot = { time_seconds: number; bbox: [number, number, number, number]; confidence: number };
@@ -119,8 +170,8 @@ export type AnalysisResultV1 = {
     court_heatmap: Metric & { value: HeatmapValue | null };
     zone_occupancy: Metric & { value: ZoneOccupancyValue | null };
     positioning: Metric & { value: PositioningValue | null };
-    rally_segmentation: Metric;
-    shot_classification: Metric;
+    rally_segmentation: Metric & { value?: RallyValue | null };
+    shot_classification: Metric & { value?: ShotValue | null };
   };
   warnings: string[];
 };
@@ -203,6 +254,24 @@ export function parseAnalysisResult(input: unknown): AnalysisResultV1 {
     num(v.transition_lingers, "metrics.positioning.value.transition_lingers");
     num(v.approaches_to_kitchen_line, "metrics.positioning.value.approaches_to_kitchen_line");
   }
+  const shots = (metrics as Record<string, Record<string, unknown>>).shot_classification;
+  if (shots.value != null) {
+    const v = shots.value;
+    if (!isObj(v) || !Array.isArray(v.contacts) || !isObj(v.counts)) {
+      throw new ContractError("metrics.shot_classification.value: expected contacts and counts");
+    }
+    for (const cls of SHOT_CLASSES) num((v.counts as Record<string, unknown>)[cls], `metrics.shot_classification.value.counts.${cls}`);
+    for (const c of v.contacts) {
+      if (!isObj(c)) throw new ContractError("metrics.shot_classification.value.contacts: invalid contact");
+      num(c.time_seconds, "shot contact time_seconds");
+      oneOf(c.shot_class, SHOT_CLASSES, "shot contact shot_class");
+      oneOf(c.evidence, ["strong", "weak"] as const, "shot contact evidence");
+    }
+  }
+  const rallies = (metrics as Record<string, Record<string, unknown>>).rally_segmentation;
+  if (rallies.value != null && (!isObj(rallies.value) || !Array.isArray(rallies.value.rallies))) {
+    throw new ContractError("metrics.rally_segmentation.value: expected rallies");
+  }
   if (!Array.isArray(input.player_positions) || !Array.isArray(input.tracks) || !Array.isArray(input.warnings)) {
     throw new ContractError("player_positions/tracks/warnings: expected arrays");
   }
@@ -226,8 +295,8 @@ export const METRIC_LABELS: Record<MetricKey, string> = {
   court_heatmap: "Court heatmap (dwell time)",
   zone_occupancy: "Zone occupancy",
   positioning: "Court positioning patterns",
-  rally_segmentation: "Rally segmentation",
-  shot_classification: "Shot classification",
+  rally_segmentation: "Rallies",
+  shot_classification: "Shot types",
 };
 
 export const VALIDATION_LABELS: Record<ValidationLevel, string> = {

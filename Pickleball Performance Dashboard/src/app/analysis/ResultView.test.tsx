@@ -96,4 +96,34 @@ describe("ResultView", () => {
     expect(row.textContent).toContain("45%");
     expect(row.textContent).toContain("Improved");
   });
+
+  it("shows experimental shot counts, keeps unclassified visible and lists hits", () => {
+    const r = structuredClone(testFixture) as Record<string, any>;
+    r.data_origin = "measured";
+    const zero = { serve: 0, return: 0, overhead: 0, volley: 0, dink: 0, drive: 0, lob: 0, unclassified: 0 };
+    const contact = (t: number, cls: string, side: string) => ({
+      time_seconds: t, rally_index: 0, shot_class: cls, evidence: "weak", reason: "test", side,
+      side_source: "ball_direction", track_id: 1, ball_px: [10, 10], ball_hidden_at_contact: false,
+      speed_player_heights_per_s: 2, arc_ratio: 0.1,
+    });
+    r.metrics.shot_classification = {
+      status: "experimental", validation: "not_evaluated", scope: "whole_clip", reason: "Rule-based",
+      value: {
+        rule_version: "shots-rules-test", class_definitions: Object.fromEntries(Object.keys(zero).map((k) => [k, `${k} rule`])),
+        precedence: Object.keys(zero), counts: { ...zero, serve: 1, drive: 1, unclassified: 1 },
+        shares: { ...zero, serve: 1 / 3, drive: 1 / 3, unclassified: 1 / 3 },
+        selected_player: "near side", selected_player_counts: { ...zero, serve: 1, drive: 1 },
+        contacts: [contact(2, "serve", "near"), contact(3.1, "unclassified", "far"), contact(4.2, "drive", "near")],
+        bounce_candidates: [], ball_observed_s: 5, ball_interpolated_s: 0.2, ball_detections_rejected: 3,
+      },
+    };
+    render(<ResultView result={parseAnalysisResult(r)} videoUrl={null} />);
+    expect(screen.getByText("Your shots")).toBeTruthy();
+    expect(screen.getAllByText("Unclassified").length).toBeGreaterThan(0);
+    const hits = screen.getByRole("list", { name: "Detected hits" });
+    expect(hits.querySelectorAll("button").length).toBe(3);
+    fireEvent.change(screen.getByLabelText("Show"), { target: { value: "drive" } });
+    expect(screen.getByRole("list", { name: "Detected hits" }).querySelectorAll("button").length).toBe(1);
+    expect(screen.getAllByText("EXPERIMENTAL").length).toBeGreaterThan(0);
+  });
 });

@@ -3,7 +3,7 @@ import schema from "../../../contracts/analysis_result.v1.schema.json";
 import testFixture from "../../../contracts/fixtures/analysis_result.test_fixture.v1.json";
 import insufficient from "../../../contracts/fixtures/analysis_result.insufficient.v1.json";
 import {
-  ContractError, DATA_ORIGINS, METRIC_KEYS, METRIC_STATUSES, RESULT_KEYS, RESULT_STATUSES, VALIDATION_LEVELS,
+  ContractError, DATA_ORIGINS, METRIC_KEYS, METRIC_STATUSES, RESULT_KEYS, RESULT_STATUSES, SHOT_CLASSES, VALIDATION_LEVELS,
   parseAnalysisResult,
 } from "./contract";
 
@@ -18,9 +18,10 @@ describe("TypeScript contract mirrors the Python schema", () => {
   it("has the same enums", () => {
     expect([...RESULT_STATUSES]).toEqual(enumOf(s.properties.status));
     expect([...DATA_ORIGINS]).toEqual(enumOf(s.properties.data_origin));
-    expect([...METRIC_STATUSES]).toEqual(enumOf(s.$defs.Metric.properties.status));
-    expect([...VALIDATION_LEVELS]).toEqual(enumOf(s.$defs.Metric.properties.validation));
+    expect([...METRIC_STATUSES]).toEqual(enumOf(s.$defs.ShotMetric.properties.status));
+    expect([...VALIDATION_LEVELS]).toEqual(enumOf(s.$defs.ShotMetric.properties.validation));
     expect([...METRIC_KEYS].sort()).toEqual(Object.keys(s.$defs.Metrics.properties).sort());
+    expect([...SHOT_CLASSES]).toEqual(enumOf(s.$defs.ShotContact.properties.shot_class));
   });
 });
 
@@ -43,6 +44,10 @@ describe("parseAnalysisResult", () => {
     const badBall = structuredClone(testFixture) as Json;
     badBall.ball_positions = [{ time_seconds: 1, bbox: [1, 2], confidence: 0.8 }];
     expect(() => parseAnalysisResult(badBall)).toThrow(/invalid ball box/);
+    const badShot = structuredClone(testFixture) as Json;
+    badShot.metrics.shot_classification.value = { contacts: [{ time_seconds: 1, shot_class: "smash", evidence: "weak" }],
+      counts: Object.fromEntries(SHOT_CLASSES.map((c) => [c, 0])) };
+    expect(() => parseAnalysisResult(badShot)).toThrow(/shot_class/);
     // The legacy /analyze/video payload is not a v1 result.
     expect(() => parseAnalysisResult({ duration_seconds: 6, frame_count: 180, heatmap: [], message: "Analysis complete" }))
       .toThrow(ContractError);

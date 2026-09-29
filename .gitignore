@@ -32,6 +32,7 @@ venv/
 # ── Model weights (download explicitly; check licence first) ─
 *.pt
 *.onnx
+*.part
 
 # ── Local videos, CV outputs, scratch data ───────────────────
 *.mp4

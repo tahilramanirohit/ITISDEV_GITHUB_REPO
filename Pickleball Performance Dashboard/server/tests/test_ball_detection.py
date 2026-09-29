@@ -29,7 +29,7 @@ def test_custom_model_reports_highest_scored_ball_box():
     }
 
 
-def test_pipeline_records_ball_observations_without_claiming_shots(synthetic_clip, monkeypatch):
+def test_a_ball_that_never_moves_yields_no_rallies_or_shots(synthetic_clip, monkeypatch):
     monkeypatch.setattr("picklepro.pipeline.BallDetector", lambda _weights:
                         BallDetector("operator-weights.pt", model=FakeBallModel()))
     result = analyze_video(synthetic_clip.path, AnalysisOptions(
@@ -38,8 +38,16 @@ def test_pipeline_records_ball_observations_without_claiming_shots(synthetic_cli
     assert result.provenance.ball_detector.name == "ultralytics-yolo-ball"
     assert result.coverage.frames_with_ball_detections == len(result.ball_positions) > 0
     assert result.ball_positions[0].bbox == [100, 80, 110, 90]
+    # The fake ball never moves, so it is not in play: no rally and no shot is claimed.
+    assert result.metrics.shot_classification.status == "insufficient_data"
+    assert result.metrics.shot_classification.value is None
+    assert result.metrics.rally_segmentation.status == "insufficient_data"
+
+
+def test_without_a_ball_model_shots_are_not_computed(synthetic_clip):
+    result = analyze_video(synthetic_clip.path, AnalysisOptions(compute_sha256=False, max_seconds=1))
     assert result.metrics.shot_classification.status == "not_computed"
-    assert result.metrics.rally_segmentation.status == "not_computed"
+    assert "PICKLEPRO_BALL_WEIGHTS" in result.metrics.shot_classification.reason
 
 
 def test_court_player_and_ball_paths_produce_one_honest_result(synthetic_clip, monkeypatch):

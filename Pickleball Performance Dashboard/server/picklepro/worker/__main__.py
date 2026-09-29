@@ -33,6 +33,20 @@ def _load_dotenv(path: Path) -> None:
         os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
 
 
+MODELS_DIR = Path(__file__).resolve().parents[2] / "models"
+
+
+def _use_downloaded_models(args) -> None:
+    """Fall back to models fetched by `python -m picklepro.fetch_models` when none are configured."""
+    obj, court = MODELS_DIR / "ball,person,paddle.pt", MODELS_DIR / "court_best.pt"
+    if obj.is_file() and not args.ball_weights:
+        args.ball_weights = str(obj)
+        if not os.getenv("PICKLEPRO_DETECTOR") and not args.yolo_weights:
+            args.detector, args.yolo_weights = "yolo", str(obj)
+    if court.is_file() and not args.court_weights:
+        args.court_weights = str(court)
+
+
 def main(argv=None) -> int:
     _load_dotenv(Path(__file__).resolve().parents[2] / ".env")
     p = argparse.ArgumentParser(prog="picklepro.worker")
@@ -45,7 +59,10 @@ def main(argv=None) -> int:
     p.add_argument("--yolo-weights", default=os.getenv("PICKLEPRO_YOLO_WEIGHTS"))
     p.add_argument("--court-weights", default=os.getenv("PICKLEPRO_COURT_WEIGHTS"))
     p.add_argument("--ball-weights", default=os.getenv("PICKLEPRO_BALL_WEIGHTS"))
+    p.add_argument("--ball-fps", type=float, default=float(os.getenv("PICKLEPRO_BALL_FPS", "30")),
+                   help="Ball detection rate; 30 checks every frame of a 30 fps video")
     args = p.parse_args(argv)
+    _use_downloaded_models(args)
 
     logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"), format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     log = logging.getLogger("picklepro.worker")
@@ -58,8 +75,11 @@ def main(argv=None) -> int:
     cfg = WorkerConfig(worker_id=f"{socket.gethostname()}-{uuid.uuid4().hex[:8]}", mode=args.mode,
                        lease_seconds=args.lease_seconds, detector=args.detector,
                        yolo_weights=args.yolo_weights, court_weights=args.court_weights,
-                       ball_weights=args.ball_weights)
-    log.info("worker %s starting (mode=%s, detector=%s)", cfg.worker_id, cfg.mode, cfg.detector)
+                       ball_weights=args.ball_weights, ball_fps=args.ball_fps)
+    log.info("worker %s starting (mode=%s, detector=%s, ball model=%s)", cfg.worker_id, cfg.mode, cfg.detector,
+             "yes" if cfg.ball_weights else "no")
+    if cfg.mode == "measured" and not cfg.ball_weights:
+        log.warning("No ball model (PICKLEPRO_BALL_WEIGHTS): rallies and shot types will be 'not computed'.")
     if cfg.mode == "test_fixture":
         log.warning("TEST FIXTURE MODE: results are canned test data, not analysis of uploaded videos.")
 

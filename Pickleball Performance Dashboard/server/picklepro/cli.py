@@ -5,6 +5,8 @@
     python -m picklepro.cli analyze match.mp4 --calibration calib.json --court-half near --out result.json
     python -m picklepro.cli make-synthetic demo.mp4 --calibration-out demo_calibration.json
     python -m picklepro.cli schema
+    python -m picklepro.cli review-shots match.mp4 result.json --out review/
+    python -m picklepro.cli evaluate-shots result.json labels.csv
 
 ``analyze`` exits 0 when the result status is "ok", 3 when it is
 "insufficient_data" (a valid outcome, not a crash), 2 for bad input, 1 on errors.
@@ -72,7 +74,7 @@ def _cmd_analyze(args) -> int:
     opts = AnalysisOptions(
         detector=args.detector, yolo_weights=args.yolo_weights, court_weights=args.court_weights,
         ball_weights=args.ball_weights,
-        target_fps=args.target_fps,
+        target_fps=args.target_fps, ball_fps=args.ball_fps,
         max_seconds=args.max_seconds, calibration=calibration, selection=selection,
         experimental_zones=args.experimental_zones, include_positions=not args.no_positions,
         min_tracked_seconds=args.min_tracked_seconds, min_tracked_fraction=args.min_tracked_fraction,
@@ -117,6 +119,35 @@ def _cmd_make_synthetic(args) -> int:
     return EXIT_OK
 
 
+def _cmd_review_shots(args) -> int:
+    from .shot_eval import export_review
+
+    try:
+        n = export_review(args.video, json.loads(Path(args.result).read_text()), args.out)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return EXIT_USAGE
+    print(f"Wrote {n} contact images and {args.out / 'labels_template.csv'}.\n"
+          "Watch the video and turn the template into labels: fix each shot_class and side, delete rows "
+          "that are not a hit, and add a row for every hit that was missed.")
+    return EXIT_OK
+
+
+def _cmd_evaluate_shots(args) -> int:
+    from .shot_eval import evaluate, format_report, read_labels
+
+    try:
+        report = evaluate(json.loads(Path(args.result).read_text()), read_labels(args.labels),
+                          window_s=args.window, min_support=args.min_support)
+    except (OSError, ValueError, KeyError, json.JSONDecodeError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return EXIT_USAGE
+    print(format_report(report))
+    if args.out:
+        Path(args.out).write_text(json.dumps(report, indent=2))
+    return EXIT_OK
+
+
 def _cmd_schema(_args) -> int:
     print(json.dumps(json_schema(), indent=2))
     return EXIT_OK
@@ -149,7 +180,8 @@ def build_parser() -> argparse.ArgumentParser:
     an.add_argument("--yolo-weights", help="Local YOLO weights file (detector=yolo)")
     an.add_argument("--court-weights", help="Local 14-keypoint YOLO court pose weights for automatic calibration")
     an.add_argument("--ball-weights", help="Local YOLO weights with a pickleball/ball class for observed ball boxes")
-    an.add_argument("--target-fps", type=float, default=10.0, help="Analysis sample rate (default 10)")
+    an.add_argument("--target-fps", type=float, default=10.0, help="Player sample rate (default 10)")
+    an.add_argument("--ball-fps", type=float, default=30.0, help="Ball sample rate (default 30, i.e. every frame)")
     an.add_argument("--max-seconds", type=float, help="Stop after this many seconds (reported in coverage)")
     an.add_argument("--min-tracked-seconds", type=float, default=10.0)
     an.add_argument("--min-tracked-fraction", type=float, default=0.25)
@@ -167,6 +199,20 @@ def build_parser() -> argparse.ArgumentParser:
                     help="avc1 (H.264) plays in browsers; falls back to mp4v if unavailable")
     ms.add_argument("--calibration-out", type=Path)
     ms.set_defaults(func=_cmd_make_synthetic)
+
+    rv = sub.add_parser("review-shots", help="Save an image per detected contact and a label template CSV")
+    rv.add_argument("video", type=Path)
+    rv.add_argument("result", type=Path, help="Result JSON from `analyze`")
+    rv.add_argument("--out", type=Path, required=True, help="Folder for images and labels_template.csv")
+    rv.set_defaults(func=_cmd_review_shots)
+
+    ev = sub.add_parser("evaluate-shots", help="Compare detected contacts and shot types with hand labels")
+    ev.add_argument("result", type=Path)
+    ev.add_argument("labels", type=Path, help="CSV: time_seconds,side,shot_class,notes (one row per real hit)")
+    ev.add_argument("--window", type=float, default=0.2, help="Matching window in seconds (default 0.2)")
+    ev.add_argument("--min-support", type=int, default=20, help="Labels a class needs to count in macro F1")
+    ev.add_argument("--out", type=Path, help="Also write the report as JSON")
+    ev.set_defaults(func=_cmd_evaluate_shots)
 
     sub.add_parser("schema", help="Print the result JSON schema").set_defaults(func=_cmd_schema)
     return p

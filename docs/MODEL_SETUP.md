@@ -2,10 +2,10 @@
 
 PicklePro's measured worker has three separate detection tasks. The court
 model proposes a one-time ground-plane calibration from the first five seconds.
-The player model supplies person boxes and track IDs. The ball model supplies
-observed ball boxes at sampled frames. The heatmap uses player feet and the
-court calibration; ball boxes appear in video replay but do not create shot or
-speed statistics.
+The player model supplies person boxes and track IDs. The ball model runs on
+every frame and feeds the experimental rally and shot-type rules in
+[SHOT_DETECTION.md](SHOT_DETECTION.md). The heatmap uses player feet and the
+court calibration.
 
 ## Candidate weights for local evaluation
 
@@ -24,9 +24,14 @@ checksums below before using them:
 | `models/court_best.pt` | `c67cc2df5dbec2befe8b0c48297d9abb2345080357e57ebd8eaddcbf3d4d9aac` |
 | `models/ball,person,paddle.pt` | `05e01ebe77f3256426d0e54ffad83abf3da2d1fcadc2bcf10dbd5714fdded459` |
 
-From `Pickleball Performance Dashboard/server/`, install the optional runtime
-from `requirements-yolo.txt`, then set the following in the ignored `server/.env`
-using absolute paths to the reviewed local weights:
+On Windows, `server/start_worker.bat` installs PyTorch (the NVIDIA GPU build when
+one is available), the optional runtime and both models on its first run.
+Elsewhere, from `Pickleball Performance Dashboard/server/`, install the optional
+runtime from `requirements-yolo.txt` and run `python -m picklepro.fetch_models`.
+It downloads both files from the pinned commit into the ignored `server/models/`
+and refuses any file whose checksum differs. The worker uses files in
+`server/models/` automatically. To use other files, set the following in the
+ignored `server/.env`, using absolute paths:
 
 ```dotenv
 WORKER_RESULT_MODE=measured
@@ -45,8 +50,9 @@ heatmap remains `insufficient_data`; manual calibration is the fallback.
 Before using these results as performance evidence, compare detections with
 hand-labelled real clips from the intended camera angle. Record court
 landmark error, player and ball detection precision/recall, ID switches,
-heatmap coverage, failures, and processing time. Keep shot classification and
-rally segmentation `not_computed` until their own evaluation exists.
+heatmap coverage, failures, and processing time. Shot types and rallies stay
+labelled experimental until `picklepro.cli evaluate-shots` has been run on
+labelled team footage.
 
 ## Initial local smoke test
 
