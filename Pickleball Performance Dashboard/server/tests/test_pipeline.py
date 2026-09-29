@@ -150,6 +150,12 @@ def test_manual_map_is_discarded_after_view_moves(synthetic_clip, monkeypatch):
 
 
 def test_track_ids_do_not_cross_camera_cuts(synthetic_clip, monkeypatch):
+    # A person standing on the near court (off-court people are set aside).
+    inv = np.linalg.inv(calibration_from_dict(synthetic_clip.calibration).homography)
+    foot = inv @ np.array([2.5, 3.0, 1.0])
+    u, v = int(foot[0] / foot[2]), int(foot[1] / foot[2])
+    box = [u - 10, v - 50, u + 10, v]
+
     class ReusedTrackId:
         confidence_is_model_score = True
         detector_name = "test-person-model"
@@ -158,7 +164,7 @@ def test_track_ids_do_not_cross_camera_cuts(synthetic_clip, monkeypatch):
             pass
 
         def update(self, _frame):
-            return [{"track_id": 7, "bbox": [20, 20, 40, 70], "confidence": 0.9}]
+            return [{"track_id": 7, "bbox": box, "confidence": 0.9}]
 
     calls = 0
 

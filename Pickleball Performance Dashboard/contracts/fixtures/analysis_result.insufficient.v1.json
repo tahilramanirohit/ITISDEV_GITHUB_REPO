@@ -4,7 +4,7 @@
   "data_origin": "measured",
   "message": "Detections are available for review, but court metrics were not produced: Court not calibrated: at least 4 court landmarks are required.",
   "provenance": {
-    "pipeline_version": "0.6.0-dev",
+    "pipeline_version": "0.7.0-dev",
     "generated_at": "2026-01-01T00:00:00+00:00",
     "detector": {
       "name": "opencv-mog2-motion",
@@ -33,43 +33,53 @@
     "decode_failures": 0,
     "stopped_early_reason": null,
     "fraction_of_video_analyzed": 1.0,
-    "frames_with_detections": 146,
+    "frames_with_detections": 145,
     "frames_with_ball_detections": 0,
+    "ball_sample_stride": null,
+    "frames_with_carried_court_map": null,
     "selected_view_duration_s": null
   },
   "calibration": null,
   "player_selection": null,
+  "players": [
+    {
+      "player_id": 1,
+      "label": "Player",
+      "on_court": true,
+      "side": null,
+      "first_seen_s": 0.667,
+      "last_seen_s": 19.867,
+      "observed_frames": 145,
+      "median_court_m": null,
+      "thumbnail": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAkGBwgHBgkIBwgKCgkLDRYPDQwMDRsUFRAWIB0iIiAdHx8kKDQsJCYxJx8fLT0tMTU3Ojo6Iys/RD84QzQ5Ojf/2wBDAQoKCg0MDRoPDxo3JR8lNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzf/wAARCACAAC0DASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDL/siz/wCg/p//AHzN/wDEUf2RZf8AQf0//vmb/wCIqppUcb3JMy7o0QswwPb1rUhtrafywtuu8AMVAHP4+/pXo1aypuzf5HDTo+0V0Vv7Hs/+g/p//fM3/wARSppVojB08QWCspyCFmBB/wC+Ktiyh2RutshQDJbAI3dgTnHT/OalawsxOm9I1RshsryOMjpn+Xasni4rv+A/YPQTxNbxXMcWrWk8Nx5p8u7aBWCrMBnPIB+Yc9Oua5+untbe1jE1vdv9mt5n2yGMZGMfKe3QnPeufv7SawvJrW4XbJE20+/v9D1rzcRBRleOzCpBxepBot0kl04tnV5BGT1xgZHft6fjXQ/MIt6qWzyTv5789c9B+X1rD0KOFL7/AFSDKEZ2D1HrW5M6tcLJGhZRhRjoSAcA+2Mf5FduJuqmprQs46IUMZFUq3mNnA4PzHPqf/1fjSEGOAROAVVtyg8nOfl57d/yolIChTIckM+SuWLHjBPTH4jrSukSsDKgDFyBuAY8An6cZHHT+uKa3R03Sdite3EX9n3U4CopUfe9COv+fT8ktb/RNdsoG1LWYLK8tl8pnkBPnIPuH6jkfgKdqCZsHTygIthyvGOvqffn9K5nyIf+eUf/AHyK6Y0VWg0clecVPVGlpAzdE5KkISGHY5Fbk0zLghgFzxGEXdg5Hce9ZGlW9wt180EoQqQxwV4+vatYhFgLGQoVXOCc8kfw+vXvSxNnU37FYa6jsKhjtxukQNGpBVcklegyOwzx19DSgypEpwC3VvmAbb16/gOfb8aQblnOCX4VzgcYx09Mnjv+VI0gcQFtzqx2gEAd/Y8EeufWuVbnRzOTuiDUFWGxlRQwfBBKuCPoR265rna6W9jf7A4iXhl4EeehH3ffGB/kVgfZbj/n3l/74NejhdIWOHEu8kzUsdW1G6kdLu+vLhAhYRyTOw3AjBxn/IzWlAULHKsUBAwz8ZBHv1BJrn9MdUuGZgSAh6f5/Ct6BpFZUh2AEArIGxlcZ59/x9fw58X7stDXD/A7gZXaR0dmZSWJLjO75eB6g5Oe+SaEdE4lADI2eTjjnnOT3J496cXVZJFEjFi3G8dT9MdecfgPpTHDlg77d/mBfujeeeAMjHt+Arn0tqdGrZFNLLBbGWGSaLblopE4dT3ORjAJ9Kzf7f1n/oL6h/4FP/jV2/uQ9rN/q2DJgMDtJA9vTqfx/CsCu/Cq8XddTjxTkp2LulDN0QVz8vQjPcflW7tXbgOXDMcnJJbrnHbsBjmsTSBuuXA/55txx83tWxH5aGZ3+Uyfwg7VXnvkDPT/APXWGL1mbYbWnZD2ZeQy/vOXJDYCnA6Z6dBx+Heov3SA7Y0HzABSoyxwB36frT0i8tflAXfySzfcwP8AD/8AVTWtwdpeUgkEhhwyDnjJ/D16/SudWdzoTTd+wy+YNp5LEKoj2KijJOMYP8u3audroL8L9hkRDnYpJwpB5I4PPYY/KuervwfwM4MV8SZd0n/j5OFRiF+63Q8jit8KqoWAHm5GWGNuMdfSsTRGVLp2diF8sg4OM8jjPatwSr5jfvS7KCwz93GOnPYYHT+lc2Mb9obYdN07ogj3Av8AIMAFgAvzY9/8jrnvwrNkGTdC23+EZLEkDpnvnj881E3lyoDlZEGQeQRtzgcH6tz7VYR03GVQxzHlgUHX1API9enc1ldJux0uHXcguol/s+4LSLlQcDp37fX6fjXO10N6oOnuzAHCEjjBH+cjsOn1rna7sG04u3c4MVrJM0NE3fbCFGSVxgHGckCttDGQbYI2COuAcjPPr/kdK5/TNwugVyDtIyOoB44/Oug8t4lKsgjHJ2k4IPPccA4+lY4pfvN+hvhmlSuNSRd7xrgIyblxx1PHI/r7UtyyRRof+Wig4wuflAzkjnvj/wCv1qXZt2/PgA7lZjjaCckc4yOc5psI2RxnYGUgj5wGBORzknjJ56D/AB53qzZStqyjdNG2nShZOnI6AMO3ck9vQCsCuh1ExmKRFCnMZbudp4OCfXJ/SuervwitF27nJjPjXoXNMkjjuC0smwbCM88/lWmb22EWFuXB3DnpnHc4/H86waKuph1UlzNmNOs4KyR0H26z8td04Zgm3OwjHt9OB+ZpV1CDyGBulZ1IKblJz2Ht6enSueorP6nDu/wNPrU+xuXV/atayxRSMcoVGfr9Oent1rCpaSt6dKNNOxhObm7n/9k="
+    },
+    {
+      "player_id": 2,
+      "label": "Player",
+      "on_court": true,
+      "side": null,
+      "first_seen_s": 1.6,
+      "last_seen_s": 2.4,
+      "observed_frames": 7,
+      "median_court_m": null,
+      "thumbnail": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAkGBwgHBgkIBwgKCgkLDRYPDQwMDRsUFRAWIB0iIiAdHx8kKDQsJCYxJx8fLT0tMTU3Ojo6Iys/RD84QzQ5Ojf/2wBDAQoKCg0MDRoPDxo3JR8lNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzf/wAARCACAAA0DASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDm6K20tovJ+VIGfBLAYOBjjv14/nWXeKqTFUGAB6VyypuKuccqTjubjs+TJj95kn7hGTjofQYPt9ayNVYNdnG3G0Y2jitcSxoyiNQS8p2OmQGGPQ9zj2/KsO9XZOVJ+YAbjkent7YrWtrG5pW2Nl1+TayjaX3blBO/jHJ9McVZXw6+uRLLpRQSxEpPFK4BXup+hBI/4DVVJGkVlVGCg7srHk9OmO54PcZrMv7y5t72T7PNJHlVBKvjdjoTXVCh7T3GViJWV2bLESyRtE+1lYlSWALDHJx+fTj9BWfcapDaymJtJsJyP45kk3fo4FWTCqk+UygxP0XJzgdPpyOKxNTbfdlsgkqOhzWmGXNPyFiXywsmb9tKEmX5kRQd3TAznp+Of0rD1nb9ubZyoVQG/vYGM1twxrxGoQpndjb0GMEA56cHnOKwdTUrdsGJY4Hzc8jt19qeGX7z5E4mzhc3YXch1eJPLI4AyN3PJx+PtWLrC7L1hgD5R0Oe1byDzIBBhgqqBuK4zk+3I7j8D2FYOspsvmHl7OM47c88e1GFd6m1gxLfJsb4aNmbcMRM4C8YAwRgcDJ4GO9YGsri+fBYgjI3da2I1KQhTIPMXGfkwTyRyCcd/wCf4YuqEtcg4C5QHG3GPYilhEo1LIeJ+C/mbT6naecy+ePLAJ3YJJP4/hWJqkyXF20qkHIGSKq0V1U8PGnLmTOapWc1Zo//2Q=="
+    }
+  ],
   "tracks": [
     {
       "track_id": 1,
-      "first_seen_s": 0.533,
+      "first_seen_s": 0.667,
       "last_seen_s": 19.867,
-      "observed_frames": 146
+      "observed_frames": 145
     },
     {
       "track_id": 2,
       "first_seen_s": 1.6,
       "last_seen_s": 2.4,
-      "observed_frames": 6
+      "observed_frames": 7
     }
   ],
   "player_positions": [
-    {
-      "time_seconds": 0.533,
-      "players": [
-        {
-          "track_id": 1,
-          "bbox": [
-            476,
-            156,
-            536,
-            416
-          ],
-          "confidence": null,
-          "selected": false
-        }
-      ]
-    },
     {
       "time_seconds": 0.667,
       "players": [
@@ -77,9 +87,9 @@
           "track_id": 1,
           "bbox": [
             534,
-            155,
+            156,
             582,
-            413
+            412
           ],
           "confidence": null,
           "selected": false
@@ -93,7 +103,7 @@
           "track_id": 1,
           "bbox": [
             546,
-            155,
+            156,
             592,
             413
           ],
@@ -109,9 +119,9 @@
           "track_id": 1,
           "bbox": [
             558,
-            155,
+            156,
             604,
-            410
+            411
           ],
           "confidence": null,
           "selected": false
@@ -127,7 +137,7 @@
             570,
             156,
             614,
-            410
+            409
           ],
           "confidence": null,
           "selected": false
@@ -140,9 +150,9 @@
         {
           "track_id": 1,
           "bbox": [
-            582,
-            156,
-            624,
+            581,
+            155,
+            623,
             407
           ],
           "confidence": null,
@@ -175,7 +185,7 @@
             560,
             155,
             640,
-            400
+            401
           ],
           "confidence": null,
           "selected": false
@@ -200,7 +210,7 @@
           "track_id": 2,
           "bbox": [
             632,
-            154,
+            155,
             650,
             399
           ],
@@ -213,22 +223,22 @@
       "time_seconds": 1.733,
       "players": [
         {
-          "track_id": 1,
-          "bbox": [
-            580,
-            156,
-            616,
-            394
-          ],
-          "confidence": null,
-          "selected": false
-        },
-        {
           "track_id": 2,
           "bbox": [
             640,
             155,
             656,
+            395
+          ],
+          "confidence": null,
+          "selected": false
+        },
+        {
+          "track_id": 1,
+          "bbox": [
+            578,
+            155,
+            616,
             395
           ],
           "confidence": null,
@@ -240,22 +250,22 @@
       "time_seconds": 1.867,
       "players": [
         {
-          "track_id": 1,
+          "track_id": 2,
           "bbox": [
-            586,
-            156,
-            624,
+            640,
+            155,
+            664,
             393
           ],
           "confidence": null,
           "selected": false
         },
         {
-          "track_id": 2,
+          "track_id": 1,
           "bbox": [
-            640,
+            586,
             155,
-            664,
+            624,
             393
           ],
           "confidence": null,
@@ -271,7 +281,7 @@
           "bbox": [
             592,
             154,
-            638,
+            635,
             389
           ],
           "confidence": null,
@@ -282,7 +292,7 @@
           "bbox": [
             648,
             153,
-            670,
+            672,
             389
           ],
           "confidence": null,
@@ -308,7 +318,7 @@
           "track_id": 2,
           "bbox": [
             656,
-            153,
+            152,
             672,
             384
           ],
@@ -330,6 +340,17 @@
           ],
           "confidence": null,
           "selected": false
+        },
+        {
+          "track_id": 2,
+          "bbox": [
+            663,
+            153,
+            678,
+            354
+          ],
+          "confidence": null,
+          "selected": false
         }
       ]
     },
@@ -339,9 +360,9 @@
         {
           "track_id": 1,
           "bbox": [
-            609,
+            610,
             155,
-            654,
+            652,
             377
           ],
           "confidence": null,
@@ -350,9 +371,9 @@
         {
           "track_id": 2,
           "bbox": [
-            667,
+            666,
             153,
-            682,
+            680,
             376
           ],
           "confidence": null,
@@ -366,9 +387,9 @@
         {
           "track_id": 1,
           "bbox": [
-            611,
+            612,
             153,
-            686,
+            687,
             375
           ],
           "confidence": null,
@@ -400,7 +421,7 @@
           "bbox": [
             617,
             152,
-            686,
+            688,
             365
           ],
           "confidence": null,
@@ -415,7 +436,7 @@
           "track_id": 1,
           "bbox": [
             618,
-            151,
+            152,
             674,
             361
           ],
@@ -430,7 +451,7 @@
         {
           "track_id": 1,
           "bbox": [
-            619,
+            618,
             151,
             672,
             357
@@ -462,7 +483,7 @@
         {
           "track_id": 1,
           "bbox": [
-            618,
+            620,
             149,
             683,
             349
@@ -480,8 +501,8 @@
           "bbox": [
             618,
             149,
-            681,
-            345
+            682,
+            346
           ],
           "confidence": null,
           "selected": false
@@ -511,7 +532,7 @@
           "track_id": 1,
           "bbox": [
             614,
-            148,
+            147,
             672,
             336
           ],
@@ -527,7 +548,7 @@
           "track_id": 1,
           "bbox": [
             610,
-            148,
+            147,
             670,
             331
           ],
@@ -544,7 +565,7 @@
           "bbox": [
             604,
             147,
-            664,
+            666,
             327
           ],
           "confidence": null,
@@ -559,7 +580,7 @@
           "track_id": 1,
           "bbox": [
             600,
-            146,
+            145,
             660,
             323
           ],
@@ -576,7 +597,7 @@
           "bbox": [
             594,
             145,
-            653,
+            654,
             319
           ],
           "confidence": null,
@@ -593,7 +614,7 @@
             592,
             144,
             648,
-            316
+            315
           ],
           "confidence": null,
           "selected": false
@@ -606,9 +627,9 @@
         {
           "track_id": 1,
           "bbox": [
-            585,
+            586,
             144,
-            639,
+            640,
             311
           ],
           "confidence": null,
@@ -622,7 +643,7 @@
         {
           "track_id": 1,
           "bbox": [
-            578,
+            579,
             141,
             632,
             307
@@ -638,7 +659,7 @@
         {
           "track_id": 1,
           "bbox": [
-            570,
+            571,
             140,
             624,
             303
@@ -655,7 +676,7 @@
           "track_id": 1,
           "bbox": [
             564,
-            140,
+            141,
             616,
             299
           ],
@@ -670,9 +691,9 @@
         {
           "track_id": 1,
           "bbox": [
-            557,
-            138,
-            609,
+            558,
+            139,
+            608,
             295
           ],
           "confidence": null,
@@ -686,8 +707,8 @@
         {
           "track_id": 1,
           "bbox": [
-            549,
-            139,
+            550,
+            138,
             600,
             291
           ],
@@ -702,8 +723,8 @@
         {
           "track_id": 1,
           "bbox": [
-            541,
-            137,
+            542,
+            136,
             592,
             287
           ],
@@ -718,9 +739,9 @@
         {
           "track_id": 1,
           "bbox": [
-            533,
-            136,
-            582,
+            534,
+            137,
+            584,
             283
           ],
           "confidence": null,
@@ -751,9 +772,25 @@
           "track_id": 1,
           "bbox": [
             516,
-            134,
+            133,
             566,
             277
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 5.867,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            506,
+            133,
+            555,
+            273
           ],
           "confidence": null,
           "selected": false

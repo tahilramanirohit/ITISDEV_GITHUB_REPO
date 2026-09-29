@@ -8,8 +8,9 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
 from . import PIPELINE_VERSION
-from .auto_court import CourtPoseDetector
+from .auto_court import CourtMapHold, CourtPoseDetector
 from .ball_detection import BallDetector
+from .ball_tracking import BallCandidate, track_ball
 from .camera_view import likely_scene_cut, view_changed
 from .contract import (
     RALLY_NOT_COMPUTED,
@@ -27,6 +28,7 @@ from .contract import (
     PositioningValue,
     PlayerBox,
     PlayerSelectionSummary,
+    PlayerSummary,
     PositionSnapshot,
     Provenance,
     RallySegmentationMetric,
@@ -42,6 +44,7 @@ from .contract import (
 )
 from .court import COURT_MODEL, CourtCalibration
 from .detection import PlayerTracker
+from .players import PlayerCollector
 from .positioning import positioning_patterns
 from .shots import FrameObs, analyze_shots, court_line_segments
 from .spatial import Selection, dwell_heatmap, select_player, zone_occupancy
@@ -59,6 +62,8 @@ class AnalysisOptions:
     court_weights: Optional[str] = None
     ball_weights: Optional[str] = None
     target_fps: float = 10.0
+    # The ball moves much faster than players, so it is sampled more often.
+    ball_fps: float = 15.0
     max_seconds: Optional[float] = None
     calibration: Optional[CourtCalibration] = None
     selection: Optional[Selection] = None
@@ -93,6 +98,9 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
 
     tracker = PlayerTracker(detector=opts.detector, yolo_weights=opts.yolo_weights)
     ball_detector = BallDetector(opts.ball_weights) if opts.ball_weights else None
+    ball_stride = max(1, round(props.fps / opts.ball_fps)) if ball_detector and opts.ball_fps > 0 else stride
+    court_hold = CourtMapHold() if court_detector else None
+    collector = PlayerCollector()
     if not tracker.confidence_is_model_score:
         warnings.append(
             "Motion-based detection finds moving objects, not specifically people: stationary players can be "
@@ -108,22 +116,33 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
     manual_reference = None
     manual_view_lost = False
     times: List[float] = []
-    ball_snapshots: List[BallSnapshot] = []
-    tracks: Dict[int, List[float]] = {}  # id -> [first, last, count]
+    ball_frames: List[tuple[float, List[BallCandidate]]] = []
     view_track_ids: Dict[tuple[int, int], int] = {}
     next_view_track_id = 1
-    frames_with_detections = 0
+    carried_court_frames = 0
     expected = props.container_duration_s
 
     for index, ts, frame in iter_frames(path, props.fps, stats, max_seconds=opts.max_seconds):
-        if index % stride:
+        player_frame = index % stride == 0
+        ball_frame = ball_detector is not None and index % ball_stride == 0
+        if not (player_frame or ball_frame):
+            continue
+        if ball_frame:
+            ball_frames.append((ts, [BallCandidate(round(ts, 3), tuple(c["bbox"]), c["confidence"])
+                                     for c in ball_detector.candidates(frame)]))
+        if not player_frame:
             continue
         if previous_sample is not None and likely_scene_cut(previous_sample, frame):
             segment += 1
+            if court_hold is not None:
+                court_hold = CourtMapHold()  # a new view cannot reuse the old map
         previous_sample = frame.copy()
         segments.append(segment)
         if court_detector:
-            frame_calibration = court_detector.calibrate_frame(frame)
+            fitted = court_detector.calibrate_frame(frame)
+            frame_calibration = court_hold.update(ts, frame, fitted)
+            if fitted is None and frame_calibration is not None:
+                carried_court_frames += 1
         else:
             if calibration is not None and manual_reference is None:
                 manual_reference = frame.copy()
@@ -143,25 +162,25 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
                 view_track_ids[key] = next_view_track_id
                 next_view_track_id += 1
             detection["track_id"] = view_track_ids[key]
-        if ball_detector is not None:
-            ball = ball_detector.detect(frame)
-            if ball is not None:
-                ball_snapshots.append(BallSnapshot(time_seconds=round(ts, 3), **ball))
+        collector.observe(len(per_frame), ts, frame, detections, frame_calibration, segment)
         per_frame.append(detections)
         times.append(ts)
-        if detections:
-            frames_with_detections += 1
-        for d in detections:
-            tid = d.get("track_id")
-            if tid is None:
-                continue
-            t = tracks.setdefault(tid, [ts, ts, 0])
-            t[1] = ts
-            t[2] += 1
         if progress and expected:
             progress(min(0.99, ts / expected))
 
     frames_analyzed = len(per_frame)
+    players, per_frame = _identify_players(collector, per_frame, opts.selection)
+    frames_with_detections = sum(1 for dets in per_frame if dets)
+    tracks: Dict[int, List[float]] = {}  # player id -> [first, last, count]
+    for ts, dets in zip(times, per_frame):
+        for d in dets:
+            if d.get("track_id") is not None:
+                t = tracks.setdefault(d["track_id"], [ts, ts, 0])
+                t[1] = ts
+                t[2] += 1
+    ball_path, ball_stats = track_ball(ball_frames, props.width) if ball_detector is not None else ([], {})
+    ball_snapshots = [BallSnapshot(time_seconds=c.time_s, bbox=list(c.bbox), confidence=c.confidence)
+                      for c in ball_path]
     start = times[0] if times else 0.0
     # Each analyzed frame stands for one sample interval; never report beyond
     # the end of the video or the requested cut-off.
@@ -177,7 +196,17 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
     if stats.decode_failures:
         warnings.append(f"{stats.decode_failures} frame(s) could not be decoded and were skipped.")
     if ball_detector is not None and not ball_snapshots:
-        warnings.append("The ball model found no pickleball in the sampled frames; no ball positions are shown.")
+        warnings.append("The ball model found no pickleball in flight in the sampled frames; no ball positions are shown.")
+    if ball_stats.get("static_removed"):
+        warnings.append(f"{ball_stats['static_removed']} ball-like detections that never moved (for example a ball "
+                        "printed on a banner) were ignored.")
+    off_court = [p for p in players if not p.on_court]
+    if off_court:
+        warnings.append(f"{len(off_court)} person(s) stood mostly off the court (for example a referee or spectators) "
+                        "and are not counted as players.")
+    if carried_court_frames:
+        warnings.append(f"In {carried_court_frames} sampled frames the court model missed the lines; the court map "
+                        "from up to 1 second earlier was carried over, adjusted for camera movement.")
     if manual_view_lost:
         warnings.append("Camera movement or a changed view was detected. The manual court map was discarded from that point onward; re-run with a compatible court model for moving footage.")
 
@@ -209,6 +238,8 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
         fraction_of_video_analyzed=round(min(1.0, analyzed_duration / expected), 4) if expected else None,
         frames_with_detections=frames_with_detections,
         frames_with_ball_detections=len(ball_snapshots),
+        ball_sample_stride=ball_stride if ball_detector is not None else None,
+        frames_with_carried_court_map=carried_court_frames if court_detector else None,
         selected_view_duration_s=round(selected_view_duration, 3) if selected_view_duration is not None else None,
     )
 
@@ -272,6 +303,10 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
         coverage=coverage,
         calibration=calib_summary,
         player_selection=selection_summary,
+        players=[PlayerSummary(player_id=p.player_id, label=p.label, on_court=p.on_court, side=p.side,
+                               first_seen_s=p.first_seen_s, last_seen_s=p.last_seen_s,
+                               observed_frames=p.observed_frames, median_court_m=list(p.median_court_m) if p.median_court_m else None,
+                               thumbnail=p.thumbnail) for p in players],
         tracks=[TrackSummary(track_id=k, first_seen_s=round(v[0], 3), last_seen_s=round(v[1], 3),
                              observed_frames=int(v[2])) for k, v in sorted(tracks.items())],
         player_positions=snapshots,
@@ -286,6 +321,28 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
         ),
         warnings=warnings,
     )
+
+
+def _identify_players(collector: PlayerCollector, per_frame: List[List[dict]], selection: Optional[Selection]):
+    """Replace tracker IDs with player IDs and drop people who are not on the court.
+
+    A person the user explicitly selected is kept even when they stood off court.
+    """
+    players, mapping = collector.group()
+    keep = {p.player_id for p in players if p.on_court}
+    if selection is not None and selection.method == "track_id" and selection.track_id is not None:
+        keep.add(selection.track_id)
+    relabelled = []
+    for dets in per_frame:
+        out = []
+        for d in dets:
+            if d.get("track_id") is not None:
+                d = {**d, "track_id": mapping.get(d["track_id"], d["track_id"])}
+                if d["track_id"] not in keep:
+                    continue
+            out.append(d)
+        relabelled.append(out)
+    return players, relabelled
 
 
 def _court_metrics(per_frame, frame_interval_s, analyzed_duration, per_frame_calibration,

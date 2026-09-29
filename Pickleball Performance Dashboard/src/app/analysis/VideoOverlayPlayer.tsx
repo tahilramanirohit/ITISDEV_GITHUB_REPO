@@ -148,11 +148,11 @@ export function VideoOverlayPlayer({
     const snapshot = nearest(positions, t);
     for (const player of snapshot?.players ?? []) {
       const [x1, y1, x2, y2] = player.bbox;
-      const you = player.selected || (selectedTrackId != null && player.track_id === selectedTrackId);
+      const you = selectedTrackId != null ? player.track_id === selectedTrackId : !!player.selected;
       ctx.strokeStyle = you ? YOU : OTHER;
       ctx.lineWidth = you ? 4 : 2;
       ctx.strokeRect(px(x1), py(y1), (x2 - x1) * scale, (y2 - y1) * scale);
-      const name = you ? "You" : onSelectTrack && player.track_id != null ? `Player ${player.track_id}` : "Player";
+      const name = you ? "You" : player.track_id != null ? `Player ${player.track_id}` : "Player";
       tag(name, px(x1), py(y1), you ? YOU : OTHER, you ? "#ffffff" : INK);
     }
 
@@ -196,7 +196,8 @@ export function VideoOverlayPlayer({
     if (shot) {
       const info = SHOT_INFO[shot.shot_type];
       const hitterBox = nearest(positions, shot.time_seconds)?.players.find((p) => p.track_id === shot.hitter_track_id);
-      const who = shot.by_selected_player ? "You: " : "";
+      const mine = selectedTrackId != null ? shot.hitter_track_id === selectedTrackId : shot.by_selected_player;
+      const who = mine ? "You: " : shot.hitter_track_id != null ? `P${shot.hitter_track_id}: ` : "";
       const x = hitterBox ? px(hitterBox.bbox[2]) + 6 : 12;
       const y = hitterBox ? py(hitterBox.bbox[1]) + fontPx * 2 : fontPx * 2 + 12;
       tag(`${who}${info.name}?`, x, y, info.color, "#ffffff");

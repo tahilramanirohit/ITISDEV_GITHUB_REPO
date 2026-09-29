@@ -24,6 +24,10 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+# Players on the far side of the net are only 60-90 px tall in 1080p video.
+# At the model's default 640 px input they shrink to ~25 px and are missed.
+PERSON_IMAGE_SIZE = 1280
+
 
 def calculate_iou(box1: List[int], box2: List[int]) -> float:
     """Calculate Intersection over Union (IoU) for two bounding boxes (x1, y1, x2, y2)."""
@@ -83,7 +87,8 @@ class PlayerTracker:
     def _detect_and_track_yolo(self, frame: np.ndarray) -> List[Dict[str, Any]]:
         """Uses Ultralytics YOLOv8 with built-in persist=True tracking."""
         # Custom pickleball models need not use COCO's class 0 for people.
-        results = self.yolo_model.track(frame, persist=True, classes=[self.yolo_person_class_id], verbose=False)
+        results = self.yolo_model.track(frame, persist=True, classes=[self.yolo_person_class_id],
+                                        imgsz=PERSON_IMAGE_SIZE, verbose=False)
 
         detections = []
         if results and len(results) > 0 and results[0].boxes:

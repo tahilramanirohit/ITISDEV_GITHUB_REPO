@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle2, CircleDashed, FlaskConical, Info } from "lucide-react";
 import {
   METRIC_KEYS, METRIC_LABELS, VALIDATION_LABELS,
@@ -10,9 +10,10 @@ import { BLUE_SKY, BORDER, INK, NEON, ORANGE, ORANGE_L, ROSE, VIOLET, WHITE_DIM,
 import { Card, Notice, Pill, WidgetHeader } from "../shell/primitives";
 import { CourtDwellHeatmap } from "./CourtDwellHeatmap";
 import { CoachingPanel, type PreviousSession } from "./CoachingPanel";
+import { PlayerPicker } from "./PlayerPicker";
 import { ShotsPanel } from "./ShotsPanel";
 import { VideoOverlayPlayer, type JumpRequest } from "./VideoOverlayPlayer";
-import { focusShots } from "../../lib/analysis/shotLabels";
+import { courtPlayers, focusShots } from "../../lib/analysis/shotLabels";
 
 const STATUS_COLORS: Record<MetricStatus, string> = {
   measured: NEON,
@@ -50,6 +51,25 @@ export function OriginBadge({ origin, devMock = false }: { origin: AnalysisResul
   );
 }
 
+/** The player the user said they are, remembered per session in this browser. */
+function useMyPlayer(key: string, analysed: number | null): [number | null, (id: number) => void] {
+  const read = () => {
+    try {
+      const saved = window.localStorage.getItem(key);
+      return saved != null && /^\d+$/.test(saved) ? Number(saved) : analysed;
+    } catch {
+      return analysed;
+    }
+  };
+  const [id, setId] = useState<number | null>(read);
+  useEffect(() => setId(read()), [key, analysed]); // eslint-disable-line react-hooks/exhaustive-deps
+  const choose = (next: number) => {
+    setId(next);
+    try { window.localStorage.setItem(key, String(next)); } catch { /* private mode: keep it for this visit */ }
+  };
+  return [id, choose];
+}
+
 function Row({ k, v }: { k: string; v: React.ReactNode }) {
   return (
     <div className="flex justify-between gap-3 py-1.5 border-b text-sm" style={{ borderColor: BORDER }}>
@@ -72,11 +92,17 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack 
   const [jump, setJump] = useState<JumpRequest>(null);
   const shotMetric = result.metrics.shot_classification;
   const shotsValidated = shotMetric.validation === "evaluated_on_real_footage";
+  // Experimental shot labels are shown, clearly marked, so they can be checked against the video.
+  const shotsShown = !!shotMetric.value?.shots.length;
+  const analysedId = sel?.method === "track_id" ? sel.track_id : null;
+  const [myPlayerId, setMyPlayerId] = useMyPlayer(
+    `picklepro:me:${session?.id ?? result.provenance.source.sha256 ?? result.provenance.generated_at}`, analysedId);
+  const hasPlayers = courtPlayers(result).length > 0;
   // Older saved reports included an experimental hit count in the summary.
   // Keep that count hidden until the shot detector has real-footage evaluation.
   const visibleMessage = shotsValidated ? result.message
     : result.message.replace(/\s+\d+ hits? were estimated from the ball's flight\./, "");
-  const shotCount = focusShots(result);
+  const shotCount = focusShots(result, myPlayerId);
   const devMock = isDevMock(result);
   const heatValidated = devMock || heat.validation === "evaluated_on_real_footage";
   const zonesValidated = devMock || zones.validation === "evaluated_on_real_footage";
@@ -148,13 +174,14 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack 
           },
           {
             label: "Shots",
-            ok: shotsValidated && !!shotMetric.value?.shots.length,
-            value: shotsValidated && shotMetric.value?.shots.length
+            ok: shotsShown,
+            value: shotsShown
               ? `${shotCount.shots.length} ${shotCount.mine ? "of your hits" : "hits"} named`
               : "Not available",
-            detail: !shotsValidated ? "Shot labels need evaluation on labelled real footage before they can be shown as performance evidence."
-              : shotMetric.value?.shots.length ? "Tap Watch next to a shot to check it."
-                : shotMetric.reason ?? "Shot types are not available for this video.",
+            detail: shotsShown
+              ? shotsValidated ? "Tap Watch next to a shot to check it."
+                : "Experimental: not yet checked against hand-labelled videos. Tap Watch to check a shot."
+              : shotMetric.reason ?? "Shot types are not available for this video.",
           },
         ].map((item) => (
           <div key={item.label} className="rounded-2xl border bg-white p-4" style={{ borderColor: BORDER }}>
@@ -175,12 +202,12 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack 
           <ul className="space-y-2">
             {session.improvement_goals.map((goal) => {
               const rating = session[`${goal}_rating`];
-              const shotsAvailable = shotsValidated && !!shotMetric.value?.shots.length;
+              const shotsAvailable = shotsShown;
               const observed = (goal === "positioning" && coaching.available) || (goal === "shot_outcomes" && shotsAvailable);
               const reason = goal === "positioning" ? coaching.introduction
                 : goal === "shot_outcomes"
                   ? shotsAvailable
-                    ? "See the validated shot types below. Ball landing and shot success are not assessed."
+                    ? "See the estimated shot types below. Ball landing and shot success are not assessed."
                     : "Shot outcomes cannot be assessed. Shot success and in/out calls are outside this analysis scope."
                   : "Technique cannot be assessed yet. The current analysis does not measure body and paddle mechanics.";
               return <li key={goal} className="rounded-xl p-3 text-sm" style={{ border: `1px solid ${BORDER}` }}>
@@ -196,10 +223,18 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack 
       {(!session?.improvement_goals?.length || session.improvement_goals.includes("positioning")) &&
         <CoachingPanel result={result} previous={previous} />}
 
+      {result.data_origin === "measured" && !devMock && hasPlayers && (
+        <PlayerPicker result={result} myPlayerId={myPlayerId} onPick={setMyPlayerId}
+          onUpdateCourt={onSelectTrack && myPlayerId != null ? () => {
+            const me = result.players?.find((p) => p.player_id === myPlayerId);
+            onSelectTrack(myPlayerId, me?.first_seen_s ?? 0);
+          } : undefined} />
+      )}
+
       <section aria-labelledby="video-heading" className="space-y-3">
         <div>
           <h2 id="video-heading" className="text-lg font-bold text-[#101827]">Watch your video</h2>
-          <p className="text-base" style={{ color: WHITE_DIM }}>Press play to review the recording. Validated labels appear when available; player boxes also appear while you select yourself.</p>
+          <p className="text-base" style={{ color: WHITE_DIM }}>Press play to review the recording. Player numbers, the ball's trail and each estimated shot name are drawn on the video.</p>
         </div>
         {videoUrl && onSelectTrack && result.tracks.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
@@ -210,16 +245,17 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack 
             {selectingPlayer && <p className="text-base" style={{ color: INK }}>Pause the video where you can be seen, then tap the box around you. PicklePro will check the video again for you.</p>}
           </div>
         )}
-        <VideoOverlayPlayer src={videoUrl} positions={heatValidated || selectingPlayer ? result.player_positions : []}
-          ballPositions={shotsValidated ? result.ball_positions ?? [] : []}
-          courtLines={heatValidated ? result.court_lines ?? [] : []} shots={shotsValidated ? shotMetric.value?.shots ?? [] : []}
-          bounces={shotsValidated ? shotMetric.value?.bounces ?? [] : []}
-          selectedTrackId={sel?.method === "track_id" ? sel.track_id : null} jump={jump}
-          onSelectTrack={selectingPlayer ? (id, time) => { setSelectingPlayer(false); onSelectTrack?.(id, time); } : undefined} />
+        <VideoOverlayPlayer src={videoUrl}
+          positions={heatValidated || selectingPlayer || hasPlayers ? result.player_positions : []}
+          ballPositions={result.ball_positions ?? []}
+          courtLines={result.court_lines ?? []} shots={shotMetric.value?.shots ?? []}
+          bounces={shotMetric.value?.bounces ?? []}
+          selectedTrackId={myPlayerId} jump={jump}
+          onSelectTrack={selectingPlayer ? (id, time) => { setSelectingPlayer(false); setMyPlayerId(id); onSelectTrack?.(id, time); } : undefined} />
       </section>
 
       {result.data_origin === "measured" && !devMock && (
-        <ShotsPanel result={result} onWatch={videoUrl ? (time) => setJump({ time, id: Date.now() }) : undefined} />
+        <ShotsPanel result={result} myPlayerId={myPlayerId} onWatch={videoUrl ? (time) => setJump({ time, id: Date.now() }) : undefined} />
       )}
 
       <details className="rounded-2xl p-4" style={{ border: `1px solid ${BORDER}` }}>

@@ -9,9 +9,12 @@ export const VALIDATION_LEVELS = ["not_evaluated", "synthetic_only", "evaluated_
 export const METRIC_KEYS = ["court_heatmap", "zone_occupancy", "positioning", "rally_segmentation", "shot_classification"] as const;
 export const RESULT_KEYS = [
   "schema_version", "status", "data_origin", "message", "provenance", "video", "coverage", "calibration",
-  "player_selection", "tracks", "player_positions", "ball_positions", "court_lines", "metrics", "warnings",
+  "player_selection", "players", "tracks", "player_positions", "ball_positions", "court_lines", "metrics", "warnings",
 ] as const;
-export const SHOT_TYPES = ["serve", "return", "drive", "drop", "dink", "volley", "lob", "overhead", "unclassified"] as const;
+export const SHOT_TYPES = [
+  "serve", "return", "third_shot_drop", "third_shot_drive", "drive", "drop", "dink", "reset",
+  "speed_up", "counter", "volley", "lob", "overhead", "erne", "unclassified",
+] as const;
 
 export type ResultStatus = (typeof RESULT_STATUSES)[number];
 export type DataOrigin = (typeof DATA_ORIGINS)[number];
@@ -98,6 +101,20 @@ export type RallyValue = {
   rally_time_s: number;
 };
 export type PositionSnapshot = { time_seconds: number; players: PlayerBox[] };
+/** One person found in the video. `player_id` matches `track_id` in boxes and `hitter_track_id` in shots. */
+export type PlayerSummary = {
+  player_id: number;
+  label: string;
+  /** False for people standing mostly off the court, such as a referee. */
+  on_court: boolean;
+  side: "near" | "far" | null;
+  first_seen_s: number;
+  last_seen_s: number;
+  observed_frames: number;
+  median_court_m: [number, number] | null;
+  /** Small JPEG data URI. */
+  thumbnail: string | null;
+};
 export type BallSnapshot = { time_seconds: number; bbox: [number, number, number, number]; confidence: number };
 
 export type AnalysisResultV1 = {
@@ -131,6 +148,8 @@ export type AnalysisResultV1 = {
     fraction_of_video_analyzed: number | null;
     frames_with_detections: number;
     frames_with_ball_detections?: number;
+    ball_sample_stride?: number | null;
+    frames_with_carried_court_map?: number | null;
     selected_view_duration_s?: number | null;
   };
   calibration: {
@@ -149,6 +168,8 @@ export type AnalysisResultV1 = {
     tracked_fraction: number;
     ambiguous_frames: number;
   } | null;
+  /** Missing in results made before players were grouped. */
+  players?: PlayerSummary[];
   tracks: { track_id: number; first_seen_s: number; last_seen_s: number; observed_frames: number }[];
   player_positions: PositionSnapshot[];
   ball_positions?: BallSnapshot[];
@@ -245,6 +266,18 @@ export function parseAnalysisResult(input: unknown): AnalysisResultV1 {
   }
   if (!Array.isArray(input.player_positions) || !Array.isArray(input.tracks) || !Array.isArray(input.warnings)) {
     throw new ContractError("player_positions/tracks/warnings: expected arrays");
+  }
+  if (input.players !== undefined) {
+    if (!Array.isArray(input.players)) throw new ContractError("players: expected an array");
+    for (const player of input.players) {
+      if (!isObj(player) || typeof player.label !== "string" || typeof player.on_court !== "boolean") {
+        throw new ContractError("players: invalid player");
+      }
+      num(player.player_id, "players.player_id");
+      if (player.thumbnail != null && (typeof player.thumbnail !== "string" || !player.thumbnail.startsWith("data:image/jpeg;base64,"))) {
+        throw new ContractError("players.thumbnail: expected a JPEG data URI");
+      }
+    }
   }
   if (input.ball_positions !== undefined && !Array.isArray(input.ball_positions)) {
     throw new ContractError("ball_positions: expected an array");

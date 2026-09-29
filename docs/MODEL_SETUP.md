@@ -7,6 +7,24 @@ observed ball boxes at sampled frames. The heatmap uses player feet and the
 court calibration; ball boxes appear in video replay but do not create shot or
 speed statistics.
 
+## Quick setup
+
+From `Pickleball Performance Dashboard/server/`, with the optional runtime installed (`requirements-yolo.txt`):
+
+```sh
+.venv/bin/python -m picklepro.fetch_models
+```
+
+It downloads three pinned files into `server/models/` and rejects any file whose SHA-256 differs:
+
+| File | Used for | Source |
+| --- | --- | --- |
+| `court_best.pt` | court lines (14 keypoints) | pickleball-analysis, MIT |
+| `ball,person,paddle.pt` | the ball | pickleball-analysis, MIT |
+| `yolo11n.pt` | players (COCO `person`) | Ultralytics release v8.3.0, AGPL-3.0 |
+
+`yolo11n.pt` has SHA-256 `0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1`. On the 29 September test clip, the pickleball model's own person class missed the far-side players and gave unstable confidence for near players. The COCO model found all four players and the referee at 0.8–0.9 confidence. Both detectors run at 1280 px because far players and the ball are small in 1080p video.
+
 ## Candidate weights for local evaluation
 
 The MIT-licensed [pickleball-analysis](https://github.com/sumanblack666/pickleball-analysis)

@@ -12,7 +12,7 @@ import pytest
 
 from picklepro.court import COURT_WIDTH_M, calibrate
 from picklepro.fixtures import court_to_image_homography, project
-from picklepro.shots import FrameObs, analyze_shots, court_line_segments
+from picklepro.shots import SHOT_TYPES, TYPE_DEFINITIONS, FrameObs, _classify, analyze_shots, court_line_segments
 from picklepro.court import LANDMARKS_M
 
 DT = 0.1
@@ -103,12 +103,14 @@ def test_synthetic_rally_shot_types_hitters_and_bounces():
     out = analyze_shots(ball, frames, 540, DT)
     shots = out["shots"]
     assert [s["time_seconds"] for s in shots] == pytest.approx([0.0, 1.4, 2.8, 4.7, 6.2, 6.6])
-    assert [s["shot_type"] for s in shots] == ["serve", "return", "drop", "dink", "drive", "volley"]
+    # A's fast shot at the kitchen line after B's dink is a speed-up; B's fast
+    # volley straight back at it is a counter.
+    assert [s["shot_type"] for s in shots] == ["serve", "return", "third_shot_drop", "dink", "speed_up", "counter"]
     assert [s["hitter_track_id"] for s in shots] == [1, 2, 1, 2, 1, 2]
     assert [s["hitter_side"] for s in shots] == ["near", "far"] * 3
     assert shots[5]["contact"] == "volley" and shots[4]["contact"] == "after_bounce"
     assert [s["by_selected_player"] for s in shots] == [True, False] * 3
-    assert out["selected_player_counts_by_type"]["drop"] == 1
+    assert out["selected_player_counts_by_type"]["third_shot_drop"] == 1
     assert all(s["rally_index"] == 0 for s in shots)
     assert out["rallies"] == [{"rally_index": 0, "start_s": 0.0, "end_s": pytest.approx(7.5), "shots": 6}]
     # Bounces are on the ground, so their mapped court position is meaningful.
@@ -148,3 +150,44 @@ def test_court_lines_project_back_onto_the_court():
     near_baseline = lines[0]
     assert near_baseline == pytest.approx([130, 500, 830, 500], abs=1)
     assert COURT_WIDTH_M > 0 and not any(math.isnan(v) for line in lines for v in line)
+
+
+def _rule(**kw):
+    base = dict(number=5, depth=4.0, contact="after_bounce", speed=None, soft=False, fast=False, pace="",
+                is_lob=False, rise=None, hang=None, travel=None, above_head=False, incoming_fast=False,
+                incoming_soft=False, lands_in_kitchen=False, outside_sideline=False, unmapped=False)
+    base.update(kw)
+    if base["speed"] is not None:
+        base["soft"] = base["speed"] < 6.0
+        base["fast"] = base["speed"] >= 9.0
+        base["pace"] = f"{base['speed']:.1f} m/s"
+    return _classify(**base)[0]
+
+
+@pytest.mark.parametrize("features, expected", [
+    (dict(number=1, depth=-0.3), "serve"),
+    (dict(number=2, depth=0.5), "return"),
+    (dict(number=3, depth=0.8, speed=4.0), "third_shot_drop"),
+    (dict(number=3, depth=0.8, speed=7.5, lands_in_kitchen=True), "third_shot_drop"),
+    (dict(number=3, depth=0.8, speed=15.0), "third_shot_drive"),
+    (dict(depth=4.2, speed=3.0), "dink"),
+    (dict(depth=4.2, speed=3.0, incoming_fast=True), "reset"),
+    (dict(depth=3.0, speed=4.0, incoming_fast=True), "reset"),
+    (dict(depth=1.0, speed=4.0, incoming_fast=True), "drop"),
+    (dict(depth=4.2, speed=12.0, incoming_soft=True), "speed_up"),
+    (dict(depth=4.2, speed=12.0, incoming_fast=True, contact="volley"), "counter"),
+    (dict(depth=4.2, speed=7.0, contact="volley"), "volley"),
+    (dict(depth=4.2, contact="volley", outside_sideline=True), "erne"),
+    (dict(depth=1.0, speed=16.0), "drive"),
+    (dict(depth=1.0, speed=7.0), "drop"),
+    (dict(depth=4.2, above_head=True, speed=15.0), "overhead"),
+    (dict(depth=4.2, is_lob=True, rise=5.0), "lob"),
+    (dict(depth=None, unmapped=True), "unclassified"),
+    (dict(depth=1.0), "unclassified"),
+])
+def test_each_shot_rule(features, expected):
+    assert _rule(**features) == expected
+
+
+def test_every_shot_type_has_a_definition():
+    assert set(TYPE_DEFINITIONS) == set(SHOT_TYPES)

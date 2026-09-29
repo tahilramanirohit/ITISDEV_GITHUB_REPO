@@ -24,6 +24,21 @@ def test_finds_court_and_object_models_in_the_models_folder(models_dir, monkeypa
     assert str(models_dir) not in str(info), "absolute paths must not reach the browser"
 
 
+def test_separate_person_model_is_preferred_for_players(models_dir, monkeypatch):
+    (models_dir / "yolo11n.pt").write_bytes(b"x")
+    monkeypatch.setattr(models, "_ultralytics_installed", lambda: True)
+    setup = models.resolve_models({"PICKLEPRO_MODELS_DIR": str(models_dir)})
+    assert setup.yolo_weights.endswith("yolo11n.pt")
+    assert setup.ball_weights.endswith("ball,person,paddle.pt")
+    assert setup.court_weights.endswith("court_best.pt")
+
+
+def test_explicit_motion_detector_explains_the_override(models_dir, monkeypatch):
+    monkeypatch.setattr(models, "_ultralytics_installed", lambda: True)
+    setup = models.resolve_models({"PICKLEPRO_MODELS_DIR": str(models_dir), "PICKLEPRO_DETECTOR": "motion"})
+    assert setup.detector == "motion" and any("delete that line" in n for n in setup.notes)
+
+
 def test_missing_env_path_falls_back_to_the_models_folder(models_dir, monkeypatch):
     monkeypatch.setattr(models, "_ultralytics_installed", lambda: True)
     setup = models.resolve_models({"PICKLEPRO_MODELS_DIR": str(models_dir),

@@ -83,7 +83,10 @@ class Coverage(_Model):
     )
     fraction_of_video_analyzed: Optional[float] = None
     frames_with_detections: int
-    frames_with_ball_detections: int = 0
+    frames_with_ball_detections: int = Field(0, description="Ball samples kept on the cleaned ball path.")
+    ball_sample_stride: Optional[int] = Field(None, description="Every Nth decoded frame was searched for the ball.")
+    frames_with_carried_court_map: Optional[int] = Field(
+        None, description="Sampled frames whose court map was carried from up to 1 s earlier, adjusted for camera motion.")
     selected_view_duration_s: Optional[float] = Field(
         None, description="Duration of the selected camera view when a cut was detected; null for a continuous video."
     )
@@ -105,6 +108,18 @@ class PlayerSelectionSummary(_Model):
     tracked_time_s: float
     tracked_fraction: float = Field(description="tracked_time_s / selected view duration, or whole analyzed duration for a continuous video")
     ambiguous_frames: int = Field(0, description="Frames excluded because the selection matched >1 detection.")
+
+
+class PlayerSummary(_Model):
+    player_id: int = Field(description="Matches track_id in player boxes and hitter_track_id in shots.")
+    label: str
+    on_court: bool = Field(description="False for people standing mostly off the court, such as a referee.")
+    side: Optional[Literal["near", "far"]] = None
+    first_seen_s: float
+    last_seen_s: float
+    observed_frames: int
+    median_court_m: Optional[List[float]] = Field(None, min_length=2, max_length=2)
+    thumbnail: Optional[str] = Field(None, description="Small JPEG data URI of the player, for choosing yourself.")
 
 
 class TrackSummary(_Model):
@@ -191,7 +206,8 @@ class PositioningMetric(Metric):
     value: Optional[PositioningValue] = None
 
 
-ShotType = Literal["serve", "return", "drive", "drop", "dink", "volley", "lob", "overhead", "unclassified"]
+ShotType = Literal["serve", "return", "third_shot_drop", "third_shot_drive", "drive", "drop", "dink", "reset",
+                   "speed_up", "counter", "volley", "lob", "overhead", "erne", "unclassified"]
 ContactType = Literal["volley", "after_bounce", "unknown"]
 
 
@@ -266,6 +282,7 @@ class AnalysisResultV1(_Model):
     coverage: Coverage
     calibration: Optional[CalibrationSummary] = None
     player_selection: Optional[PlayerSelectionSummary] = None
+    players: List[PlayerSummary] = Field(default_factory=list)
     tracks: List[TrackSummary]
     player_positions: List[PositionSnapshot]
     ball_positions: List[BallSnapshot] = Field(default_factory=list)

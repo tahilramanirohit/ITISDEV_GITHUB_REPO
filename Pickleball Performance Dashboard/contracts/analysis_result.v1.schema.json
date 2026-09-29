@@ -276,8 +276,35 @@
         },
         "frames_with_ball_detections": {
           "default": 0,
+          "description": "Ball samples kept on the cleaned ball path.",
           "title": "Frames With Ball Detections",
           "type": "integer"
+        },
+        "ball_sample_stride": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Every Nth decoded frame was searched for the ball.",
+          "title": "Ball Sample Stride"
+        },
+        "frames_with_carried_court_map": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Sampled frames whose court map was carried from up to 1 s earlier, adjusted for camera motion.",
+          "title": "Frames With Carried Court Map"
         },
         "selected_view_duration_s": {
           "anyOf": [
@@ -527,6 +554,93 @@
         "tracked_fraction"
       ],
       "title": "PlayerSelectionSummary",
+      "type": "object"
+    },
+    "PlayerSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "player_id": {
+          "description": "Matches track_id in player boxes and hitter_track_id in shots.",
+          "title": "Player Id",
+          "type": "integer"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "on_court": {
+          "description": "False for people standing mostly off the court, such as a referee.",
+          "title": "On Court",
+          "type": "boolean"
+        },
+        "side": {
+          "anyOf": [
+            {
+              "enum": [
+                "near",
+                "far"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Side"
+        },
+        "first_seen_s": {
+          "title": "First Seen S",
+          "type": "number"
+        },
+        "last_seen_s": {
+          "title": "Last Seen S",
+          "type": "number"
+        },
+        "observed_frames": {
+          "title": "Observed Frames",
+          "type": "integer"
+        },
+        "median_court_m": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Median Court M"
+        },
+        "thumbnail": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Small JPEG data URI of the player, for choosing yourself.",
+          "title": "Thumbnail"
+        }
+      },
+      "required": [
+        "player_id",
+        "label",
+        "on_court",
+        "first_seen_s",
+        "last_seen_s",
+        "observed_frames"
+      ],
+      "title": "PlayerSummary",
       "type": "object"
     },
     "PositionSnapshot": {
@@ -1008,12 +1122,18 @@
           "enum": [
             "serve",
             "return",
+            "third_shot_drop",
+            "third_shot_drive",
             "drive",
             "drop",
             "dink",
+            "reset",
+            "speed_up",
+            "counter",
             "volley",
             "lob",
             "overhead",
+            "erne",
             "unclassified"
           ],
           "title": "Shot Type",
@@ -1401,6 +1521,13 @@
         }
       ],
       "default": null
+    },
+    "players": {
+      "items": {
+        "$ref": "#/$defs/PlayerSummary"
+      },
+      "title": "Players",
+      "type": "array"
     },
     "tracks": {
       "items": {

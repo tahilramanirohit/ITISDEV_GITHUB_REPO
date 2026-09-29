@@ -11,22 +11,31 @@ from picklepro.spatial import Selection
 
 
 class FakeBallModel:
+    """A ball flying across the frame, plus a fixed ball-like logo that never moves."""
     names = {0: "person", 1: "pickleball", 2: "paddle"}
+
+    def __init__(self):
+        self.calls = 0
 
     def predict(self, _frame, **kwargs):
         assert kwargs["classes"] == [1]
+        x = 100 + 12 * self.calls
+        self.calls += 1
         boxes = [
-            SimpleNamespace(xyxy=np.asarray([[100, 80, 110, 90]]), conf=[0.8]),
-            SimpleNamespace(xyxy=np.asarray([[200, 90, 210, 100]]), conf=[0.3]),
+            SimpleNamespace(xyxy=np.asarray([[x, 80, x + 10, 90]]), conf=[0.8]),
+            SimpleNamespace(xyxy=np.asarray([[200, 190, 210, 200]]), conf=[0.3]),
         ]
         return [SimpleNamespace(boxes=boxes)]
 
 
-def test_custom_model_reports_highest_scored_ball_box():
+def test_custom_model_reports_ball_candidates_most_confident_first():
     detector = BallDetector("operator-weights.pt", model=FakeBallModel())
-    assert detector.detect(np.zeros((120, 300, 3), dtype=np.uint8)) == {
-        "bbox": [100, 80, 110, 90], "confidence": 0.8,
-    }
+    frame = np.zeros((120, 300, 3), dtype=np.uint8)
+    assert detector.candidates(frame) == [
+        {"bbox": [100, 80, 110, 90], "confidence": 0.8},
+        {"bbox": [200, 190, 210, 200], "confidence": 0.3},
+    ]
+    assert detector.detect(frame) == {"bbox": [112, 80, 122, 90], "confidence": 0.8}
 
 
 def test_too_few_ball_frames_do_not_produce_shots(synthetic_clip, monkeypatch):
@@ -37,6 +46,8 @@ def test_too_few_ball_frames_do_not_produce_shots(synthetic_clip, monkeypatch):
         compute_sha256=False, max_seconds=1))
     assert result.provenance.ball_detector.name == "ultralytics-yolo-ball"
     assert result.coverage.frames_with_ball_detections == len(result.ball_positions) > 0
+    # Only the moving ball is kept; the fixed logo at x=200..210, y=190 is scenery.
+    assert all(b.bbox[1] == 80 for b in result.ball_positions)
     assert result.ball_positions[0].bbox == [100, 80, 110, 90]
     # One second of sampled frames is too little ball flight to claim any shot.
     assert result.metrics.shot_classification.status == "insufficient_data"

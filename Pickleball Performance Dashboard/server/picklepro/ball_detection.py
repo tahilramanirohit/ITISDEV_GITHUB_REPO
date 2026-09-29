@@ -1,15 +1,17 @@
 """Optional per-frame pickleball observations from locally supplied YOLO weights.
 
-This reports only boxes actually returned by the model. It does not interpolate
-a trajectory or infer hits, speed, height, or shot type.
+This reports only boxes actually returned by the model. Choosing the real ball
+among several candidates is done afterwards by :mod:`picklepro.ball_tracking`.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 from .detection import DetectorUnavailable
+
+BALL_IMAGE_SIZE = 1280
 
 
 def ball_class_id(names: Any) -> int:
@@ -37,14 +39,24 @@ class BallDetector:
         self.class_id = ball_class_id(getattr(model, "names", {}))
 
     def detect(self, frame) -> Optional[dict]:
-        results = self.model.predict(frame, classes=[self.class_id], conf=0.15, verbose=False)
+        found = self.candidates(frame, limit=1)
+        return found[0] if found else None
+
+    def candidates(self, frame, limit: int = 4) -> List[dict]:
+        """Up to ``limit`` ball boxes, most confident first.
+
+        A pickleball is only 10-25 px wide in 1080p video, so the model runs at
+        1280 px (instead of its 640 px default) to keep the ball visible.
+        """
+        results = self.model.predict(frame, classes=[self.class_id], conf=0.15, imgsz=BALL_IMAGE_SIZE, verbose=False)
         if not results or results[0].boxes is None or len(results[0].boxes) == 0:
-            return None
-        best = max(results[0].boxes, key=lambda box: float(box.conf[0]))
-        coords = best.xyxy[0]
-        if hasattr(coords, "cpu"):
-            coords = coords.cpu()
-        box = [int(round(float(v))) for v in coords]
-        if box[2] <= box[0] or box[3] <= box[1]:
-            return None
-        return {"bbox": box, "confidence": round(float(best.conf[0]), 3)}
+            return []
+        out = []
+        for found in sorted(results[0].boxes, key=lambda box: -float(box.conf[0]))[:limit]:
+            coords = found.xyxy[0]
+            if hasattr(coords, "cpu"):
+                coords = coords.cpu()
+            box = [int(round(float(v))) for v in coords]
+            if box[2] > box[0] and box[3] > box[1]:
+                out.append({"bbox": box, "confidence": round(float(found.conf[0]), 3)})
+        return out

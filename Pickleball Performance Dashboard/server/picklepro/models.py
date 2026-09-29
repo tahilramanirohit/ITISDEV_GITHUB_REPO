@@ -7,15 +7,18 @@ Resolution order for each model:
    existing file.
 2. A weights file in the models folder (``server/models`` or
    ``PICKLEPRO_MODELS_DIR``). The court model is a ``.pt`` file with "court" in
-   its name; the object model is any other ``.pt`` file, preferring names that
-   mention "ball" or "person".
+   its name and the ball model one with "ball" in its name. Any other ``.pt``
+   file (for example ``yolo11n.pt``) is the person model; without one, the
+   ball model's own person class is used.
+
+``python -m picklepro.fetch_models`` downloads the reviewed files.
 
 The person detector defaults to ``yolo`` when Ultralytics is installed and an
 object model was found, and to ``motion`` otherwise. ``PICKLEPRO_DETECTOR``
 still overrides this. Set ``PICKLEPRO_AUTO_MODELS=0`` to turn discovery off
 (the test suite does this so results do not depend on local files).
 
-Nothing is downloaded. Class names are checked when a model is loaded.
+Discovery never downloads anything. Class names are checked when a model is loaded.
 """
 
 from __future__ import annotations
@@ -85,15 +88,20 @@ def _existing(value: Optional[str], label: str, notes: List[str]) -> Optional[st
     return None
 
 
-def _discover(models_dir: Path) -> tuple[Optional[str], Optional[str]]:
+def _discover(models_dir: Path) -> tuple[Optional[str], Optional[str], Optional[str]]:
+    """Return (court, person, ball) weights found in the models folder."""
     if not models_dir.is_dir():
-        return None, None
+        return None, None, None
     weights = sorted(p for p in models_dir.glob("*.pt") if p.is_file())
     court = next((p for p in weights if "court" in p.name.lower()), None)
-    objects = [p for p in weights if p != court]
-    preferred = [p for p in objects if any(k in p.name.lower() for k in ("ball", "person", "player"))]
-    obj = (preferred or objects or [None])[0]
-    return (str(court.resolve()) if court else None, str(obj.resolve()) if obj else None)
+    ball = next((p for p in weights if p != court and "ball" in p.name.lower()), None)
+    others = [p for p in weights if p not in (court, ball)]
+    person = next((p for p in others if any(k in p.name.lower() for k in ("person", "player"))), None) \
+        or (others[0] if others else None) or ball
+    if ball is None and others:
+        ball = others[0]
+    path = lambda p: str(p.resolve()) if p else None  # noqa: E731
+    return path(court), path(person), path(ball)
 
 
 def resolve_models(env: Optional[Mapping[str, str]] = None) -> ModelSetup:
@@ -106,10 +114,10 @@ def resolve_models(env: Optional[Mapping[str, str]] = None) -> ModelSetup:
     person = _existing(env.get("PICKLEPRO_YOLO_WEIGHTS"), "PICKLEPRO_YOLO_WEIGHTS", notes)
     ball = _existing(env.get("PICKLEPRO_BALL_WEIGHTS"), "PICKLEPRO_BALL_WEIGHTS", notes)
     if auto:
-        found_court, found_objects = _discover(Path(env.get("PICKLEPRO_MODELS_DIR") or DEFAULT_MODELS_DIR))
+        found_court, found_person, found_ball = _discover(Path(env.get("PICKLEPRO_MODELS_DIR") or DEFAULT_MODELS_DIR))
         court = court or found_court
-        person = person or found_objects
-        ball = ball or found_objects
+        person = person or found_person
+        ball = ball or found_ball
 
     if (court or person or ball) and not installed:
         notes.append("Model files were found, but Ultralytics is not installed "
@@ -119,6 +127,9 @@ def resolve_models(env: Optional[Mapping[str, str]] = None) -> ModelSetup:
     requested = env.get("PICKLEPRO_DETECTOR")
     if requested in ("motion", "yolo"):
         detector = requested
+        if requested == "motion" and person:
+            notes.append("PICKLEPRO_DETECTOR=motion in server/.env overrides the person model that was found; "
+                         "delete that line to detect players with the model.")
     else:
         detector = "yolo" if person else "motion"
     if detector == "yolo" and not person:

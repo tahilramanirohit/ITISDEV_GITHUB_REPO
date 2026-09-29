@@ -98,7 +98,7 @@ describe("VideoOverlayPlayer", () => {
     act(() => drawFrame?.(0));
     const texts = ctx.fillText.mock.calls.map((call) => call[0]);
     expect(texts).toContain("You");
-    expect(texts).toContain("Player");
+    expect(texts).toContain("Player 8");
     expect(texts).toContain("You: Drop?");
     expect(ctx.moveTo).toHaveBeenCalledWith(65, 250);
     expect(getByText("Court lines found")).toBeTruthy();

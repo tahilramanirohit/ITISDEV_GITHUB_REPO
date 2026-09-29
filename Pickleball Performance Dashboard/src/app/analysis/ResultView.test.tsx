@@ -25,7 +25,7 @@ describe("ResultView", () => {
     expect(screen.getByText("Ball finder not set up")).toBeTruthy();
     expect(screen.getByText("Court lines found")).toBeTruthy();
     expect(screen.getByText("Not available")).toBeTruthy();
-    expect(screen.getByText(/Shot labels need evaluation on labelled real footage/)).toBeTruthy();
+    expect(screen.getAllByText("Not available").length).toBeGreaterThan(0);
     fireEvent.click(screen.getByText("Detailed measurements and analysis notes"));
     expect(screen.getByText(testFixture.provenance.pipeline_version)).toBeTruthy();
     expect(screen.getByText("Share of video analyzed")).toBeTruthy();
@@ -138,11 +138,36 @@ describe("ResultView", () => {
       },
     };
     result.message = "The selected player was tracked. 4 hits were estimated from the ball's flight.";
+    result.players = [
+      { player_id: 1, label: "Near side, left", on_court: true, side: "near", first_seen_s: 0, last_seen_s: 20,
+        observed_frames: 150, median_court_m: [2, 3], thumbnail: "data:image/jpeg;base64,AAAA" },
+      { player_id: 2, label: "Far side, right", on_court: true, side: "far", first_seen_s: 0, last_seen_s: 20,
+        observed_frames: 150, median_court_m: [4, 11], thumbnail: null },
+      { player_id: 9, label: "Off court (not counted as a player)", on_court: false, side: null, first_seen_s: 0,
+        last_seen_s: 5, observed_frames: 20, median_court_m: [-2, 6], thumbnail: null },
+    ];
+    window.localStorage.clear();
     render(<ResultView result={parseAnalysisResult(result)} videoUrl="/demo.mp4" />);
     expect(screen.getByText("The selected player was tracked.")).toBeTruthy();
     expect(screen.queryByText(/4 hits were estimated/)).toBeNull();
-    expect(screen.getByText(/Shot labels are unavailable until the detector and rules pass evaluation/)).toBeTruthy();
-    expect(screen.queryByText("Your shots")).toBeNull();
-    expect(screen.queryByRole("button", { name: /Watch the/ })).toBeNull();
+    // Experimental labels are shown, clearly marked, for every player.
+    expect(screen.getAllByText("EXPERIMENTAL").length).toBeGreaterThan(0);
+    expect(screen.getByRole("tab", { name: "All players (4)" })).toBeTruthy();
+    expect(screen.getByRole("table", { name: "Shots by player" })).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: /Watch the/ })).toHaveLength(4);
+    // Only people on the court can be picked.
+    expect(screen.getByText("Which player are you?")).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: /This is me/ })).toHaveLength(2);
+
+    // Nobody chosen yet: "My shots" asks the player to pick themselves.
+    fireEvent.click(screen.getByRole("tab", { name: "My shots (?)" }));
+    expect(screen.getByText(/to see only your shots/)).toBeTruthy();
+
+    // Choosing Player 2 shows their two shots straight away.
+    fireEvent.click(screen.getAllByRole("button", { name: /This is me/ })[1]);
+    fireEvent.click(screen.getByRole("tab", { name: "My shots (2)" }));
+    expect(screen.getAllByRole("button", { name: /Watch the/ })).toHaveLength(2);
+    expect(screen.getByRole("button", { name: /Watch the return at 0:02/ })).toBeTruthy();
+    expect(window.localStorage.getItem(`picklepro:me:${result.provenance.source.sha256 ?? result.provenance.generated_at}`)).toBe("2");
   });
 });
