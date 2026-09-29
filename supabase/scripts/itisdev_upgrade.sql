@@ -3,8 +3,12 @@
 -- That project already had a smaller `sessions` table
 -- (id, owner_id, title, session_date, notes, created_at) and none of the
 -- video/job/result tables, so the normal migrations fail with "already exists".
--- This script brings it to the same state as the three files in
--- supabase/migrations/ WITHOUT deleting any table or row:
+-- This script brings it to the state of the first migrations
+-- (20260924000100, 20260924000200, 20260928000100 and the goal columns from
+-- 20260928000200) WITHOUT deleting any table or row. It does NOT include the
+-- later capture/consent, versioned-run, raw-video retention or dev-mock-run
+-- migrations; apply those with `supabase db push` after reviewing a dry run.
+-- For a new project, skip this script and use `supabase db push` only:
 --
 --   * adds the missing sessions columns with defaults (existing rows become
 --     practice / singles / individual sessions);

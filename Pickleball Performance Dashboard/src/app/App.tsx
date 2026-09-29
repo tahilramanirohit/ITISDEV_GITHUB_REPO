@@ -3,6 +3,7 @@ import { HashRouter, Route, Routes } from "react-router";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { config as defaultConfig, type AppConfig } from "../lib/config";
 import { supabase as defaultSupabase } from "../lib/supabase";
+import { devModeErrorText, guestErrorText } from "./auth/anonymousErrors";
 import { AuthScreen, PasswordRecoveryScreen } from "./auth/AuthScreen";
 import { useAuth } from "./auth/useAuth";
 import { AppShell } from "./shell/AppShell";
@@ -53,16 +54,6 @@ function NotAvailable() {
   );
 }
 
-function devModeErrorText(message: string): string {
-  if (/anonymous sign-ins are disabled/i.test(message)) {
-    return "Anonymous sign-ins are off in this Supabase project. Turn on Authentication → Sign In / Providers → Allow anonymous sign-ins, then try again.";
-  }
-  if (/seed_dev_mock_data|could not find the function/i.test(message)) {
-    return "The mock-data function is missing. Run supabase/migrations/20260928000100_dev_mock_data.sql in the Supabase SQL editor, then try again.";
-  }
-  return message;
-}
-
 function SignedInApp({ sb, cfg }: { sb: SupabaseClient; cfg: AppConfig }) {
   const auth = useAuth(sb);
   const [devBusy, setDevBusy] = useState(false);
@@ -77,7 +68,7 @@ function SignedInApp({ sb, cfg }: { sb: SupabaseClient; cfg: AppConfig }) {
       const { error } = await sb.auth.signInAnonymously();
       if (error) throw error;
     } catch (e) {
-      setGuestError(devModeErrorText(e instanceof Error ? e.message : String(e)));
+      setGuestError(guestErrorText(e instanceof Error ? e.message : String(e)));
     } finally {
       setGuestBusy(false);
     }

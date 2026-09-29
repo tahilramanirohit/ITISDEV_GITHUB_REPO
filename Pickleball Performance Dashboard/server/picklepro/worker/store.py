@@ -1,7 +1,7 @@
 """Job-store interface used by the worker, plus an in-memory implementation.
 
 The lease semantics here intentionally mirror the SQL functions in
-``supabase/migrations/*_analysis_jobs.sql`` so the runner can be tested without
+``supabase/migrations/*_analysis_jobs_and_results.sql`` so the runner can be tested without
 a database:
 
 * ``claim`` takes the oldest queued job whose ``available_at`` has passed, or a

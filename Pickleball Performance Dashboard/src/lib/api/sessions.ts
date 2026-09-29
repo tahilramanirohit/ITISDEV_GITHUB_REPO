@@ -148,7 +148,11 @@ export async function registerVideo(
 }
 
 export async function removeVideo(sb: SupabaseClient, video: VideoAssetRow): Promise<void> {
-  await sb.storage.from(VIDEO_BUCKET).remove([video.storage_path]);
+  // Delete the file first and stop if that fails, so the row that points to it
+  // is kept and the player can retry instead of leaving an orphaned object.
+  // Removing a path that was never uploaded or has already expired succeeds.
+  const { error } = await sb.storage.from(VIDEO_BUCKET).remove([video.storage_path]);
+  if (error) throw new Error(`Could not delete the video file: ${error.message}`);
   check(await sb.from("video_assets").delete().eq("id", video.id));
 }
 

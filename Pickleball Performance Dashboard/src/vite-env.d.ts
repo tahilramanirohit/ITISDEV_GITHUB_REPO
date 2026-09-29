@@ -9,6 +9,9 @@ declare interface ImportMetaEnv {
   readonly VITE_CV_BACKEND_URL?: string;
   readonly VITE_ENABLE_DESIGN_PREVIEW?: string;
   readonly VITE_ENABLE_LOCAL_PROTOTYPE?: string;
+  readonly VITE_ENABLE_DEV_MODE?: string;
+  readonly VITE_ENABLE_GUEST_MODE?: string;
+  readonly VITE_TRIAL_NO_WORKER?: string;
 }
 
 declare interface ImportMeta {

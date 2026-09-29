@@ -35,6 +35,14 @@ select tests.expect_count($$ select 1 from public.sessions where title like '[De
 select tests.expect_count($$ select 1 from public.video_assets where upload_status = 'uploaded' $$, 2, 'mock videos marked uploaded');
 select tests.expect_count($$ select 1 from public.analysis_jobs where status = 'completed' $$, 2, 'mock jobs completed');
 select tests.expect_count($$ select 1 from public.analysis_results where pipeline_version = 'dev-mock' $$, 2, 'mock results stored');
+select tests.expect_count($$ select 1 from public.analysis_runs where run_number = 1 and status = 'completed'
+  and pipeline_version = 'dev-mock' $$, 2, 'each mock session has a completed run 1');
+select tests.expect_count($$ select 1 from public.sessions s join public.analysis_runs r on r.id = s.active_run_id
+  where r.session_id = s.id $$, 2, 'each mock session publishes its run as the active report');
+select tests.expect_count($$ select 1 from public.analysis_jobs j join public.analysis_results res on res.job_id = j.id
+  where j.current_run_id = res.run_id $$, 2, 'mock job and result both name the run');
+select tests.expect_count($$ select 1 from public.video_assets where raw_video_expires_at is not null $$, 0,
+  'mock videos are not scheduled for raw-video deletion');
 
 select public.seed_dev_mock_data($$[{"title":"Again","result":{"schema_version":"1.0","status":"ok",
   "data_origin":"measured","provenance":{"pipeline_version":"dev-mock"}}}]$$);

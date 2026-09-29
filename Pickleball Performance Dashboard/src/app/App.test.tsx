@@ -128,7 +128,7 @@ describe("dev mode entry", () => {
     const sb = fakeSupabase({ rpcError: { message: "Could not find the function public.seed_dev_mock_data" } });
     render(<App cfg={devConfig} sb={sb as unknown as SupabaseClient} />);
     fireEvent.click(await screen.findByRole("button", { name: /Try PicklePro with sample sessions/ }));
-    expect(await screen.findByText(/Run supabase\/migrations\/20260928000100_dev_mock_data.sql/)).toBeTruthy();
+    expect(await screen.findByText(/Apply the database migrations/)).toBeTruthy();
     await waitFor(() => expect(sb.auth.signOut).toHaveBeenCalled());
   });
 });

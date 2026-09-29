@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+// Must equal the policy_version required in supabase/migrations (see capture.test.ts).
 export const UPLOAD_POLICY_VERSION = "2026-09-29-v4";
 
 export type Checkin = {

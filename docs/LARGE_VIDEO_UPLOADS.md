@@ -18,9 +18,12 @@ aggressive compression that makes the ball or court lines hard to see.
 The Free plan also includes 1 GB of total file storage
 ([current pricing](https://supabase.com/pricing)). About 37 clips the size of
 the supplied sample would reach that amount before other files and overhead.
-Automatic raw-video expiry is not implemented, so review usage and delete
-unneeded sessions manually in the pilot. Do not state that footage is
-automatically removed after 30 days.
+Raw videos expire 30 days after their first measured report unless the owner
+keeps them, but the file is only deleted while an analysis worker is running
+(see [SUPABASE_SETUP.md](SUPABASE_SETUP.md#raw-video-retention-migration)).
+Kept videos, fixture-only sessions and sessions whose analysis failed are never
+removed automatically, so still review usage and delete unneeded sessions
+manually in the pilot.
 
 If full-length uploads become necessary, revisit the plan. For this sample's
 bitrate, a ten-minute clip needs more than the existing 500 MiB bucket and
