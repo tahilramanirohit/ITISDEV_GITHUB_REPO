@@ -11,6 +11,10 @@ declare interface ImportMetaEnv {
   readonly VITE_ENABLE_LOCAL_PROTOTYPE?: string;
 }
 
+// Set by vite.config.ts at build time.
+declare const __APP_COMMIT__: string;
+declare const __APP_BRANCH__: string;
+
 declare interface ImportMeta {
   readonly env: ImportMetaEnv;
 }

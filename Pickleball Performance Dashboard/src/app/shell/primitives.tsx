@@ -105,6 +105,25 @@ export function Notice({ tone = "info", children }: { tone?: "info" | "warn" | "
   );
 }
 
+// ── Build marker ──────────────────────────────────────────────────────────
+const BUILD_COMMIT = typeof __APP_COMMIT__ !== "undefined" ? __APP_COMMIT__ : "dev";
+const BUILD_BRANCH = typeof __APP_BRANCH__ !== "undefined" ? __APP_BRANCH__ : "";
+
+/** Marks the test build (with shot detection) and the exact commit it was built from. */
+export function VersionBadge() {
+  return (
+    <span className="flex flex-col items-start leading-tight" title={`Built from commit ${BUILD_COMMIT}${BUILD_BRANCH ? ` on ${BUILD_BRANCH}` : ""}`}>
+      <span className="rounded-md px-1.5 py-0.5 text-[11px] font-bold tracking-wide"
+        style={{ background: `${ORANGE}25`, border: `1px solid ${ORANGE}80`, color: ORANGE }}>
+        version TEST
+      </span>
+      <span className="font-mono text-[10px] mt-0.5" style={{ color: WHITE_SUB }}>
+        {BUILD_BRANCH ? `${BUILD_BRANCH} · ` : ""}{BUILD_COMMIT}
+      </span>
+    </span>
+  );
+}
+
 // ── Brand mark ────────────────────────────────────────────────────────────
 export function PickleProLogo({ size = "md" }: { size?: "md" | "lg" }) {
   const box = size === "lg" ? 56 : 44;
@@ -126,6 +145,7 @@ export function PickleProLogo({ size = "md" }: { size?: "md" | "lg" }) {
       <span style={{ fontFamily: DISPLAY_FONT, fontWeight: 800, fontSize: size === "lg" ? "2.8rem" : "2.2rem", letterSpacing: "0.06em", lineHeight: 1, color: WHITE }}>
         Pickle<span style={{ color: NEON }}>Pro</span>
       </span>
+      <VersionBadge />
     </div>
   );
 }

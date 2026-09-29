@@ -19,6 +19,8 @@ import { ResultView } from "../analysis/ResultView";
 import type { PreviousSession } from "../analysis/CoachingPanel";
 
 const POLL_MS = 3000;
+// A queued job this old usually means no analysis worker is running.
+const WORKER_WAIT_MS = 60_000;
 
 export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; userId: string }) {
   const { sessionId = "" } = useParams();
@@ -183,6 +185,15 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
             <p className="text-[11px]" style={{ color: WHITE_SUB }}>
               {localUpload.phase === "finalizing" ? "Registering upload…" : `${Math.round(localUpload.progress * 100)}% uploaded`}
             </p>
+          </div>
+        )}
+        {state === "queued" && job && Date.now() - Date.parse(job.updated_at) > WORKER_WAIT_MS && (
+          <div className="mb-3">
+            <Notice tone="warn">
+              <strong>Still waiting for the analysis worker.</strong> This website only stores the video; the analysis
+              runs on the computer where <code>start_worker.bat</code> is open. Start it (or check its window for errors)
+              and this page updates by itself when the video has been analyzed.
+            </Notice>
           </div>
         )}
         {state === "failed" && job?.error_code && (

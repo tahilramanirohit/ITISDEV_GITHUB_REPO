@@ -52,6 +52,12 @@ export function ShotsPanel({ result, onSeek }: { result: AnalysisResultV1; onSee
         <p className="text-xs flex gap-2" style={{ color: ORANGE_L }}>
           <Info size={12} className="flex-shrink-0 mt-0.5" /> {shots.reason ?? "Not available."}
         </p>
+        {shots.status === "not_computed" && (
+          <p className="text-xs mt-2" style={{ color: WHITE_DIM }}>
+            This result was made by a worker without the ball model, or before shot detection existed. Start the
+            worker with <code>start_worker.bat</code> (it installs the models), then use <strong>Re-run analysis</strong> above.
+          </p>
+        )}
       </Card>
     );
   }
