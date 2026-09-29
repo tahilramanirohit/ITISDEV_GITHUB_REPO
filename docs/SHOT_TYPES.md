@@ -26,9 +26,10 @@ PicklePro names every detected hit with one of the shot types below. The names f
 
 ## How hits are found
 
-1. **Ball path.** Every ball model in `server/models` runs at 1280 px, 15 times per second, and their boxes are pooled. Boxes far too big for a ball, and candidates that never move (a ball printed on a banner, a lamp), are removed. The rest are linked into flights using their velocity. Only observed boxes are kept, so nothing is interpolated.
+1. **Ball path.** The ball model (`ball,person,paddle.pt`) runs at 1280 px, 15 times per second. Boxes far too big for a ball, and candidates that never move (a ball printed on a banner, a lamp), are removed. The rest are linked into flights using their velocity. Only observed boxes are kept, so nothing is interpolated.
 2. **Hits and bounces.** A sharp change of direction is a candidate hit. An upward kick in the image with no player in reach is a bounce. Seen from behind a baseline, a near player's box covers much of the far court in the picture, so a candidate can fit a player on either side of the net.
    **Hits alternate sides.** Every shot must cross the net, so within a rally the hitters must alternate between the near and far teams. For each candidate, PicklePro considers the closest player on each side, then picks the sequence of hits and sides that scores best: the ball turned sharply and passed close to the chosen player. Weak candidates that would break the alternation are dropped.
+   A ball at shoe level (below about 85% of the player's height) is rolling or bouncing past, not being struck, so it is never a hit for that player.
    The ball's apparent size is only a coarse check: detector boxes are padded and blurred to about twice the ball's true size, so size cannot tell a near ball from a far one.
 3. **Not a stroke.** A ball that stays within about a third of a body height of the player for the whole half second around the "hit" is being carried, caught or bounced before a serve, so it is ignored. So is a "shot" that travels slower than 0.8 m/s.
 4. **Rallies.** Hits more than 3.5 s apart start a new rally. A rally starts at its first hit from a serving position: behind or near the baseline, or, on the near side, with the player's feet below the bottom of the picture (the near baseline is often out of view). Hits before that are balls knocked back between points and are dropped. A run of hits without a serving position counts only if it has at least 4 hits. Shot numbers (serve, return, third shot) come from this, so a missed serve shifts the numbering.
@@ -75,19 +76,22 @@ Players and court on the same clip:
 
 | Version | Shots found (recall) | Detections that match a label (precision) | Right player | Right side of the net | Right type | Player and type both right |
 | --- | --- | --- | --- | --- | --- | --- |
-| Before this work (one ball model) | 62% | 76% | 63% | – | 6% | 1 of 26 |
-| Current rules, one ball model | 81% | 66% | 52% | 71% | 43% | 1 of 26 |
-| **Current rules, three ball models (shipped)** | **100%** | **39%** | **69%** | **85%** | **23%** | **5 of 26** |
+| First version (29 Sep, one ball model) | 62% | 76% | 63% | – | 6% | 1 of 26 |
+| Side alternation, three ball models (29 Sep) | 100% | 39% (67 detections) | 69% | 85% | 23% | 5 of 26 |
+| **Current (30 Sep): one ball model, stricter hits, no shoe-level hits** | **73%** | **83% (23 detections)** | **53%** | **89%** | **42%** | **1 of 26** |
+
+The team judged the three-model version unusable: it reported many shots that were never played, for example while the ball was dead after the service fault at 0:01. The current version reports about as many shots as were played.
 
 What this means:
 
-- **Hits are found**, but there are many extra detections. Most fall between points, when players knock the ball back to the server, and in the dink exchange at 21–27 s, where extra hits make dinks look like fast volleys.
+- **Few false shots.** Most detections are real shots. The remaining false ones are a ball rolling across the far court after a point (0:33, 0:50), which in the picture passes a near player at knee height, and extra hits in fast exchanges.
+- **Missed shots:** both serves at 0:15 and 0:45 (the server's feet are out of the picture), the overhead at 0:31, and some volleys in the 0:28–0:31 exchange.
 - **Which side hit is usually right.** Which partner hit it is often wrong: from behind the baseline, both partners' boxes overlap the ball's path.
-- **Shot types are still unreliable.** The fast volley exchange at 28–31 s is mostly right. Serves are often missed because the server's feet are out of the picture.
+- **Shot types are still unreliable.** The fast volley exchange at 28–31 s is mostly right. When the serve is missed, the return becomes shot 1 and is called a serve, which shifts the names of the next shots.
 - These numbers come from one clip whose labels were also used to choose the rules, so they are optimistic. More labelled clips, with times to 0.1 s, are needed for a fair measure (requirement F10).
-- Each pipeline run takes about 9 minutes for this clip on a 4-core CPU with three ball models, compared with about 4 minutes before.
+- A pipeline run takes about 4 minutes for this clip on a 4-core CPU with one ball model (about 9 minutes with three).
 
-**Tried and rejected.** A 3D ball-flight fit using the camera pose recovered from the court lines: 15 samples a second and jittery boxes cannot pin down depth over short flights. Measuring the ball's true size from its colour: video compression makes every ball look about 20 px wide, near or far. Treating the ball's highest and lowest points in the picture as far and near hits: at the net, both teams contact the ball at about the same height in the picture.
+**Tried and rejected.** Pooling three ball models (see the table). A 3D ball-flight fit using the camera pose recovered from the court lines: 15 samples a second and jittery boxes cannot pin down depth over short flights. Measuring the ball's true size from its colour: video compression makes every ball look about 20 px wide, near or far. Treating the ball's highest and lowest points in the picture as far and near hits: at the net, both teams contact the ball at about the same height in the picture.
 
 ## Sources consulted for the shot definitions
 
@@ -104,7 +108,7 @@ What this means:
 | Repository | Used? | Why |
 | --- | --- | --- |
 | sumanblack666/pickleball-analysis | Court and ball weights (MIT) | Pinned revision and checksums in `picklepro/fetch_models.py`. |
-| 5urabhi/Pickle_ball_tracking | Ball weights | No licence file; used at the team's direction (see `ADVISER_DECISIONS.md`). `fetch_models` downloads `best.pt` as `ball_5urabhi.pt`. No code is copied. |
+| 5urabhi/Pickle_ball_tracking | Optional ball weights | No licence file; tried at the team's direction (see `ADVISER_DECISIONS.md`). Not used by default because it added false hits. `fetch_models --extra` downloads `best.pt` as `ball_5urabhi.pt`. No code is copied. |
 | AndrewDettor/TrackNet-Pickleball | No | No licence file; weights hosted separately. A TrackNet-style heatmap model is the natural next step for ball recall. |
-| kpp91302/Pickleball-Analytics | Ball weights | No licence file; used at the team's direction. `fetch_models` downloads `models/ball_tracking.pt` as `ball_kpp91302.pt`. Its court model was tested and not used: it misplaces corners when the near baseline is out of view. It has no shot detection. |
+| kpp91302/Pickleball-Analytics | Optional ball weights | No licence file; tried at the team's direction. Not used by default because it added false hits. `fetch_models --extra` downloads `models/ball_tracking.pt` as `ball_kpp91302.pt`. Its court model was tested and not used: it misplaces corners when the near baseline is out of view. It has no shot detection. |
 | Roboflow pickleball-detection dataset | Not yet | Candidate training or evaluation data; check its licence first. |

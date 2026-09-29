@@ -69,12 +69,21 @@ def test_worker_warns_when_web_app_uses_another_supabase_project(tmp_path):
     assert supabase_mismatch("https://aaaa.supabase.co", env) is None
 
 
-def test_every_ball_model_in_the_folder_is_used(models_dir, monkeypatch):
+def test_the_original_ball_model_is_used_even_with_extra_ball_models_in_the_folder(models_dir, monkeypatch):
     (models_dir / "yolo11n.pt").write_bytes(b"x")
+    (models_dir / "ball_5urabhi.pt").write_bytes(b"x")
     (models_dir / "ball_kpp91302.pt").write_bytes(b"x")
     monkeypatch.setattr(models, "_ultralytics_installed", lambda: True)
     setup = models.resolve_models({"PICKLEPRO_MODELS_DIR": str(models_dir)})
-    names = [Path(p).name for p in setup.ball_weights.split(os.pathsep)]
-    assert names == ["ball,person,paddle.pt", "ball_kpp91302.pt"]
+    assert Path(setup.ball_weights).name == "ball,person,paddle.pt"
     assert setup.yolo_weights.endswith("yolo11n.pt")
+
+
+def test_extra_ball_models_run_together_when_listed(models_dir, monkeypatch):
+    extra = models_dir / "ball_kpp91302.pt"
+    extra.write_bytes(b"x")
+    monkeypatch.setattr(models, "_ultralytics_installed", lambda: True)
+    listed = os.pathsep.join([str(models_dir / "ball,person,paddle.pt"), str(extra)])
+    setup = models.resolve_models({"PICKLEPRO_MODELS_DIR": str(models_dir), "PICKLEPRO_BALL_WEIGHTS": listed})
+    assert [Path(p).name for p in setup.ball_weights.split(os.pathsep)] == ["ball,person,paddle.pt", "ball_kpp91302.pt"]
     assert setup.describe()["ball_model"] == "ball,person,paddle.pt, ball_kpp91302.pt"

@@ -19,20 +19,24 @@ from .models import DEFAULT_MODELS_DIR
 
 SUMAN_REV = "000b22e853dde9e36b4797dc68d9ba0dd2eea4ae"
 SUMAN = f"https://github.com/sumanblack666/pickleball-analysis/raw/{SUMAN_REV}/models"
-# No licence file in these two repositories; used at the team's direction
-# (see docs/ADVISER_DECISIONS.md).
+# Optional extra ball models (no licence file; used at the team's direction,
+# see docs/ADVISER_DECISIONS.md). They are not used by default: on the labelled
+# test clip they added many false hits. `python -m picklepro.fetch_models --extra`
+# downloads them; list them in PICKLEPRO_BALL_WEIGHTS to use them.
 KPP = "https://raw.githubusercontent.com/kpp91302/Pickleball-Analytics/e4dfdc7945108fa0449b8a818d13e43576fe690c/models"
 SURABHI = "https://raw.githubusercontent.com/5urabhi/Pickle_ball_tracking/3c0a678e7dec9a4496c1912a157c5f63f473d41a"
+EXTRA_MODELS = [
+    ("ball_kpp91302.pt", f"{KPP}/ball_tracking.pt",
+     "86b0a7d9140f648ffb00ed2453c8046c727c30a99c8523426b77e42e135a12bc", "pickleball (optional second model)"),
+    ("ball_5urabhi.pt", f"{SURABHI}/best.pt",
+     "ec2525ad44455865d459ad9dab3719ecfb7974519b2efdaf16854e9e6510cd68", "pickleball (optional third model)"),
+]
 MODELS = [
     # (file name, url, sha256, purpose)
     ("court_best.pt", f"{SUMAN}/court_best.pt",
      "c67cc2df5dbec2befe8b0c48297d9abb2345080357e57ebd8eaddcbf3d4d9aac", "court lines (14 keypoints)"),
     ("ball,person,paddle.pt", f"{SUMAN}/ball%2Cperson%2Cpaddle.pt",
      "05e01ebe77f3256426d0e54ffad83abf3da2d1fcadc2bcf10dbd5714fdded459", "pickleball and paddle"),
-    ("ball_kpp91302.pt", f"{KPP}/ball_tracking.pt",
-     "86b0a7d9140f648ffb00ed2453c8046c727c30a99c8523426b77e42e135a12bc", "pickleball (second model)"),
-    ("ball_5urabhi.pt", f"{SURABHI}/best.pt",
-     "ec2525ad44455865d459ad9dab3719ecfb7974519b2efdaf16854e9e6510cd68", "pickleball (third model)"),
     ("yolo11n.pt", "https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11n.pt",
      "0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1", "people (COCO person class)"),
 ]
@@ -46,10 +50,10 @@ def _sha256(path: Path) -> str:
     return h.hexdigest()
 
 
-def fetch(models_dir: Path = DEFAULT_MODELS_DIR) -> int:
+def fetch(models_dir: Path = DEFAULT_MODELS_DIR, extra: bool = False) -> int:
     models_dir.mkdir(parents=True, exist_ok=True)
     failures = 0
-    for name, url, digest, purpose in MODELS:
+    for name, url, digest, purpose in MODELS + (EXTRA_MODELS if extra else []):
         target = models_dir / name
         if target.is_file() and _sha256(target) == digest:
             print(f"ok       {name} ({purpose})")
@@ -76,4 +80,4 @@ def fetch(models_dir: Path = DEFAULT_MODELS_DIR) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(fetch())
+    raise SystemExit(fetch(extra="--extra" in sys.argv[1:]))

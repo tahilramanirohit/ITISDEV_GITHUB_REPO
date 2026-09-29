@@ -103,7 +103,7 @@ Double-click `Pickleball Performance Dashboard\server\start_worker.bat`, then ch
 The first run on a new computer takes a while:
 
 - It creates the Python environment and installs the packages. The PyTorch download is large, over 1 GB.
-- It downloads the court, ball and player models, about 90 MB, and checks them against pinned checksums.
+- It downloads the court, ball and player models, about 60 MB, and checks them against pinned checksums.
 
 Later starts take seconds. Leave the window open; closing it stops analysis. An analysis that was interrupted is retried automatically when a worker runs again.
 

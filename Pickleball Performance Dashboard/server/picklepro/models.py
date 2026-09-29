@@ -8,8 +8,9 @@ Resolution order for each model:
    by ``;`` on Windows or ``:`` elsewhere.
 2. A weights file in the models folder (``server/models`` or
    ``PICKLEPRO_MODELS_DIR``). The court model is a ``.pt`` file with "court" in
-   its name and every ``.pt`` file with "ball" in its name is a ball model
-   (several ball models run together). Any other ``.pt``
+   its name and the ball model one with "ball" in its name (the
+   pickleball-analysis ``ball,person,paddle.pt`` when present; extra ball
+   models run only when listed in ``PICKLEPRO_BALL_WEIGHTS``). Any other ``.pt``
    file (for example ``yolo11n.pt``) is the person model; without one, the
    ball model's own person class is used.
 
@@ -36,6 +37,7 @@ logger = logging.getLogger(__name__)
 
 SERVER_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_MODELS_DIR = SERVER_DIR / "models"
+DEFAULT_BALL_MODEL = "ball,person,paddle.pt"
 
 
 def load_dotenv(path: Path = SERVER_DIR / ".env") -> None:
@@ -94,7 +96,10 @@ def _existing(value: Optional[str], label: str, notes: List[str]) -> Optional[st
 def _discover(models_dir: Path) -> tuple[Optional[str], Optional[str], Optional[str]]:
     """Return (court, person, ball) weights found in the models folder.
 
-    ``ball`` lists every ball model, separated by ``os.pathsep``.
+    One ball model is used: the pickleball-analysis model when present. On
+    the labelled test clip, pooling extra ball models found more balls but
+    also many false hits, so they run only when listed in
+    ``PICKLEPRO_BALL_WEIGHTS``.
     """
     if not models_dir.is_dir():
         return None, None, None
@@ -107,6 +112,7 @@ def _discover(models_dir: Path) -> tuple[Optional[str], Optional[str], Optional[
         or next((p for p in balls if "person" in p.name.lower()), None)
     if not balls and others:
         balls = [others[0]]
+    balls = sorted(balls, key=lambda p: (p.name.lower() != DEFAULT_BALL_MODEL, p.name.lower()))[:1]
     path = lambda p: str(p.resolve()) if p else None  # noqa: E731
     ball = os.pathsep.join(str(p.resolve()) for p in balls) or None
     return path(court), path(person), ball

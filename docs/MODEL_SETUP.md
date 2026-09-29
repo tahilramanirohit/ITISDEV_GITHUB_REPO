@@ -15,19 +15,19 @@ From `Pickleball Performance Dashboard/server/`, with the optional runtime insta
 .venv/bin/python -m picklepro.fetch_models
 ```
 
-It downloads five pinned files into `server/models/` and rejects any file whose SHA-256 differs:
+It downloads three pinned files into `server/models/` and rejects any file whose SHA-256 differs:
 
 | File | Used for | Source |
 | --- | --- | --- |
 | `court_best.pt` | court lines (14 keypoints) | pickleball-analysis, MIT |
 | `ball,person,paddle.pt` | the ball | pickleball-analysis, MIT |
-| `ball_kpp91302.pt` | the ball (second model) | kpp91302/Pickleball-Analytics `models/ball_tracking.pt`, revision `e4dfdc7`; no licence file, used at the team's direction |
-| `ball_5urabhi.pt` | the ball (third model) | 5urabhi/Pickle_ball_tracking `best.pt`, revision `3c0a678`; no licence file, used at the team's direction |
+| `ball_kpp91302.pt` (optional, `--extra`) | the ball (second model) | kpp91302/Pickleball-Analytics `models/ball_tracking.pt`, revision `e4dfdc7`; no licence file, used at the team's direction |
+| `ball_5urabhi.pt` (optional, `--extra`) | the ball (third model) | 5urabhi/Pickle_ball_tracking `best.pt`, revision `3c0a678`; no licence file, used at the team's direction |
 | `yolo11n.pt` | players (COCO `person`) | Ultralytics release v8.3.0, AGPL-3.0 |
 
 `yolo11n.pt` has SHA-256 `0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1`. On the 29 September test clip, the pickleball model's own person class missed the far-side players and gave unstable confidence for near players. The COCO model found all four players and the referee at 0.8–0.9 confidence. Both detectors run at 1280 px because far players and the ball are small in 1080p video.
 
-**All ball models run together.** Every `.pt` file with "ball" in its name is a ball model. Their boxes are pooled for each frame: boxes from different models on the same spot are merged, and agreement raises the confidence. On the 29 September clip (14.5–34 s), the share of frames in which the tracker kept the real ball was about 38% with the pickleball-analysis model alone, 62–76% with the kpp91302 model and 76–87% with the 5urabhi model. Each extra model also reports its own look-alikes (neon shoes, a banner logo); the tracker drops most of them because they do not move like a ball in flight. Each extra model adds about the same CPU time as the first. To use fewer, remove the file from `server/models/` or list the ones you want in `PICKLEPRO_BALL_WEIGHTS`, separated by `;` on Windows or `:` elsewhere.
+**One ball model by default.** The worker uses `ball,person,paddle.pt` even when other ball files are in `server/models/`. The two extra models were tried together with it (30 September 2026). They found the real ball in more frames: about 76–87% instead of 38% on the 29 September clip. But they also reported look-alikes, such as neon shoes, and the shot detector turned the extra points into many false hits: 67 detections for 26 real shots, against 23 with the original model alone (see `SHOT_TYPES.md`). The team preferred the original model. To try the extra models again, run `python -m picklepro.fetch_models --extra`, then list every model in `PICKLEPRO_BALL_WEIGHTS`, separated by `;` on Windows or `:` elsewhere. Their boxes are then pooled for each frame. You can delete `ball_kpp91302.pt` and `ball_5urabhi.pt` from `server/models/` if an earlier version downloaded them.
 
 `start_worker.bat` runs `fetch_models` every time it starts, so a missing or new model is downloaded and existing files are only checked.
 

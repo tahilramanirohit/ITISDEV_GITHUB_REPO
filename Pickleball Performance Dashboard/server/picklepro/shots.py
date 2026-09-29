@@ -96,8 +96,10 @@ BOUNCE_MAX_SPEED_RATIO = 0.9  # beside a player, a kick that loses speed is a bo
 CONTACT_HEIGHT_FRAC = 0.59    # usual contact about 1 m up a 1.7 m player
 FAR_CONTACT_MAX_DIST = 0.5    # of player height
 FAR_CONTACT_WINDOW_S = 0.4
-REACH_SCALE = 0.8             # ball-to-player distance (in player heights) that halves a hit's score... roughly
+REACH_SCALE = 0.5             # ball-to-player distance (in player heights) that halves a hit's score... roughly
 HIT_COST = 0.4               # a candidate must score more than this to be kept as a hit
+LOWEST_CONTACT_FRAC = 0.85    # of the player's height from the top of their box (about shin height)
+ASSIGN_ANY_SIDE = True        # a candidate may go to the closest player of either side, even out of reach
 MIN_HIT_GAP_S = 0.3           # the ball cannot cross the net and come back faster
 FEET_CUT_OFF_FRAC = 0.012     # a box this close to the bottom edge has its feet out of the picture
 NET_VOLLEY_MAX_INTERVAL_S = 0.85  # kitchen line to kitchen line, a bounce needs longer than this
@@ -200,6 +202,9 @@ def _reach_options(frame: Optional[FrameObs], p: _Point, everyone: bool = False)
     for i, det in enumerate(frame.detections):
         x1, y1, x2, y2 = det["bbox"]
         w, h = x2 - x1, max(1.0, y2 - y1)
+        # A ball at shoe level is rolling or bouncing past, not being struck.
+        if p.y > y1 + LOWEST_CONTACT_FRAC * h:
+            continue
         if (everyone or x1 - 0.6 * w <= p.x <= x2 + 0.6 * w and y1 - 0.4 * h <= p.y <= y2 + 0.05 * h
                 and _depth_consistent(frame, det["bbox"], p)):
             d = math.hypot(p.x - (x1 + x2) / 2, p.y - (y1 + y2) / 2) / h
@@ -268,7 +273,7 @@ def _find_events(points: List[_Point], frames: Sequence[FrameObs], frame_h: int,
             frame = _nearest_frame(frames, a.t, tol)
             hitter = _in_reach(frame, a)
             if speed >= min_speed and hitter is not None:
-                events.append(_Event("hit", a.t, a, 0.5, frame, hitter, extras={"options": _reach_options(frame, a, everyone=True)}))
+                events.append(_Event("hit", a.t, a, 0.5, frame, hitter, extras={"options": _reach_options(frame, a, everyone=ASSIGN_ANY_SIDE)}))
         for i in range(1, len(seg) - 1):
             a, p, b = seg[i - 1], seg[i], seg[i + 1]
             vin = np.array([p.x - a.x, p.y - a.y]) / max(1e-6, p.t - a.t)
@@ -288,7 +293,7 @@ def _find_events(points: List[_Point], frames: Sequence[FrameObs], frame_h: int,
                 events.append(_Event("bounce", p.t, p, turn / 180, frame, extras={"priority": 2}))
             elif hitter is not None and (turn >= MIN_TURN_DEG or ratio > 1.8 or ratio < 0.45):
                 events.append(_Event("hit", p.t, p, turn / 180 + min(1.0, abs(math.log(ratio))), frame, hitter,
-                                     extras={"priority": 3, "options": _reach_options(frame, p, everyone=True)}))
+                                     extras={"priority": 3, "options": _reach_options(frame, p, everyone=ASSIGN_ANY_SIDE)}))
         events.extend(_far_side_contacts(seg, frames, tol))
     bounce_times = [e.t for e in events if e.kind == "bounce"]
     # A ball landing just in front of a far player passes their contact point in

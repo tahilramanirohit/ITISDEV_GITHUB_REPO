@@ -247,3 +247,12 @@ def test_short_exchange_without_a_serve_is_not_play():
     knock = [_candidate(0.0, {"near": (0, 0.1)}), _candidate(1.0, {"far": (1, 0.1)})]  # ball fed back
     rally = [_candidate(10.0 + k, {"near": (0, 0.1)}) for k in range(4)]  # serve not seen, but a real exchange
     assert [h.t for h in _in_play(knock + rally, 540)] == [10.0, 11.0, 12.0, 13.0]
+
+
+def test_a_ball_rolling_past_the_feet_is_not_a_stroke():
+    from picklepro.shots import _Point, _reach_options
+    frame = FrameObs(0.0, [{"bbox": [100, 100, 160, 300], "track_id": 1}], None)
+    at_waist = _Point(0.0, 150, 200, 205, 10)
+    at_shoes = _Point(0.0, 150, 290, 295, 10)
+    assert _reach_options(frame, at_shoes, everyone=True) == {}
+    assert [o[0] for o in _reach_options(frame, at_waist).values()] == [0]
