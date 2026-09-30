@@ -42,6 +42,15 @@ function downloadResult(result: AnalysisResultV1) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+/** Keep in-report navigation separate from the application's HashRouter. */
+function focusReportSection(id: string) {
+  const target = document.getElementById(id);
+  if (!target) return;
+  if (target instanceof HTMLDetailsElement) target.open = true;
+  target.scrollIntoView?.({ behavior: "smooth", block: "start" });
+  target.focus({ preventScroll: true });
+}
+
 /** Results written by the development-only Dev mode button. */
 export const isDevMock = (result: AnalysisResultV1) => result.provenance.pipeline_version === "dev-mock";
 
@@ -124,6 +133,14 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
   const heatValidated = devMock || heat.validation === "evaluated_on_real_footage";
   const zonesValidated = devMock || zones.validation === "evaluated_on_real_footage";
   const warnings = devMock ? result.warnings.filter((warning) => !warning.startsWith("DEV MOCK DATA")) : result.warnings;
+  const showCoaching = !session?.improvement_goals?.length || session.improvement_goals.includes("positioning");
+  const nextAction = hasPlayers && myPlayerId == null
+    ? { label: "Choose your player", target: "player-review" }
+    : result.calibration?.quality !== "good" && videoUrl
+      ? { label: result.calibration ? "Check the court lines" : "Review the camera view", target: "video-heading" }
+      : shotsShown ? { label: "Review the named hits", target: "named-hits" }
+        : showCoaching ? { label: coaching.available ? "Start your practice plan" : "Explore general practice", target: "practice-plan" }
+          : { label: "Review analysis details", target: "result-details" };
 
   return (
     <div id="feedback" className="space-y-4 scroll-mt-6" data-testid="result-view">
@@ -135,108 +152,152 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
       )}
 
       <Card accent={result.status === "ok" ? NEON : ORANGE}>
-        <h2 className="mb-3 text-xl font-bold text-[#101827]">What PicklePro could assess</h2>
+        <h2 className="mb-3 text-xl font-bold text-[#101827]">Your video review</h2>
         <div className="flex flex-wrap items-center gap-2 mb-2">
           <OriginBadge origin={result.data_origin} devMock={devMock} />
           <Pill color={devMock ? ORANGE : result.status === "ok" ? NEON : ORANGE}>
             {devMock ? "SAMPLE" : result.status === "ok" ? "RESULT" : "INSUFFICIENT DATA"}
           </Pill>
-          {result.data_origin === "measured" && <button type="button" onClick={() => downloadResult(result)} className="ml-auto text-sm font-semibold underline"
-            style={{ color: BLUE_SKY }} title="For the Label shots page and for scoring shot detection">
-            Download research result (JSON)
-          </button>}
         </div>
-        <p className="text-base text-[#101827]">{devMock ? "This sample shows the kind of practice plan PicklePro can display. It is not feedback about your play." : visibleMessage}</p>
-        {summary && <section aria-label="Your result at a glance" className="mt-4 space-y-3">
-          <div className="grid gap-3 md:grid-cols-3">
-            {[
-              { title: "What was found", items: summary.found, color: BLUE_SKY },
-              { title: "What needs review", items: summary.needsReview, color: ORANGE_L },
-              { title: "What could not be assessed", items: summary.unavailable, color: WHITE_DIM },
-            ].map(({ title, items, color }) => <div key={title} className="rounded-xl p-3" style={{ border: `1px solid ${BORDER}` }}>
-              <h3 className="text-base font-semibold" style={{ color }}>{title}</h3>
-              <ul className="mt-2 list-disc space-y-2 pl-4 text-sm leading-relaxed" style={{ color: INK }}>
-                {items.length ? items.map(item => <li key={item}>{item}</li>) : <li>No findings are available to review yet.</li>}
-              </ul>
-            </div>)}
-          </div>
-          <p className="rounded-xl p-3 text-sm leading-relaxed" style={{ background: "rgba(41,61,242,0.04)", color: INK }}>
-            <strong>Your next step: </strong>{summary.nextStep}
-          </p>
-        </section>}
-        {warnings.length > 0 && (
-          <details className="mt-3">
-            <summary className="cursor-pointer text-sm font-semibold" style={{ color: ORANGE_L }}>
-              {warnings.length === 1 ? "1 note about this video" : `${warnings.length} notes about this video`}
-            </summary>
-            <ul className="mt-2 space-y-1.5">
-              {warnings.map((w) => (
-                <li key={w} className="text-sm flex gap-2" style={{ color: ORANGE_L }}>
-                  <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" aria-hidden="true" /> {w}
-                </li>
-              ))}
-            </ul>
-          </details>
-        )}
+        <p className="text-base text-[#101827]">{summary
+          ? shotsShown ? "Review the named hits, check what the video could show, then choose a practice action."
+            : "Some findings need your review. No named hits are available; this does not mean no hits occurred."
+          : devMock ? "This sample shows the kind of practice plan PicklePro can display. It is not feedback about your play." : visibleMessage}</p>
+        {summary && <>
+          <p className="mt-2 text-sm" style={{ color: ORANGE_L }}>These findings are estimates. Shot success, in/out calls and technique are not assessed.{c.fraction_of_video_analyzed != null && c.fraction_of_video_analyzed < .99 ? " Only part of this video was analyzed." : ""}</p>
+          <nav aria-label="Your next action" className="mt-4">
+            <button type="button" aria-controls={nextAction.target} onClick={() => focusReportSection(nextAction.target)}
+              className="inline-flex min-h-[44px] items-center rounded-lg px-4 py-2 text-sm font-semibold" style={{ background: BLUE_SKY, color: "white" }}>{nextAction.label}</button>
+          </nav>
+        </>}
       </Card>
 
-      {result.data_origin === "measured" && !devMock && <section aria-label="What the video analysis found" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <h2 className="sr-only">What PicklePro could see</h2>
-        {[
-          {
-            label: "Players",
-            ok: c.frames_with_detections > 0,
-            value: !result.provenance.detector.confidence_is_model_score
-              ? c.frames_with_detections > 0 ? "Movement detected" : "No movement detected"
-              : sel && sel.tracked_fraction > 0
-              ? `Found you in ${Math.round(sel.tracked_fraction * 100)}% of the video`
-              : c.frames_with_detections > 0 ? "Players found" : "No players found",
-            detail: result.provenance.detector.confidence_is_model_score
-              ? "Boxes on the video show who was found. \u201cYou\u201d is the player used for your feedback."
-              : "Only movement was detected, so boxes may not always be people.",
-          },
-          {
-            label: "Court",
-            ok: !!result.calibration,
-            value: result.calibration ? "Court lines found" : "Court not found",
-            detail: result.calibration
-              ? "Yellow lines on the video show where PicklePro thinks the court is."
-              : "Film so the whole court and its lines are visible to get court feedback.",
-          },
-          {
-            label: "Ball",
-            ok: (c.frames_with_ball_detections ?? 0) > 0,
-            value: !result.provenance.ball_detector ? "Ball finder not set up"
-              : (c.frames_with_ball_detections ?? 0) > 0 ? "Ball positions found" : "Ball not seen",
-            detail: result.provenance.ball_detector
-              ? "The orange dot and trail show where the ball was seen."
-              : "The analyzer needs a ball model to follow the ball.",
-          },
-          {
-            label: "Shots",
-            ok: shotsShown,
-            value: shotsShown
-              ? `${shotCount.shots.length} ${shotCount.mine ? "of your hits" : "hits"} named`
-              : "Not available",
-            detail: shotsShown
-              ? shotsValidated ? "Tap Watch next to a shot to check it."
-                : "Experimental: not yet checked against hand-labelled videos. Tap Watch to check a shot."
-              : !allowShotDisplay ? "Shot labels are hidden until they pass evaluation on labelled real footage."
-                : shotMetric.reason ?? "Shot types are not available for this video.",
-          },
-        ].map((item) => (
-          <div key={item.label} className="rounded-2xl border bg-white p-4" style={{ borderColor: BORDER }}>
-            <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider" style={{ color: BLUE_SKY }}>
-              {item.ok ? <CheckCircle2 size={18} aria-label="found" style={{ color: NEON }} />
-                : <CircleDashed size={18} aria-label="not found" style={{ color: WHITE_SUB }} />}
-              {item.label}
-            </p>
-            <p className="mt-2 text-lg font-bold" style={{ color: INK }}>{item.value}</p>
-            <p className="mt-1 text-sm leading-relaxed" style={{ color: WHITE_DIM }}>{item.detail}</p>
-          </div>
-        ))}
-      </section>}
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+        <Card>
+          <section aria-labelledby="video-heading" className="space-y-3 min-w-0">
+            <div>
+              <h2 id="video-heading" tabIndex={-1} className="text-lg font-bold text-[#101827]">Review your video</h2>
+              <p className="text-base" style={{ color: WHITE_DIM }}>Press play to review the recording. Player boxes, observed ball positions and court lines are shown when available.{shotsValidated ? " Evaluated shot estimates are also shown." : " Experimental shot estimates are also shown; check them against the video."}</p>
+            </div>
+            {videoUrl && onSelectTrack && result.tracks.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <button type="button" onClick={() => setSelectingPlayer((value) => !value)}
+                  className="rounded-lg px-4 py-2.5 text-sm font-semibold min-h-[44px]" style={{ background: BLUE_SKY, color: "#ffffff" }}>
+                  {selectingPlayer ? "Cancel" : "Not you? Pick yourself in the video"}
+                </button>
+                {selectingPlayer && <p className="text-base" style={{ color: INK }}>Pause the video where you can be seen, then tap the box around you. PicklePro will check the video again for you.</p>}
+              </div>
+            )}
+            <VideoOverlayPlayer src={videoUrl}
+              positions={heatValidated || selectingPlayer || hasPlayers ? result.player_positions : []}
+              ballPositions={result.ball_positions ?? []}
+              courtLines={result.court_lines ?? []} shots={allowShotDisplay ? shotDisplayResult.metrics.shot_classification.value?.shots ?? [] : []}
+              bounces={allowShotDisplay ? shotMetric.value?.bounces ?? [] : []}
+              selectedTrackId={myPlayerId} jump={jump}
+              onSelectTrack={selectingPlayer ? (id, time) => { setSelectingPlayer(false); setMyPlayerId(id); onSelectTrack?.(id, time); } : undefined} />
+          </section>
 
+          {result.data_origin === "measured" && !devMock && hasPlayers && (
+            <div id="player-review" tabIndex={-1} className="scroll-mt-6"><PlayerPicker result={shotDisplayResult} myPlayerId={myPlayerId} onPick={setMyPlayerId} showShotCounts={allowShotDisplay}
+              onUpdateCourt={onSelectTrack && myPlayerId != null ? () => {
+                const me = result.players?.find((p) => p.player_id === myPlayerId);
+                onSelectTrack(myPlayerId, me?.first_seen_s ?? 0);
+              } : undefined} /></div>
+          )}
+
+        </Card>
+        <section aria-label="Understand your results" className="min-w-0">
+          <Card>
+            <h2 className="text-lg font-bold" style={{ color: INK }}>Understand your results</h2>
+            {result.data_origin === "measured" && !devMock && <section aria-label="What the video analysis found" className="space-y-0">
+              <h2 className="sr-only">What PicklePro could see</h2>
+              {[
+                {
+                  label: "Players",
+                  ok: c.frames_with_detections > 0,
+                  value: !result.provenance.detector.confidence_is_model_score
+                    ? c.frames_with_detections > 0 ? "Movement detected" : "No movement detected"
+                    : sel && sel.tracked_fraction > 0
+                    ? `Found you in ${Math.round(sel.tracked_fraction * 100)}% of the video`
+                    : c.frames_with_detections > 0 ? "Players found" : "No players found",
+                  detail: result.provenance.detector.confidence_is_model_score
+                    ? "Boxes on the video show who was found. \u201cYou\u201d is the player used for your feedback."
+                    : "Only movement was detected, so boxes may not always be people.",
+                },
+                {
+                  label: "Court",
+                  ok: !!result.calibration,
+                  value: result.calibration ? "Court lines found" : "Court not found",
+                  detail: result.calibration
+                    ? "Yellow lines on the video show where PicklePro thinks the court is."
+                    : "Film so the whole court and its lines are visible to get court feedback.",
+                },
+                {
+                  label: "Ball",
+                  ok: (c.frames_with_ball_detections ?? 0) > 0,
+                  value: !result.provenance.ball_detector ? "Ball finder not set up"
+                    : (c.frames_with_ball_detections ?? 0) > 0 ? "Ball positions found" : "Ball not seen",
+                  detail: result.provenance.ball_detector
+                    ? "The orange dot and trail show where the ball was seen."
+                    : "The analyzer needs a ball model to follow the ball.",
+                },
+                {
+                  label: "Shots",
+                  ok: shotsShown,
+                  value: shotsShown
+                    ? `${shotCount.shots.length} ${shotCount.mine ? "of your hits" : "hits"} named`
+                    : "Not available",
+                  detail: shotsShown
+                    ? shotsValidated ? "Tap Watch next to a shot to check it."
+                      : "Experimental: not yet checked against hand-labelled videos. Tap Watch to check a shot."
+                    : !allowShotDisplay ? "Shot labels are hidden until they pass evaluation on labelled real footage."
+                      : shotMetric.reason ?? "Shot types are not available for this video.",
+                },
+              ].map((item) => (
+                <div key={item.label} className="border-b py-3" style={{ borderColor: BORDER }}>
+                  <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider" style={{ color: BLUE_SKY }}>
+                    {item.ok ? <CheckCircle2 size={18} aria-label="found" style={{ color: NEON }} />
+                      : <CircleDashed size={18} aria-label="not found" style={{ color: WHITE_SUB }} />}
+                    {item.label}
+                  </p>
+                  <p className="mt-1 text-base font-bold" style={{ color: INK }}>{item.label === "Shots" && shotsShown
+                    ? <button type="button" aria-controls="named-hits" onClick={() => focusReportSection("named-hits")} className="inline-flex min-h-[44px] items-center underline underline-offset-4" style={{ color: BLUE_SKY }}>{item.value}</button>
+                    : item.value}</p>
+                  <p className="mt-1 text-sm leading-relaxed" style={{ color: WHITE_DIM }}>{item.detail}</p>
+                </div>
+              ))}
+            </section>}
+
+            {summary && <div aria-label="Your result at a glance" className="mt-3 space-y-3">
+              <h3 className="text-sm font-semibold" style={{ color: INK }}>What this video cannot tell you</h3>
+              <ul className="list-disc space-y-1 pl-4 text-sm" style={{ color: WHITE_DIM }}>
+                {summary.unavailable.map(item => <li key={item}>{item}</li>)}
+              </ul>
+              <details>
+                <summary className="cursor-pointer py-2 text-sm font-semibold" style={{ color: BLUE_SKY }}>What to check against the video</summary>
+                <ul className="list-disc space-y-1 pl-4 text-sm" style={{ color: WHITE_DIM }}>
+                  {summary.needsReview.map(item => <li key={item}>{item}</li>)}
+                </ul>
+              </details>
+            </div>}
+            {!summary && <p className="mt-3 text-sm" style={{ color: ORANGE_L }}>Sample values are for demonstration only. They do not describe your play.</p>}
+          </Card>
+        </section>
+      </div>
+      {result.data_origin === "measured" && !devMock && allowShotDisplay && (
+        <section id="named-hits" tabIndex={-1} aria-label="Review named hits" className="scroll-mt-6"><ShotsPanel result={shotDisplayResult} myPlayerId={myPlayerId} research={experimentalReview}
+          onWatch={videoUrl ? (time) => setJump({ time, id: Date.now() }) : undefined} /></section>
+      )}
+
+      <section id="practice-plan" tabIndex={-1} aria-label="Choose what to practice" className="space-y-3 scroll-mt-6">
+        <h2 className="text-lg font-bold" style={{ color: INK }}>Choose what to practice</h2>
+        {showCoaching ? <CoachingPanel result={result} previous={previous} />
+          : <Card><p className="text-base" style={{ color: INK }}>PicklePro cannot provide a practice plan for your selected technique or shot-outcome goals yet.</p>
+            <p className="mt-2 text-sm" style={{ color: WHITE_DIM }}>Review the video yourself or with a coach. Your goals and starting ratings are saved below.</p></Card>}
+
+      </section>
+      {!!session?.improvement_goals?.length && <details className="rounded-xl border p-4" style={{ borderColor: BORDER }}>
+        <summary className="cursor-pointer font-semibold" style={{ color: BLUE_SKY }}>Your goals and starting ratings</summary>
       {session?.improvement_goals?.length ? (
         <Card accent={BLUE_SKY}>
           <WidgetHeader title="Your goals and video evidence" subtitle="Your own skill ratings are separate from video measurements." />
@@ -258,47 +319,15 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
         </Card>
       ) : null}
 
-      {(!session?.improvement_goals?.length || session.improvement_goals.includes("positioning")) &&
-        <CoachingPanel result={result} previous={previous} />}
-
-      {result.data_origin === "measured" && !devMock && hasPlayers && (
-        <PlayerPicker result={shotDisplayResult} myPlayerId={myPlayerId} onPick={setMyPlayerId} showShotCounts={allowShotDisplay}
-          onUpdateCourt={onSelectTrack && myPlayerId != null ? () => {
-            const me = result.players?.find((p) => p.player_id === myPlayerId);
-            onSelectTrack(myPlayerId, me?.first_seen_s ?? 0);
-          } : undefined} />
-      )}
-
-      <section aria-labelledby="video-heading" className="space-y-3">
-        <div>
-          <h2 id="video-heading" className="text-lg font-bold text-[#101827]">Watch your video</h2>
-          <p className="text-base" style={{ color: WHITE_DIM }}>Press play to review the recording. Player boxes, observed ball positions and court lines are shown when available.{shotsValidated ? " Evaluated shot estimates are also shown." : " Experimental shot estimates are also shown; check them against the video."}</p>
-        </div>
-        {videoUrl && onSelectTrack && result.tracks.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2">
-            <button type="button" onClick={() => setSelectingPlayer((value) => !value)}
-              className="rounded-lg px-4 py-2.5 text-sm font-semibold min-h-[44px]" style={{ background: BLUE_SKY, color: "#ffffff" }}>
-              {selectingPlayer ? "Cancel" : "Not you? Pick yourself in the video"}
-            </button>
-            {selectingPlayer && <p className="text-base" style={{ color: INK }}>Pause the video where you can be seen, then tap the box around you. PicklePro will check the video again for you.</p>}
-          </div>
-        )}
-        <VideoOverlayPlayer src={videoUrl}
-          positions={heatValidated || selectingPlayer || hasPlayers ? result.player_positions : []}
-          ballPositions={result.ball_positions ?? []}
-          courtLines={result.court_lines ?? []} shots={allowShotDisplay ? shotDisplayResult.metrics.shot_classification.value?.shots ?? [] : []}
-          bounces={allowShotDisplay ? shotMetric.value?.bounces ?? [] : []}
-          selectedTrackId={myPlayerId} jump={jump}
-          onSelectTrack={selectingPlayer ? (id, time) => { setSelectingPlayer(false); setMyPlayerId(id); onSelectTrack?.(id, time); } : undefined} />
-      </section>
-
-      {result.data_origin === "measured" && !devMock && allowShotDisplay && (
-        <ShotsPanel result={shotDisplayResult} myPlayerId={myPlayerId} research={experimentalReview}
-          onWatch={videoUrl ? (time) => setJump({ time, id: Date.now() }) : undefined} />
-      )}
-
-      <details className="rounded-2xl p-4" style={{ border: `1px solid ${BORDER}` }}>
-        <summary className="cursor-pointer text-base font-semibold" style={{ color: BLUE_SKY }}>Detailed measurements and analysis notes</summary>
+      </details>}
+      <details id="result-details" tabIndex={-1} className="rounded-2xl p-4 scroll-mt-6" style={{ border: `1px solid ${BORDER}` }}>
+        <summary className="cursor-pointer text-base font-semibold" style={{ color: BLUE_SKY }}>Analysis details</summary>
+        <p className="mt-3 text-sm" style={{ color: WHITE_DIM }}>{visibleMessage}</p>
+        {result.data_origin === "measured" && <button type="button" onClick={() => downloadResult(result)} className="mt-3 min-h-[44px] text-sm font-semibold underline"
+          style={{ color: BLUE_SKY }} title="For the Label shots page and for scoring shot detection">Download research result (JSON)</button>}
+        {warnings.length > 0 && <ul className="mt-3 space-y-1.5">
+          {warnings.map(w => <li key={w} className="flex gap-2 text-sm" style={{ color: ORANGE_L }}><AlertTriangle size={14} className="mt-0.5 flex-shrink-0" aria-hidden="true" />{w}</li>)}
+        </ul>}
         <div className="mt-3"><Pill color={BLUE_SKY}>{heat.scope === "selected_view" ? "SELECTED-VIEW METRICS" : "WHOLE-CLIP METRICS"}</Pill></div>
         <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_340px]">
           <div className="space-y-4">

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import testFixture from "../../../contracts/fixtures/analysis_result.test_fixture.v1.json";
 import insufficient from "../../../contracts/fixtures/analysis_result.insufficient.v1.json";
 import { parseAnalysisResult } from "../../lib/analysis/contract";
@@ -28,7 +28,7 @@ describe("ResultView", () => {
     expect(screen.queryByText(/Found you in/)).toBeNull();
     expect(screen.getByText("Not available")).toBeTruthy();
     expect(screen.getAllByText("Not available").length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByText("Detailed measurements and analysis notes"));
+    fireEvent.click(screen.getByText("Analysis details"));
     expect(screen.getByText(testFixture.provenance.pipeline_version)).toBeTruthy();
     expect(screen.getByText("Share of video analyzed")).toBeTruthy();
     expect(screen.getByText("Player track IDs")).toBeTruthy();
@@ -38,6 +38,43 @@ describe("ResultView", () => {
     expect(screen.getByText("WHOLE-CLIP METRICS")).toBeTruthy();
     expect(screen.queryByRole("img", { name: /Court heatmap/ })).toBeNull();
     expect(screen.getByText(/Hidden until positional accuracy passes evaluation/)).toBeTruthy();
+  });
+
+  it("orders video review, results and practice and offers one relevant next action", () => {
+    window.localStorage.clear();
+    const result = structuredClone(testFixture);
+    result.data_origin = "measured";
+    render(<ResultView result={parseAnalysisResult(result)} videoUrl={null} />);
+    const review = screen.getByRole("region", { name: "Review your video" });
+    const findings = screen.getByRole("region", { name: "Understand your results" });
+    const practice = screen.getByRole("region", { name: "Choose what to practice" });
+    expect(review.compareDocumentPosition(findings) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(findings.compareDocumentPosition(practice) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const action = within(screen.getByRole("navigation", { name: "Your next action" })).getByRole("button");
+    expect(action.textContent).toBe("Choose your player");
+    expect(action.getAttribute("aria-controls")).toBe("player-review");
+    expect(document.getElementById("player-review")).toBeTruthy();
+    const before = window.location.hash;
+    fireEvent.click(action);
+    expect(document.activeElement?.id).toBe("player-review");
+    expect(window.location.hash).toBe(before);
+  });
+
+  it("opens analysis details when selected goals cannot be coached", () => {
+    window.localStorage.clear();
+    const result = structuredClone(testFixture) as any;
+    result.data_origin = "measured";
+    result.players = [];
+    result.provenance.detector = { name: "ultralytics-yolov8-person", confidence_is_model_score: true };
+    result.metrics.positioning.validation = "evaluated_on_real_footage";
+    result.metrics.court_heatmap.validation = "evaluated_on_real_footage";
+    const session = { improvement_goals: ["shot_technique"] } as SessionRow;
+    render(<ResultView result={parseAnalysisResult(result)} videoUrl={null} session={session} />);
+    const action = within(screen.getByRole("navigation", { name: "Your next action" })).getByRole("button");
+    expect(action.textContent).toBe("Review analysis details");
+    fireEvent.click(action);
+    expect((document.getElementById("result-details") as HTMLDetailsElement).open).toBe(true);
+    expect(within(screen.getByRole("region", { name: "Choose what to practice" })).getByText(/cannot provide a practice plan/)).toBeTruthy();
   });
 
   it("explains insufficient data instead of showing a heatmap", () => {
@@ -152,7 +189,10 @@ describe("ResultView", () => {
     // A saved player report shows the same estimates, marked experimental.
     const report = render(<ResultView result={parseAnalysisResult(result)} videoUrl="/demo.mp4" />);
     expect(screen.getByRole("tab", { name: "All players (4)" })).toBeTruthy();
-    expect(screen.getByText(/4 hits named/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "4 hits named" }).getAttribute("aria-controls")).toBe("named-hits");
+    expect(document.getElementById("named-hits")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "4 hits named" }));
+    expect(document.activeElement?.id).toBe("named-hits");
     expect(screen.getAllByText("EXPERIMENTAL").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: /Watch the serve at 0:01/ })).toBeTruthy();
     report.unmount();
