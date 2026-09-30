@@ -57,7 +57,7 @@ def write_manifest(rows,path):
     path=Path(path)
     if path.suffix.lower()=='.csv':
         with path.open('w',newline='') as stream:
-            writer=csv.DictWriter(stream,fieldnames=FIELDS);writer.writeheader();writer.writerows(rows)
+            writer=csv.DictWriter(stream,fieldnames=FIELDS,lineterminator="\n");writer.writeheader();writer.writerows(rows)
     else: path.write_text(json.dumps({'manifest_version':'v2-1','recordings':rows},indent=2,allow_nan=False)+'\n')
 
 
