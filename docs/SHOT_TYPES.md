@@ -101,6 +101,51 @@ On `TestVideoKirk_REAL.mp4`, where no other court is in view, the preference cha
 
 Analysing every frame of the video was tried and dropped (team decision, 30 Sep 2026): a 30-second 60 fps clip took over an hour of processor time on a 4-core laptop CPU.
 
+## Zone time (F01, F02, F12)
+
+The report shows **where each player on the court stood** (`metrics.zone_time`, `picklepro/zones.py`), using the zones of the requirements' metric dictionary. Distances are from the net toward the player's own baseline:
+
+| Zone | Where |
+| --- | --- |
+| Kitchen | 0 to 2.13 m (inside the non-volley zone) |
+| Transition | 2.13 to 5.2 m |
+| Baseline | 5.2 m to the baseline (6.71 m) |
+| Outside | beyond a sideline or behind the baseline (for example serving and returning) |
+| At the kitchen line (F01) | the 1 m just behind the kitchen line, within the sidelines; part of transition |
+
+- **Time measured.** Detected rallies, from 1 s before the first hit to 1.5 s after the last (rallies of 2 or more hits). With no rallies, the whole video is used, and the report says so.
+- **Seen by the camera (coverage, F12).** Share of that time the player's feet were seen and mapped.
+- **Estimated position** (team choice, 30 Sep 2026). When a player cannot be seen, their position is estimated, and the estimated share is always shown next to the result:
+  - feet below the picture: placed from the head position and the camera, assuming a person about 1.7 m tall;
+  - out of the picture and back within 8 s: a straight line between the two positions;
+  - out at the start or end: the last position is kept for 3 s.
+
+  The requirements allow only gaps up to 0.5 s to be filled, so this is a recorded change.
+- **Brief detections are left out.** Someone seen for less than 15% of the time (on CHvsBJ, a false detection near the net for 2 s) gets no zone time.
+
+**First results (30 Sep 2026, not yet checked against labels):**
+
+| Clip | Player | Kitchen | Transition | Baseline | Outside | At kitchen line | Seen | Estimated |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| PickleballVideo | Near left | 2% | 68% | 3% | 27% | 46% | 75% | 25% |
+| PickleballVideo | Near right | 6% | 63% | 7% | 24% | 47% | 73% | 27% |
+| PickleballVideo | Far left | 6% | 45% | 12% | 37% | 13% | 71% | 17% |
+| PickleballVideo | Far right | 0% | 66% | 11% | 23% | 4% | 75% | 22% |
+| CHvsBJ (singles) | Near | 0% | 56% | 4% | 40% | 37% | 70% | 30% |
+| CHvsBJ (singles) | Far | 0% | 18% | 14% | 68% | 8% | 100% | 0% |
+| Kirk | Near left | 0% | 100% | 0% | 0% | 53% | 86% | 14% |
+| Kirk | Near right | 0% | 93% | 7% | 0% | 53% | 86% | 14% |
+| Kirk | Far left | 93% | 5% | 2% | 0% | 1% | 70% | 30% |
+| Kirk | Far right | 91% | 3% | 0% | 7% | 1% | 89% | 11% |
+
+Spot checks on the video agreed:
+- On PickleballVideo, the near players' "outside" time is mostly serving and returning from just behind the baseline, which the head-based estimate places correctly.
+- On CHvsBJ, the far player stands well behind his baseline, as singles players do.
+
+**Known limit: Kirk's far players are not reliable.** That camera is low, so the far half of the court is squeezed into a few dozen pixels, and a few pixels of foot error is about a metre. Their feet map just in front of the far kitchen line, so the 91–93% "kitchen" should be treated as wrong, not as a finding.
+
+**Validation still needed (gate: mean zone-share error ≤ 10 percentage points).** Mark each player's zone every few seconds on a labelled clip, then compare.
+
 ## Labelling a clip
 
 Scores need hand labels. The web app has a labelling page at `#/label` (the **Label shots** link in the header; no account needed). The video is played from your own disk and never uploaded.

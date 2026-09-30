@@ -6,7 +6,7 @@ export const RESULT_STATUSES = ["ok", "insufficient_data"] as const;
 export const DATA_ORIGINS = ["measured", "test_fixture"] as const;
 export const METRIC_STATUSES = ["measured", "insufficient_data", "not_computed", "experimental"] as const;
 export const VALIDATION_LEVELS = ["not_evaluated", "synthetic_only", "evaluated_on_real_footage"] as const;
-export const METRIC_KEYS = ["court_heatmap", "zone_occupancy", "positioning", "rally_segmentation", "shot_classification"] as const;
+export const METRIC_KEYS = ["court_heatmap", "zone_occupancy", "positioning", "rally_segmentation", "shot_classification", "zone_time"] as const;
 export const RESULT_KEYS = [
   "schema_version", "status", "data_origin", "message", "provenance", "video", "coverage", "calibration",
   "player_selection", "players", "tracks", "player_positions", "ball_positions", "court_lines", "metrics", "warnings",
@@ -51,6 +51,31 @@ export type ZoneOccupancyValue = {
   zone_definitions: Record<string, string>;
   seconds: Record<string, number>;
   fraction_of_tracked_time: Record<string, number>;
+};
+
+export const ZONES = ["kitchen", "transition", "baseline", "outside"] as const;
+export type ZoneName = (typeof ZONES)[number];
+
+export type PlayerZoneTime = {
+  player_id: number;
+  side: "near" | "far";
+  evaluable_s: number;
+  observed_s: number;
+  estimated_s: number;
+  unknown_s: number;
+  coverage: number;
+  estimated_share: number;
+  zone_seconds: Record<ZoneName, number>;
+  zone_share: Record<ZoneName, number>;
+  kitchen_line_share: number;
+};
+
+export type ZoneTimeValue = {
+  zone_definitions: Record<string, string>;
+  window: "detected_rallies" | "whole_video";
+  window_s: number;
+  estimate_rules: string;
+  players: PlayerZoneTime[];
 };
 
 export const POSITION_BANDS = ["behind_baseline", "baseline_area", "transition", "kitchen_line", "inside_kitchen"] as const;
@@ -202,6 +227,7 @@ export type AnalysisResultV1 = {
     positioning: Metric & { value: PositioningValue | null };
     rally_segmentation: Metric & { value?: RallyValue | null };
     shot_classification: Metric & { value?: ShotsValue | null };
+    zone_time: Metric & { value?: ZoneTimeValue | null };
   };
   warnings: string[];
 };
@@ -231,6 +257,11 @@ const POSITIONING_NOT_COMPUTED = {
   reason: "Positioning patterns were not computed for this result. Re-run analysis to add them.", value: null,
 };
 
+const ZONE_TIME_NOT_COMPUTED = {
+  status: "not_computed", validation: "not_evaluated", scope: "whole_clip",
+  reason: "Zone time was not computed for this result. Re-run analysis to add it.", value: null,
+};
+
 export function parseAnalysisResult(input: unknown): AnalysisResultV1 {
   if (!isObj(input)) throw new ContractError("result: expected an object");
   if (input.schema_version !== "1.0") {
@@ -257,10 +288,12 @@ export function parseAnalysisResult(input: unknown): AnalysisResultV1 {
     oneOf(input.calibration.method, ["manual_landmarks", "user_confirmed_landmarks", "auto_model_landmarks", "auto_painted_lines"] as const, "calibration.method");
   }
   if (!isObj(input.metrics)) throw new ContractError("metrics: expected an object");
-  // Results saved before positioning existed are still valid; show them as not computed.
-  const metrics = input.metrics.positioning === undefined
-    ? { ...input.metrics, positioning: POSITIONING_NOT_COMPUTED }
-    : input.metrics;
+  // Results saved before positioning or zone time existed are still valid; show them as not computed.
+  const metrics = {
+    ...input.metrics,
+    ...(input.metrics.positioning === undefined ? { positioning: POSITIONING_NOT_COMPUTED } : {}),
+    ...(input.metrics.zone_time === undefined ? { zone_time: ZONE_TIME_NOT_COMPUTED } : {}),
+  };
   for (const key of METRIC_KEYS) {
     const m = (metrics as Record<string, unknown>)[key];
     if (!isObj(m)) throw new ContractError(`metrics.${key}: missing`);
@@ -285,6 +318,21 @@ export function parseAnalysisResult(input: unknown): AnalysisResultV1 {
     num(v.mapped_time_s, "metrics.positioning.value.mapped_time_s");
     num(v.transition_lingers, "metrics.positioning.value.transition_lingers");
     num(v.approaches_to_kitchen_line, "metrics.positioning.value.approaches_to_kitchen_line");
+  }
+  const zoneTime = (metrics as Record<string, Record<string, unknown>>).zone_time;
+  if (zoneTime.status === "measured" || zoneTime.status === "experimental") {
+    const v = zoneTime.value;
+    if (!isObj(v) || !Array.isArray(v.players)) throw new ContractError("metrics.zone_time: expected players");
+    oneOf(v.window, ["detected_rallies", "whole_video"] as const, "metrics.zone_time.value.window");
+    for (const row of v.players) {
+      if (!isObj(row) || !isObj(row.zone_share)) throw new ContractError("metrics.zone_time.value.players: invalid row");
+      num(row.player_id, "metrics.zone_time.value.players.player_id");
+      oneOf(row.side, ["near", "far"] as const, "metrics.zone_time.value.players.side");
+      for (const key of ["coverage", "estimated_share", "kitchen_line_share", "observed_s", "estimated_s", "evaluable_s"]) {
+        num(row[key], `metrics.zone_time.value.players.${key}`);
+      }
+      for (const zone of ZONES) num((row.zone_share as Record<string, unknown>)[zone], `metrics.zone_time.value.players.zone_share.${zone}`);
+    }
   }
   if (!Array.isArray(input.player_positions) || !Array.isArray(input.tracks) || !Array.isArray(input.warnings)) {
     throw new ContractError("player_positions/tracks/warnings: expected arrays");
@@ -356,6 +404,7 @@ export const METRIC_LABELS: Record<MetricKey, string> = {
   positioning: "Court positioning patterns",
   rally_segmentation: "Rallies (estimated)",
   shot_classification: "Shot types (estimated)",
+  zone_time: "Zone time (where each player stood)",
 };
 
 export const VALIDATION_LABELS: Record<ValidationLevel, string> = {

@@ -441,6 +441,9 @@
         },
         "shot_classification": {
           "$ref": "#/$defs/ShotClassificationMetric"
+        },
+        "zone_time": {
+          "$ref": "#/$defs/ZoneTimeMetric"
         }
       },
       "required": [
@@ -649,6 +652,105 @@
         "observed_frames"
       ],
       "title": "PlayerSummary",
+      "type": "object"
+    },
+    "PlayerZoneTime": {
+      "additionalProperties": false,
+      "properties": {
+        "player_id": {
+          "description": "Matches players[].player_id.",
+          "title": "Player Id",
+          "type": "integer"
+        },
+        "side": {
+          "enum": [
+            "near",
+            "far"
+          ],
+          "title": "Side",
+          "type": "string"
+        },
+        "evaluable_s": {
+          "description": "Time measured over (rally windows, or the whole video).",
+          "title": "Evaluable S",
+          "type": "number"
+        },
+        "observed_s": {
+          "description": "Time the player's feet were seen and mapped to the court.",
+          "title": "Observed S",
+          "type": "number"
+        },
+        "estimated_s": {
+          "description": "Time the position was estimated: feet out of the picture, or a gap filled.",
+          "title": "Estimated S",
+          "type": "number"
+        },
+        "unknown_s": {
+          "description": "Time with no position and no estimate.",
+          "title": "Unknown S",
+          "type": "number"
+        },
+        "coverage": {
+          "description": "observed_s / evaluable_s (tracking coverage, F12).",
+          "title": "Coverage",
+          "type": "number"
+        },
+        "estimated_share": {
+          "description": "estimated_s / (observed_s + estimated_s).",
+          "title": "Estimated Share",
+          "type": "number"
+        },
+        "zone_seconds": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "propertyNames": {
+            "enum": [
+              "kitchen",
+              "transition",
+              "baseline",
+              "outside"
+            ]
+          },
+          "title": "Zone Seconds",
+          "type": "object"
+        },
+        "zone_share": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Shares of positioned time; they sum to 1 (F02).",
+          "propertyNames": {
+            "enum": [
+              "kitchen",
+              "transition",
+              "baseline",
+              "outside"
+            ]
+          },
+          "title": "Zone Share",
+          "type": "object"
+        },
+        "kitchen_line_share": {
+          "description": "Share of positioned time in the 1 m strip behind the kitchen line (F01).",
+          "title": "Kitchen Line Share",
+          "type": "number"
+        }
+      },
+      "required": [
+        "player_id",
+        "side",
+        "evaluable_s",
+        "observed_s",
+        "estimated_s",
+        "unknown_s",
+        "coverage",
+        "estimated_share",
+        "zone_seconds",
+        "zone_share",
+        "kitchen_line_share"
+      ],
+      "title": "PlayerZoneTime",
       "type": "object"
     },
     "PositionSnapshot": {
@@ -1506,6 +1608,114 @@
         "fraction_of_tracked_time"
       ],
       "title": "ZoneOccupancyValue",
+      "type": "object"
+    },
+    "ZoneTimeMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "measured",
+            "insufficient_data",
+            "not_computed",
+            "experimental"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "validation": {
+          "default": "not_evaluated",
+          "enum": [
+            "not_evaluated",
+            "synthetic_only",
+            "evaluated_on_real_footage"
+          ],
+          "title": "Validation",
+          "type": "string"
+        },
+        "scope": {
+          "default": "whole_clip",
+          "enum": [
+            "whole_clip",
+            "selected_view"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Why the metric is missing, partial, or experimental.",
+          "title": "Reason"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ZoneTimeValue"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "ZoneTimeMetric",
+      "type": "object"
+    },
+    "ZoneTimeValue": {
+      "additionalProperties": false,
+      "properties": {
+        "zone_definitions": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Zone Definitions",
+          "type": "object"
+        },
+        "window": {
+          "description": "Rally windows from detected hits when there are any, otherwise the whole analysed video.",
+          "enum": [
+            "detected_rallies",
+            "whole_video"
+          ],
+          "title": "Window",
+          "type": "string"
+        },
+        "window_s": {
+          "title": "Window S",
+          "type": "number"
+        },
+        "estimate_rules": {
+          "title": "Estimate Rules",
+          "type": "string"
+        },
+        "players": {
+          "items": {
+            "$ref": "#/$defs/PlayerZoneTime"
+          },
+          "title": "Players",
+          "type": "array"
+        }
+      },
+      "required": [
+        "zone_definitions",
+        "window",
+        "window_s",
+        "estimate_rules",
+        "players"
+      ],
+      "title": "ZoneTimeValue",
       "type": "object"
     }
   },

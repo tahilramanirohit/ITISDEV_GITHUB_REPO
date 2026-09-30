@@ -209,6 +209,36 @@ class PositioningMetric(Metric):
     value: Optional[PositioningValue] = None
 
 
+ZoneName = Literal["kitchen", "transition", "baseline", "outside"]
+
+
+class PlayerZoneTime(_Model):
+    player_id: int = Field(description="Matches players[].player_id.")
+    side: Literal["near", "far"]
+    evaluable_s: float = Field(description="Time measured over (rally windows, or the whole video).")
+    observed_s: float = Field(description="Time the player's feet were seen and mapped to the court.")
+    estimated_s: float = Field(description="Time the position was estimated: feet out of the picture, or a gap filled.")
+    unknown_s: float = Field(description="Time with no position and no estimate.")
+    coverage: float = Field(description="observed_s / evaluable_s (tracking coverage, F12).")
+    estimated_share: float = Field(description="estimated_s / (observed_s + estimated_s).")
+    zone_seconds: Dict[ZoneName, float]
+    zone_share: Dict[ZoneName, float] = Field(description="Shares of positioned time; they sum to 1 (F02).")
+    kitchen_line_share: float = Field(description="Share of positioned time in the 1 m strip behind the kitchen line (F01).")
+
+
+class ZoneTimeValue(_Model):
+    zone_definitions: Dict[str, str]
+    window: Literal["detected_rallies", "whole_video"] = Field(
+        description="Rally windows from detected hits when there are any, otherwise the whole analysed video.")
+    window_s: float
+    estimate_rules: str
+    players: List[PlayerZoneTime]
+
+
+class ZoneTimeMetric(Metric):
+    value: Optional[ZoneTimeValue] = None
+
+
 ShotType = Literal["serve", "return", "drive", "drop", "dink", "reset",
                    "speed_up", "counter", "volley", "lob", "overhead", "erne", "unclassified"]
 PublicShotType = Literal["serve", "return", "drop", "drive", "volley", "dink", "overhead", "lob", "unclassified"]
@@ -279,6 +309,9 @@ class Metrics(_Model):
         status="not_computed", reason=POSITIONING_NOT_COMPUTED))
     rally_segmentation: RallySegmentationMetric
     shot_classification: ShotClassificationMetric
+    # Defaulted so results stored before this metric existed still validate.
+    zone_time: ZoneTimeMetric = Field(default_factory=lambda: ZoneTimeMetric(
+        status="not_computed", reason=ZONE_TIME_NOT_COMPUTED))
 
 
 class AnalysisResultV1(_Model):
@@ -310,6 +343,7 @@ def not_computed(reason: str) -> Metric:
 
 # Reasons for metrics this pipeline deliberately does not produce yet.
 POSITIONING_NOT_COMPUTED = "Positioning patterns were not computed for this result."
+ZONE_TIME_NOT_COMPUTED = "Zone time was not computed for this result."
 RALLY_NOT_COMPUTED = (
     "Rallies are found from detected ball hits, which needs a ball model. All other metrics are whole-clip metrics."
 )

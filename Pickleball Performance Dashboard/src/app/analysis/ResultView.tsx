@@ -12,6 +12,7 @@ import { CourtDwellHeatmap } from "./CourtDwellHeatmap";
 import { CoachingPanel, type PreviousSession } from "./CoachingPanel";
 import { PlayerPicker } from "./PlayerPicker";
 import { ShotsPanel } from "./ShotsPanel";
+import { ZoneTimePanel } from "./ZoneTimePanel";
 import { VideoOverlayPlayer, type JumpRequest } from "./VideoOverlayPlayer";
 import { courtPlayers, focusShots } from "../../lib/analysis/shotLabels";
 
@@ -275,6 +276,8 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
         <ShotsPanel result={shotDisplayResult} myPlayerId={myPlayerId} research={experimentalReview}
           onWatch={videoUrl ? (time) => setJump({ time, id: Date.now() }) : undefined} />
       )}
+
+      {result.data_origin === "measured" && !devMock && <ZoneTimePanel result={result} myPlayerId={myPlayerId} />}
 
       <details className="rounded-2xl p-4" style={{ border: `1px solid ${BORDER}` }}>
         <summary className="cursor-pointer text-base font-semibold" style={{ color: BLUE_SKY }}>Detailed measurements and analysis notes</summary>

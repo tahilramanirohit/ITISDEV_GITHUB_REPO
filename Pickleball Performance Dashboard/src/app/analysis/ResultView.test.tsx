@@ -32,7 +32,7 @@ describe("ResultView", () => {
     expect(screen.getByText("Player track IDs")).toBeTruthy();
     expect(screen.getByText("not available")).toBeTruthy(); // motion detector: no confidence
     expect(screen.getAllByText("Accuracy not yet evaluated").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("NOT COMPUTED").length).toBe(2); // rallies and shots
+    expect(screen.getAllByText("NOT COMPUTED").length).toBe(3); // rallies, shots, and zone time (fixture predates it)
     expect(screen.getByText("WHOLE-CLIP METRICS")).toBeTruthy();
     expect(screen.queryByRole("img", { name: /Court heatmap/ })).toBeNull();
     expect(screen.getByText(/Hidden until positional accuracy passes evaluation/)).toBeTruthy();
@@ -176,5 +176,28 @@ describe("ResultView", () => {
     expect(screen.getAllByRole("button", { name: /Watch the/ })).toHaveLength(2);
     expect(screen.getByRole("button", { name: /Watch the return at 0:02/ })).toBeTruthy();
     expect(window.localStorage.getItem(`picklepro:me:${result.provenance.source.sha256 ?? result.provenance.generated_at}`)).toBe("2");
+  });
+
+  it("shows where each player stood, with the estimated share visible", () => {
+    const measured = structuredClone(testFixture) as Record<string, any>;
+    measured.data_origin = "measured";
+    measured.players = [{ player_id: 1, label: "Near side, left", on_court: true, side: "near", first_seen_s: 0,
+      last_seen_s: 10, observed_frames: 90 }];
+    measured.metrics.zone_time = {
+      status: "experimental", validation: "not_evaluated", scope: "whole_clip", reason: "not checked",
+      value: {
+        zone_definitions: { kitchen: "k", transition: "t", baseline: "b", outside: "o", kitchen_line: "l" },
+        window: "detected_rallies", window_s: 42, estimate_rules: "Feet below the picture: placed from the head.",
+        players: [{ player_id: 1, side: "near", evaluable_s: 42, observed_s: 30, estimated_s: 12, unknown_s: 0,
+          coverage: 0.714, estimated_share: 0.286, kitchen_line_share: 0.45,
+          zone_seconds: { kitchen: 4.2, transition: 29.4, baseline: 6.3, outside: 2.1 },
+          zone_share: { kitchen: 0.1, transition: 0.7, baseline: 0.15, outside: 0.05 } }],
+      },
+    };
+    render(<ResultView result={parseAnalysisResult(measured)} videoUrl={null} />);
+    expect(screen.getByText("Where each player stood")).toBeTruthy();
+    expect(screen.getByText("Kitchen 10% · Transition 70% · Baseline 15% · Outside 5%")).toBeTruthy();
+    expect(screen.getByText("29%")).toBeTruthy(); // estimated position share
+    expect(screen.getByRole("img", { name: /Transition 70%/ })).toBeTruthy();
   });
 });

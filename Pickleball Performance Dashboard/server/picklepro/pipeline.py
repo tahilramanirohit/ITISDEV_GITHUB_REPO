@@ -43,8 +43,11 @@ from .contract import (
     SourceInfo,
     TrackSummary,
     VideoInfo,
+    PlayerZoneTime,
     ZoneOccupancyMetric,
     ZoneOccupancyValue,
+    ZoneTimeMetric,
+    ZoneTimeValue,
     utc_now_iso,
 )
 from .court import COURT_LENGTH_M, COURT_MODEL, COURT_WIDTH_M, CalibrationError, CourtCalibration
@@ -54,6 +57,7 @@ from .positioning import positioning_patterns
 from .shots import BALL_DIAMETER_M, CORE_TYPES, FrameObs, analyze_shots, court_line_segments
 from .spatial import Selection, dwell_heatmap, select_player, zone_occupancy
 from .video_io import ReadStats, iter_frames, probe, sha256_of
+from .zones import HOLD_S, MAX_FILL_GAP_S, ZONE_DEFINITIONS, zone_time
 
 logger = logging.getLogger(__name__)
 
@@ -322,6 +326,8 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
     shot_metric, rally_metric = _shot_metrics(
         ball_detector is not None, ball_snapshots, times, per_frame, per_frame_calibration, selected_indices,
         props.height, frame_interval_s, "selected_view" if segment > 0 else "whole_clip")
+    zone_time_metric = _zone_time_metric(times, per_frame, per_frame_calibration, props.height, frame_interval_s,
+                                         players, rally_metric, "selected_view" if segment > 0 else "whole_clip")
 
     if frames_analyzed == 0:
         status, message = "insufficient_data", "No frames could be decoded from this video."
@@ -377,6 +383,7 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
             positioning=positioning_metric,
             rally_segmentation=rally_metric,
             shot_classification=shot_metric,
+            zone_time=zone_time_metric,
         ),
         warnings=warnings,
     )
@@ -388,6 +395,31 @@ FLOOR_SIZE_RATIO = (0.5, 1.8)   # observed / expected size of a ball lying at th
 
 
 PLAYER_REACH_GAP_S = 0.15
+RALLY_PAD_S = (1.0, 1.5)     # zone time starts a little before the first detected hit and ends after the last
+MIN_RALLY_HITS_FOR_ZONES = 2
+
+
+def _zone_time_metric(times, per_frame, calibrations, frame_h, frame_interval_s, players, rally_metric, scope):
+    if not any(c is not None for c in calibrations):
+        return ZoneTimeMetric(status="insufficient_data", scope=scope,
+                              reason="The court was not mapped, so positions cannot be placed in zones.")
+    rallies = [r for r in (rally_metric.value.rallies if rally_metric.value else []) if r.shots >= MIN_RALLY_HITS_FOR_ZONES]
+    windows = [(r.start_s - RALLY_PAD_S[0], r.end_s + RALLY_PAD_S[1]) for r in rallies] or None
+    rows = zone_time(times, per_frame, calibrations, frame_h, frame_interval_s, players, windows)
+    if not rows:
+        return ZoneTimeMetric(status="insufficient_data", scope=scope, reason="No players on the court were found.")
+    window_s = rows[0]["evaluable_s"]
+    return ZoneTimeMetric(
+        status="experimental", scope=scope, validation="not_evaluated",
+        reason=("Not yet checked against labelled positions. Positions are the bottom of each player's box; "
+                "estimated time is shown separately."),
+        value=ZoneTimeValue(
+            zone_definitions=ZONE_DEFINITIONS, window="detected_rallies" if windows else "whole_video",
+            window_s=window_s,
+            estimate_rules=("Feet below the picture: placed from the head position and the camera. Out of the picture "
+                            f"and back within {MAX_FILL_GAP_S:.0f} s: straight line between the two positions. Out at "
+                            f"the start or end: last position kept for {HOLD_S:.0f} s."),
+            players=[PlayerZoneTime(**r) for r in rows]))
 
 
 def _ball_near_court_players(balls: Sequence[BallCandidate], people: Sequence[dict],
