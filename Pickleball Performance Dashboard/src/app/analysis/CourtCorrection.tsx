@@ -77,6 +77,13 @@ export function CourtCorrection({ file, onConfirm, onCancel }: {
     setError("");
   }
 
+  function removePoint(name: CourtLandmark) {
+    setDraft((current) => current && ({ ...current,
+      points: current.points.filter((p) => p.landmark !== name),
+    }));
+    setError("");
+  }
+
   function pixelAt(e: React.PointerEvent<SVGSVGElement>): [number, number] {
     const r = e.currentTarget.getBoundingClientRect();
     return [Math.max(0, Math.min((still?.width ?? 1) - 1, (e.clientX - r.left) * (still?.width ?? 1) / r.width)),
@@ -147,11 +154,17 @@ export function CourtCorrection({ file, onConfirm, onCancel }: {
         </svg>
       </div>
       <label className="block text-sm font-semibold" htmlFor="court-point">Point to place or move</label>
-      <select id="court-point" value={active} onChange={(e) => setActive(e.target.value as CourtLandmark)}
-        className="w-full max-w-sm rounded-lg px-3 py-2" style={fieldStyle}>
-        {COURT_LANDMARKS.map((name) => <option key={name} value={name}>{name.replaceAll("_", " ")}</option>)}
-      </select>
-      <p className="text-sm" style={{ color: WHITE_DIM }}>Choose a point name, then tap its position on the frame; drag a yellow handle to correct it. Select a different point name for each mark.</p>
+      <div className="flex flex-wrap gap-2">
+        <select id="court-point" value={active} onChange={(e) => setActive(e.target.value as CourtLandmark)}
+          className="w-full max-w-sm rounded-lg px-3 py-2" style={fieldStyle}>
+          {COURT_LANDMARKS.map((name) => <option key={name} value={name}>{name.replaceAll("_", " ")}</option>)}
+        </select>
+        <button type="button" disabled={!point(active)} onClick={() => removePoint(active)}
+          className="rounded-lg px-3 py-2 text-sm font-semibold disabled:opacity-40" style={{ border: `1px solid ${BORDER}` }}>
+          Remove selected point
+        </button>
+      </div>
+      <p className="text-sm" style={{ color: WHITE_DIM }}>Choose a point name, then tap its position on the frame; drag a yellow handle to correct it. Only mark visible painted intersections. If a corner is outside the image, remove that point instead of guessing its position at the edge.</p>
       <p className="text-sm" style={{ color: WHITE_DIM }}>{draft.points.length} points · frame at {still.time.toFixed(1)} s</p>
     </>}
     {note && <p className="text-sm" style={{ color: WHITE_DIM }}>{note}</p>}
