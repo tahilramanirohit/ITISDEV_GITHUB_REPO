@@ -1,6 +1,6 @@
 # PicklePro thesis prototype
 
-**New tester or AI continuing this branch?** Start with [run and handoff guide](PICKLEPRO_RUN_AND_HANDOFF.md).
+
 
 PicklePro accepts fixed-camera pickleball footage and can inspect moving-camera footage when the court tracker finds reliable painted lines. Players can create a session before play, complete a private check-in wizard, record recovery and reflection, and choose draft practice focuses with optional self-ratings. The worker reports detections, court positions, and a dwell-time heatmap with coverage and provenance. Before upload, the player reviews a court frame, drags named landmarks into place, and confirms the map; the worker checks the saved correction against the source video. Player grouping, thumbnails, ball tracking, and estimated shots and rallies remain available for research review. Unvalidated shot statistics and positioning advice are withheld from real-player reports. The development prototype shows experimental events for inspection. See [consolidation guide](docs/CONSOLIDATED_CV.md) and [shot types](docs/SHOT_TYPES.md). Technique, skill and play-style estimates are not computed. The old dashboard is only a labelled sample-data design preview in development.
 
