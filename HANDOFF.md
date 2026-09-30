@@ -21,10 +21,10 @@ All paths are relative to `Pickleball Performance Dashboard/`.
 
 | Part | Files | What it does |
 | --- | --- | --- |
-| Pipeline | `server/picklepro/pipeline.py` | Samples frames: players at 10 per second (`target_fps`), the ball at 15 per second (`ball_fps`). Maps the court per frame, tracks the ball, then calls the shot detector and builds the result contract. |
-| Models | `server/picklepro/models.py`, `fetch_models.py`, `docs/MODEL_SETUP.md` | Default models: court `court_best.pt`, ball `ball,person,paddle.pt`, players `yolo11n-pose.pt` (17 body keypoints). `python -m picklepro.fetch_models` downloads them with pinned SHA-256; `--extra` also downloads the kpp91302 and 5urabhi ball models. |
+| Pipeline | `server/picklepro/pipeline.py` | Samples frames: players at 10 per second (`target_fps`), the ball at 15 per second (`ball_fps`). `frame_mode` (chosen on the upload form): `standard`; `near_players` (the ball on every frame while it is near an on-court player); `every_frame` (slow). Maps the court per frame, tracks the ball, then calls the shot detector and builds the result contract. |
+| Models | `server/picklepro/models.py`, `fetch_models.py`, `docs/MODEL_SETUP.md` | Default models: court `court_best.pt`, ball `ball,person,paddle.pt`. Players: found and tracked by `yolo11n.pt`, with 17 body keypoints added from `yolo11n-pose.pt` (`pose_weights`), matched by box overlap. The pose model alone missed small far players. `python -m picklepro.fetch_models` downloads them with pinned SHA-256; `--extra` also downloads the kpp91302 and 5urabhi ball models. |
 | Court | `court.py`, `court_lines.py`, `court_refine.py`, `auto_court.py` | Homography from the painted lines. Lines outside the frame are **extrapolated** from the homography (the "imaginary line"), so the full 13.41 × 6.10 m court is always known once four points are mapped. |
-| Ball | `ball_detection.py`, `ball_tracking.py` | Keeps flights with plausible speed; removes static and oversized look-alikes. Optional `drop_floor_balls_off_court` (off by default) drops balls lying on the floor well outside the court, i.e. from neighbouring courts. |
+| Ball | `ball_detection.py`, `ball_tracking.py` | Keeps flights with plausible speed; removes static and oversized look-alikes. A flight that passes within reach of an on-court player counts 5× when flights overlap (`PLAYER_FLIGHT_BONUS`), so the ball of a neighbouring court loses. Optional `drop_floor_balls_off_court` (off by default) drops balls lying on the floor well outside the court, i.e. from neighbouring courts. |
 | Players | `players.py` | Tracks people; keeps **at most 2 per side** (`MAX_PLAYERS_PER_SIDE`). Extra pieces are merged into the best colour match with no time overlap, otherwise marked off court. |
 | Swings | `swings.py` | From pose keypoints: wrist speed relative to the shoulders (body heights per second), and contact posture (above head, below hips). |
 | Shots | `shots.py`, `docs/SHOT_TYPES.md` | Ball direction changes → candidate hits. Each candidate is scored for each player by reach (distance) × swing factor. A dynamic program makes the hitting side alternate within a rally (`HIT_COST`). Rules classify into 8 public types: serve, return, drop, drive, volley, dink, overhead, lob. Anything else is `unclassified`. |
@@ -35,7 +35,11 @@ All paths are relative to `Pickleball Performance Dashboard/`.
 
 ## Evaluation
 
-- Test clip: `TestVideoKirk_REAL.mp4` (51 s, doubles, near baseline cut off at the bottom of the frame).
+- Labelled clips (all in `Pickleball Performance Dashboard/`, labels in `eval/`):
+  - `TestVideoKirk_REAL.mp4`: 51 s, 30 fps, doubles, near baseline cut off. 26 shots, whole-second labels whose player numbers are **old tracker IDs**; hitter scores on it are meaningless after any tracker change.
+  - `PickleballVideo.mp4`: 52 s, 60 fps, doubles, **neighbouring courts in view**. 38 shots, frame-precise; human player numbers with no tracker mapping, so hitters are not scored.
+  - `CHvsBJ.mp4`: 29 s, 60 fps, singles. 15 shots, frame-precise, with a tracker mapping.
+- The team's shot definitions: `Pickleball_Cap1_Notes.pdf` (not in the repo; summarised in `docs/SHOT_TYPES.md`). Any shot hit out of the air is a volley unless it is a serve, return, lob or overhead.
 - Human labels: `eval/TestVideoKirk_REAL.labels.json`, 26 real shots.
   - These are **whole-second** labels (`resolution_s: 1`), so matching allows a window around each second.
   - Players are numbered 1–2 near, 3–4 far.
@@ -53,13 +57,15 @@ All paths are relative to `Pickleball Performance Dashboard/`.
 
   This turns a several-minute run into under a second per setting.
 
-### Current numbers (default settings, pose model, suman ball model)
+### Current numbers (defaults, Standard detail, 30 Sep 2026)
 
-| Detected | Shots found (recall) | Detections that are real (precision) | Right hitter | Right side | Right type |
+| Clip | Labelled | Detected | Found | Real | Right type |
 | --- | --- | --- | --- | --- | --- |
-| 25 | 0.73 | 0.76 | 0.58 | 0.74 | 0.53 |
+| TestVideoKirk_REAL.mp4 | 26 | 23 | 19 (73%) | 83% | 63% |
+| PickleballVideo.mp4 | 38 | 19 | 15 (39%) | 79% | 40% |
+| CHvsBJ.mp4 (the team's own app run, before these changes) | 15 | 14 | 9 (60%) | 64% | 78%, hitter 100% |
 
-The older figure in Kirk's guide ("11 shots, 10 matched, 5/10 types") is from before the swing and alternation work.
+Hitter accuracy on the Kirk clip is not comparable across tracker changes (its labels use old tracker IDs). PickleballVideo has no tracker mapping yet: map human players to tracker IDs on `#/label` to score hitters.
 
 ### Tried and measured (same clip)
 

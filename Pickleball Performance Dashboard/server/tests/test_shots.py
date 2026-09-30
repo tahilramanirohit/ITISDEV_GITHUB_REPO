@@ -282,3 +282,12 @@ def test_a_ball_rolling_past_the_feet_is_not_a_stroke():
     at_shoes = _Point(0.0, 150, 290, 295, 10)
     assert _reach_options(frame, at_shoes, everyone=True) == {}
     assert [o[0] for o in _reach_options(frame, at_waist).values()] == [0]
+
+
+def test_a_ball_hit_out_of_the_air_is_a_volley_as_in_the_team_shot_table():
+    from picklepro.shots import core_type
+    assert core_type("drop", "volley", 3.0, False, False, 5)[0] == "volley"
+    assert core_type("reset", "volley", 6.0, False, False, 5)[0] == "volley"
+    assert core_type("drive", "after_bounce", 3.0, False, True, 5)[0] == "drive"
+    for kept in ("serve", "return", "lob", "overhead", "unclassified"):
+        assert core_type(kept, "volley", 3.0, False, False, 5)[0] == kept

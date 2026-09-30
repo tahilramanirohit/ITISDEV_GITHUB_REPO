@@ -11,6 +11,10 @@ Matching uses contact time, independently of the predicted hitter. Reported:
 * hits found (recall) and detected hits that match a label (precision);
 * hitter accuracy and shot-type accuracy on matched shots;
 * a confusion list of wrong types, and detections at "not a shot" moments.
+
+Labels may use the finer names (speed-up, counter, reset, erne). PicklePro
+reports each as the core type it is a kind of, so such a label is correct when
+the detection names one of those core types (``LABEL_ACCEPTS``).
 """
 
 from __future__ import annotations
@@ -23,6 +27,14 @@ from typing import Dict, List
 MARGIN_S = 0.35
 # Older results used these names for what is now one type.
 ALIASES = {"third_shot_drop": "drop"}
+# Finer label -> core types that count as correct (see shots.core_type).
+LABEL_ACCEPTS = {"speed_up": {"drive", "volley"}, "counter": {"volley"}, "erne": {"volley"},
+                 "reset": {"dink", "drop"}}
+
+
+def _type_ok(label_type: str, detected_type: str) -> bool:
+    detected_type = ALIASES.get(detected_type, detected_type)
+    return detected_type == label_type or detected_type in LABEL_ACCEPTS.get(label_type, ())
 
 
 def _window(label: dict, file_resolution: float) -> tuple[float, float]:
@@ -66,9 +78,9 @@ def evaluate(result: dict, labels: dict) -> Dict[str, object]:
     found = [(l, d) for l, d in matches if d is not None]
     hitter_scored = [(l, d) for l, d in found if expected_track(l) is not None]
     hitter_ok = sum(1 for l, d in hitter_scored if d.get("hitter_track_id") == expected_track(l))
-    type_ok = sum(1 for l, d in found if ALIASES.get(d["shot_type"], d["shot_type"]) == l["type"])
+    type_ok = sum(1 for l, d in found if _type_ok(l["type"], d["shot_type"]))
     confusion = Counter((l["type"], ALIASES.get(d["shot_type"], d["shot_type"])) for l, d in found
-                        if ALIASES.get(d["shot_type"], d["shot_type"]) != l["type"])
+                        if not _type_ok(l["type"], d["shot_type"]))
     false_at_negatives = sum(1 for n in negatives
                              if any(_window(n, res)[0] <= s["time_seconds"] < _window(n, res)[1]
                                     for j, s in enumerate(detected) if j not in used))
@@ -82,7 +94,7 @@ def evaluate(result: dict, labels: dict) -> Dict[str, object]:
         "hitter_labels_scored": len(hitter_scored),
         "type_accuracy": round(type_ok / len(found), 3) if found else None,
         "type_and_hitter_correct": sum(1 for l, d in hitter_scored if d.get("hitter_track_id") == expected_track(l)
-                                       and ALIASES.get(d["shot_type"], d["shot_type"]) == l["type"]),
+                                       and _type_ok(l["type"], d["shot_type"])),
         "detections_at_not_a_shot_moments": false_at_negatives,
         "wrong_types": {f"{a} -> {b}": n for (a, b), n in confusion.most_common()},
         "rows": [{"t": l["t"], "player": l["player"], "label": l["type"],
@@ -104,7 +116,7 @@ def main(argv: List[str]) -> int:
     for r in rows:
         d = r["detected"]
         got = "MISSED" if d is None else f"{d['t']:6.2f}s P{d['player']} {d['type']}"
-        mark = "" if d is None else ("  ok" if d["player"] == r["player"] and d["type"] == r["label"] else "  <-")
+        mark = "" if d is None else ("  ok" if d["player"] == r["player"] and _type_ok(r["label"], d["type"]) else "  <-")
         print(f"{r['t']:7.2f}s P{r['player']} {r['label']:10s} | {got}{mark}")
     return 0
 

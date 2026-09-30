@@ -27,4 +27,10 @@ describe("court correction", () => {
       .toMatchObject({ calibration: draft, calibration_source: "user_confirmed", selection: { track_id: 5 } });
     expect(updatedJobParams(saved, {}, null, true).calibration).toBeUndefined();
   });
+
+  it("keeps a chosen analysis detail and drops it when the user goes back to standard", () => {
+    const saved = { frame_mode: "every_frame", selection: { method: "court_half", court_half: "near" } };
+    expect(updatedJobParams(saved, { frame_mode: "near_players" }, null, true).frame_mode).toBe("near_players");
+    expect(updatedJobParams(saved, {}, null, true)).not.toHaveProperty("frame_mode");
+  });
 });

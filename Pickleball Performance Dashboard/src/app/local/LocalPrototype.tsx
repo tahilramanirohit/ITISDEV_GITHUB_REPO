@@ -70,6 +70,7 @@ export default function LocalPrototype() {
     const q = new URLSearchParams({ max_seconds: String(maxSeconds) });
     if (params.selection?.method === "court_half") q.set("court_half", params.selection.court_half);
     if (params.selection?.method === "track_id") q.set("track_id", String(params.selection.track_id));
+    if (params.frame_mode) q.set("frame_mode", params.frame_mode);
     const progressId = `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
     q.set("progress_id", progressId);
     setPhase("uploading");

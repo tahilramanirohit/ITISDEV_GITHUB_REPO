@@ -6,7 +6,7 @@ import bisect
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Sequence
 
 import numpy as np
 
@@ -60,15 +60,29 @@ logger = logging.getLogger(__name__)
 ProgressFn = Callable[[float], None]
 
 
+# How densely frames are searched (see AnalysisOptions.frame_mode).
+FRAME_MODES = ("standard", "near_players", "every_frame")
+NEAR_PLAYER_HOLD_S = 0.25      # keep searching every frame this long after the ball was near a player
+NEAR_REACH_WIDTHS = 1.0        # region around a player, in box widths to each side ...
+NEAR_REACH_HEIGHTS = 0.6       # ... and box heights above the head
+ON_COURT_MARGIN_M = (1.0, 3.5)  # beside a sideline, behind a baseline
+
+
 @dataclass
 class AnalysisOptions:
     detector: str = "motion"
     yolo_weights: Optional[str] = None
+    pose_weights: Optional[str] = None  # body joints for the people found (swings)
     court_weights: Optional[str] = None
     ball_weights: Optional[str] = None
     target_fps: float = 10.0
     # The ball moves much faster than players, so it is sampled more often.
     ball_fps: float = 15.0
+    # "standard": players ``target_fps`` and ball ``ball_fps`` times a second.
+    # "near_players": the same, plus the ball on every frame while it is near a
+    # player on the court, where hits happen (much faster than every frame).
+    # "every_frame": players and ball on every decoded frame (slow on a CPU).
+    frame_mode: str = "standard"
     # Find the court from its painted lines when no manual calibration is given.
     auto_court: bool = True
     # Off by default: on the test clip no neighbouring court was in view and the
@@ -91,8 +105,11 @@ class AnalysisOptions:
 def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
                   progress: Optional[ProgressFn] = None) -> AnalysisResultV1:
     opts = options or AnalysisOptions()
+    if opts.frame_mode not in FRAME_MODES:
+        raise ValueError(f"frame_mode must be one of {', '.join(FRAME_MODES)}")
     props = probe(path)
-    stride = max(1, round(props.fps / opts.target_fps)) if opts.target_fps > 0 else 1
+    every_frame = opts.frame_mode == "every_frame"
+    stride = 1 if every_frame else max(1, round(props.fps / opts.target_fps)) if opts.target_fps > 0 else 1
     frame_interval_s = stride / props.fps
     warnings: List[str] = []
     if not props.fps_reported:
@@ -114,9 +131,15 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
         )
         calibration = calibration.scaled_to(props.width, props.height)
 
-    tracker = PlayerTracker(detector=opts.detector, yolo_weights=opts.yolo_weights)
+    tracker = PlayerTracker(detector=opts.detector, yolo_weights=opts.yolo_weights, pose_weights=opts.pose_weights)
     ball_detector = BallDetector(opts.ball_weights) if opts.ball_weights else None
-    ball_stride = max(1, round(props.fps / opts.ball_fps)) if ball_detector and opts.ball_fps > 0 else stride
+    ball_stride = 1 if every_frame else (max(1, round(props.fps / opts.ball_fps))
+                                         if ball_detector and opts.ball_fps > 0 else stride)
+    near_players_mode = opts.frame_mode == "near_players" and ball_detector is not None
+    dense_until = -1.0
+    extra_ball_frames = 0
+    last_people: List[dict] = []
+    last_people_cal: Optional[CourtCalibration] = None
     collector = PlayerCollector()
     if not tracker.confidence_is_model_score:
         warnings.append(
@@ -141,12 +164,17 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
 
     for index, ts, frame in iter_frames(path, props.fps, stats, max_seconds=opts.max_seconds):
         player_frame = index % stride == 0
-        ball_frame = ball_detector is not None and index % ball_stride == 0
+        on_ball_stride = ball_detector is not None and index % ball_stride == 0
+        ball_frame = on_ball_stride or (near_players_mode and ts <= dense_until)
         if not (player_frame or ball_frame):
             continue
         if ball_frame:
-            ball_frames.append((ts, [BallCandidate(round(ts, 3), tuple(c["bbox"]), c["confidence"])
-                                     for c in ball_detector.candidates(frame)]))
+            extra_ball_frames += not on_ball_stride
+            found_balls = [BallCandidate(round(ts, 3), tuple(c["bbox"]), c["confidence"])
+                           for c in ball_detector.candidates(frame)]
+            ball_frames.append((ts, found_balls))
+            if near_players_mode and _ball_near_court_players(found_balls, last_people, last_people_cal):
+                dense_until = ts + NEAR_PLAYER_HOLD_S
         if not player_frame:
             continue
         if not correction_checked and ts + frame_interval_s / 2 >= opts.calibration_frame_s:
@@ -182,6 +210,7 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
                 next_view_track_id += 1
             detection["track_id"] = view_track_ids[key]
         collector.observe(len(per_frame), ts, frame, detections, frame_calibration, segment)
+        last_people, last_people_cal = detections, frame_calibration
         per_frame.append(detections)
         times.append(ts)
         if progress and progress_total:
@@ -201,9 +230,17 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
                 t[2] += 1
     ball_frames, off_court_balls = (_drop_balls_on_floor_off_court(ball_frames, times, per_frame_calibration)
                                     if opts.drop_floor_balls_off_court else (ball_frames, 0))
-    ball_path, ball_stats = track_ball(ball_frames, props.width) if ball_detector is not None else ([], {})
+    ball_path, ball_stats = (track_ball(ball_frames, props.width, _near_player_test(times, per_frame))
+                             if ball_detector is not None else ([], {}))
     if ball_detector is not None:
         ball_stats["on_floor_off_court_removed"] = off_court_balls
+        ball_stats["frames_searched"] = len(ball_frames)
+        ball_stats["extra_frames_near_players"] = extra_ball_frames
+    if opts.frame_mode == "every_frame":
+        warnings.append("Every frame was analyzed (detailed mode).")
+    elif near_players_mode:
+        warnings.append(f"The ball was also searched on every frame while it was near a player: "
+                        f"{extra_ball_frames} extra frames (detailed-near-players mode).")
     ball_snapshots = [BallSnapshot(time_seconds=c.time_s, bbox=list(c.bbox), confidence=c.confidence)
                       for c in ball_path]
     start = times[0] if times else 0.0
@@ -352,6 +389,54 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
 OFF_COURT_SIDE_MARGIN_M = 2.0   # wide balls stay in play this far outside a sideline
 OFF_COURT_END_MARGIN_M = 3.0    # ... and this far behind a baseline
 FLOOR_SIZE_RATIO = (0.5, 1.8)   # observed / expected size of a ball lying at that floor spot
+
+
+PLAYER_REACH_GAP_S = 0.15
+
+
+def _ball_near_court_players(balls: Sequence[BallCandidate], people: Sequence[dict],
+                             cal: Optional[CourtCalibration]) -> bool:
+    """Is any ball candidate close to a person standing on (or just beside) the court?
+
+    Used while the video is read, before players are identified, so "on the
+    court" comes from the latest court map. Without a map, anyone counts.
+    """
+    if not balls or not people:
+        return False
+    for d in people:
+        x1, y1, x2, y2 = d["bbox"]
+        if cal is not None:
+            cx, cy = cal.image_to_court([((x1 + x2) / 2, y2)])[0]
+            side, end = ON_COURT_MARGIN_M
+            if not (-side <= cx <= COURT_WIDTH_M + side and -end <= cy <= COURT_LENGTH_M + end):
+                continue
+        w, h = x2 - x1, y2 - y1
+        for b in balls:
+            x, y = b.center
+            if x1 - NEAR_REACH_WIDTHS * w <= x <= x2 + NEAR_REACH_WIDTHS * w and y1 - NEAR_REACH_HEIGHTS * h <= y <= y2:
+                return True
+    return False
+
+
+def _near_player_test(times: Sequence[float], per_frame: Sequence[Sequence[dict]]):
+    """A test for "this ball candidate is within reach of a player on this court".
+
+    ``per_frame`` holds only on-court players at this point. The reach region
+    is the one the shot detector uses: beside the body and a little above the
+    head, down to the feet.
+    """
+    def near(c: BallCandidate) -> bool:
+        i = bisect.bisect_left(times, c.time_s)
+        near_frames = [j for j in (i - 1, i) if 0 <= j < len(times) and abs(times[j] - c.time_s) <= PLAYER_REACH_GAP_S]
+        x, y = c.center
+        for j in near_frames:
+            for d in per_frame[j]:
+                x1, y1, x2, y2 = d["bbox"]
+                w, h = x2 - x1, y2 - y1
+                if x1 - 0.6 * w <= x <= x2 + 0.6 * w and y1 - 0.4 * h <= y <= y2:
+                    return True
+        return False
+    return near
 
 
 def _drop_balls_on_floor_off_court(ball_frames, times, calibrations):

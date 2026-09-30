@@ -111,6 +111,7 @@ MIN_HITS_WITHOUT_SERVE = 4    # an exchange this long is play even if its serve 
 # to the shoulders, in body heights per second.
 PACE_TO_NEXT_HITTER = False   # pace from hitter to the next hitter, not to a (less reliable) bounce spot
 USE_SWINGS = True
+AIR_CONTACT_IS_VOLLEY = True  # the team's shot table: only a volley is struck out of the air
 SWING_FULL = 3.0              # a swing this fast counts fully
 SWING_FLOOR = 0.2             # a still arm keeps this share of a candidate's score
 SWING_UNKNOWN = 0.6           # no pose for this player at that moment
@@ -644,8 +645,15 @@ def core_type(raw: str, contact: str, depth: Optional[float], low_contact: bool,
     volley (out of the air), a counter and an erne are volleys, and a reset is
     a dink at the kitchen line or a drop further back. A low contact at the
     kitchen line that is not fast is a dink.
+
+    Following the team's shot table (Pickleball_Cap1_Notes.pdf, 30 Sep 2026),
+    dinks, drops and drives are hit after the bounce: any shot struck out of
+    the air is a volley, except a serve, return, lob or overhead.
     """
     at_net = depth is not None and depth >= NET_ZONE_DEPTH_M
+    if AIR_CONTACT_IS_VOLLEY and contact == "volley" and raw not in ("serve", "return", "lob", "overhead",
+                                                                          "unclassified"):
+        return "volley", "" if raw in ("volley", "counter", "erne") else f"hit out of the air ({raw.replace('_', '-')})"
     if raw == "speed_up":
         return ("volley", "fast attack out of the air") if contact == "volley" else ("drive", "fast attack after the bounce")
     if raw in ("counter", "erne"):

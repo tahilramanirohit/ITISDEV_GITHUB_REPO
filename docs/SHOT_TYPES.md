@@ -14,7 +14,7 @@ PicklePro names each detected hit with one of **eight core shot types: serve, re
 | Reset (block) | Soft reply that takes the pace off a hard incoming ball. | Soft reply at the kitchen line or in the transition zone when the incoming shot was fast. |
 | Speed-up | Sudden fast attack out of a soft (dinking) exchange. | Fast shot (≥ 9 m/s) from the kitchen line after a soft incoming shot. |
 | Counter | Volley straight back at an opponent's speed-up. | Volley at the kitchen line when the incoming shot was a speed-up. |
-| Volley | Any shot hit out of the air before the ball bounces. | Both players at the kitchen line and the ball came back within 0.85 s (no time to bounce), or no bounce seen since the previous hit with good ball coverage. Fast kitchen-line exchanges ("hands battles") stay volleys. |
+| Volley | Any shot hit out of the air before the ball bounces. | Both players at the kitchen line and the ball came back within 0.85 s (no time to bounce), or no bounce seen since the previous hit with good ball coverage. Fast kitchen-line exchanges ("hands battles") stay volleys. Following the team's shot table (`Pickleball_Cap1_Notes.pdf`), **every shot hit out of the air is reported as a volley** except a serve, return, lob or overhead: dinks, drops and drives are hit after the bounce. |
 | Lob | High shot over the opponents, landing deep. | Ball rises more than 3.5 m above the far-baseline image line, or hangs ≥ 2 s over ≥ 8 m. |
 | Overhead smash | Hard downward shot from above the head, usually off a short lob. | Contact point above the top of the hitter's box (not on the first hit). |
 | Erne | Volley near the net hit with the feet outside the sideline, beside the kitchen. | Volley at the kitchen line with the hitter's feet more than 0.25 m outside a sideline. |
@@ -36,7 +36,7 @@ PicklePro names each detected hit with one of **eight core shot types: serve, re
 
 ## Swings and posture (pose model)
 
-With the pose model (`yolo11n-pose.pt`, found automatically in `server/models`), player detection also returns 17 body points for each person: head, shoulders, elbows, wrists, hips, knees and ankles. `picklepro/swings.py` turns them into two kinds of evidence, the way racket-sport apps such as SwingVision read strokes from the player as well as the ball:
+With the pose model (`yolo11n-pose.pt`, found automatically in `server/models`), each player found by the person model (`yolo11n.pt`) also gets 17 body points: head, shoulders, elbows, wrists, hips, knees and ankles. `picklepro/swings.py` turns them into two kinds of evidence, the way racket-sport apps such as SwingVision read strokes from the player as well as the ball:
 
 - **Swing strength.** How fast a wrist moves relative to the player's own shoulders, in body heights per second. Walking moves the shoulders too, so it does not count as a swing. When the ball turns near two partners, the one who swung is preferred. A candidate hit with no swing near it scores lower, so fewer non-shots are reported.
 - **Contact posture.** Where the hitting wrist was at contact: above the head (overhead), between hips and head, or below the hips. A low, soft contact at the kitchen line is a dink.
@@ -63,7 +63,9 @@ The person model (`yolo11n.pt`, COCO person class) runs at 1280 px so that playe
 - They are plausibly close in time and place.
 - Their shirt and shorts colours match. The colour signature includes brightness, which separates black and white shirts.
 
-Very short sightings are folded into the matching player on the same side. **A side never has more than two players** (doubles): within one camera view, the two people seen most on each side are the players, and any other on-court piece is joined to the one whose clothes match best, as long as the two are never seen at the same moment. Someone on court alongside both players (a coach, a ball fetcher) is set aside. People standing mostly off the court (a referee, spectators) are listed separately, are not drawn on the video, and are never counted as hitters.
+Very short sightings are folded into the matching player on the same side. **A side never has more than two players** (doubles): within one camera view, the two people seen most on each side are the players, and any other on-court piece is joined to the one whose clothes match best, as long as the two are never seen at the same moment. Someone on court alongside both players (a coach, a ball fetcher) is set aside. People standing mostly off the court (a referee, spectators) are listed separately, are not drawn on the video, and are never counted as hitters. The app shows a photo of each player so you can pick yourself; "My shots" then shows only your shots.
+
+**Players are found by `yolo11n.pt`, body points added by `yolo11n-pose.pt` (30 Sep 2026).** On `PickleballVideo.mp4` the pose model alone often saw only 1–2 of the 4 players in the first seconds, because the far players are small; the serve at 0:03 then had no hitter. The plain person model found 93% of on-court players against 72% (see `MODEL_SETUP.md`), and with it all four players are found from about 0:04.
 
 **Ball outside the court.** Keeping only ball detections over the court was tested (30 Sep 2026) and not adopted. With the camera just behind the baseline, every line of sight passes through the space above the near court, so a 3-D check rejected nothing. A picture-based boundary rejected 100 of 251 ball points, mostly real high balls, because a ball in the air appears above the narrower far court. Look-alikes outside play are instead removed because they do not move like a ball in flight.
 
@@ -81,7 +83,22 @@ A narrower rule is available but off by default (`drop_floor_balls_off_court`). 
 
 The 5urabhi model sees the ball in more frames and finds more shots, but the extra points also create false shots and confuse the shot types. Detecting every frame helps the types but loses shots, because the hit rules are tuned for 15 samples a second. None beats the default overall, so the default is unchanged.
 
-The app shows a photo of each player so you can pick yourself; "My shots" then shows only your shots.
+**Ball of a neighbouring court (30 Sep 2026).** On `PickleballVideo.mp4` the tracker followed the ball of the court to the left for most of the first rally: it was detected more steadily than the rally ball. Size cannot separate them either: the ball model's boxes are 1.1–2.9 times the real ball size, so a ball on the next court looks like one 2 m up near the near sideline. What separates them is **whose ball it is**. A flight of ball points that passes within reach of one of this court's players now counts 5 times as strong when two flights claim the same moment (`PLAYER_FLIGHT_BONUS`). Measured:
+
+| Setting (PickleballVideo.mp4, 38 shots) | Found | Real | Right type |
+| --- | --- | --- | --- |
+| Before | 11 | 79% | 18% |
+| Prefer this court's flights (kept) | 15 | 79% | 33% |
+| ... and air contact = volley (kept) | 15 | 79% | 40% |
+| Drop flights never near a player instead | 15 | 88% | 27% |
+
+On `TestVideoKirk_REAL.mp4`, where no other court is in view, the preference changes nothing, and the volley rule raises right types from 58% to 63%.
+
+**Analysis detail.** The upload form has three choices (`frame_mode`):
+
+- **Standard** (default): players 10 times and the ball 15 times a second.
+- **Detailed near players:** the same, plus the ball on *every* frame while it is near a player on the court, for a quarter of a second after it was last seen there. Hits happen there, so this looks closely only where it matters.
+- **Every frame:** everything on every frame. About 30–40 minutes for a one-minute 60 fps video on a laptop CPU.
 
 ## Labelling a clip
 

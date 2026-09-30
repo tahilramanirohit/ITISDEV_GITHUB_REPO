@@ -76,3 +76,31 @@ def test_a_ball_lying_on_the_floor_beside_the_court_is_dropped_and_a_high_ball_i
     high = BallCandidate(0.0, (int(hx - 4), int(hy - 90), int(hx + 4), int(hy - 82)), 0.8)
     kept, removed = _drop_balls_on_floor_off_court([(0.0, [on_floor, high])], [0.0], [cal])
     assert removed == 1 and kept[0][1] == [high]
+
+
+def test_the_flight_of_this_courts_players_beats_a_stronger_one_on_the_next_court():
+    ours = _flight(0.0, 20, 900, 500, 800, -200, conf=0.4)
+    other = _flight(0.0, 25, 100, 300, 600, 100, conf=0.9)  # longer and more confident
+    # Collide at the same moments so only one can be kept per time.
+    other = [BallCandidate(o.time_s, o.bbox, o.confidence) for o in other if o.time_s in {c.time_s for c in ours}]
+    near = lambda c: c.time_s == ours[0].time_s and c.bbox == ours[0].bbox  # the player hits it at the start
+    path, stats = track_ball(_frames(ours, other), 1920)
+    assert {p.bbox for p in path} == {c.bbox for c in other}
+    path, stats = track_ball(_frames(ours, other), 1920, near_player=near)
+    assert {p.bbox for p in path} == {c.bbox for c in ours}
+    assert stats["flights_near_players"] == 1
+
+
+def test_detailed_mode_looks_closer_only_when_the_ball_is_near_a_player_on_the_court():
+    from picklepro.pipeline import _ball_near_court_players
+    player = {"bbox": [900, 400, 960, 580]}
+    near = BallCandidate(1.0, (975, 380, 985, 390), 0.5)     # beside the head
+    far = BallCandidate(1.0, (300, 100, 310, 110), 0.5)
+    assert _ball_near_court_players([far, near], [player], None)
+    assert not _ball_near_court_players([far], [player], None)
+    assert not _ball_near_court_players([near], [], None)
+
+    class OffCourt:  # every foot point maps 10 m beside the court
+        def image_to_court(self, pts):
+            return [(-10.0, 5.0) for _ in pts]
+    assert not _ball_near_court_players([near], [player], OffCourt())

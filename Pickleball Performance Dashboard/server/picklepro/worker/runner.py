@@ -35,7 +35,7 @@ from ..contract import AnalysisResultV1
 from ..court import CalibrationError, calibration_from_dict
 from ..court_review import checked_review
 from ..detection import DetectorUnavailable
-from ..pipeline import AnalysisOptions, analyze_video
+from ..pipeline import FRAME_MODES, AnalysisOptions, analyze_video
 from ..spatial import Selection
 from ..video_io import VideoOpenError, VideoProperties, probe
 from .store import Job, JobStore, LeaseLost, TransientStoreError, VideoMissing
@@ -86,6 +86,7 @@ class WorkerConfig:
     yolo_weights: Optional[str] = None
     court_weights: Optional[str] = None
     ball_weights: Optional[str] = None
+    pose_weights: Optional[str] = None
     target_fps: float = 10.0
     enforce_source_quality: bool = True
 
@@ -118,9 +119,12 @@ def options_from_params(params: dict, cfg: WorkerConfig, filename: Optional[str]
     if selection_time_s is not None:
         if isinstance(selection_time_s, bool) or not isinstance(selection_time_s, (int, float)) or not math.isfinite(selection_time_s) or selection_time_s < 0:
             raise ValueError("selection_time_s must be a non-negative number")
-    return AnalysisOptions(detector=cfg.detector, yolo_weights=cfg.yolo_weights,
+    frame_mode = params.get("frame_mode", "standard")
+    if frame_mode not in FRAME_MODES:
+        raise ValueError(f"Unsupported frame_mode: {str(frame_mode)[:40]}")
+    return AnalysisOptions(detector=cfg.detector, yolo_weights=cfg.yolo_weights, frame_mode=frame_mode,
                            court_weights=cfg.court_weights, ball_weights=cfg.ball_weights,
-                           target_fps=cfg.target_fps,
+                           pose_weights=cfg.pose_weights, target_fps=cfg.target_fps,
                            calibration=calibration, selection=selection, selection_time_s=selection_time_s,
                            calibration_source=source, calibration_frame_s=frame_s,
                            experimental_zones=bool(params.get("experimental_zones")), source_filename=filename)

@@ -1,0 +1,204 @@
+{
+  "video": "PickleballVideo.mp4",
+  "labelled_by": "",
+  "time_resolution_s": 0.1,
+  "notes": "Frame-precise labels by the team (30 Sep 2026). Doubles; no tracker mapping yet, so hitters are not scored.",
+  "identity_scheme": "human",
+  "shots": [
+    {
+      "t": 3.333,
+      "player": 1,
+      "type": "serve"
+    },
+    {
+      "t": 4.4,
+      "player": 4,
+      "type": "return"
+    },
+    {
+      "t": 5.867,
+      "player": 2,
+      "type": "return"
+    },
+    {
+      "t": 7,
+      "player": 4,
+      "type": "dink"
+    },
+    {
+      "t": 8.1,
+      "player": 2,
+      "type": "return"
+    },
+    {
+      "t": 9.067,
+      "player": 4,
+      "type": "drive"
+    },
+    {
+      "t": 9.6,
+      "player": 1,
+      "type": "counter"
+    },
+    {
+      "t": 10.633,
+      "player": 3,
+      "type": "volley"
+    },
+    {
+      "t": 11,
+      "player": 1,
+      "type": "not_a_shot"
+    },
+    {
+      "t": 14.533,
+      "player": 4,
+      "type": "serve"
+    },
+    {
+      "t": 15.6,
+      "player": 1,
+      "type": "return"
+    },
+    {
+      "t": 17.467,
+      "player": 3,
+      "type": "speed_up"
+    },
+    {
+      "t": 19.267,
+      "player": 2,
+      "type": "reset"
+    },
+    {
+      "t": 20.233,
+      "player": 4,
+      "type": "dink"
+    },
+    {
+      "t": 22.433,
+      "player": 3,
+      "type": "serve"
+    },
+    {
+      "t": 23.567,
+      "player": 2,
+      "type": "return"
+    },
+    {
+      "t": 24.933,
+      "player": 3,
+      "type": "speed_up"
+    },
+    {
+      "t": 25.7,
+      "player": 2,
+      "type": "counter"
+    },
+    {
+      "t": 26.8,
+      "player": 4,
+      "type": "drive"
+    },
+    {
+      "t": 30.9,
+      "player": 1,
+      "type": "serve"
+    },
+    {
+      "t": 31.967,
+      "player": 4,
+      "type": "return"
+    },
+    {
+      "t": 33.367,
+      "player": 1,
+      "type": "speed_up"
+    },
+    {
+      "t": 33.833,
+      "player": 3,
+      "type": "counter"
+    },
+    {
+      "t": 34.433,
+      "player": 2,
+      "type": "volley"
+    },
+    {
+      "t": 34.933,
+      "player": 2,
+      "type": "unclassified"
+    },
+    {
+      "t": 37.833,
+      "player": 2,
+      "type": "serve"
+    },
+    {
+      "t": 38.9,
+      "player": 3,
+      "type": "return"
+    },
+    {
+      "t": 40.067,
+      "player": 2,
+      "type": "return"
+    },
+    {
+      "t": 43.333,
+      "player": 1,
+      "type": "serve"
+    },
+    {
+      "t": 44.667,
+      "player": 4,
+      "type": "return"
+    },
+    {
+      "t": 46.033,
+      "player": 2,
+      "type": "drop"
+    },
+    {
+      "t": 46.767,
+      "player": 4,
+      "type": "dink"
+    },
+    {
+      "t": 47.567,
+      "player": 1,
+      "type": "dink"
+    },
+    {
+      "t": 48,
+      "player": 4,
+      "type": "speed_up"
+    },
+    {
+      "t": 48.633,
+      "player": 1,
+      "type": "counter"
+    },
+    {
+      "t": 49.1,
+      "player": 3,
+      "type": "speed_up"
+    },
+    {
+      "t": 49.533,
+      "player": 1,
+      "type": "counter"
+    },
+    {
+      "t": 50.033,
+      "player": 3,
+      "type": "return"
+    },
+    {
+      "t": 51.133,
+      "player": 2,
+      "type": "dink"
+    }
+  ]
+}

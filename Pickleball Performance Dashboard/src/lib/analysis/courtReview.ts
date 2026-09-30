@@ -21,6 +21,8 @@ export function analysisJobParams(options: object, court: CourtConfirmation): Re
 export function updatedJobParams(saved: Record<string, unknown>, options: object,
   court: CourtConfirmation | null, automaticCourt: boolean): Record<string, unknown> {
   const next: Record<string, unknown> = { ...saved, ...options };
+  // "standard" is sent as no frame_mode, so a saved detailed mode must not linger.
+  if (!("frame_mode" in options)) delete next.frame_mode;
   if (automaticCourt) {
     delete next.calibration;
     delete next.calibration_source;

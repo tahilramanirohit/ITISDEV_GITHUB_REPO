@@ -96,6 +96,13 @@ def test_worker_passes_selected_video_time_and_rejects_invalid_time():
         runner.options_from_params({"selection_time_s": -1}, _cfg(), "clip.mp4")
 
 
+def test_worker_passes_the_analysis_detail_and_rejects_unknown_ones():
+    assert runner.options_from_params({}, _cfg(), "clip.mp4").frame_mode == "standard"
+    assert runner.options_from_params({"frame_mode": "near_players"}, _cfg(), "clip.mp4").frame_mode == "near_players"
+    with pytest.raises(ValueError):
+        runner.options_from_params({"frame_mode": "every_second"}, _cfg(), "clip.mp4")
+
+
 def test_worker_uses_confirmed_court_points(synthetic_clip):
     params = {"calibration": synthetic_clip.calibration, "calibration_source": "user_confirmed",
               "calibration_frame_s": 1.2}

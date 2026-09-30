@@ -62,6 +62,7 @@ def main(argv=None) -> int:
     p.add_argument("--yolo-weights", default=models.yolo_weights)
     p.add_argument("--court-weights", default=models.court_weights)
     p.add_argument("--ball-weights", default=models.ball_weights)
+    p.add_argument("--pose-weights", default=models.pose_weights)
     p.add_argument("--check", action="store_true", help="Print the model and database setup, then exit")
     args = p.parse_args(argv)
 
@@ -86,7 +87,7 @@ def main(argv=None) -> int:
     cfg = WorkerConfig(worker_id=f"{socket.gethostname()}-{uuid.uuid4().hex[:8]}", mode=args.mode,
                        lease_seconds=args.lease_seconds, detector=args.detector,
                        yolo_weights=args.yolo_weights, court_weights=args.court_weights,
-                       ball_weights=args.ball_weights)
+                       ball_weights=args.ball_weights, pose_weights=args.pose_weights)
     log.info("worker %s starting (mode=%s, detector=%s)", cfg.worker_id, cfg.mode, cfg.detector)
     if cfg.mode == "test_fixture":
         log.warning("TEST FIXTURE MODE: results are canned test data, not analysis of uploaded videos.")

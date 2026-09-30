@@ -43,3 +43,12 @@ def test_duplicate_human_mapping_is_rejected():
     labels = {"identity_scheme": "human", "tracker_mapping": {"1": 8, "2": 8}, "shots": []}
     with pytest.raises(ValueError, match="different tracker"):
         evaluate(_result(), labels)
+
+
+def test_finer_labels_accept_the_core_type_they_are_reported_as():
+    labels = {"time_resolution_s": 0.1, "shots": [
+        {"t": 1.0, "player": 1, "type": "counter"}, {"t": 2.0, "player": 1, "type": "reset"},
+        {"t": 3.0, "player": 1, "type": "speed_up"}, {"t": 4.0, "player": 1, "type": "reset"}]}
+    report = evaluate(_result((1.0, 1, "volley"), (2.0, 1, "drop"), (3.0, 1, "drive"), (4.0, 1, "lob")), labels)
+    assert report["type_accuracy"] == 0.75
+    assert report["wrong_types"] == {"reset -> lob": 1}

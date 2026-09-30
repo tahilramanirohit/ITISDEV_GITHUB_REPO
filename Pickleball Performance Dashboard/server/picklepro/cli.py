@@ -74,7 +74,7 @@ def _cmd_analyze(args) -> int:
 
     opts = AnalysisOptions(
         detector=args.detector, yolo_weights=args.yolo_weights, court_weights=args.court_weights,
-        ball_weights=args.ball_weights,
+        ball_weights=args.ball_weights, pose_weights=args.pose_weights, frame_mode=args.frame_mode,
         target_fps=args.target_fps,
         max_seconds=args.max_seconds, calibration=calibration, selection=selection,
         experimental_zones=args.experimental_zones, include_positions=not args.no_positions,
@@ -155,11 +155,15 @@ def build_parser() -> argparse.ArgumentParser:
     an.add_argument("--detector", choices=["motion", "yolo"], default=_models.detector,
                     help=f"Default found automatically: {_models.detector}")
     an.add_argument("--yolo-weights", default=_models.yolo_weights, help="Local YOLO weights file (detector=yolo)")
+    an.add_argument("--pose-weights", default=_models.pose_weights,
+                    help="Local YOLO pose weights that add body joints to the people found (detector=yolo)")
     an.add_argument("--court-weights", default=_models.court_weights,
                     help="Local 14-keypoint YOLO court pose weights for automatic calibration")
     an.add_argument("--ball-weights", default=_models.ball_weights,
                     help="Local YOLO weights with a pickleball/ball class for observed ball boxes")
     an.add_argument("--target-fps", type=float, default=10.0, help="Analysis sample rate (default 10)")
+    an.add_argument("--frame-mode", choices=["standard", "near_players", "every_frame"], default="standard",
+                    help="near_players: also search every frame while the ball is near a player; every_frame: slowest")
     an.add_argument("--max-seconds", type=float, help="Stop after this many seconds (reported in coverage)")
     an.add_argument("--min-tracked-seconds", type=float, default=10.0)
     an.add_argument("--min-tracked-fraction", type=float, default=0.25)

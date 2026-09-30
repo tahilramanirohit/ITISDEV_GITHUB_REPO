@@ -89,10 +89,20 @@ def test_extra_ball_models_run_together_when_listed(models_dir, monkeypatch):
     assert setup.describe()["ball_model"] == "ball,person,paddle.pt, ball_kpp91302.pt"
 
 
-def test_a_pose_model_is_preferred_for_players(models_dir, monkeypatch):
+def test_the_plain_person_model_tracks_players_and_the_pose_model_adds_joints(models_dir, monkeypatch):
     (models_dir / "yolo11n.pt").write_bytes(b"x")
     (models_dir / "yolo11n-pose.pt").write_bytes(b"x")
     monkeypatch.setattr(models, "_ultralytics_installed", lambda: True)
     setup = models.resolve_models({"PICKLEPRO_MODELS_DIR": str(models_dir)})
-    assert Path(setup.yolo_weights).name == "yolo11n-pose.pt"
+    assert Path(setup.yolo_weights).name == "yolo11n.pt"
+    assert Path(setup.pose_weights).name == "yolo11n-pose.pt"
     assert Path(setup.ball_weights).name == "ball,person,paddle.pt"
+    assert setup.describe()["pose_model"] == "yolo11n-pose.pt"
+
+
+def test_a_pose_model_alone_finds_players_and_their_joints(models_dir, monkeypatch):
+    (models_dir / "yolo11n-pose.pt").write_bytes(b"x")
+    monkeypatch.setattr(models, "_ultralytics_installed", lambda: True)
+    setup = models.resolve_models({"PICKLEPRO_MODELS_DIR": str(models_dir)})
+    assert Path(setup.yolo_weights).name == "yolo11n-pose.pt"
+    assert setup.pose_weights is None

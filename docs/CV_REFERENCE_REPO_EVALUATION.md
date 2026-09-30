@@ -75,3 +75,19 @@ From `Pickleball Performance Dashboard/server/`, run `python -m picklepro.evalua
 | [racquet-sports-analyzer](https://huggingface.co/Bot-Derpy/racquet-sports-analyzer) (MIT; code received as an archive, commit `7cfe0f4`, about 3,700 lines, no weights) | A pipeline template. The shot classifier is VideoMAE with either a Kinetics-400 action model mapped by keyword ("playing tennis" becomes forehand) or a new, **untrained** classification head; it needs fine-tuning on labelled hit clips, which the card itself estimates at 30–50 labelled pickleball matches. Hit detection is ball reversal **or** wrist swing; on the PicklePro test clip swings alone gave 65 peaks for 26 shots, so an OR fusion adds false shots (PicklePro uses the ball for timing and swings to weigh and attribute hits). The ball tracker is colour/motion based, with the deep tracker left as a placeholder. Useful idea kept for later: fine-tuning on short clips centred on each labelled hit (3 frames before, 12 after), once enough frame-precise labels exist. No code was imported. |
 | [TrackNet-Pickleball](https://github.com/AndrewDettor/TrackNet-Pickleball) weights | Hosted on Google Drive as TensorFlow/Keras files. Google Drive and Hugging Face were not reachable from the development environment, and the project has no TensorFlow runtime; using them needs a download by hand and a conversion or a TensorFlow-based adapter. TrackNet-style models use three consecutive frames and are the most likely route to finding the ball at contact, where single-frame detectors miss it. |
 
+### TrackNet-Pickleball weights tested (30 Sep 2026)
+
+The team downloaded the pickleball fine-tune (`weights_k14_epoch19`, TensorFlow SavedModel, 134 MB) and stored it in [tahilramanirohit/Tracknetweights](https://github.com/tahilramanirohit/Tracknetweights) as a split 7-Zip archive. `server/picklepro/tracknet.py` is a PyTorch port of that network (`convert_keras` makes a 45 MB `.npz` once; TensorFlow is needed only for that step). Its output matches TensorFlow to within 0.000005. One quirk is kept on purpose: the Keras BatchNorm layers normalise per image column, not per channel.
+
+On `TestVideoKirk_REAL.mp4` (26 labelled shots, same shot rules):
+
+| Ball input | Detected | Found | Real | Right type |
+| --- | --- | --- | --- | --- |
+| `ball,person,paddle.pt`, 15/s (default) | 23 | 73% | 83% | 53% |
+| TrackNet alone, 15/s | 10 | 35% | 90% | 22% |
+| TrackNet alone, every frame | 20 | 54% | 70% | 57% |
+| Both pooled, 15/s | 21 | 62% | 76% | 31% |
+| Both pooled, every frame | 28 | 73% | 68% | 53% |
+
+TrackNet saw the ball in 27% of frames, probably because it was trained on the original authors' camera position. It also costs about 0.4 s per frame on a 4-core CPU. It is not used by the pipeline; the port stays for experiments, for example fine-tuning on frames labelled from these videos.
+

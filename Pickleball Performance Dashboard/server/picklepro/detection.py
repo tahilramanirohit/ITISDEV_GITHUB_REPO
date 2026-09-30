@@ -27,6 +27,10 @@ logger = logging.getLogger(__name__)
 # Players on the far side of the net are only 60-90 px tall in 1080p video.
 # At the model's default 640 px input they shrink to ~25 px and are missed.
 PERSON_IMAGE_SIZE = 1280
+# A separate pose model only adds joints to the tracked boxes, so it may use a
+# low threshold: a weak pose box counts only when it overlaps a tracked person.
+POSE_MIN_CONFIDENCE = 0.05
+POSE_MIN_IOU = 0.3
 
 
 def calculate_iou(box1: List[int], box2: List[int]) -> float:
@@ -53,13 +57,20 @@ class PlayerTracker:
     """Stateful tracker: feed frames in order with :meth:`update`."""
 
     def __init__(self, detector: str = "motion", yolo_weights: Optional[str] = None,
-                 min_area_fraction: float = 0.002):
+                 min_area_fraction: float = 0.002, pose_weights: Optional[str] = None):
         self.detector = detector
         self.yolo_model = None
         self.yolo_person_class_id = None
+        self.pose_model = None
         if detector == "yolo":
             self.yolo_model = _load_yolo(yolo_weights)
             self.yolo_person_class_id = person_class_id(getattr(self.yolo_model, "names", {}))
+            # The plain person model finds far, small players that pose models
+            # miss (on PickleballVideo.mp4: 93% of on-court players against
+            # 72%), so it finds and tracks people and a pose model, when given,
+            # only adds their joints.
+            if pose_weights and Path(pose_weights).resolve() != Path(yolo_weights or "").resolve():
+                self.pose_model = _load_yolo(pose_weights)
         elif detector != "motion":
             raise ValueError(f"Unknown detector '{detector}'. Use 'motion' or 'yolo'.")
 
@@ -108,10 +119,32 @@ class PlayerTracker:
                     "confidence": round(conf, 3),
                 }
                 if kp_data is not None and i < len(kp_data) and kp_data[i].shape[-1] >= 3:
-                    det["keypoints"] = [[round(float(x), 1), round(float(y), 1), round(float(c), 2)]
-                                        for x, y, c in kp_data[i][:, :3]]
+                    det["keypoints"] = _keypoint_list(kp_data[i])
                 detections.append(det)
+        if self.pose_model is not None and detections:
+            self._add_pose(frame, detections)
         return detections
+
+    def _add_pose(self, frame: np.ndarray, detections: List[Dict[str, Any]]) -> None:
+        """Give each tracked person the joints of the pose box that overlaps it most."""
+        results = self.pose_model.predict(frame, classes=[0], conf=POSE_MIN_CONFIDENCE,
+                                          imgsz=PERSON_IMAGE_SIZE, verbose=False)
+        keypoints = getattr(results[0], "keypoints", None) if results else None
+        if not results or results[0].boxes is None or keypoints is None or keypoints.data is None:
+            return
+        boxes = [b.xyxy[0].cpu().numpy().astype(int).tolist() for b in results[0].boxes]
+        kp_data = keypoints.data.cpu().numpy()
+        pairs = sorted(((calculate_iou(d["bbox"], b), i, j) for i, d in enumerate(detections)
+                        for j, b in enumerate(boxes)), reverse=True)
+        used_d, used_b = set(), set()
+        for iou, i, j in pairs:
+            if iou < POSE_MIN_IOU:
+                break
+            if i in used_d or j in used_b or j >= len(kp_data) or kp_data[j].shape[-1] < 3:
+                continue
+            detections[i]["keypoints"] = _keypoint_list(kp_data[j])
+            used_d.add(i)
+            used_b.add(j)
 
     def _detect_and_track_motion(self, frame: np.ndarray) -> List[Dict[str, Any]]:
         """Background subtraction + IoU association. Finds moving blobs, not people."""
@@ -187,6 +220,10 @@ def associate_boxes(boxes: List[List[int]], previous: Dict[int, List[int]],
             matches[index] = tid
             used.add(tid)
     return matches
+
+
+def _keypoint_list(kps) -> List[List[float]]:
+    return [[round(float(x), 1), round(float(y), 1), round(float(c), 2)] for x, y, c in kps[:, :3]]
 
 
 def person_class_id(names) -> int:

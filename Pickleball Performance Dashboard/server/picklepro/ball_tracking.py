@@ -15,6 +15,11 @@ like a ball in play:
    new one.
 4. **Short or motionless flights are dropped**, and where two flights claim
    the same moment the stronger one (longer, more confident) wins.
+5. **Flights of this court's players are preferred.** When the caller says
+   which candidates are within reach of a player on this court, a flight that
+   passes one of them counts ``PLAYER_FLIGHT_BONUS`` times as strong, and a
+   flight that never does is dropped when ``DROP_FLIGHTS_AWAY_FROM_PLAYERS``.
+   Balls on neighbouring courts fly between other players, so they lose.
 
 Only observed boxes are returned. Nothing is interpolated, so a missing
 sample never becomes a hit or bounce downstream.
@@ -24,7 +29,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Dict, List, Sequence, Tuple
+from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
 REFERENCE_WIDTH = 1920.0
 STATIC_RADIUS_PX = 8.0        # at 1920 px width
@@ -36,6 +41,8 @@ BASE_GATE_PX = 45.0
 MIN_FLIGHT_POINTS = 3
 MIN_FLIGHT_TRAVEL_PX = 25.0
 MAX_BALL_BOX_PX = 70.0        # at 1920 px width; a ball is 10-40 px even when blurred
+PLAYER_FLIGHT_BONUS = 5.0
+DROP_FLIGHTS_AWAY_FROM_PLAYERS = False
 
 
 @dataclass
@@ -92,8 +99,13 @@ def _static_mask(cands: Sequence[BallCandidate], radius: float) -> List[bool]:
     return static
 
 
-def track_ball(frames: Sequence[Tuple[float, Sequence[BallCandidate]]], frame_width: int) -> Tuple[List[BallCandidate], dict]:
-    """Return one observed ball box per time at most, plus counts for provenance."""
+def track_ball(frames: Sequence[Tuple[float, Sequence[BallCandidate]]], frame_width: int,
+               near_player: Optional[Callable[[BallCandidate], bool]] = None) -> Tuple[List[BallCandidate], dict]:
+    """Return one observed ball box per time at most, plus counts for provenance.
+
+    ``near_player(candidate)`` says whether a candidate is within reach of a
+    player on this court (step 5 above).
+    """
     scale = frame_width / REFERENCE_WIDTH
     everything = [c for _t, cands in frames for c in cands]
     too_big = sum(1 for c in everything
@@ -140,9 +152,14 @@ def track_ball(frames: Sequence[Tuple[float, Sequence[BallCandidate]]], frame_wi
     finished.extend(active)
 
     kept = [f for f in finished if len(f.points) >= MIN_FLIGHT_POINTS and f.travel() >= MIN_FLIGHT_TRAVEL_PX * scale]
+    anchored = {id(f) for f in kept if near_player is not None and any(near_player(p) for p in f.points)}
+    away = 0
+    if near_player is not None and DROP_FLIGHTS_AWAY_FROM_PLAYERS:
+        away = sum(1 for f in kept if id(f) not in anchored)
+        kept = [f for f in kept if id(f) in anchored]
     chosen: Dict[float, Tuple[float, BallCandidate]] = {}
     for f in kept:
-        s = f.score()
+        s = f.score() * (PLAYER_FLIGHT_BONUS if id(f) in anchored else 1.0)
         for p in f.points:
             if p.time_s not in chosen or s > chosen[p.time_s][0]:
                 chosen[p.time_s] = (s, p)
@@ -153,5 +170,7 @@ def track_ball(frames: Sequence[Tuple[float, Sequence[BallCandidate]]], frame_wi
         "static_removed": sum(static),
         "flights": len(kept),
         "kept": len(path),
+        "flights_near_players": len(anchored),
+        "flights_away_from_players_removed": away,
     }
     return path, stats

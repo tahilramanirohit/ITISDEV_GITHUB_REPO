@@ -130,6 +130,8 @@ def analyze_video_endpoint(
     file: UploadFile = File(...),
     max_seconds: float = Query(120.0, gt=0, description="Stop after this many seconds (reported in coverage)."),
     target_fps: float = Query(10.0, gt=0, le=60),
+    frame_mode: Literal["standard", "near_players", "every_frame"] = Query(
+        "standard", description="standard; near_players (every frame while the ball is near a player); every_frame."),
     court_half: Optional[Literal["near", "far"]] = Query(None),
     track_id: Optional[int] = Query(None),
     calibration: Optional[str] = Form(None, description="Calibration JSON (see `python -m picklepro.cli landmarks`)."),
@@ -187,6 +189,7 @@ def analyze_video_endpoint(
             calibration_source=calibration_source, calibration_frame_s=calibration_frame_s,
             detector=models.detector, yolo_weights=models.yolo_weights,
             court_weights=models.court_weights, ball_weights=models.ball_weights,
+            pose_weights=models.pose_weights, frame_mode=frame_mode,
         ), progress=lambda f: _set_progress(progress_id, "analyzing", f))
         _set_progress(progress_id, "finishing", 1.0)
         return result

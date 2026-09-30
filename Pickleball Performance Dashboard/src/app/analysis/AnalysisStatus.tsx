@@ -31,9 +31,18 @@ export function ProgressBar({ fraction, label }: { fraction: number | null; labe
   );
 }
 
+export const FRAME_MODES = [
+  { value: "standard", label: "Standard (fastest)", hint: "About 10 player and 15 ball checks a second." },
+  { value: "near_players", label: "Detailed near players", hint: "Also checks every frame while the ball is near a player, where hits happen. Finds more shots; takes longer." },
+  { value: "every_frame", label: "Every frame (slowest)", hint: "Checks every frame. Can take 30 minutes or more for a one-minute video on a laptop." },
+] as const;
+export type FrameMode = (typeof FRAME_MODES)[number]["value"];
+
 export type AnalysisParams = {
   selection?: { method: "court_half"; court_half: "near" | "far" } | { method: "track_id"; track_id: number };
   experimental_zones?: boolean;
+  /** Left out for "standard", so saved jobs keep their old form. */
+  frame_mode?: Exclude<FrameMode, "standard">;
 };
 
 /**
@@ -45,11 +54,13 @@ export function AnalysisParamsForm({ onChange }: { onChange: (params: AnalysisPa
   const [mode, setMode] = useState<"none" | "near" | "far" | "track">("near");
   const [trackId, setTrackId] = useState("");
   const [zones, setZones] = useState(false);
+  const [frameMode, setFrameMode] = useState<FrameMode>("standard");
 
-  function emit(next: { mode?: typeof mode; trackId?: string; zones?: boolean }) {
+  function emit(next: { mode?: typeof mode; trackId?: string; zones?: boolean; frameMode?: FrameMode }) {
     const m = next.mode ?? mode;
     const t = next.trackId ?? trackId;
     const z = next.zones ?? zones;
+    const f = next.frameMode ?? frameMode;
     const params: AnalysisParams = {};
     if (m === "near" || m === "far") params.selection = { method: "court_half", court_half: m };
     if (m === "track") {
@@ -58,6 +69,7 @@ export function AnalysisParamsForm({ onChange }: { onChange: (params: AnalysisPa
       params.selection = { method: "track_id", track_id: n };
     }
     if (z) params.experimental_zones = true;
+    if (f !== "standard") params.frame_mode = f;
     onChange(params, null);
   }
 
@@ -83,7 +95,13 @@ export function AnalysisParamsForm({ onChange }: { onChange: (params: AnalysisPa
         </label>
       </div>
       <div>
-        <p className="text-sm" style={{ color: WHITE_DIM }}>
+        <label className={labelClass} style={labelStyle} htmlFor="frame-mode">Analysis detail</label>
+        <select id="frame-mode" value={frameMode} className="w-full rounded-xl px-3 py-2 text-sm" style={fieldStyle}
+          onChange={(e) => { const v = e.target.value as FrameMode; setFrameMode(v); emit({ frameMode: v }); }}>
+          {FRAME_MODES.map((m) => <option key={m.value} value={m.value} className="bg-white">{m.label}</option>)}
+        </select>
+        <p className="text-xs mt-1" style={{ color: WHITE_DIM }}>{FRAME_MODES.find((m) => m.value === frameMode)?.hint}</p>
+        <p className="text-sm mt-3" style={{ color: WHITE_DIM }}>
           Review and correct the court on your video before analysis. Re-running an upload keeps its saved court setup.
         </p>
       </div>
