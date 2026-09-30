@@ -94,11 +94,12 @@ The 5urabhi model sees the ball in more frames and finds more shots, but the ext
 
 On `TestVideoKirk_REAL.mp4`, where no other court is in view, the preference changes nothing, and the volley rule raises right types from 58% to 63%.
 
-**Analysis detail.** The upload form has three choices (`frame_mode`):
+**Analysis detail.** The upload form has two choices (`frame_mode`):
 
 - **Standard** (default): players 10 times and the ball 15 times a second.
 - **Detailed near players:** the same, plus the ball on *every* frame while it is near a player on the court, for a quarter of a second after it was last seen there. Hits happen there, so this looks closely only where it matters.
-- **Every frame:** everything on every frame. About 30–40 minutes for a one-minute 60 fps video on a laptop CPU.
+
+Analysing every frame of the video was tried and dropped (team decision, 30 Sep 2026): a 30-second 60 fps clip took over an hour of processor time on a 4-core laptop CPU.
 
 ## Labelling a clip
 

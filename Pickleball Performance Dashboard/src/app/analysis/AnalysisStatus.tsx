@@ -34,7 +34,6 @@ export function ProgressBar({ fraction, label }: { fraction: number | null; labe
 export const FRAME_MODES = [
   { value: "standard", label: "Standard (fastest)", hint: "About 10 player and 15 ball checks a second." },
   { value: "near_players", label: "Detailed near players", hint: "Also checks every frame while the ball is near a player, where hits happen. Finds more shots; takes longer." },
-  { value: "every_frame", label: "Every frame (slowest)", hint: "Checks every frame. Can take 30 minutes or more for a one-minute video on a laptop." },
 ] as const;
 export type FrameMode = (typeof FRAME_MODES)[number]["value"];
 

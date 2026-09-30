@@ -162,8 +162,8 @@ def build_parser() -> argparse.ArgumentParser:
     an.add_argument("--ball-weights", default=_models.ball_weights,
                     help="Local YOLO weights with a pickleball/ball class for observed ball boxes")
     an.add_argument("--target-fps", type=float, default=10.0, help="Analysis sample rate (default 10)")
-    an.add_argument("--frame-mode", choices=["standard", "near_players", "every_frame"], default="standard",
-                    help="near_players: also search every frame while the ball is near a player; every_frame: slowest")
+    an.add_argument("--frame-mode", choices=["standard", "near_players"], default="standard",
+                    help="near_players: also search every frame while the ball is near a player (slower)")
     an.add_argument("--max-seconds", type=float, help="Stop after this many seconds (reported in coverage)")
     an.add_argument("--min-tracked-seconds", type=float, default=10.0)
     an.add_argument("--min-tracked-fraction", type=float, default=0.25)

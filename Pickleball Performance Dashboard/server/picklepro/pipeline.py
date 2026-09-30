@@ -61,7 +61,7 @@ ProgressFn = Callable[[float], None]
 
 
 # How densely frames are searched (see AnalysisOptions.frame_mode).
-FRAME_MODES = ("standard", "near_players", "every_frame")
+FRAME_MODES = ("standard", "near_players")
 NEAR_PLAYER_HOLD_S = 0.25      # keep searching every frame this long after the ball was near a player
 NEAR_REACH_WIDTHS = 1.0        # region around a player, in box widths to each side ...
 NEAR_REACH_HEIGHTS = 0.6       # ... and box heights above the head
@@ -80,8 +80,8 @@ class AnalysisOptions:
     ball_fps: float = 15.0
     # "standard": players ``target_fps`` and ball ``ball_fps`` times a second.
     # "near_players": the same, plus the ball on every frame while it is near a
-    # player on the court, where hits happen (much faster than every frame).
-    # "every_frame": players and ball on every decoded frame (slow on a CPU).
+    # player on the court, where hits happen. Analysing every frame of the
+    # video was dropped: far too slow on a laptop CPU (team decision, 30 Sep 2026).
     frame_mode: str = "standard"
     # Find the court from its painted lines when no manual calibration is given.
     auto_court: bool = True
@@ -108,8 +108,7 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
     if opts.frame_mode not in FRAME_MODES:
         raise ValueError(f"frame_mode must be one of {', '.join(FRAME_MODES)}")
     props = probe(path)
-    every_frame = opts.frame_mode == "every_frame"
-    stride = 1 if every_frame else max(1, round(props.fps / opts.target_fps)) if opts.target_fps > 0 else 1
+    stride = max(1, round(props.fps / opts.target_fps)) if opts.target_fps > 0 else 1
     frame_interval_s = stride / props.fps
     warnings: List[str] = []
     if not props.fps_reported:
@@ -133,8 +132,7 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
 
     tracker = PlayerTracker(detector=opts.detector, yolo_weights=opts.yolo_weights, pose_weights=opts.pose_weights)
     ball_detector = BallDetector(opts.ball_weights) if opts.ball_weights else None
-    ball_stride = 1 if every_frame else (max(1, round(props.fps / opts.ball_fps))
-                                         if ball_detector and opts.ball_fps > 0 else stride)
+    ball_stride = max(1, round(props.fps / opts.ball_fps)) if ball_detector and opts.ball_fps > 0 else stride
     near_players_mode = opts.frame_mode == "near_players" and ball_detector is not None
     dense_until = -1.0
     extra_ball_frames = 0
@@ -236,9 +234,7 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
         ball_stats["on_floor_off_court_removed"] = off_court_balls
         ball_stats["frames_searched"] = len(ball_frames)
         ball_stats["extra_frames_near_players"] = extra_ball_frames
-    if opts.frame_mode == "every_frame":
-        warnings.append("Every frame was analyzed (detailed mode).")
-    elif near_players_mode:
+    if near_players_mode:
         warnings.append(f"The ball was also searched on every frame while it was near a player: "
                         f"{extra_ball_frames} extra frames (detailed-near-players mode).")
     ball_snapshots = [BallSnapshot(time_seconds=c.time_s, bbox=list(c.bbox), confidence=c.confidence)

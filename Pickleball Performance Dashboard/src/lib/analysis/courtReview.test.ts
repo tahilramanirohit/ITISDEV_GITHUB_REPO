@@ -29,8 +29,8 @@ describe("court correction", () => {
   });
 
   it("keeps a chosen analysis detail and drops it when the user goes back to standard", () => {
-    const saved = { frame_mode: "every_frame", selection: { method: "court_half", court_half: "near" } };
-    expect(updatedJobParams(saved, { frame_mode: "near_players" }, null, true).frame_mode).toBe("near_players");
+    const saved = { frame_mode: "near_players", selection: { method: "court_half", court_half: "near" } };
+    expect(updatedJobParams(saved, {}, null, false).frame_mode).toBeUndefined();
     expect(updatedJobParams(saved, {}, null, true)).not.toHaveProperty("frame_mode");
   });
 });
