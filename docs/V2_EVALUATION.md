@@ -43,11 +43,11 @@ Regenerate queue from `server/` (development recording only):
 From `server/`, after the human review and manifest update:
 
 ```sh
-PICKLEPRO_AUTO_MODELS=0 .venv/bin/python -m picklepro.benchmark ../eval/manifest.v2.json --source-id TestVideoKirk_REAL --purpose tuning --ball-fps 15 --output /Users/kiro/Desktop/THESIS/output/v2-benchmarks/baseline15.json
-PICKLEPRO_AUTO_MODELS=0 .venv/bin/python -m picklepro.benchmark ../eval/manifest.v2.json --source-id TestVideoKirk_REAL --purpose tuning --ball-fps 30 --output /Users/kiro/Desktop/THESIS/output/v2-benchmarks/candidate30.json
+PICKLEPRO_AUTO_MODELS=0 .venv/bin/python -m picklepro.benchmark ../eval/manifest.v2.json --source-id TestVideoKirk_REAL --purpose tuning --ball-fps 15 --repeats 3 --output /Users/kiro/Desktop/THESIS/output/v2-benchmarks/baseline15.json
+PICKLEPRO_AUTO_MODELS=0 .venv/bin/python -m picklepro.benchmark ../eval/manifest.v2.json --source-id TestVideoKirk_REAL --purpose tuning --ball-fps 30 --repeats 3 --output /Users/kiro/Desktop/THESIS/output/v2-benchmarks/candidate30.json
 ```
 
-The runner verifies source/label identities and exact local model hashes. Coarse labels currently block inference. Each benchmark records Git revision, source-code snapshot hash (including uncommitted Python/HTML), every player/court/ball checkpoint hash, full analysis options and sampling settings, original FPS, runtime/hardware, scorer version, label version/content hash and complete split manifest; full result is saved alongside it. Keep videos, previews, weights and generated benchmark outputs outside Git. Report effective sampling from actual stride (round(original FPS / requested FPS)); requested 30 FPS on this source samples about 29.93 FPS, not a new 30-FPS encode.
+The runner verifies source/label identities and exact local model hashes. Full-clip inference benchmarks also require an explicit `"label_coverage": "complete"` declaration in a human-reviewed label file. This declaration means all contacts throughout the recording have been audited; it must not be added to partial exports, clips with unresolved hidden contacts, or a file just because all available queue buttons were clicked. Current coarse/partial labels block inference. A future reviewed-interval protocol would need explicit interval boundaries and boundary handling before partial-contact scoring; it is not implemented here. Each benchmark records Git revision, source-code snapshot hash (including uncommitted Python/HTML), every player/court/ball checkpoint hash, full analysis options and sampling settings, original FPS, runtime/hardware, scorer version, label version/content hash and complete split manifest; full result is saved alongside it. Keep videos, previews, weights and generated benchmark outputs outside Git. Report effective sampling from actual stride (round(original FPS / requested FPS)); requested 30 FPS on this source samples about 29.93 FPS, not a new 30-FPS encode.
 
 ## Frozen go/no-go rules (before any Phase 2/3 run)
 
@@ -84,3 +84,21 @@ Phase 2 replay cache, retuning and measured 15/30 comparison await complete prec
 - Autosave regression test fails without the hash guard and passes with it.
 - Actual manifest/label hash and FPS verified for development only; coarse labels blocked and reserved evaluation source rejected in tuning selection.
 - Local browser queue: 0/26 confirmed, candidate image rendered, next frame 45→46 advanced decoder time 1.503960→1.537382 seconds, leaving confirmations unchanged. No benchmark inference or training run.
+
+## Phase 2 preparation update
+
+The three-repeat runner now creates `baseline15.run1.json` through `.run3.json` and equivalent candidate reports/results. It records actual ball/player strides and effective FPS in addition to requested rates. No inference runs have been made with the incomplete current labels.
+
+Apply the frozen gate after six real, comparable inference runs:
+
+```sh
+.venv/bin/python -m picklepro.sampling_gate --baseline /Users/kiro/Desktop/THESIS/output/v2-benchmarks/baseline15.run1.json /Users/kiro/Desktop/THESIS/output/v2-benchmarks/baseline15.run2.json /Users/kiro/Desktop/THESIS/output/v2-benchmarks/baseline15.run3.json --candidate /Users/kiro/Desktop/THESIS/output/v2-benchmarks/candidate30.run1.json /Users/kiro/Desktop/THESIS/output/v2-benchmarks/candidate30.run2.json /Users/kiro/Desktop/THESIS/output/v2-benchmarks/candidate30.run3.json --output /Users/kiro/Desktop/THESIS/output/v2-benchmarks/gate.json
+```
+
+The gate compares the lowest candidate recall/precision against the highest baseline recall/precision across three runs, and uses median runtime. This conservatively requires the score thresholds in every repeat. Missing/nonfinite scores, partial coverage, repeated run indices (three distinct indices 1/2/3 are required), evaluation partitions, changed labels/splits/models/hardware/player sampling or other changed analysis options fail eligibility. Code revisions may differ for a retune, but must remain identical within each configuration's repeated runs and are recorded in the decision. It cannot update defaults or deployments.
+
+Latest user review: `contact-review-progress (3).json` has 11 saved confirmations, with contacts 21/22 still sharing frame 946; 15 entries remain unconfirmed. The user reports contacts are hidden/unclear. Original review files and confirmations are preserved; no inferred contacts or negatives were added. Even the nonconflicting saved contacts are a partial label set, not a complete clip. The next data requirement is clearer **development** footage (or independent complete-contact review of a suitable existing development recording); `PickleballVideo.mp4` remains reserved for evaluation. The queue of old coarse labels is not an exhaustive-contact audit.
+
+Retuning, replay caching and the measured promotion decision await suitable verified coverage. TrackNet integration, fine-tuning and hit-classifier training remain adviser-gated.
+
+Phase 2 verification: broader backend run passed 219 tests with the existing long synthetic positioning test deselected; the final duplicate-repeat safeguard and all related benchmark/manifest/scorer tests passed in a subsequent 46-test focused run. That safeguard was shown to fail before its fix. Repeated-run CLI behavior was tested with explicitly synthetic result/model fixtures, not real footage; these test scores are not performance evidence. Frontend was unchanged.
