@@ -62,6 +62,30 @@ const DRILLS = {
   },
 } satisfies Record<string, Drill>;
 
+/** Existing drill offered independently of detector findings, never personalized. */
+export const GENERAL_PRACTICE_DRILL: Drill = DRILLS.transition;
+
+/** An action the player can take; better footage cannot bypass the evaluation gate. */
+export function coachingNextStep(result: AnalysisResultV1): string {
+  if (result.data_origin !== "measured") return "Analyze a real recording to get feedback about your play.";
+  if (coachingBlocker(result) === null) return buildCoachingReport(result).focus.length
+    ? "Start with the practice focus below, then record a comparable session to review progress."
+    : "Review what is working, then record a comparable session to check whether the pattern continues.";
+  if (result.metrics.positioning.validation !== "evaluated_on_real_footage" ||
+      result.metrics.court_heatmap.validation !== "evaluated_on_real_footage")
+    return "Personalized feedback still needs checking against human-labelled matches. For now, review your video and try optional general practice.";
+  if (result.metrics.court_heatmap.status !== "measured" || !result.metrics.court_heatmap.value)
+    return "Use a steady camera view with the player and court lines visible throughout the rally, then analyze again.";
+  if (!result.provenance.detector.confidence_is_model_score || !result.provenance.detector.name.includes("person"))
+    return "This analysis found movement rather than reliable player identities. Use player detection before requesting personalized feedback.";
+  if (result.calibration?.quality !== "good")
+    return "Check the court overlay and correct its painted-line points, or use a clearer court view before analyzing again.";
+  const selection = result.player_selection;
+  if (!selection || selection.tracked_fraction < .5 || selection.ambiguous_frames > result.coverage.frames_analyzed * .2)
+    return "Choose yourself in the video and analyze again. Keep the selected player visible as much as possible.";
+  return "Use a longer, steady view with at least ten seconds of the selected player clearly visible inside the court.";
+}
+
 const LIMITATION = "These ideas come from where the player stood, not from shots, technique, or point outcomes. Position estimates have not been validated on real matches, the clip includes time between rallies, and the targets are practice goals rather than validated benchmarks.";
 
 const COURT_WIDTH_M = 6.096;

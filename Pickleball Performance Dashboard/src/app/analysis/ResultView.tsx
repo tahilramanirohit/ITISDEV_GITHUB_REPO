@@ -5,6 +5,7 @@ import {
   type AnalysisResultV1, type MetricKey, type MetricStatus,
 } from "../../lib/analysis/contract";
 import { GOAL_LABELS, type SessionRow } from "../../lib/api/types";
+import { resultSummary } from "../../lib/analysis/resultSummary";
 import { buildCoachingReport } from "../../lib/analysis/coaching";
 import { BLUE_SKY, BORDER, INK, NEON, ORANGE, ORANGE_L, ROSE, VIOLET, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Card, Notice, Pill, WidgetHeader } from "../shell/primitives";
@@ -100,6 +101,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
   const zones = result.metrics.zone_occupancy;
   const sel = result.player_selection;
   const coaching = buildCoachingReport(result);
+  const summary = resultSummary(result);
   const [selectingPlayer, setSelectingPlayer] = useState(false);
   const [jump, setJump] = useState<JumpRequest>(null);
   const shotMetric = result.metrics.shot_classification;
@@ -145,6 +147,23 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
           </button>}
         </div>
         <p className="text-base text-[#101827]">{devMock ? "This sample shows the kind of practice plan PicklePro can display. It is not feedback about your play." : visibleMessage}</p>
+        {summary && <section aria-label="Your result at a glance" className="mt-4 space-y-3">
+          <div className="grid gap-3 md:grid-cols-3">
+            {[
+              { title: "What was found", items: summary.found, color: BLUE_SKY },
+              { title: "What needs review", items: summary.needsReview, color: ORANGE_L },
+              { title: "What could not be assessed", items: summary.unavailable, color: WHITE_DIM },
+            ].map(({ title, items, color }) => <div key={title} className="rounded-xl p-3" style={{ border: `1px solid ${BORDER}` }}>
+              <h3 className="text-base font-semibold" style={{ color }}>{title}</h3>
+              <ul className="mt-2 list-disc space-y-2 pl-4 text-sm leading-relaxed" style={{ color: INK }}>
+                {items.length ? items.map(item => <li key={item}>{item}</li>) : <li>No findings are available to review yet.</li>}
+              </ul>
+            </div>)}
+          </div>
+          <p className="rounded-xl p-3 text-sm leading-relaxed" style={{ background: "rgba(41,61,242,0.04)", color: INK }}>
+            <strong>Your next step: </strong>{summary.nextStep}
+          </p>
+        </section>}
         {warnings.length > 0 && (
           <details className="mt-3">
             <summary className="cursor-pointer text-sm font-semibold" style={{ color: ORANGE_L }}>
@@ -167,7 +186,9 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
           {
             label: "Players",
             ok: c.frames_with_detections > 0,
-            value: sel && sel.tracked_fraction > 0
+            value: !result.provenance.detector.confidence_is_model_score
+              ? c.frames_with_detections > 0 ? "Movement detected" : "No movement detected"
+              : sel && sel.tracked_fraction > 0
               ? `Found you in ${Math.round(sel.tracked_fraction * 100)}% of the video`
               : c.frames_with_detections > 0 ? "Players found" : "No players found",
             detail: result.provenance.detector.confidence_is_model_score
@@ -186,7 +207,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
             label: "Ball",
             ok: (c.frames_with_ball_detections ?? 0) > 0,
             value: !result.provenance.ball_detector ? "Ball finder not set up"
-              : (c.frames_with_ball_detections ?? 0) > 0 ? "Ball followed" : "Ball not seen",
+              : (c.frames_with_ball_detections ?? 0) > 0 ? "Ball positions found" : "Ball not seen",
             detail: result.provenance.ball_detector
               ? "The orange dot and trail show where the ball was seen."
               : "The analyzer needs a ball model to follow the ball.",

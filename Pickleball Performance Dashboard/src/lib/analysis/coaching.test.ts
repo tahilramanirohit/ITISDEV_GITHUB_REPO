@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import fixture from "../../../contracts/fixtures/analysis_result.test_fixture.v1.json";
 import { parseAnalysisResult, type AnalysisResultV1, type PositioningValue } from "./contract";
-import { buildCoachingReport, coachingSpeechText, compareProgress, THRESHOLDS } from "./coaching";
+import { buildCoachingReport, coachingNextStep, coachingSpeechText, compareProgress, THRESHOLDS } from "./coaching";
 
 function measured(patch?: (v: PositioningValue) => void): AnalysisResultV1 {
   const result = structuredClone(fixture);
@@ -99,6 +99,7 @@ describe("gameplay feedback", () => {
     });
     const report = buildCoachingReport(r);
     expect(report.focus).toEqual([]);
+    expect(coachingNextStep(r)).not.toMatch(/practice focus below/);
     expect(report.introduction).toMatch(/No positioning issues/);
   });
 

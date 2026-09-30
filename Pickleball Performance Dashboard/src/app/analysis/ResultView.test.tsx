@@ -24,6 +24,8 @@ describe("ResultView", () => {
     expect(screen.getByRole("region", { name: "What the video analysis found" })).toBeTruthy();
     expect(screen.getByText("Ball finder not set up")).toBeTruthy();
     expect(screen.getByText("Court lines found")).toBeTruthy();
+    expect(screen.getByText("Movement detected")).toBeTruthy();
+    expect(screen.queryByText(/Found you in/)).toBeNull();
     expect(screen.getByText("Not available")).toBeTruthy();
     expect(screen.getAllByText("Not available").length).toBeGreaterThan(0);
     fireEvent.click(screen.getByText("Detailed measurements and analysis notes"));
@@ -150,6 +152,7 @@ describe("ResultView", () => {
     // A saved player report shows the same estimates, marked experimental.
     const report = render(<ResultView result={parseAnalysisResult(result)} videoUrl="/demo.mp4" />);
     expect(screen.getByRole("tab", { name: "All players (4)" })).toBeTruthy();
+    expect(screen.getByText(/4 hits named/)).toBeTruthy();
     expect(screen.getAllByText("EXPERIMENTAL").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: /Watch the serve at 0:01/ })).toBeTruthy();
     report.unmount();

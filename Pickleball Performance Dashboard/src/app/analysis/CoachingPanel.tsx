@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowDownRight, ArrowUpRight, CheckCircle2, Minus, Play, Square, Target, Volume2 } from "lucide-react";
 import type { AnalysisResultV1 } from "../../lib/analysis/contract";
-import { buildCoachingReport, coachingSpeechText, compareProgress, type CoachingItem, type ProgressRow } from "../../lib/analysis/coaching";
+import { buildCoachingReport, coachingSpeechText, coachingNextStep, GENERAL_PRACTICE_DRILL, compareProgress, type CoachingItem, type ProgressRow } from "../../lib/analysis/coaching";
 import { BLUE_SKY, BORDER, NEON, ORANGE_L, WHITE_DIM } from "../theme";
 import { Card, WidgetHeader } from "../shell/primitives";
 
@@ -106,7 +106,7 @@ export function CoachingPanel({ result, previous }: { result: AnalysisResultV1; 
   return (
     <Card accent={report.available ? NEON : undefined}>
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <WidgetHeader title="What to practice next" subtitle={devMock ? "Example practice plan using sample data." : "Practice plan based on court positioning observed in your video."} />
+        <WidgetHeader title="What to practice next" subtitle={devMock ? "Example practice plan using sample data." : report.available ? "Practice plan based on court positioning observed in your video." : "Personalized coaching is not ready yet"} />
         {report.available && (
           <button type="button" onClick={toggleAudio} disabled={!speechAvailable}
             aria-label={playing ? "Stop audio coaching" : "Play audio coaching"}
@@ -119,6 +119,29 @@ export function CoachingPanel({ result, previous }: { result: AnalysisResultV1; 
         )}
       </div>
       <p className="text-sm text-[#101827]">{devMock ? "Example only: these findings do not describe your play." : report.introduction}</p>
+      {!report.available && <p className="mt-3 rounded-xl p-3 text-sm leading-relaxed" style={itemStyle}>
+        <strong>What you can do next: </strong>{coachingNextStep(result)}
+      </p>}
+      {!report.available && result.data_origin === "measured" && !devMock && <details className="mt-3 rounded-xl p-3" style={itemStyle}>
+        <summary className="cursor-pointer text-base font-semibold" style={{ color: BLUE_SKY }}>Optional general practice</summary>
+        <p className="mt-2 text-sm" style={{ color: WHITE_DIM }}>This is a general positioning exercise, not a finding about your play or a personalized recommendation from this video.</p>
+        <h4 className="mt-3 font-semibold">{GENERAL_PRACTICE_DRILL.name}</h4>
+        <p className="mt-1 text-sm leading-relaxed">{GENERAL_PRACTICE_DRILL.how}</p>
+        <p className="mt-2 text-sm" style={{ color: WHITE_DIM }}>Count the repetitions you complete. This is a practice goal, not a video score.</p>
+      </details>}
+      {report.focus.length > 0 && (
+        <div className="mt-3">
+          <p className="text-sm font-semibold text-[#101827]">Focus for your next session</p>
+          <h4 className="mt-1 text-base font-bold text-[#101827]">Start with this practice focus</h4>
+          <ol className="mt-2 space-y-3"><FocusItem item={report.focus[0]} index={0} /></ol>
+          {report.focus.length > 1 && <details className="mt-3">
+            <summary className="cursor-pointer text-sm font-semibold" style={{ color: BLUE_SKY }}>More practice ideas ({report.focus.length - 1})</summary>
+            <ol start={2} className="mt-2 space-y-3">
+              {report.focus.slice(1).map((item, index) => <FocusItem key={item.title} item={item} index={index + 1} />)}
+            </ol>
+          </details>}
+        </div>
+      )}
       {report.strengths.length > 0 && (
         <div className="mt-3">
           <p className="text-sm font-semibold text-[#101827]">What's working</p>
@@ -130,14 +153,6 @@ export function CoachingPanel({ result, previous }: { result: AnalysisResultV1; 
               </li>
             ))}
           </ul>
-        </div>
-      )}
-      {report.focus.length > 0 && (
-        <div className="mt-3">
-          <p className="text-sm font-semibold text-[#101827]">Focus for your next session</p>
-          <ol className="mt-1 space-y-3">
-            {report.focus.map((item, index) => <FocusItem key={item.title} item={item} index={index} />)}
-          </ol>
         </div>
       )}
       {progress && previous && <ProgressTable rows={progress} label={previous.label} />}

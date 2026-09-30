@@ -1,6 +1,16 @@
 # PicklePro: run it, try it, and continue the work
 
 
+## Results and coaching update — 1 October 2026
+
+- User approved clearer results and coaching, keeping **“hits named”**. The measured-result overview now separates findings, items needing human review, and things the system cannot assess, followed by a next step. Ball detections do not imply every contact was seen; unavailable hits do not imply no hits occurred. Motion-only results say “Movement detected” instead of claiming the player was identified.
+- Eligible coaching leads with one existing practice focus, its drill, target and evidence; remaining ideas are expandable. No-focus reports avoid pointing to a nonexistent priority. Existing positioning eligibility checks, thresholds, progress comparison and audio guards remain in place. Audio still reads the complete supported practice plan.
+- Withheld coaching explains the blocker and next action. An expandable **optional general practice** exercise is explicitly independent of this video's findings and is never personalized or spoken as coaching. Sample results receive neither that exercise nor a measured-result overview. Court-position coaching does not assess shot technique, shot success or in/out calls.
+- Verification: frontend `npm run check` passed **104 tests**, TypeScript and production build. Regression assertions cover “hits named”, motion-only wording, eligibility, sample safety, insufficient results and no-focus next steps. Existing chart-size warning remains in the synthetic DOM test; it does not fail the suite. Backend code was unchanged and backend tests were not rerun for this UI change.
+- Browser checks used a clearly labeled synthetic UI harness: supported/withheld coaching, expandable ideas/general practice, sample and insufficient states, desktop (1280×900) and mobile (390×844). Mobile document width stayed within the viewport; no Vite overlay remained after fixing the preview-only import. A preview-only React hot-reload root warning was observed during editing. No real-video inference or accuracy evaluation was performed.
+- Local preview while its development server is running: `http://127.0.0.1:5175/.qa-results-preview/index.html`. The harness is locally excluded from Git; it simulates eligibility flags and **is not evidence of model validation**. Screenshots: `/Users/kiro/Desktop/THESIS/output/results-coaching-preview/`. Resume the app with `npm run dev -- --host 127.0.0.1 --port 5175`; use the usual app entry for actual video reports. No deployment, detector/default change, training, video/checkpoint commit, or held-out tuning occurred.
+- Next research work remains blocked on complete precise development labels; replay cache and the actual 15/30-FPS comparison are pending. Adviser sign-off still gates training. This UI work adds no measured accuracy claim.
+
 ## Current v2 work — 1 October 2026 (overrides older branch/next-step guidance below)
 
 - Work only on **`integrated-v2`**, created from integrated commit `f3d3c3b`. No deploys, default changes, raw-video/checkpoint commits, fine-tuning or classifier training. User adviser sign-off confirmation gates Phase 3/4 training; TrackNet investigation only is allowed before it, with no integration.
