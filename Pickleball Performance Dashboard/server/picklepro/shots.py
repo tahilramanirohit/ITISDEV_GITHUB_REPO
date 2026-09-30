@@ -75,6 +75,7 @@ DINK_MAX_SPEED = 6.0        # m/s of ground travel
 DROP_MAX_SPEED = 9.0
 FAST_MIN_SPEED = 9.0        # drives, speed-ups and counters travel at least this fast
 MAX_GROUND_SPEED = 28.0     # faster "travel" means a wrong bounce or hitter was matched
+MAX_LANDING_OUTSIDE_M = 1.5  # larger court extrapolations are likely false bounces
 MIN_SHOT_SPEED = 0.8        # a "shot" that travels slower than this is a ball being handled
 HELD_WINDOW_S = 0.5         # ball samples this close to a hit decide whether it was held
 HELD_MIN_POINTS = 2
@@ -489,6 +490,17 @@ def _inside(xy: Tuple[float, float], side: Optional[str] = None, margin: float =
     return side is None or court_half(y) == side
 
 
+def _landing_event(bounces: Sequence[_Event], start_t: float, end_t: float
+                   ) -> Tuple[Optional[_Event], Optional[Tuple[float, float]]]:
+    """Return the first bounce; withhold implausible mapped coordinates."""
+    for bounce in bounces:
+        if not start_t < bounce.t < end_t:
+            continue
+        xy = _bounce_court(bounce)
+        return bounce, xy if xy is not None and _inside(xy, margin=MAX_LANDING_OUTSIDE_M) else None
+    return None, None
+
+
 def serve_landing(server_xy: Tuple[float, float], landing_xy: Tuple[float, float]) -> Tuple[bool, str]:
     """Is a serve's first bounce inside the service court diagonally opposite the server?
 
@@ -633,7 +645,7 @@ def analyze_shots(ball: Sequence[Tuple[float, Sequence[int]]], frames: Sequence[
             same_rally_next = i + 1 < len(hits) and rally_ids[i + 1] == rally_ids[i]
             next_hit = hits[i + 1] if same_rally_next else None
             end_t = next_hit.t if next_hit else h.t + RALLY_GAP_S
-            landing = next((b for b in bounces if h.t < b.t < end_t), None)
+            landing, landing_xy = _landing_event(bounces, h.t, end_t)
             court = h.extras["court"]
             side = h.extras["side"]
             det = h.frame.detections[h.hitter] if h.frame else None
@@ -666,9 +678,12 @@ def analyze_shots(ball: Sequence[Tuple[float, Sequence[int]]], frames: Sequence[
 
             # Ground travel to the next bounce, else to the next hitter.
             speed = None
-            landing_xy = _bounce_court(landing) if landing else None
-            target_xy, target_t = (landing_xy, landing.t) if landing_xy else (
-                (_hitter_court(next_hit), next_hit.t) if next_hit else (None, None))
+            # A bounce with an impossible map means the flight is uncertain;
+            # do not estimate pace to the next hitter across that bounce.
+            if landing is not None:
+                target_xy, target_t = (landing_xy, landing.t) if landing_xy else (None, None)
+            else:
+                target_xy, target_t = ((_hitter_court(next_hit), next_hit.t) if next_hit else (None, None))
             if court and target_xy and target_t and target_t > h.t:
                 speed = math.hypot(target_xy[0] - court[0], target_xy[1] - court[1]) / (target_t - h.t)
                 if speed > MAX_GROUND_SPEED:

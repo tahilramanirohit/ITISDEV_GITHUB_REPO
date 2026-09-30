@@ -32,3 +32,38 @@ Combine **capabilities through narrow interfaces**, not whole applications. Pick
 4. Consider TrackNet-style ball tracking only after court and player positions are reliable. Do not infer ball height or shot speed from a ground-plane homography. Do not adopt the reference projects' shot, rally, violation, or skill claims without independent validation.
 
 The two repositories without a declared license can inform an independently written design, but their code or weights should not be copied without permission. MIT licensing of another repository does not settle the license or provenance of its dependencies and model weights. Ultralytics' AGPL/enterprise terms need a separate decision for a deployed web app.
+
+## Shot and ball review (2026-09-30)
+
+The next pass reviewed the five user-supplied repositories at these revisions. Their README claims are not treated as measured accuracy in PicklePro.
+
+| Reference | Revision | Finding for this pipeline |
+| --- | --- | --- |
+| [smart-pickleball-assistant](https://github.com/arcotn/smart-pickleball-assistant) | `ee275ad` | MIT. Its pose/DeepSORT and visual correction concepts may help player continuity, but it needs user-drawn zones and has no validated shot model or transferable pickleball weights. |
+| [TrackNet-Pickleball](https://github.com/AndrewDettor/TrackNet-Pickleball) | `6c15f95` | Its frame labels, temporal ball model, and per-frame prediction evaluation are relevant. Weights are on Google Drive, not in the repository; training/prediction needs a GPU. No license file appears in the inspected tree, so no code or weights were imported. |
+| [pickleball-computer-vision-ai](https://github.com/Abdul-Rehman-44/pickleball-computer-vision-ai) | `e527dd4` | Its app detects players/equipment/ball for live telemetry. The repository contains `app.py` and UI, but not the custom weights claimed in its README. No license file appears despite a README badge. It provides no shot-contact evaluation to adopt. |
+| [pickleball-vision-llm](https://github.com/SathishKumarAI/pickleball-vision-llm) | `7ab8d18` | Its trajectory analyzer rejects isolated spikes and keeps temporal features distinct from a shot classifier. Its TrackNet adapter explicitly leaves model selection/loading as a seam, and its rule classifier uses unvalidated pixel thresholds. No license file appears in the inspected tree. We independently added a motion check without copying its interpolation or code. |
+| [ai-enhanced-pickleball-learning-platform](https://github.com/phu-boop/ai-enhanced-pickleball-learning-platform) | `7f670a0` | MIT. Its vision service combines ball tracking and player pose. Its contact rule uses a fixed 60-pixel wrist distance and classifies some shots from image height, which cannot be transferred across camera views without calibration and labeled evaluation. |
+
+The implemented changes keep every output ball box observed. A flight cannot extend through an image jump beyond the existing scale-adjusted speed limit. Shot travel estimates withhold bounce mappings more than 1.5 m outside the court, and do not infer pace to the next hitter across such a bounce; the raw bounce remains available in the research output for review. These are independent safeguards based on trajectory and geometry, not new trained models or accuracy claims. A stricter contact-observation gap was tried and removed: on the existing development clip, it reduced matched contacts from 10 to 2 because the ball model often misses frames around real hits. A continuous-only stationary filter was also tried and removed after it added observations but reduced matched contacts from 10 to 7; apparent ball coverage alone was misleading.
+
+The current default remains the locally supplied ball detector plus court/player pipeline. TrackNet-style inference needs permission or a compatible licensed implementation, documented weight provenance, and evaluation on consented held-out footage before enabling it. The highest-value next dataset is frame-precise ball centres, contact times, hitters, and the five public shot classes across several courts and camera views. Measure ball precision/recall, contact precision/recall, hitter accuracy, type confusion, and processing time separately.
+
+On the existing 51-second **development** clip, the final safeguards retained the same 248 observed ball boxes and the same 11 proposed contacts as the consolidated baseline. Both versions matched 10 of 26 whole-second human shot labels. Matched shot-type accuracy moved from 4/10 to 5/10, while absurd mapped landings such as `(−77.82, −208.69)` m were withheld from shot travel. The run had no selected player, so its overall court-metric status was correctly `insufficient_data`; shot output remained `experimental`. These numbers are a regression check on a clip used during development, not a held-out accuracy estimate.
+
+### Ball-position evaluation
+
+TrackNet's prediction-versus-label workflow is now available for PicklePro result files without importing its model. Save a JSON label file with frames that were actually reviewed, including explicit frames where the ball is absent:
+
+```json
+{
+  "image_width": 1920,
+  "image_height": 1080,
+  "frames": [
+    {"time_seconds": 1.002, "visible": true, "x": 853, "y": 427},
+    {"time_seconds": 1.069, "visible": false}
+  ]
+}
+```
+
+From `Pickleball Performance Dashboard/server/`, run `python -m picklepro.evaluate_ball result.json ball_labels.json`. The evaluator scales labels to the video's resolution, matches only nearby sample times, and considers a predicted centre correct within 1% of video width. A wrong-position detection counts as a false positive and a missed ball. Detections on frames that were never labelled do not affect precision. The JSON report contains per-frame outcomes and precision, recall, and median pixel error. This measures a declared tolerance on a declared labelled subset; it does not turn the development clip into independent validation.

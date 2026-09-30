@@ -136,6 +136,31 @@ def test_ball_far_from_players_is_not_a_hit():
     assert analyze_shots(ball, frames, 540, DT)["shots"] == []
 
 
+def test_shot_landing_ignores_a_bounce_far_outside_the_court(monkeypatch):
+    from picklepro import shots as module
+    from picklepro.shots import _Event, _Point
+
+    bad = _Event("bounce", 1.0, _Point(1.0, 0, 0, 0), 1.0)
+    good = _Event("bounce", 1.2, _Point(1.2, 0, 0, 0), 1.0)
+    monkeypatch.setattr(module, "_bounce_court", lambda e: (30.0, 30.0) if e is bad else (3.0, 10.0))
+    event, xy = module._landing_event([bad, good], 0.0, 2.0)
+    assert event is bad and xy is None  # do not substitute a later bounce
+
+
+def test_bad_bounce_map_does_not_remove_the_shot_or_invent_pace(monkeypatch):
+    from picklepro import shots as module
+
+    frames, ball = _scene()
+    original = module._bounce_court
+    monkeypatch.setattr(module, "_bounce_court",
+                        lambda event: (100.0, 100.0) if abs(event.t - 1.0) < 0.01 else original(event))
+    found = analyze_shots(ball, frames, 540, DT)["shots"]
+    assert len(found) == 6
+    assert found[0]["shot_type"] == "serve"
+    assert found[0]["landing_court_m"] is None
+    assert found[0]["ground_speed_mps"] is None
+
+
 def test_long_pause_starts_a_new_rally():
     frames, ball = _scene()
     shifted = [(t + 20.0, b) for t, b in ball]

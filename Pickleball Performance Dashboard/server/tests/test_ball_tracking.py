@@ -48,3 +48,11 @@ def test_nothing_is_invented_when_the_ball_is_missing():
     path, _ = track_ball(_frames(ball), 1920)
     times = [p.time_s for p in path]
     assert not any(0.6 < t < 2.0 for t in times)
+
+
+def test_implausible_teleport_cannot_extend_a_flight():
+    ball = [BallCandidate(t, (x, 500, x + 14, 514), 0.7)
+            for t, x in [(0.0, 100), (0.1, 500), (0.2, 900)]]
+    teleport = BallCandidate(0.3, (1600, 500, 1614, 514), 0.95)
+    path, _ = track_ball(_frames(ball, [teleport]), 1920)
+    assert [p.bbox for p in path] == [p.bbox for p in ball]

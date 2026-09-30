@@ -125,7 +125,7 @@ def track_ball(frames: Sequence[Tuple[float, Sequence[BallCandidate]]], frame_wi
                 d_pred = math.hypot(c.center[0] - px, c.center[1] - py)
                 d_last = math.hypot(c.center[0] - f.last.center[0], c.center[1] - f.last.center[1])
                 # New flights have no velocity yet: allow any plausible speed.
-                if (len(f.points) >= 2 and d_pred <= gate) or (len(f.points) < 2 and d_last <= reach):
+                if d_last <= reach and (len(f.points) < 2 or d_pred <= gate):
                     pairs.append((d_pred, fi, ci))
         used_f, used_c = set(), set()
         for _d, fi, ci in sorted(pairs):
