@@ -15,7 +15,7 @@ From `Pickleball Performance Dashboard/server/`, with the optional runtime insta
 .venv/bin/python -m picklepro.fetch_models
 ```
 
-It downloads three pinned files into `server/models/` and rejects any file whose SHA-256 differs:
+It downloads four pinned files into `server/models/` and rejects any file whose SHA-256 differs:
 
 | File | Used for | Source |
 | --- | --- | --- |
@@ -24,6 +24,7 @@ It downloads three pinned files into `server/models/` and rejects any file whose
 | `ball_kpp91302.pt` (optional, `--extra`) | the ball (second model) | kpp91302/Pickleball-Analytics `models/ball_tracking.pt`, revision `e4dfdc7`; no licence file, used at the team's direction |
 | `ball_5urabhi.pt` (optional, `--extra`) | the ball (third model) | 5urabhi/Pickle_ball_tracking `best.pt`, revision `3c0a678`; no licence file, used at the team's direction |
 | `yolo11n.pt` | players (COCO `person`) | Ultralytics release v8.3.0, AGPL-3.0 |
+| `yolo11n-pose.pt` | players and their 17 body points, for swings and contact posture (preferred over `yolo11n.pt` when present) | Ultralytics release v8.3.0, AGPL-3.0, SHA-256 `869e83fcdffdc7371fa4e34cd8e51c838cc729571d1635e5141e3075e9319dc0` |
 
 `yolo11n.pt` has SHA-256 `0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1`. On the 29 September test clip, the pickleball model's own person class missed the far-side players and gave unstable confidence for near players. The COCO model found all four players and the referee at 0.8–0.9 confidence. Both detectors run at 1280 px because far players and the ball are small in 1080p video.
 

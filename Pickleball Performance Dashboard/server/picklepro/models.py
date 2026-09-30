@@ -107,7 +107,10 @@ def _discover(models_dir: Path) -> tuple[Optional[str], Optional[str], Optional[
     court = next((p for p in weights if "court" in p.name.lower()), None)
     balls = [p for p in weights if p != court and "ball" in p.name.lower()]
     others = [p for p in weights if p != court and p not in balls]
-    person = next((p for p in others if any(k in p.name.lower() for k in ("person", "player"))), None) \
+    # A pose model finds the same people and also their joints, which the
+    # shot detector uses to see swings, so it is preferred.
+    person = next((p for p in others if "pose" in p.name.lower()), None) \
+        or next((p for p in others if any(k in p.name.lower() for k in ("person", "player"))), None) \
         or (others[0] if others else None) \
         or next((p for p in balls if "person" in p.name.lower()), None)
     if not balls and others:

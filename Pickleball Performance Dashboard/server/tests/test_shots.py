@@ -103,9 +103,10 @@ def test_synthetic_rally_shot_types_hitters_and_bounces():
     out = analyze_shots(ball, frames, 540, DT)
     shots = out["shots"]
     assert [s["time_seconds"] for s in shots] == pytest.approx([0.0, 1.4, 2.8, 4.7, 6.2, 6.6])
-    # A's fast shot at the kitchen line after B's dink is a speed-up; B's fast
-    # volley straight back at it is a counter.
-    assert [s["shot_type"] for s in shots] == ["serve", "return", "drop", "dink", "speed_up", "counter"]
+    # A's fast shot at the kitchen line after B's dink is a speed-up, reported
+    # as a drive (after the bounce); B's volley straight back at it is a volley.
+    assert [s["shot_type"] for s in shots] == ["serve", "return", "drop", "dink", "drive", "volley"]
+    assert "fast attack" in shots[4]["evidence"]
     assert [s["hitter_track_id"] for s in shots] == [1, 2, 1, 2, 1, 2]
     assert [s["hitter_side"] for s in shots] == ["near", "far"] * 3
     assert shots[5]["contact"] == "volley" and shots[4]["contact"] == "after_bounce"

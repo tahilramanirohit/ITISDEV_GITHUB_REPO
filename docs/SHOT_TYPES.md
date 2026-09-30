@@ -1,6 +1,6 @@
 # Pickleball shot types and how PicklePro names them
 
-PicklePro estimates a research `shot_type` for each detected hit using the categories below. Revision 4's separate `public_shot_type` has only **serve, volley, dink, drive, lob, and unclassified**. A return, drop, reset, speed-up, counter, overhead, or erne remains in the research field and is `unclassified` in the public field; those meanings are not collapsed into another class. **All automatic shot labels are experimental.** One development clip was used to tune the rules, so it is not independent validation. The local prototype shows estimated events for review; the player report withholds them until real-footage evaluation is recorded.
+PicklePro names each detected hit with one of **eight core shot types: serve, return, drop, drive, volley, dink, overhead and lob**, or `unclassified` when the evidence is too weak (team direction, 30 Sep 2026). The detailed rules below can recognise finer shots; each is reported as the core shot it is a kind of. A speed-up is a drive after the bounce or a volley out of the air. A counter and an erne are volleys. A reset is a dink at the kitchen line or a drop further back. `shot_type` and `public_shot_type` both use the eight types; results saved earlier keep their finer names in `shot_type`. **All automatic shot labels are experimental.** One development clip was used to tune the rules, so it is not independent validation. The local prototype shows estimated events for review; the player report withholds them until real-footage evaluation is recorded.
 
 ## Shot types
 
@@ -33,6 +33,26 @@ PicklePro estimates a research `shot_type` for each detected hit using the categ
    The ball's apparent size is only a coarse check: detector boxes are padded and blurred to about twice the ball's true size, so size cannot tell a near ball from a far one.
 3. **Not a stroke.** A ball that stays within about a third of a body height of the player for the whole half second around the "hit" is being carried, caught or bounced before a serve, so it is ignored. So is a "shot" that travels slower than 0.8 m/s.
 4. **Rallies.** Hits more than 3.5 s apart start a new rally. A rally starts at its first hit from a serving position: behind or near the baseline, or, on the near side, with the player's feet below the bottom of the picture (the near baseline is often out of view). Hits before that are balls knocked back between points and are dropped. A run of hits without a serving position counts only if it has at least 4 hits. Shot numbers (serve, return, third shot) come from this, so a missed serve shifts the numbering.
+
+## Swings and posture (pose model)
+
+With the pose model (`yolo11n-pose.pt`, found automatically in `server/models`), player detection also returns 17 body points for each person: head, shoulders, elbows, wrists, hips, knees and ankles. `picklepro/swings.py` turns them into two kinds of evidence, the way racket-sport apps such as SwingVision read strokes from the player as well as the ball:
+
+- **Swing strength.** How fast a wrist moves relative to the player's own shoulders, in body heights per second. Walking moves the shoulders too, so it does not count as a swing. When the ball turns near two partners, the one who swung is preferred. A candidate hit with no swing near it scores lower, so fewer non-shots are reported.
+- **Contact posture.** Where the hitting wrist was at contact: above the head (overhead), between hips and head, or below the hips. A low, soft contact at the kitchen line is a dink.
+
+Without a pose model, these steps are skipped and the rules use ball and court evidence alone.
+
+**Measured on the development clip (30 Sep 2026).** In each labelled second, the player swinging fastest on the hitting side was the labelled hitter in 21 of 26 shots. Swings alone do not find shots, though. Pose runs 10 times a second, and the short swings of dinks and net volleys barely register: a threshold that caught 16 of the 26 shots also produced 65 swing peaks. So the ball still decides *when* a shot happened, and swings help decide *who* hit it and *what* it was.
+
+| This branch, one ball model | Detections (26 real) | Shots found | Detections that are real | Right side of the net | Right player | Right type |
+| --- | --- | --- | --- | --- | --- | --- |
+| Person model, no swings | 28 | 77% | 71% | 70% | 55% | 50% |
+| **Pose model with swings and posture** | **25** | **73%** | **76%** | **74%** | **58%** | **53%** |
+
+Hitter figures here match each label to the labelled player's detection within that second. The official `picklepro.evaluate` matcher pairs by time alone; with whole-second labels, where several seconds hold two shots, it reports 32% for the same run. Frame-precise labels from `#/label` remove that ambiguity. All numbers come from the clip used to choose the rules, so they are not independent accuracy.
+
+**What stops higher accuracy on this footage:** the ball is missed in fast exchanges and at contact (0:25, the overhead at 0:31, both serves); the near baseline is out of the picture, so a server's position is unknown; and the pace used to separate dinks and drops from drives comes from mapped positions that are often off. More frame-precise labelled clips are the next step. With them, a classifier can be trained on the pose, ball and court features instead of hand-set thresholds.
 
 ## Players
 

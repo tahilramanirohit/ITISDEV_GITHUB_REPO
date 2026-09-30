@@ -39,6 +39,8 @@ MODELS = [
      "05e01ebe77f3256426d0e54ffad83abf3da2d1fcadc2bcf10dbd5714fdded459", "pickleball and paddle"),
     ("yolo11n.pt", "https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11n.pt",
      "0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1", "people (COCO person class)"),
+    ("yolo11n-pose.pt", "https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11n-pose.pt",
+     "869e83fcdffdc7371fa4e34cd8e51c838cc729571d1635e5141e3075e9319dc0", "people and their joints (for swings)"),
 ]
 
 

@@ -1166,9 +1166,12 @@
             {
               "enum": [
                 "serve",
+                "return",
+                "drop",
+                "drive",
                 "volley",
                 "dink",
-                "drive",
+                "overhead",
                 "lob",
                 "unclassified"
               ],
@@ -1179,7 +1182,7 @@
             }
           ],
           "default": null,
-          "description": "Conservative revision-4 class. Other experimental classes remain unclassified.",
+          "description": "One of the eight core shot types (serve, return, drop, drive, volley, dink, overhead, lob) or unclassified.",
           "title": "Public Shot Type"
         },
         "contact": {

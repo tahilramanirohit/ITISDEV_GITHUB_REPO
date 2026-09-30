@@ -15,7 +15,11 @@ export const SHOT_TYPES = [
   "serve", "return", "drive", "drop", "dink", "reset",
   "speed_up", "counter", "volley", "lob", "overhead", "erne", "unclassified",
 ] as const;
-export const PUBLIC_SHOT_TYPES = ["serve", "volley", "dink", "drive", "lob", "unclassified"] as const;
+export const PUBLIC_SHOT_TYPES = ["serve", "return", "drop", "drive", "volley", "dink", "overhead", "lob", "unclassified"] as const;
+/** Older results could name finer shots; each is reported as the core shot it is a kind of. */
+const FINER_SHOT_TYPES: Partial<Record<string, (typeof PUBLIC_SHOT_TYPES)[number]>> = {
+  speed_up: "drive", counter: "volley", erne: "volley",
+};
 
 const LEGACY_SHOT_TYPES: Record<string, string> = { third_shot_drop: "drop", third_shot_drive: "drive" };
 
@@ -78,9 +82,9 @@ export type CourtLinesSnapshot = { time_seconds: number; lines: [number, number,
 export type ShotType = (typeof SHOT_TYPES)[number];
 export type PublicShotType = (typeof PUBLIC_SHOT_TYPES)[number];
 export const publicShotType = (type: ShotType): PublicShotType =>
-  (PUBLIC_SHOT_TYPES as readonly string[]).includes(type) ? type as PublicShotType : "unclassified";
+  (PUBLIC_SHOT_TYPES as readonly string[]).includes(type) ? type as PublicShotType : FINER_SHOT_TYPES[type] ?? "unclassified";
 
-/** Use the revision-4 vocabulary when an evaluated result is shown to players. */
+/** Use the eight core shot types when a result is shown to players. */
 export function publicShotResult(result: AnalysisResultV1): AnalysisResultV1 {
   const value = result.metrics.shot_classification.value;
   if (!value) return result;

@@ -48,7 +48,7 @@ from .court import COURT_MODEL, CalibrationError, CourtCalibration
 from .detection import PlayerTracker
 from .players import PlayerCollector
 from .positioning import positioning_patterns
-from .shots import FrameObs, analyze_shots, court_line_segments
+from .shots import CORE_TYPES, FrameObs, analyze_shots, court_line_segments
 from .spatial import Selection, dwell_heatmap, select_player, zone_occupancy
 from .video_io import ReadStats, iter_frames, probe, sha256_of
 
@@ -467,9 +467,8 @@ def _shot_metrics(ball_model: bool, ball_snapshots, times, per_frame, calibratio
                 RallySegmentationMetric(status="insufficient_data", scope=scope, reason=SHOTS_NOT_COMPUTED))
     frames = [FrameObs(t, dets, cal, idx) for t, dets, cal, idx in zip(times, per_frame, calibrations, selected_indices)]
     found = analyze_shots([(b.time_seconds, b.bbox) for b in ball_snapshots], frames, frame_h, frame_interval_s)
-    public_types = {"serve", "volley", "dink", "drive", "lob"}
     for shot in found["shots"]:
-        shot["public_shot_type"] = shot["shot_type"] if shot["shot_type"] in public_types else "unclassified"
+        shot["public_shot_type"] = shot["shot_type"] if shot["shot_type"] in CORE_TYPES else "unclassified"
     if not found["shots"]:
         reason = "The ball was seen, but no hits near a player were detected."
         return (ShotClassificationMetric(status="insufficient_data", scope=scope, reason=reason),

@@ -120,7 +120,7 @@ The most recent full development-clip check retained 248 observed ball boxes and
 
 **Next work, in order:**
 
-1. Build a consented, frame-precise dataset: ball visible/absent and centre, contact time, human hitter identity, and the five public shot classes (serve, volley, dink, drive, lob plus unclassified). Keep final-test videos untouched during tuning.
+1. Build a consented, frame-precise dataset: ball visible/absent and centre, contact time, human hitter identity, and the eight core shot classes (serve, return, drop, drive, volley, dink, overhead, lob plus unclassified). Keep final-test videos untouched during tuning.
 2. Run `evaluate_ball` and `evaluate` per clip, and record ball precision/recall, contact precision/recall, hitter accuracy, type confusion, court/ID failures, and processing time. Review false detections on video.
 3. Compare licensed candidate ball models or temporal methods on those labels before enabling one. Add model provenance and a repeatable weight setup. Do not treat the five example repositories as evidence of accuracy in this app.
 4. Improve court/player identity and shot logic only against concrete errors from that dataset; preserve the result contract, `insufficient_data` behavior, and the separation between experimental research output and player-facing claims.

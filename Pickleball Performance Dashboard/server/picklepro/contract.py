@@ -211,7 +211,7 @@ class PositioningMetric(Metric):
 
 ShotType = Literal["serve", "return", "drive", "drop", "dink", "reset",
                    "speed_up", "counter", "volley", "lob", "overhead", "erne", "unclassified"]
-PublicShotType = Literal["serve", "volley", "dink", "drive", "lob", "unclassified"]
+PublicShotType = Literal["serve", "return", "drop", "drive", "volley", "dink", "overhead", "lob", "unclassified"]
 ContactType = Literal["volley", "after_bounce", "unknown"]
 
 
@@ -225,7 +225,8 @@ class ShotEvent(_Model):
     hitter_court_m: Optional[List[float]] = Field(None, min_length=2, max_length=2)
     shot_type: ShotType
     public_shot_type: Optional[PublicShotType] = Field(
-        None, description="Conservative revision-4 class. Other experimental classes remain unclassified.")
+        None, description="One of the eight core shot types (serve, return, drop, drive, volley, dink, overhead, "
+                          "lob) or unclassified.")
     contact: ContactType = "unknown"
     ground_speed_mps: Optional[float] = Field(
         None, description="Horizontal ground distance to the next bounce or hitter divided by the time taken.")

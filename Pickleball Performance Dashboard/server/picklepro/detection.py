@@ -91,17 +91,26 @@ class PlayerTracker:
                                         imgsz=PERSON_IMAGE_SIZE, verbose=False)
 
         detections = []
+        # A pose model (for example yolo11n-pose.pt) also returns 17 COCO body
+        # keypoints per person: nose, eyes, ears, shoulders, elbows, wrists,
+        # hips, knees, ankles. The shot detector uses them to find swings.
+        keypoints = getattr(results[0], "keypoints", None) if results else None
+        kp_data = keypoints.data.cpu().numpy() if keypoints is not None and keypoints.data is not None else None
         if results and len(results) > 0 and results[0].boxes:
-            for box in results[0].boxes:
+            for i, box in enumerate(results[0].boxes):
                 x1, y1, x2, y2 = box.xyxy[0].cpu().numpy().astype(int)
                 conf = float(box.conf[0].cpu().numpy())
                 # YOLOv8 track returns an ID if persist=True was successful
                 track_id = int(box.id[0].cpu().numpy()) if box.id is not None else None
-                detections.append({
+                det = {
                     "track_id": track_id,
                     "bbox": [int(x1), int(y1), int(x2), int(y2)],
                     "confidence": round(conf, 3),
-                })
+                }
+                if kp_data is not None and i < len(kp_data) and kp_data[i].shape[-1] >= 3:
+                    det["keypoints"] = [[round(float(x), 1), round(float(y), 1), round(float(c), 2)]
+                                        for x, y, c in kp_data[i][:, :3]]
+                detections.append(det)
         return detections
 
     def _detect_and_track_motion(self, frame: np.ndarray) -> List[Dict[str, Any]]:

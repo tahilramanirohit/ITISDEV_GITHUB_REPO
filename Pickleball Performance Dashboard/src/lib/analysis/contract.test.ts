@@ -60,9 +60,9 @@ describe("parseAnalysisResult", () => {
     const types = parseAnalysisResult(old).metrics.shot_classification.value?.shots.map((s) => s.shot_type);
     expect(types).toEqual(["drop", "drive", "dink"]);
     expect(old.metrics.shot_classification.value.shots.map((s: Json) => s.public_shot_type))
-      .toEqual(["unclassified", "drive", "dink"]);
+      .toEqual(["drop", "drive", "dink"]);
     expect(publicShotResult(parseAnalysisResult(old)).metrics.shot_classification.value?.shots.map((s) => s.shot_type))
-      .toEqual(["unclassified", "drive", "dink"]);
+      .toEqual(["drop", "drive", "dink"]);
     old.metrics.shot_classification.value.shots = [shot("toString")];
     expect(() => parseAnalysisResult(old)).toThrow(ContractError);
   });
