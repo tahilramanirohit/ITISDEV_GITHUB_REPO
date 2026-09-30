@@ -52,11 +52,17 @@ The optional install includes a large PyTorch runtime. `fetch_models` downloads 
 ### Try a video
 
 1. In `#/local-prototype`, choose a permitted video. The repository includes `Pickleball Performance Dashboard/TestVideoKirk_REAL.mp4` as a development clip. A full model-backed analysis of that 51-second clip took several minutes on the development computer.
-2. Review a frame where the painted court is visible. Accept the proposed court points or drag/place named points so they follow the lines. For a fixed camera, a confirmed correction is checked again by the Python worker.
+2. Review a frame where the painted court is visible. Accept the proposed court points or drag/place named points so they follow the lines. Mark only visible painted intersections. If a corner falls outside the image, select its name and use **Remove selected point** instead of placing it at the image edge. At least four well-spread points are required. For a fixed camera, a confirmed correction is checked again by the Python worker.
 3. Run analysis and inspect coverage, warnings, court overlay, player boxes, ball observations, and the **research/experimental** shot view. Select the intended player before interpreting a personal heatmap; a doubles video can make “near side” ambiguous.
 4. Open `#/label` to inspect contacts frame by frame. Model suggestions are drafts until a human confirms them. Download labels if you want to evaluate the proposals.
 
 An `insufficient_data` result can be correct: for example, the court may be unmapped, no player may be selected, or the ball model may not see enough frames. It is not automatically an API failure.
+
+### Recent local-prototype fixes (30 September 2026)
+
+- The Python API returns `calibration.method: "user_confirmed_landmarks"` after analysis with a confirmed court. The frontend result parser now accepts this value, matching its TypeScript type and the shared Python/JSON schema. Before this fix, a completed upload could show `Unexpected result format: calibration.method ... got "user_confirmed_landmarks"` instead of its results. Re-run the upload to see the result; the local prototype does not persist past uploads or their results across a new page session.
+- The court editor now lets testers remove a selected point. Use this when an intersection is hidden or outside the frame; guessed edge points can make otherwise plausible court geometry fail with `Court points disagree`. This warning is a geometry check, so the user must still correct or remove disagreeing points. The fix does not make an inaccurate map valid.
+- On the current development Mac, the website was last served at `http://127.0.0.1:5174/#/local-prototype` because port 5173 was occupied by another app; the API was at port 8000. These are local processes, not a permanent deployment. The quick-start instructions above use Vite's normal 5173 port for a new setup.
 
 ### Command-line smoke test, including without YOLO
 
@@ -118,6 +124,8 @@ The most recent full development-clip check retained 248 observed ball boxes and
 
 **Known limits.** The local model misses fast/occluded balls and can confuse look-alikes; court mapping and player tracking can fail on moving or crowded footage; camera cuts may be missed. The shot classifier is heuristic and experimental. A strict contact-gap filter and a looser stationary-object filter were tried and rolled back because they reduced matched contacts on the development clip. The final branch does retain a plausible-speed check and withholds landing coordinates mapped far outside the court. Do not use additional observed ball boxes alone as proof of better shot detection.
 
+**Keep this handoff current.** The user asked that every future change be reflected in this file immediately. Update the relevant behavior, run instructions, known limits, and verification counts in the same work session as each code change, before committing or handing work over. Treat this file as part of the change, not as a later documentation task.
+
 **Next work, in order:**
 
 1. Build a consented, frame-precise dataset: ball visible/absent and centre, contact time, human hitter identity, and the eight core shot classes (serve, return, drop, drive, volley, dink, overhead, lob plus unclassified). Keep final-test videos untouched during tuning.
@@ -126,4 +134,4 @@ The most recent full development-clip check retained 248 observed ball boxes and
 4. Improve court/player identity and shot logic only against concrete errors from that dataset; preserve the result contract, `insufficient_data` behavior, and the separation between experimental research output and player-facing claims.
 5. Once the system itself meets the agreed evaluation criteria, plan a hosted worker and deploy a preview. A Vercel frontend alone cannot process queued videos without the Python worker and correctly configured Supabase project.
 
-**Verification before handoff:** from `Pickleball Performance Dashboard/` run `npm run check`; from `server/` run `.venv/bin/python -m pytest -q`. The last checks passed 89 frontend and 165 backend tests, plus the frontend production build. The model-free synthetic command above returned an `ok` result. The last full development-clip run preserved 11 proposals and 10 label matches while suppressing implausible landing coordinates. Re-run focused footage checks after any ball-tracker or shot-rule change; one synthetic test passing is not enough to claim improved detection.
+**Verification before handoff:** from `Pickleball Performance Dashboard/` run `npm run check`; from `server/` run `.venv/bin/python -m pytest -q`. The latest frontend check (30 September 2026) passed 94 tests, TypeScript checking, and the production build. The last recorded backend check passed 165 tests; re-run it after backend changes. The model-free synthetic command above returned an `ok` result. The last full development-clip run preserved 11 proposals and 10 label matches while suppressing implausible landing coordinates. Re-run focused footage checks after any ball-tracker or shot-rule change; one synthetic test passing is not enough to claim improved detection.
