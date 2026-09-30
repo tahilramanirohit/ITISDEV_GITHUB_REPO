@@ -1,0 +1,15 @@
+{
+  "aliases": [
+    {
+      "registry_version": "v2-1",
+      "source_id": "PickleballVideo",
+      "partition": "evaluation",
+      "canonical_file_sha256": "b13ef80a202ddf0d4469b59c7919b87ede5712a87ee66c87e6363ac1b2eab88e",
+      "alias_file_sha256": "1f75eece86f0e590ef12487fdd67e0266d62cff9bd15270cd4ce8193bb2238a9",
+      "alias_filename": "att.H3Xuzobw5ZDvEkh_3WfgJm1iz_m9FScM1M6Bk7siOKk.MP4",
+      "encoded_video_stream_sha256": "1673b8681adbca5032289f9c5e7e83d9ce8c08e5ae0afd7f786f6c5fd052a53f",
+      "method": "ffmpeg stream copy and SHA-256 hash; no reserved-frame decoding or model inference",
+      "finding": "Identical encoded video stream. Both files inherit the evaluation partition. Alias must not be registered as development under a new source ID."
+    }
+  ]
+}

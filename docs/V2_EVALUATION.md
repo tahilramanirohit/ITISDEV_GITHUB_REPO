@@ -106,3 +106,11 @@ Phase 2 verification: broader backend run passed 219 tests with the existing lon
 ## TrackNet research update
 
 Read-only source investigation is documented in [TRACKNET_INVESTIGATION.md](TRACKNET_INVESTIGATION.md), including pinned upstream source revisions, checkpoint preview links, terms found/missing and this Mac's observed runtime. No checkpoint was acquired or integrated; no training or inference test was run. This research does not bypass the Phase 2 measurement order or adviser sign-off gate.
+
+## Submitted-file identity audit
+
+The newly supplied `att.H3Xuzobw5ZDvEkh_3WfgJm1iz_m9FScM1M6Bk7siOKk.MP4` has file SHA-256 `1f75eece86f0e590ef12487fdd67e0266d62cff9bd15270cd4ce8193bb2238a9`. It is **not new development data**: its encoded video stream is identical to reserved `PickleballVideo.mp4` (stream SHA-256 `1673b8681adbca5032289f9c5e7e83d9ce8c08e5ae0afd7f786f6c5fd052a53f`). Frame count/FPS/duration also match. Different container bytes or filenames do not establish independent recordings.
+
+Identity audit used FFmpeg stream-copy hashing, without decoding reserved frames or invoking detection. Three previews of the submitted attachment were extracted for inventory before the alias was identified; none was used to tune rules or confirm labels. The attachment inherits source ID `PickleballVideo` and the evaluation partition. [Alias registry](../Pickleball%20Performance%20Dashboard/eval/recording-aliases.v2.json) persists the mapping; consult it when registering future clips. The core manifest validator handles duplicate file hashes and known source IDs but cannot infer arbitrary reencodes by itself. A changed file hash must not bypass the same-source split rule. No benchmark runs, scores or promotions resulted from this attachment.
+
+A different recording is still required for development labeling. Phase 2 replay-cache implementation remains pending; the submitted-file identity check interrupted that work before code changes.
