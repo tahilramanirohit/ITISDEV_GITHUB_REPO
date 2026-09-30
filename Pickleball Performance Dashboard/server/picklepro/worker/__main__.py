@@ -94,7 +94,11 @@ def main(argv=None) -> int:
     stop = threading.Event()
 
     def _handle(signum, _frame):
-        log.info("signal %s received; stopping after the current step", signum)
+        if stop.is_set():
+            # Second Ctrl+C: leave now. A job in progress is retried once its lease expires.
+            log.warning("signal %s received again; exiting immediately", signum)
+            os._exit(130)
+        log.info("signal %s received; stopping within a few seconds (press Ctrl+C again to exit now)", signum)
         stop.set()
 
     signal.signal(signal.SIGINT, _handle)

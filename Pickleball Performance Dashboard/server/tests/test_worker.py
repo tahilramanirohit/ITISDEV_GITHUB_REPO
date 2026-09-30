@@ -251,3 +251,20 @@ def test_progress_failures_never_fail_the_job_and_reporting_stops():
     for stage in ("downloading", "checking", "analyzing", "finishing", "analyzing"):
         report(stage)
     assert Broken.calls == PROGRESS_MAX_FAILURES
+
+
+def test_a_stop_request_interrupts_a_running_analysis_and_requeues_it(synthetic_clip, monkeypatch):
+    import threading
+    stop = threading.Event()
+    real = runner.analyze_video
+
+    def analyze_then_stop(video, opts, progress=None):
+        stop.set()  # Ctrl+C arrives while the analysis runs
+        return real(video, opts, progress=progress)
+
+    monkeypatch.setattr(runner, "analyze_video", analyze_then_stop)
+    store = InMemoryJobStore()
+    params = {"calibration": synthetic_clip.calibration, "selection": {"method": "court_half", "court_half": "near"}}
+    store.add_job(_job(params=params), video_bytes=synthetic_clip.path.read_bytes())
+    out = process_one(store, _cfg(), stop)
+    assert out.status == "queued" and out.error_code == "worker_interrupted"

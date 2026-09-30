@@ -174,13 +174,19 @@ class _Progress:
     update_analysis_progress is not applied yet) reporting simply stops.
     """
 
-    def __init__(self, store: JobStore, job_id: str, cfg: WorkerConfig, clock=time.monotonic):
+    def __init__(self, store: JobStore, job_id: str, cfg: WorkerConfig, clock=time.monotonic,
+                 stop: Optional[threading.Event] = None):
         self._store, self._job_id, self._cfg, self._clock = store, job_id, cfg, clock
+        self._stop = stop
         self._last_time = -1e9
         self._last_stage: Optional[str] = None
         self._failures = 0
 
     def __call__(self, stage: str, fraction: float = 0.0) -> None:
+        # Called many times a second during download and analysis, so a stop
+        # request (Ctrl+C) interrupts the job here instead of after it ends.
+        if self._stop is not None and self._stop.is_set():
+            raise Interrupted()
         if self._failures >= PROGRESS_MAX_FAILURES:
             return
         now = self._clock()
@@ -217,7 +223,7 @@ def process_one(store: JobStore, cfg: WorkerConfig, stop: Optional[threading.Eve
             return Outcome(job.id, "lease_lost", code)
         return Outcome(job.id, new_status, code)
 
-    report = _Progress(store, job.id, cfg)
+    report = _Progress(store, job.id, cfg, stop=stop)
     with tempfile.TemporaryDirectory(prefix="picklepro-job-") as tmp, _Heartbeat(store, job.id, cfg) as hb:
         video = Path(tmp) / ("input" + (Path(job.storage_path).suffix or ".mp4"))
         try:
