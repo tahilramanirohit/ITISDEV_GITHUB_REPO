@@ -102,3 +102,7 @@ Latest user review: `contact-review-progress (3).json` has 11 saved confirmation
 Retuning, replay caching and the measured promotion decision await suitable verified coverage. TrackNet integration, fine-tuning and hit-classifier training remain adviser-gated.
 
 Phase 2 verification: broader backend run passed 219 tests with the existing long synthetic positioning test deselected; the final duplicate-repeat safeguard and all related benchmark/manifest/scorer tests passed in a subsequent 46-test focused run. That safeguard was shown to fail before its fix. Repeated-run CLI behavior was tested with explicitly synthetic result/model fixtures, not real footage; these test scores are not performance evidence. Frontend was unchanged.
+
+## TrackNet research update
+
+Read-only source investigation is documented in [TRACKNET_INVESTIGATION.md](TRACKNET_INVESTIGATION.md), including pinned upstream source revisions, checkpoint preview links, terms found/missing and this Mac's observed runtime. No checkpoint was acquired or integrated; no training or inference test was run. This research does not bypass the Phase 2 measurement order or adviser sign-off gate.

@@ -12,6 +12,7 @@
 - Verification on 1 October: frontend **98 tests**, TypeScript and production build passed; backend **201 passed**, 1 long synthetic positioning test deselected (per existing check instructions). Queue browser check showed 0/26 confirmed and one-frame stepping. Strict coarse-label rejection and held-out tuning rejection were checked; no inference benchmark run.
 - Phase 2 checks: 219 backend tests passed (1 long synthetic positioning test deselected), then 46 focused tests passed after the duplicate-repeat safeguard. Three-repeat output and effective FPS were tested using synthetic fixtures only; no real inference comparison occurred.
 - Phase 2 preparation: benchmark runner accepts `--repeats 3`, records effective sampling/strides, and requires explicit complete-contact label coverage; `picklepro.sampling_gate` applies the frozen +5-point recall / ≤2-point precision loss / ≤2.2× median runtime rule with provenance checks. The latest review remains partial (11 saved confirmations, contacts 21/22 conflict); no actual 15/30 comparison or retune has run. Clearer development footage is needed; do not borrow the reserved evaluation clip.
+- TrackNet investigation completed at source-inspection level: [checkpoint, terms and Mac report](docs/TRACKNET_INVESTIGATION.md). This Mac exposes PyTorch MPS; current upstream V3 source supports MPS/CPU but its checkpoints are badminton-specific and untested here. Pickleball-specific TensorFlow/Keras candidate has no explicit license found in the inspected repository. Checkpoint bytes/hashes remain unverified. No model was downloaded, installed, integrated or trained. Phase 2 measurement still precedes adoption; adviser sign-off remains required.
 - Replay cache/rule sweeps belong to Phase 2. Training/model integration and broad workflow automation are deferred. No new detection accuracy claim.
 
 Paste this file into a new AI session to continue the work. It covers the state of the computer-vision work on **`integration/consolidated-cv`** as of 30 September 2026, what was tried, what was measured, and what to do next.
@@ -100,7 +101,7 @@ The older figure in Kirk's guide ("11 shots, 10 matched, 5/10 types") is from be
   - Its deep ball tracker is a placeholder.
   - Idea worth keeping: fine-tune VideoMAE on short clips centred on labelled hits.
   - Details: `docs/CV_REFERENCE_REPO_EVALUATION.md`.
-- **AndrewDettor/TrackNet-Pickleball.** Ball tracking only. Its Keras weights are on Google Drive, which is blocked here. It needs a manual download and a TensorFlow adapter or conversion. TrackNet uses three consecutive frames, so it is the most promising way to find the ball at contact.
+- **AndrewDettor/TrackNet-Pickleball.** Ball tracking only. Updated investigation found Drive preview links, TensorFlow/Keras three-frame inference and unresolved explicit permission; binary access/hash and Mac compatibility remain unverified. No measured superiority over YOLO is established. See the current [TrackNet investigation](docs/TRACKNET_INVESTIGATION.md).
 - **Blocked hosts in the development container:** `huggingface.co` and Google Drive. To use them, allow the domains in the Claude Code environment's network settings, or download the files by hand and put them in `server/models/`.
 
 ## Recommended next steps (in order)
