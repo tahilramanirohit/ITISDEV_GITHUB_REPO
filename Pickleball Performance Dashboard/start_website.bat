@@ -54,6 +54,7 @@ echo.
 echo Starting the website at http://localhost:5173 . Leave this window open. Ctrl+C stops it.
 echo.
 call npm run dev -- --open
+goto :end
 
 :fillin
 echo.
