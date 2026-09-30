@@ -65,7 +65,23 @@ The person model (`yolo11n.pt`, COCO person class) runs at 1280 px so that playe
 
 Very short sightings are folded into the matching player on the same side. **A side never has more than two players** (doubles): within one camera view, the two people seen most on each side are the players, and any other on-court piece is joined to the one whose clothes match best, as long as the two are never seen at the same moment. Someone on court alongside both players (a coach, a ball fetcher) is set aside. People standing mostly off the court (a referee, spectators) are listed separately, are not drawn on the video, and are never counted as hitters.
 
-**Ball outside the court.** Keeping only ball detections over the court was tested (30 Sep 2026) and not adopted. With the camera just behind the baseline, every line of sight passes through the space above the near court, so a 3-D check rejected nothing. A picture-based boundary rejected 100 of 251 ball points, mostly real high balls, because a ball in the air appears above the narrower far court. Look-alikes outside play are instead removed because they do not move like a ball in flight. The app shows a photo of each player so you can pick yourself; "My shots" then shows only your shots.
+**Ball outside the court.** Keeping only ball detections over the court was tested (30 Sep 2026) and not adopted. With the camera just behind the baseline, every line of sight passes through the space above the near court, so a 3-D check rejected nothing. A picture-based boundary rejected 100 of 251 ball points, mostly real high balls, because a ball in the air appears above the narrower far court. Look-alikes outside play are instead removed because they do not move like a ball in flight.
+
+A narrower rule is available but off by default (`drop_floor_balls_off_court`). It drops a detection that maps to the floor well outside the court (2 m beyond a sideline, 3 m beyond a baseline) *and* is about as big as a ball lying there would look, which is a ball on a neighbouring court or rolling away. A ball in the air maps to a floor spot much further away, where a ball would look far smaller, so it is kept. On the test clip it removed 14 of 975 candidates, but no neighbouring court is in view there, and it still cost two real shots. Turn it on for footage that shows other courts.
+
+**Ball models compared on the test clip (30 Sep 2026)**, each alone with the pose model and the same shot rules:
+
+| Ball detections | Detections (26 real) | Shots found | Detections that are real | Right type |
+| --- | --- | --- | --- | --- |
+| **pickleball-analysis `ball,person,paddle.pt` (default)** | **25** | **73%** | **76%** | **53%** |
+| kpp91302 `ball_tracking.pt` | 27 | 73% | 70% | 47% |
+| 5urabhi `best.pt` | 42 | 85% | 52% | 27% |
+| 5urabhi, stricter swing and hit thresholds | 33 | 77% | 61% | 35% |
+| default model, every frame (30 per second) | 20 | 62% | 80% | 75% |
+
+The 5urabhi model sees the ball in more frames and finds more shots, but the extra points also create false shots and confuse the shot types. Detecting every frame helps the types but loses shots, because the hit rules are tuned for 15 samples a second. None beats the default overall, so the default is unchanged.
+
+The app shows a photo of each player so you can pick yourself; "My shots" then shows only your shots.
 
 ## Labelling a clip
 

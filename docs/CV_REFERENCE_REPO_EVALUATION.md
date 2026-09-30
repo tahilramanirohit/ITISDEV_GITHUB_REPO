@@ -67,3 +67,11 @@ TrackNet's prediction-versus-label workflow is now available for PicklePro resul
 ```
 
 From `Pickleball Performance Dashboard/server/`, run `python -m picklepro.evaluate_ball result.json ball_labels.json`. The evaluator scales labels to the video's resolution, matches only nearby sample times, and considers a predicted centre correct within 1% of video width. A wrong-position detection counts as a false positive and a missed ball. Detections on frames that were never labelled do not affect precision. The JSON report contains per-frame outcomes and precision, recall, and median pixel error. This measures a declared tolerance on a declared labelled subset; it does not turn the development clip into independent validation.
+
+## Racquet Sports Video Analyzer and TrackNet-Pickleball weights (2026-09-30)
+
+| Reference | Finding for this pipeline |
+| --- | --- |
+| [racquet-sports-analyzer](https://huggingface.co/Bot-Derpy/racquet-sports-analyzer) (MIT; code received as an archive, commit `7cfe0f4`, about 3,700 lines, no weights) | A pipeline template. The shot classifier is VideoMAE with either a Kinetics-400 action model mapped by keyword ("playing tennis" becomes forehand) or a new, **untrained** classification head; it needs fine-tuning on labelled hit clips, which the card itself estimates at 30–50 labelled pickleball matches. Hit detection is ball reversal **or** wrist swing; on the PicklePro test clip swings alone gave 65 peaks for 26 shots, so an OR fusion adds false shots (PicklePro uses the ball for timing and swings to weigh and attribute hits). The ball tracker is colour/motion based, with the deep tracker left as a placeholder. Useful idea kept for later: fine-tuning on short clips centred on each labelled hit (3 frames before, 12 after), once enough frame-precise labels exist. No code was imported. |
+| [TrackNet-Pickleball](https://github.com/AndrewDettor/TrackNet-Pickleball) weights | Hosted on Google Drive as TensorFlow/Keras files. Google Drive and Hugging Face were not reachable from the development environment, and the project has no TensorFlow runtime; using them needs a download by hand and a conversion or a TensorFlow-based adapter. TrackNet-style models use three consecutive frames and are the most likely route to finding the ball at contact, where single-frame detectors miss it. |
+

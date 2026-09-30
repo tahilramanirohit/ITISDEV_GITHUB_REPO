@@ -56,3 +56,23 @@ def test_implausible_teleport_cannot_extend_a_flight():
     teleport = BallCandidate(0.3, (1600, 500, 1614, 514), 0.95)
     path, _ = track_ball(_frames(ball, [teleport]), 1920)
     assert [p.bbox for p in path] == [p.bbox for p in ball]
+
+
+def test_a_ball_lying_on_the_floor_beside_the_court_is_dropped_and_a_high_ball_is_kept():
+    import numpy as np
+    from picklepro.court import LANDMARKS_M, calibrate
+    from picklepro.fixtures import FRAME_SIZE, court_to_image_homography, project
+    from picklepro.pipeline import _drop_balls_on_floor_off_court
+
+    h = court_to_image_homography()
+    cal = calibrate({n: tuple(project(h, [LANDMARKS_M[n]])[0]) for n in LANDMARKS_M}, FRAME_SIZE)
+    # A ball lying 5 m outside the right sideline, drawn at the size a ball would have there.
+    x, y = project(h, [(6.1 + 5.0, 4.0)])[0]
+    a, b = project(h, [(6.1 + 5.0, 4.0), (6.1 + 5.0 + 0.074, 4.0)])
+    size = max(2.0, float(np.hypot(*(b - a))))
+    on_floor = BallCandidate(0.0, (int(x - size / 2), int(y - size), int(x + size / 2), int(y)), 0.8)
+    # A ball far above the far court: small, high in the picture; its floor spot is far away.
+    hx, hy = project(h, [(3.0, 13.0)])[0]
+    high = BallCandidate(0.0, (int(hx - 4), int(hy - 90), int(hx + 4), int(hy - 82)), 0.8)
+    kept, removed = _drop_balls_on_floor_off_court([(0.0, [on_floor, high])], [0.0], [cal])
+    assert removed == 1 and kept[0][1] == [high]

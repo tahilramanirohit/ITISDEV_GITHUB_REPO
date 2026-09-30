@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import bisect
 import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Dict, List, Optional
+
+import numpy as np
 
 from . import PIPELINE_VERSION
 from .auto_court import CourtPoseDetector
@@ -44,11 +47,11 @@ from .contract import (
     ZoneOccupancyValue,
     utc_now_iso,
 )
-from .court import COURT_MODEL, CalibrationError, CourtCalibration
+from .court import COURT_LENGTH_M, COURT_MODEL, COURT_WIDTH_M, CalibrationError, CourtCalibration
 from .detection import PlayerTracker
 from .players import PlayerCollector
 from .positioning import positioning_patterns
-from .shots import CORE_TYPES, FrameObs, analyze_shots, court_line_segments
+from .shots import BALL_DIAMETER_M, CORE_TYPES, FrameObs, analyze_shots, court_line_segments
 from .spatial import Selection, dwell_heatmap, select_player, zone_occupancy
 from .video_io import ReadStats, iter_frames, probe, sha256_of
 
@@ -68,6 +71,9 @@ class AnalysisOptions:
     ball_fps: float = 15.0
     # Find the court from its painted lines when no manual calibration is given.
     auto_court: bool = True
+    # Off by default: on the test clip no neighbouring court was in view and the
+    # check cost two real shots. Turn on for videos that show other courts.
+    drop_floor_balls_off_court: bool = False
     max_seconds: Optional[float] = None
     calibration: Optional[CourtCalibration] = None
     calibration_source: Optional[str] = None
@@ -193,7 +199,11 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
                 t = tracks.setdefault(d["track_id"], [ts, ts, 0])
                 t[1] = ts
                 t[2] += 1
+    ball_frames, off_court_balls = (_drop_balls_on_floor_off_court(ball_frames, times, per_frame_calibration)
+                                    if opts.drop_floor_balls_off_court else (ball_frames, 0))
     ball_path, ball_stats = track_ball(ball_frames, props.width) if ball_detector is not None else ([], {})
+    if ball_detector is not None:
+        ball_stats["on_floor_off_court_removed"] = off_court_balls
     ball_snapshots = [BallSnapshot(time_seconds=c.time_s, bbox=list(c.bbox), confidence=c.confidence)
                       for c in ball_path]
     start = times[0] if times else 0.0
@@ -337,6 +347,57 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
         ),
         warnings=warnings,
     )
+
+
+OFF_COURT_SIDE_MARGIN_M = 2.0   # wide balls stay in play this far outside a sideline
+OFF_COURT_END_MARGIN_M = 3.0    # ... and this far behind a baseline
+FLOOR_SIZE_RATIO = (0.5, 1.8)   # observed / expected size of a ball lying at that floor spot
+
+
+def _drop_balls_on_floor_off_court(ball_frames, times, calibrations):
+    """Drop candidates that are balls on the floor outside the court.
+
+    A detection is mapped to the floor with the nearest court map. If that
+    floor spot is well outside the court, and the box is about as big as a
+    ball lying there would look, it is a ball on a neighbouring court or
+    one rolling away between points. A ball in the air maps to a floor spot
+    much further away, where a ball would look far smaller, so it is kept.
+    Points above the horizon cannot be on the floor and are kept too.
+    """
+    kept, removed = [], 0
+    for ts, cands in ball_frames:
+        i = bisect.bisect_left(times, ts)
+        near = [j for j in (i - 1, i) if 0 <= j < len(times) and calibrations[j] is not None
+                and abs(times[j] - ts) <= 0.25]
+        if not near:
+            kept.append((ts, cands))
+            continue
+        h = calibrations[min(near, key=lambda j: abs(times[j] - ts))].homography
+        width, height = calibrations[near[0]].image_size
+        ground_side = (h @ np.array([width / 2, height, 1.0]))[2]
+        out = []
+        for c in cands:
+            x1, y1, x2, y2 = c.bbox
+            v = h @ np.array([(x1 + x2) / 2, y2, 1.0])
+            if v[2] * ground_side <= 0:
+                out.append(c)
+                continue
+            gx, gy = v[0] / v[2], v[1] / v[2]
+            if (-OFF_COURT_SIDE_MARGIN_M <= gx <= COURT_WIDTH_M + OFF_COURT_SIDE_MARGIN_M
+                    and -OFF_COURT_END_MARGIN_M <= gy <= COURT_LENGTH_M + OFF_COURT_END_MARGIN_M):
+                out.append(c)
+                continue
+            inv = np.linalg.inv(h)
+            a = inv @ np.array([gx, gy, 1.0])
+            b = inv @ np.array([gx + 1.0, gy, 1.0])
+            px_per_m = float(np.hypot(b[0] / b[2] - a[0] / a[2], b[1] / b[2] - a[1] / a[2]))
+            ratio = ((x2 - x1) + (y2 - y1)) / 2 / max(BALL_DIAMETER_M * px_per_m, 1.0)
+            if FLOOR_SIZE_RATIO[0] <= ratio <= FLOOR_SIZE_RATIO[1]:
+                removed += 1
+            else:
+                out.append(c)
+        kept.append((ts, out))
+    return kept, removed
 
 
 def _identify_players(collector: PlayerCollector, per_frame: List[List[dict]], selection: Optional[Selection]):
