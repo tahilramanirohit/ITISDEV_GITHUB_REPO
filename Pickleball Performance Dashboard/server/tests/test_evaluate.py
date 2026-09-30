@@ -52,3 +52,12 @@ def test_finer_labels_accept_the_core_type_they_are_reported_as():
     report = evaluate(_result((1.0, 1, "volley"), (2.0, 1, "drop"), (3.0, 1, "drive"), (4.0, 1, "lob")), labels)
     assert report["type_accuracy"] == 0.75
     assert report["wrong_types"] == {"reset -> lob": 1}
+
+
+def test_one_shot_marked_on_several_frames_counts_once():
+    labels = {"time_resolution_s": 0.1, "shots": [
+        {"t": 2.846 + k * 0.0167, "player": 2, "type": "serve"} for k in range(9)] + [
+        {"t": 3.745 + k * 0.0167, "player": 1, "type": "return"} for k in range(5)] + [
+        {"t": 3.83, "player": 1, "type": "return", "outcome": "error"}]}
+    report = evaluate(_result((2.9, 2, "serve")), labels)
+    assert report["labelled_shots"] == 2 and report["matched"] == 1

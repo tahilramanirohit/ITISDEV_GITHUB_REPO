@@ -69,7 +69,12 @@ BOUNCE_KICK = 0.35          # upward change in image velocity, as a share of bal
 MIN_SPEED_FRAC = 0.06       # of frame height per second; slower balls are rolling or held
 MIN_EVENT_GAP_S = 0.3       # merge events closer than this
 RALLY_GAP_S = 3.5           # hits further apart than this start a new rally
-SERVE_MAX_DEPTH_M = 1.2     # serve is struck from behind or at the baseline
+# A serve is struck from outside the court, behind the baseline (team rule,
+# 30 Sep 2026); 0.3 m allows for foot-point error. A point may still *start*
+# with a hit up to SERVE_START_MAX_DEPTH_M inside, which keeps the rally when
+# the serve's exact position is uncertain.
+SERVE_MAX_DEPTH_M = 0.3
+SERVE_START_MAX_DEPTH_M = 1.2
 RETURN_MAX_DEPTH_M = 2.0
 NET_ZONE_DEPTH_M = KITCHEN_LINE_FROM_BASELINE_M - 1.1   # at or near the kitchen line
 DINK_MAX_SPEED = 6.0        # m/s of ground travel
@@ -96,9 +101,9 @@ MIN_BALL_PX = 3.0           # detectors rarely return smaller boxes
 BALL_SIZE_RATIO = (0.3, 4.0)
 BOUNCE_MAX_SPEED_RATIO = 0.9  # beside a player, a kick that loses speed is a bounce
 CONTACT_HEIGHT_FRAC = 0.59    # usual contact about 1 m up a 1.7 m player
-FAR_CONTACT_MAX_DIST = 0.5    # of player height
+FAR_CONTACT_MAX_DIST = 0.6    # of player height (0.5 missed a far drive on chvsBJ_v2 by 0.01)
 FAR_CONTACT_WINDOW_S = 0.4
-REACH_SCALE = 0.5             # ball-to-player distance (in player heights) that halves a hit's score... roughly
+REACH_SCALE = 0.7             # ball-to-player distance (in player heights) at which a hit's score falls to 1/e
 HIT_COST = 0.3               # a candidate must score more than this to be kept as a hit
 LOWEST_CONTACT_FRAC = 0.85    # of the player's height from the top of their box (about shin height)
 ASSIGN_ANY_SIDE = True        # a candidate may go to the closest player of either side, even out of reach
@@ -111,6 +116,18 @@ MIN_HITS_WITHOUT_SERVE = 4    # an exchange this long is play even if its serve 
 # to the shoulders, in body heights per second.
 PACE_TO_NEXT_HITTER = False   # pace from hitter to the next hitter, not to a (less reliable) bounce spot
 USE_SWINGS = True
+# From behind the near baseline, a near player's volley or return sends the ball
+# down the picture and back up, like a bounce. So a bounce within reach of a
+# player is also offered to the side-alternation step as a weak hit candidate
+# (this share of its score), kept only when the rally needs it, for example
+# between two far-side hits. On chvsBJ_v2 three near-side hits were read as
+# bounces before this.
+BOUNCE_HIT_WEIGHT: Optional[float] = 0.5
+# With body points, "how close was the ball to the player" is measured from the
+# nearest wrist, less a paddle length (in player heights): on a volley the ball
+# meets the paddle at arm's length, far from the middle of the player's box.
+REACH_FROM_WRIST = True
+PADDLE_REACH_FRAC = 0.25
 AIR_CONTACT_IS_VOLLEY = True  # the team's shot table: only a volley is struck out of the air
 SWING_FULL = 3.0              # a swing this fast counts fully
 SWING_FLOOR = 0.2             # a still arm keeps this share of a candidate's score
@@ -232,6 +249,8 @@ def _reach_options(frame: Optional[FrameObs], p: _Point, everyone: bool = False,
         if (everyone or x1 - 0.6 * w <= p.x <= x2 + 0.6 * w and y1 - 0.4 * h <= p.y <= y2 + 0.05 * h
                 and _depth_consistent(frame, det["bbox"], p)):
             d = math.hypot(p.x - (x1 + x2) / 2, p.y - (y1 + y2) / 2) / h
+            if REACH_FROM_WRIST:
+                d = min(d, _wrist_reach(det, p, h))
             court = _to_court(frame.calibration, foot_point(det["bbox"]))
             side = court_half(court[1]) if court else None
             sf = _swing_factor(swings, det, p.t)
@@ -239,6 +258,18 @@ def _reach_options(frame: Optional[FrameObs], p: _Point, everyone: bool = False,
             if side not in out or score > rank[side]:
                 out[side], rank[side] = (i, d, sf), score
     return out
+
+
+def _wrist_reach(det: dict, p: "_Point", h: float) -> float:
+    """Ball distance from the nearer confident wrist, less a paddle length, in player heights."""
+    kps = det.get("keypoints")
+    if not kps:
+        return math.inf
+    wrists = [kps[i] for i in (9, 10) if i < len(kps) and kps[i][2] >= 0.3]
+    if not wrists:
+        return math.inf
+    near = min(math.hypot(p.x - w[0], p.y - w[1]) for w in wrists) / h
+    return max(0.0, near - PADDLE_REACH_FRAC)
 
 
 def _in_reach(frame: Optional[FrameObs], p: _Point) -> Optional[int]:
@@ -316,8 +347,13 @@ def _find_events(points: List[_Point], frames: Sequence[FrameObs], frame_h: int,
             # Seen from behind a baseline, a ball landing on the far side may
             # already be moving up the image, so compare vertical velocities.
             upward_kick = (vin[1] - vout[1]) >= BOUNCE_KICK * max(sin, sout)
-            if upward_kick and (turn >= MIN_BOUNCE_TURN_DEG or ratio < 0.5) and (hitter is None or ratio < BOUNCE_MAX_SPEED_RATIO):
-                events.append(_Event("bounce", p.t, p, turn / 180, frame, extras={"priority": 2}))
+            bounce_like = upward_kick and (turn >= MIN_BOUNCE_TURN_DEG or ratio < 0.5) and (
+                hitter is None or ratio < BOUNCE_MAX_SPEED_RATIO)
+            if bounce_like:
+                extras = {"priority": 2}
+                if hitter is not None:
+                    extras["options"] = _reach_options(frame, p, everyone=ASSIGN_ANY_SIDE, swings=swings)
+                events.append(_Event("bounce", p.t, p, turn / 180, frame, hitter, extras=extras))
             elif hitter is not None and (turn >= MIN_TURN_DEG or ratio > 1.8 or ratio < 0.45):
                 events.append(_Event("hit", p.t, p, turn / 180 + min(1.0, abs(math.log(ratio))), frame, hitter,
                                      extras={"priority": 3, "options": _reach_options(frame, p, everyone=ASSIGN_ANY_SIDE, swings=swings)}))
@@ -475,7 +511,20 @@ def _serve_position(e: _Event, frame_h: int) -> bool:
     side = court_half(court[1])
     if side == "near" and _feet_cut_off(e, frame_h):
         return True
-    return side is not None and depth_from_baseline(court[1], side) <= SERVE_MAX_DEPTH_M
+    return side is not None and depth_from_baseline(court[1], side) <= SERVE_START_MAX_DEPTH_M
+
+
+def _serve_direction(server_xy: Optional[Tuple[float, float]], target_xy: Optional[Tuple[float, float]]) -> Optional[bool]:
+    """Did the ball go over the net to the diagonally opposite half? None when unknown.
+
+    Court x runs across the court the same way on both sides, so "diagonal"
+    means the other half of x (near left to far right, and so on).
+    """
+    if server_xy is None or target_xy is None:
+        return None
+    if court_half(target_xy[1]) == court_half(server_xy[1]):
+        return False
+    return (server_xy[0] < COURT_WIDTH_M / 2) != (target_xy[0] < COURT_WIDTH_M / 2)
 
 
 def _in_play(hits: List[_Event], frame_h: int) -> List[_Event]:
@@ -574,9 +623,13 @@ def _lob_rise_m(points: List[_Point], cal: Optional[CourtCalibration]) -> Option
 
 
 def _classify(number, depth, contact, speed, soft, fast, pace, is_lob, rise, hang, travel, above_head,
-              incoming_fast, incoming_soft, lands_in_kitchen, outside_sideline, unmapped, incoming_speed_up=False):
-    """Name one shot from its measured features; see TYPE_DEFINITIONS."""
-    if number == 1 and depth is not None and depth <= SERVE_MAX_DEPTH_M:
+              incoming_fast, incoming_soft, lands_in_kitchen, outside_sideline, unmapped, incoming_speed_up=False,
+              diagonal=None):
+    """Name one shot from its measured features; see TYPE_DEFINITIONS.
+
+    ``diagonal``: did the ball go to the diagonally opposite half (None if unknown)?
+    """
+    if number == 1 and depth is not None and depth <= SERVE_MAX_DEPTH_M and diagonal is not False:
         where = "behind the baseline" if depth < 0 else f"{depth:.1f} m inside the baseline"
         return "serve", f"first hit of the rally, from {where}"
     if number == 2 and depth is not None and depth <= RETURN_MAX_DEPTH_M:
@@ -680,7 +733,17 @@ def analyze_shots(ball: Sequence[Tuple[float, Sequence[int]]], frames: Sequence[
     # The ball then stays inside the player's box instead of arriving and
     # leaving, so those direction changes are not strokes.
     hits = [e for e in events if e.kind == "hit" and not _held_ball(e, points, frames, tol)]
+    if BOUNCE_HIT_WEIGHT:
+        # Only where the sides are known: the alternation is what decides.
+        hits += [_Event("hit", b.t, b.point, b.score * BOUNCE_HIT_WEIGHT, b.frame, b.hitter,
+                        extras={"options": {k: v for k, v in b.extras["options"].items() if k is not None},
+                                "from_bounce": b})
+                 for b in bounces if any(k is not None for k in b.extras.get("options", {}))
+                 and not _held_ball(b, points, frames, tol)]
+        hits.sort(key=lambda e: e.t)
     hits = _in_play(_alternate(hits), frame_h)
+    taken = {id(h.extras["from_bounce"]) for h in hits if "from_bounce" in h.extras}
+    bounces = [b for b in bounces if id(b) not in taken]
 
     # Same-side double hits within a second are one stroke seen twice.
     cleaned: List[_Event] = []
@@ -791,9 +854,14 @@ def analyze_shots(ball: Sequence[Tuple[float, Sequence[int]]], frames: Sequence[
             posture = swings.contact(det.get("track_id"), h.t, (h.point.x, h.point.y)) if det else None
             above_head = posture["above_head"] if posture else (box is not None and h.point.y < box[1])
             low_contact = bool(posture and posture["below_hips"])
+            receiver_xy = landing_xy or (_hitter_court(next_hit) if next_hit is not None else None)
+            diagonal = _serve_direction(court, receiver_xy) if number == 1 else None
             raw, why = _classify(number, depth, contact, speed, soft, fast, pace, is_lob, rise, hang, travel,
                                  above_head, incoming_fast, incoming_soft,
-                                 lands_in_kitchen, outside_sideline, court is None, prev_raw == "speed_up")
+                                 lands_in_kitchen, outside_sideline, court is None, prev_raw == "speed_up",
+                                 diagonal)
+            if number == 1 and raw != "serve" and depth is not None and depth <= SERVE_MAX_DEPTH_M and diagonal is False:
+                reasons.append("not a serve: the ball did not go diagonally over the net")
             raw_types.append(raw)
             shot, core_why = core_type(raw, contact, depth, low_contact, fast, number)
             reasons.append(why)

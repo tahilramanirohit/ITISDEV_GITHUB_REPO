@@ -291,3 +291,23 @@ def test_a_ball_hit_out_of_the_air_is_a_volley_as_in_the_team_shot_table():
     assert core_type("drive", "after_bounce", 3.0, False, True, 5)[0] == "drive"
     for kept in ("serve", "return", "lob", "overhead", "unclassified"):
         assert core_type(kept, "volley", 3.0, False, False, 5)[0] == kept
+
+
+def test_a_serve_must_go_over_the_net_diagonally():
+    from picklepro.court import COURT_WIDTH_M, NET_Y_M
+    from picklepro.shots import _serve_direction
+    near_left = (1.0, -0.3)
+    assert _serve_direction(near_left, (COURT_WIDTH_M - 1.0, NET_Y_M + 4.0)) is True    # to far right
+    assert _serve_direction(near_left, (1.0, NET_Y_M + 4.0)) is False                   # straight ahead
+    assert _serve_direction(near_left, (COURT_WIDTH_M - 1.0, 3.0)) is False              # same side
+    assert _serve_direction(near_left, None) is None
+
+
+def test_reach_is_measured_from_the_wrist_when_body_points_exist():
+    from picklepro.shots import _Point, _wrist_reach
+    kps = [[0, 0, 0.0]] * 17
+    kps[10] = [300.0, 200.0, 0.9]  # right wrist
+    det = {"bbox": [100, 100, 200, 400], "keypoints": kps}
+    ball = _Point(1.0, 330.0, 210.0, 215.0, 10.0)
+    assert _wrist_reach(det, ball, 300.0) == 0.0           # within a paddle length of the wrist
+    assert _wrist_reach({"bbox": det["bbox"]}, ball, 300.0) == float("inf")

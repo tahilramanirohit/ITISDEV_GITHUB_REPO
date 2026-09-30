@@ -6,7 +6,7 @@ PicklePro names each detected hit with one of **eight core shot types: serve, re
 
 | Type | What players mean by it | How PicklePro recognises it |
 | --- | --- | --- |
-| Serve | Underhand first hit of a point, from outside the court behind the baseline (volley serve or drop serve). It must cross diagonally into the opposite service court and must not land in the kitchen. | 1st hit of a rally, hitter behind or within 1.2 m of their baseline (allows for foot-position error). When its bounce is seen, the serve is marked in or a fault: did not cross the net, landed in the kitchen, landed out, or did not cross diagonally. |
+| Serve | Underhand first hit of a point, from outside the court behind the baseline (volley serve or drop serve). It must cross diagonally into the opposite service court and must not land in the kitchen. | 1st hit of a rally, with the hitter **behind the baseline** (0.3 m of leeway for foot-position error; team rule, 30 Sep 2026), and the ball going **over the net to the diagonally opposite half**: the bounce, or else the receiver, is on the other side and the other half across. When neither the bounce nor the receiver was seen, the direction is not checked. When the bounce is seen, the serve is marked in or a fault: did not cross the net, landed in the kitchen, landed out, or did not cross diagonally. |
 | Return | The receiver's reply to the serve, after it bounces; usually deep. | 2nd hit of a rally, from the back 2 m. |
 | Drive | Hard, flat shot. | Fast (≥ 9 m/s) after a bounce, when no more specific rule applies. |
 | Drop | Soft shot from the back or transition zone that lands near the net. This includes the third-shot drop, which is no longer a separate type. | From behind the kitchen line, slower than 9 m/s or landing in the kitchen. |
@@ -33,6 +33,32 @@ PicklePro names each detected hit with one of **eight core shot types: serve, re
    The ball's apparent size is only a coarse check: detector boxes are padded and blurred to about twice the ball's true size, so size cannot tell a near ball from a far one.
 3. **Not a stroke.** A ball that stays within about a third of a body height of the player for the whole half second around the "hit" is being carried, caught or bounced before a serve, so it is ignored. So is a "shot" that travels slower than 0.8 m/s.
 4. **Rallies.** Hits more than 3.5 s apart start a new rally. A rally starts at its first hit from a serving position: behind or near the baseline, or, on the near side, with the player's feet below the bottom of the picture (the near baseline is often out of view). Hits before that are balls knocked back between points and are dropped. A run of hits without a serving position counts only if it has at least 4 hits. Shot numbers (serve, return, third shot) come from this, so a missed serve shifts the numbering.
+
+## Why hits were missed on chvsBJ_v2 (30 Sep 2026)
+
+On `chvsBJ_v2.mp4` (8 labelled shots) only the serve was found, although the ball was followed through the whole rally. Three causes were found and fixed:
+
+1. **Near-player volleys looked like bounces.** From behind the near baseline, a ball the near player hits back moves down the picture and then up, just like a bounce. A bounce within reach of a player is now also offered as a possible hit, and kept only when the rally needs it: the two sides must alternate, so a "bounce" between two far-side hits was really the near player's shot.
+2. **"Close to the player" was measured from the middle of the player's box.** On a volley the ball meets the paddle at arm's length, about 0.75 player-heights from the middle, which scored almost nothing. It is now measured from the nearer wrist, less a paddle length (`REACH_FROM_WRIST`, `PADDLE_REACH_FRAC`), with `REACH_SCALE` 0.7.
+3. **A far player's drive was 0.01 outside the contact distance.** `FAR_CONTACT_MAX_DIST` is now 0.6.
+
+Measured on all four labelled clips (87 shots):
+
+| | Found | Real | Right type |
+| --- | --- | --- | --- |
+| Before | 45 (52%) | 76% | 25 |
+| After | 65 (75%) | 74% | 37 |
+
+Per clip, found before and after:
+
+| Clip | Before | After |
+| --- | --- | --- |
+| chvsBJ_v2 | 2 of 8 | 7 of 8 |
+| CHvsBJ | 9 of 15 | 13 of 15 |
+| PickleballVideo | 15 of 38 | 22 of 38 |
+| Kirk | 19 of 26 | 23 of 26 |
+
+The cost is on the Kirk clip: 34 detections for 26 shots, so 68% real, down from 83%. The label scorer also merges a shot marked on several consecutive frames into one shot.
 
 ## Swings and posture (pose model)
 

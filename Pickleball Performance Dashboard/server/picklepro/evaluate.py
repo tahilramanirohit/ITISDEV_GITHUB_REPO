@@ -12,6 +12,10 @@ Matching uses contact time, independently of the predicted hitter. Reported:
 * hitter accuracy and shot-type accuracy on matched shots;
 * a confusion list of wrong types, and detections at "not a shot" moments.
 
+Labellers sometimes mark one shot on several consecutive frames. Labels by the
+same player with the same type less than ``SAME_SHOT_GAP_S`` apart are merged
+into one shot at their middle time before scoring.
+
 Labels may use the finer names (speed-up, counter, reset, erne). PicklePro
 reports each as the core type it is a kind of, so such a label is correct when
 the detection names one of those core types (``LABEL_ACCEPTS``).
@@ -25,6 +29,7 @@ from collections import Counter
 from typing import Dict, List
 
 MARGIN_S = 0.35
+SAME_SHOT_GAP_S = 0.3
 # Older results used these names for what is now one type.
 ALIASES = {"third_shot_drop": "drop"}
 # Finer label -> core types that count as correct (see shots.core_type).
@@ -44,12 +49,34 @@ def _window(label: dict, file_resolution: float) -> tuple[float, float]:
     return label["t"] - MARGIN_S, label["t"] + MARGIN_S
 
 
+def merge_repeated(shots: List[dict]) -> List[dict]:
+    """One label per shot: repeated frame labels of the same player and type become their middle one."""
+    out: List[List[dict]] = []
+    for s in sorted(shots, key=lambda s: s["t"]):
+        last = out[-1][-1] if out else None
+        if (last is not None and s["type"] == last["type"] and s.get("player") == last.get("player")
+                and s["t"] - last["t"] < SAME_SHOT_GAP_S):
+            out[-1].append(s)
+        else:
+            out.append([s])
+    merged = []
+    for group in out:
+        mid = dict(group[len(group) // 2])
+        for s in group:  # keep an outcome or note given on any of the repeats
+            for key in ("outcome", "note"):
+                if s.get(key) and not mid.get(key):
+                    mid[key] = s[key]
+        merged.append(mid)
+    return merged
+
+
 def evaluate(result: dict, labels: dict) -> Dict[str, object]:
     shots = (result.get("metrics", {}).get("shot_classification", {}).get("value") or {}).get("shots", [])
     detected = sorted(shots, key=lambda s: s["time_seconds"])
     res = float(labels.get("time_resolution_s", 1.0))
-    real = [l for l in labels["shots"] if l["type"] != "not_a_shot"]
-    negatives = [l for l in labels["shots"] if l["type"] == "not_a_shot"]
+    shots_labelled = merge_repeated(labels["shots"])
+    real = [l for l in shots_labelled if l["type"] != "not_a_shot"]
+    negatives = [l for l in shots_labelled if l["type"] == "not_a_shot"]
     used = set()
     matches = []
     mapping = labels.get("tracker_mapping") or {}

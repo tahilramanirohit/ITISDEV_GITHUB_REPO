@@ -58,13 +58,17 @@ All paths are relative to `Pickleball Performance Dashboard/`.
 
   This turns a several-minute run into under a second per setting.
 
-### Current numbers (defaults, Standard detail, 30 Sep 2026)
+### Current numbers (defaults, Standard detail, 30 Sep 2026, after the wrist-reach change)
 
 | Clip | Labelled | Detected | Found | Real | Right type |
 | --- | --- | --- | --- | --- | --- |
-| TestVideoKirk_REAL.mp4 | 26 | 23 | 19 (73%) | 83% | 63% |
-| PickleballVideo.mp4 | 38 | 19 | 15 (39%) | 79% | 40% |
-| CHvsBJ.mp4 (the team's own app run, before these changes) | 15 | 14 | 9 (60%) | 64% | 78%, hitter 100% |
+| chvsBJ_v2.mp4 | 8 | 8 | 7 (88%) | 88% | 71% |
+| CHvsBJ.mp4 | 15 | 16 | 13 (87%) | 81% | 77%, hitter 100% |
+| PickleballVideo.mp4 | 38 | 30 | 22 (58%) | 73% | 36% |
+| TestVideoKirk_REAL.mp4 | 26 | 34 | 23 (88%) | 68% | 61% |
+| All four | 87 | 88 | 65 (75%) | 74% | 57% |
+
+Before the change: 45 of 87 found (52%), 76% real. Detailed near players mode: chvsBJ_v2 7/8, CHvsBJ 14/15 (78% real). These clips were also used for tuning; a held-out clip is still needed.
 
 Hitter accuracy on the Kirk clip is not comparable across tracker changes (its labels use old tracker IDs). PickleballVideo has no tracker mapping yet: map human players to tracker IDs on `#/label` to score hitters.
 

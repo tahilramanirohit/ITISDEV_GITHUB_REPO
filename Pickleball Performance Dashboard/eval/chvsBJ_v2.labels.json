@@ -1,0 +1,265 @@
+{
+  "video": "chvsBJ_v2.mp4",
+  "labelled_by": "",
+  "time_resolution_s": 0.1,
+  "notes": "",
+  "identity_scheme": "human",
+  "shots": [
+    {
+      "t": 2.846,
+      "player": 2,
+      "type": "serve"
+    },
+    {
+      "t": 2.863,
+      "player": 2,
+      "type": "serve"
+    },
+    {
+      "t": 2.879,
+      "player": 2,
+      "type": "serve"
+    },
+    {
+      "t": 2.896,
+      "player": 2,
+      "type": "serve"
+    },
+    {
+      "t": 2.913,
+      "player": 2,
+      "type": "serve"
+    },
+    {
+      "t": 2.929,
+      "player": 2,
+      "type": "serve"
+    },
+    {
+      "t": 2.946,
+      "player": 2,
+      "type": "serve"
+    },
+    {
+      "t": 2.963,
+      "player": 2,
+      "type": "serve"
+    },
+    {
+      "t": 2.979,
+      "player": 2,
+      "type": "serve"
+    },
+    {
+      "t": 3.745,
+      "player": 1,
+      "type": "return"
+    },
+    {
+      "t": 3.762,
+      "player": 1,
+      "type": "return"
+    },
+    {
+      "t": 3.778,
+      "player": 1,
+      "type": "return"
+    },
+    {
+      "t": 3.795,
+      "player": 1,
+      "type": "return"
+    },
+    {
+      "t": 3.811,
+      "player": 1,
+      "type": "return"
+    },
+    {
+      "t": 3.828,
+      "player": 1,
+      "type": "return"
+    },
+    {
+      "t": 5.259,
+      "player": 2,
+      "type": "drive"
+    },
+    {
+      "t": 5.276,
+      "player": 2,
+      "type": "drive"
+    },
+    {
+      "t": 5.293,
+      "player": 2,
+      "type": "drive"
+    },
+    {
+      "t": 5.309,
+      "player": 2,
+      "type": "drive"
+    },
+    {
+      "t": 5.326,
+      "player": 2,
+      "type": "drive"
+    },
+    {
+      "t": 5.343,
+      "player": 2,
+      "type": "drive"
+    },
+    {
+      "t": 5.742,
+      "player": 1,
+      "type": "volley"
+    },
+    {
+      "t": 5.759,
+      "player": 1,
+      "type": "volley"
+    },
+    {
+      "t": 5.775,
+      "player": 1,
+      "type": "volley"
+    },
+    {
+      "t": 5.792,
+      "player": 1,
+      "type": "volley"
+    },
+    {
+      "t": 5.809,
+      "player": 1,
+      "type": "volley"
+    },
+    {
+      "t": 7.024,
+      "player": 2,
+      "type": "drive"
+    },
+    {
+      "t": 7.04,
+      "player": 2,
+      "type": "drive"
+    },
+    {
+      "t": 7.074,
+      "player": 2,
+      "type": "drive"
+    },
+    {
+      "t": 7.09,
+      "player": 2,
+      "type": "drive"
+    },
+    {
+      "t": 7.107,
+      "player": 2,
+      "type": "drive"
+    },
+    {
+      "t": 7.124,
+      "player": 2,
+      "type": "drive"
+    },
+    {
+      "t": 7.54,
+      "player": 1,
+      "type": "volley"
+    },
+    {
+      "t": 7.556,
+      "player": 1,
+      "type": "volley"
+    },
+    {
+      "t": 7.573,
+      "player": 1,
+      "type": "volley"
+    },
+    {
+      "t": 7.59,
+      "player": 1,
+      "type": "volley"
+    },
+    {
+      "t": 7.606,
+      "player": 1,
+      "type": "volley"
+    },
+    {
+      "t": 7.623,
+      "player": 1,
+      "type": "volley"
+    },
+    {
+      "t": 8.538,
+      "player": 2,
+      "type": "drive"
+    },
+    {
+      "t": 8.555,
+      "player": 2,
+      "type": "drive"
+    },
+    {
+      "t": 8.572,
+      "player": 2,
+      "type": "drive"
+    },
+    {
+      "t": 8.588,
+      "player": 2,
+      "type": "drive"
+    },
+    {
+      "t": 8.605,
+      "player": 2,
+      "type": "drive"
+    },
+    {
+      "t": 8.622,
+      "player": 2,
+      "type": "drive"
+    },
+    {
+      "t": 8.638,
+      "player": 2,
+      "type": "drive"
+    },
+    {
+      "t": 9.054,
+      "player": 1,
+      "type": "volley"
+    },
+    {
+      "t": 9.071,
+      "player": 1,
+      "type": "volley"
+    },
+    {
+      "t": 9.088,
+      "player": 1,
+      "type": "volley"
+    },
+    {
+      "t": 9.104,
+      "player": 1,
+      "type": "volley"
+    },
+    {
+      "t": 9.121,
+      "player": 1,
+      "type": "volley"
+    },
+    {
+      "t": 9.138,
+      "player": 1,
+      "type": "volley",
+      "outcome": "error"
+    }
+  ]
+}
