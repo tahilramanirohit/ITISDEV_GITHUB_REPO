@@ -250,7 +250,7 @@ export function parseAnalysisResult(input: unknown): AnalysisResultV1 {
   if (cov.selected_view_duration_s != null) num(cov.selected_view_duration_s, "coverage.selected_view_duration_s");
   if (input.calibration !== null) {
     if (!isObj(input.calibration)) throw new ContractError("calibration: expected an object or null");
-    oneOf(input.calibration.method, ["manual_landmarks", "auto_model_landmarks", "auto_painted_lines"] as const, "calibration.method");
+    oneOf(input.calibration.method, ["manual_landmarks", "user_confirmed_landmarks", "auto_model_landmarks", "auto_painted_lines"] as const, "calibration.method");
   }
   if (!isObj(input.metrics)) throw new ContractError("metrics: expected an object");
   // Results saved before positioning existed are still valid; show them as not computed.

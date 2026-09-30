@@ -34,6 +34,12 @@ describe("parseAnalysisResult", () => {
     expect(r.metrics.court_heatmap.value).toBeNull();
   });
 
+  it("accepts analyzed videos with a user-confirmed court", () => {
+    const confirmed = structuredClone(testFixture);
+    confirmed.calibration.method = "user_confirmed_landmarks";
+    expect(parseAnalysisResult(confirmed).calibration?.method).toBe("user_confirmed_landmarks");
+  });
+
   it("rejects results it cannot describe truthfully", () => {
     const bad = (patch: Json) => () => parseAnalysisResult({ ...structuredClone(testFixture), ...patch });
     expect(bad({ schema_version: "2.0" })).toThrow(ContractError);
