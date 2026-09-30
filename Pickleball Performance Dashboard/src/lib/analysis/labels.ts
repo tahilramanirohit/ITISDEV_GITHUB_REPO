@@ -31,6 +31,10 @@ export type ShotLabel = {
 
 export type LabelFile = {
   video: string;
+  recording_sha256?: string;
+  original_fps?: number;
+  source_id?: string;
+  label_version?: string;
   identity_scheme?: "human";
   labelled_by: string;
   time_resolution_s: number;
@@ -76,6 +80,10 @@ export class LabelFileError extends Error {}
 /** Read a labels file, accepting the older whole-second files. */
 export function parseLabelFile(input: unknown): { labels: ShotLabel[]; meta: Omit<LabelFile, "shots"> } {
   if (!isObj(input) || !Array.isArray(input.shots)) throw new LabelFileError("Not a labels file: expected a \"shots\" list.");
+  if (input.recording_sha256 !== undefined && (typeof input.recording_sha256 !== "string" || !/^[a-f0-9]{64}$/.test(input.recording_sha256)))
+    throw new LabelFileError("Invalid recording SHA-256.");
+  if (input.original_fps !== undefined && (typeof input.original_fps !== "number" || !Number.isFinite(input.original_fps) || input.original_fps <= 0))
+    throw new LabelFileError("Invalid original FPS.");
   const fileRes = typeof input.time_resolution_s === "number" && input.time_resolution_s > 0 ? input.time_resolution_s : 1;
   const labels = input.shots.map((raw, i): ShotLabel => {
     if (!isObj(raw)) throw new LabelFileError(`Shot ${i + 1}: expected an object.`);
@@ -93,6 +101,7 @@ export function parseLabelFile(input: unknown): { labels: ShotLabel[]; meta: Omi
       id: newId(), t, player, type: type as LabelType, outcome,
       note: typeof raw.note === "string" && raw.note ? raw.note : undefined,
       resolution_s: res,
+      draft: raw.draft === true || raw.confirmed === false,
     };
   });
   const players = isObj(input.players)
@@ -104,6 +113,10 @@ export function parseLabelFile(input: unknown): { labels: ShotLabel[]; meta: Omi
   return {
     labels: sortLabels(labels),
     meta: {
+      recording_sha256: input.recording_sha256 as string | undefined,
+      original_fps: input.original_fps as number | undefined,
+      source_id: typeof input.source_id === "string" ? input.source_id : undefined,
+      label_version: typeof input.label_version === "string" ? input.label_version : undefined,
       video: typeof input.video === "string" ? input.video : "",
       labelled_by: typeof input.labelled_by === "string" ? input.labelled_by : "",
       time_resolution_s: PRECISE_RESOLUTION_S,
@@ -126,7 +139,8 @@ export function toLabelFile(labels: ShotLabel[], meta: Omit<LabelFile, "shots" |
   });
   const players = meta.players && Object.keys(meta.players).length ? meta.players : undefined;
   const tracker_mapping = meta.tracker_mapping && Object.keys(meta.tracker_mapping).length ? meta.tracker_mapping : undefined;
-  return { video: meta.video, labelled_by: meta.labelled_by, time_resolution_s: PRECISE_RESOLUTION_S, notes: meta.notes,
+  return { video: meta.video, recording_sha256: meta.recording_sha256, original_fps: meta.original_fps,
+    source_id: meta.source_id, label_version: meta.label_version ?? "v2-1", labelled_by: meta.labelled_by, time_resolution_s: PRECISE_RESOLUTION_S, notes: meta.notes,
     ...(meta.identity_scheme === "human" ? { identity_scheme: "human" as const } : {}),
     ...(players ? { players } : {}), ...(tracker_mapping ? { tracker_mapping } : {}), shots };
 }

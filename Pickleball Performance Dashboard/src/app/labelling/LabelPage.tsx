@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } f
 import { parseAnalysisResult, ContractError, type AnalysisResultV1 } from "../../lib/analysis/contract";
 import {
   LABEL_TYPES, OUTCOMES, TYPE_KEYS, TYPE_NAMES, boxesAt, draftsFromResult, formatTime, newId, parseLabelFile,
-  snapToFrame, sortLabels, toLabelFile, typeForKey, LabelFileError, type LabelType, type Outcome, type ShotLabel,
+  snapToFrame, sortLabels, toLabelFile, typeForKey, LabelFileError, type LabelType, type Outcome, type ShotLabel, type LabelFile,
 } from "../../lib/analysis/labels";
 import { SHOT_INFO } from "../../lib/analysis/shotLabels";
 import { BORDER, COBALT, INK, ORANGE, WHITE_DIM, WHITE_SUB } from "../theme";
@@ -13,7 +13,7 @@ const typeColor = (t: LabelType) => (t === "not_a_shot" ? NOT_A_SHOT_COLOR : SHO
 const PLAYER_COLORS = ["#66707c", "#293df2", "#0f766e", "#ad2545", "#b5651d", "#6543a4", "#1f7a4d", "#9f1239", "#4f5fd6", "#a94318"];
 const playerColor = (p: number | null) => PLAYER_COLORS[(p ?? 0) % PLAYER_COLORS.length];
 
-type Meta = { video: string; labelled_by: string; notes: string; identity_scheme?: "human"; players?: Record<string, string>; tracker_mapping?: Record<string, number> };
+type Meta = Omit<LabelFile, "shots" | "time_resolution_s">;
 type Saved = { labels: ShotLabel[]; meta: Meta };
 
 const storageKey = (file: File) => `picklepro:labels:${file.name}:${file.size}`;
@@ -65,11 +65,13 @@ export default function LabelPage() {
   const [duration, setDuration] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [rate, setRate] = useState(1);
-  const [fpsInput, setFpsInput] = useState("30");
+  const [fpsInput, setFpsInput] = useState("");
+  const loadToken = useRef(0);
+  const [hashBusy, setHashBusy] = useState(false);
   const [message, setMessage] = useState<{ tone: "info" | "warn" | "error"; text: string } | null>(null);
   const [showBoxes, setShowBoxes] = useState(true);
 
-  const fps = result?.video.fps && result.video.fps > 0 ? result.video.fps : Number(fpsInput) > 0 ? Number(fpsInput) : 30;
+  const fps = meta.original_fps ?? (result?.video.fps && result.video.fps > 0 ? result.video.fps : 30);
   const frame = 1 / fps;
   const selected = labels.find((l) => l.id === selectedId) ?? null;
   const drafts = labels.filter((l) => l.draft).length;
@@ -79,8 +81,8 @@ export default function LabelPage() {
 
   // Autosave per video, so closing the tab loses nothing.
   useEffect(() => {
-    if (videoFile) writeSaved(storageKey(videoFile), { labels, meta });
-  }, [videoFile, labels, meta]);
+    if (videoFile && !hashBusy && meta.recording_sha256) writeSaved(storageKey(videoFile), { labels, meta });
+  }, [videoFile, labels, meta, hashBusy]);
 
   const players = useMemo(() => {
     return [1, 2, 3, 4].map((id) => {
@@ -90,21 +92,32 @@ export default function LabelPage() {
   }, [result, meta.players, meta.tracker_mapping]);
 
   // ── Loading files ────────────────────────────────────────────────────────
-  function onVideo(e: ChangeEvent<HTMLInputElement>) {
+  async function onVideo(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    const saved = readSaved(storageKey(file));
+    const token = ++loadToken.current;
+    setHashBusy(true);
     setVideoFile(file);
     setVideoUrl(URL.createObjectURL(file));
-    const saved = readSaved(storageKey(file));
-    if (saved?.labels?.length) {
-      setLabels(saved.labels);
-      setMeta({ ...saved.meta, video: file.name });
-      setMessage({ tone: "info", text: `Restored ${saved.labels.length} labels saved in this browser for ${file.name}.` });
-    } else {
-      setLabels([]);
-      setMeta({ video: file.name, labelled_by: meta.labelled_by, notes: "", identity_scheme: "human" });
-      setMessage(null);
-    }
+    setResult(null); setLabels([]); setSelectedId(null); setFpsInput("");
+    setMeta({ video: file.name, labelled_by: meta.labelled_by, notes: "", identity_scheme: "human" });
+    try {
+      const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
+      const hash = Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+      if (token !== loadToken.current) return;
+      if (saved?.labels?.length && (!saved.meta.recording_sha256 || saved.meta.recording_sha256 === hash)) {
+        setLabels(saved.labels);
+        setMeta({ ...saved.meta, video: file.name, recording_sha256: hash });
+        setFpsInput(saved.meta.original_fps ? String(saved.meta.original_fps) : "");
+        setMessage({ tone: "warn", text: `Restored ${saved.labels.length} labels. Verify original FPS and recording ID before export; coarse labels remain coarse.` });
+      } else {
+        setMeta((m) => ({ ...m, recording_sha256: hash, source_id: file.name.replace(/\.[^.]+$/, ""), label_version: "v2-1" }));
+        setMessage({ tone: "info", text: "Recording hash ready. Enter original FPS from the manifest before export. Frame stepping uses an approximate rate until then." });
+      }
+    } catch {
+      if (token === loadToken.current) setMessage({ tone: "error", text: "Could not hash this recording. Export is disabled until its identity is verified." });
+    } finally { if (token === loadToken.current) setHashBusy(false); }
   }
 
   async function onResult(e: ChangeEvent<HTMLInputElement>) {
@@ -112,6 +125,8 @@ export default function LabelPage() {
     if (!file) return;
     try {
       const parsed = parseAnalysisResult(await readJson(file));
+      if (videoFile && (!meta.recording_sha256 || parsed.provenance.source.sha256 !== meta.recording_sha256))
+        throw new LabelFileError("Result does not match the selected recording hash.");
       setResult(parsed);
       const onCourt = (parsed.players ?? []).filter((p) => p.on_court);
       const n = parsed.metrics.shot_classification.value?.shots.length ?? 0;
@@ -128,8 +143,14 @@ export default function LabelPage() {
     if (!file) return;
     try {
       const { labels: loaded, meta: m } = parseLabelFile(await readJson(file));
+      if (hashBusy) throw new LabelFileError("Wait for the recording hash first.");
+      if (m.recording_sha256 && meta.recording_sha256 && m.recording_sha256 !== meta.recording_sha256)
+        throw new LabelFileError("Labels belong to a different recording hash.");
       setLabels(loaded);
-      setMeta({ video: videoFile?.name ?? m.video, labelled_by: m.labelled_by, notes: m.notes,
+      setFpsInput(m.original_fps ? String(m.original_fps) : fpsInput);
+      setMeta({ ...m, recording_sha256: meta.recording_sha256 ?? m.recording_sha256,
+        original_fps: m.original_fps ?? meta.original_fps, source_id: m.source_id ?? meta.source_id,
+        label_version: m.label_version ?? "v2-1", video: videoFile?.name ?? m.video, labelled_by: m.labelled_by, notes: m.notes,
         identity_scheme: m.identity_scheme, players: m.players, tracker_mapping: m.tracker_mapping });
       const rough = loaded.filter((l) => l.resolution_s > 0.2).length;
       setMessage({ tone: rough || !m.identity_scheme ? "warn" : "info", text: `Loaded ${loaded.length} labels.` + (rough
@@ -327,7 +348,7 @@ export default function LabelPage() {
         <div className="grid gap-3 sm:grid-cols-3">
           <label className="text-sm font-semibold" style={{ color: WHITE_DIM }}>
             1. Video <span style={{ color: ORANGE }}>(required)</span>
-            <input type="file" accept="video/*" onChange={onVideo} className="mt-1 block w-full text-sm" />
+            <input type="file" accept="video/*" onChange={(e) => void onVideo(e)} className="mt-1 block w-full text-sm" />
           </label>
           <label className="text-sm font-semibold" style={{ color: WHITE_DIM }}>
             2. PicklePro result (optional)
@@ -385,10 +406,14 @@ export default function LabelPage() {
                 <input type="checkbox" checked={showBoxes} onChange={(e) => setShowBoxes(e.target.checked)} disabled={!result} />
                 Show player boxes
               </label>
-              {!result && (
+              {(
                 <label className="flex items-center gap-1.5">
-                  Frames per second
-                  <input value={fpsInput} onChange={(e) => setFpsInput(e.target.value)} className="w-16 rounded-md px-1 py-0.5" style={fieldStyle} inputMode="decimal" />
+                  Original FPS (from manifest)
+                  <input value={fpsInput} onChange={(e) => {
+                    setFpsInput(e.target.value);
+                    const value = Number(e.target.value);
+                    setMeta((m) => ({ ...m, original_fps: Number.isFinite(value) && value > 0 ? value : undefined }));
+                  }} className="w-16 rounded-md px-1 py-0.5" style={fieldStyle} inputMode="decimal" />
                 </label>
               )}
               {result && (
@@ -484,11 +509,19 @@ export default function LabelPage() {
                 Clear all
               </button>
               <button type="button" className={buttonClass} style={{ ...buttonStyle, background: COBALT, color: "#fff", borderColor: COBALT }}
-                disabled={!confirmed} onClick={() => download(saveName, toLabelFile(labels, meta))}>
+                disabled={!confirmed || hashBusy || !meta.recording_sha256 || !meta.original_fps || !meta.source_id?.trim()} onClick={() => download(saveName, toLabelFile(labels, meta))}>
                 Download labels
               </button>
             </div>
           </div>
+          <p className="text-sm mb-3" style={{ color: WHITE_SUB }}>
+            {hashBusy ? "Computing recording identity…" : `SHA-256: ${meta.recording_sha256 ?? "not available"}`}
+            {!meta.original_fps && " · Enter original FPS to enable export. Coarse timestamps are never automatically refined."}
+          </p>
+          <label className="block text-sm mb-3" style={{ color: WHITE_DIM }}>Source recording ID (same ID for cuts of one recording)
+            <input className="mt-1 w-full rounded-md px-2 py-1" style={fieldStyle} value={meta.source_id ?? ""}
+              onChange={(e) => setMeta((m) => ({ ...m, source_id: e.target.value }))} />
+          </label>
           <div className="grid gap-2 sm:grid-cols-2 mb-3">
             <label className="text-sm" style={{ color: WHITE_DIM }}>Labelled by
               <input className="mt-1 w-full rounded-md px-2 py-1" style={fieldStyle} value={meta.labelled_by}

@@ -20,6 +20,8 @@ import sys
 from collections import Counter
 from typing import Dict, List
 
+from .precise_scoring import evaluate_precise
+
 MARGIN_S = 0.35
 # Older results used these names for what is now one type.
 ALIASES = {"third_shot_drop": "drop"}
@@ -93,6 +95,10 @@ def evaluate(result: dict, labels: dict) -> Dict[str, object]:
 
 
 def main(argv: List[str]) -> int:
+    if len(argv) == 3 and argv[0] == "--strict":
+        report = evaluate_precise(json.load(open(argv[1])), json.load(open(argv[2])))
+        print(json.dumps(report, indent=2, allow_nan=False))
+        return 0
     if len(argv) != 2:
         print(__doc__)
         return 2

@@ -1,0 +1,3 @@
+source_id,sha256,path,original_fps,duration_s,partition,label_path,label_version,consent_status
+TestVideoKirk_REAL,739e11d3e0556f200ec7746cfed188f26eeba31a6ea0bca973c84a389ec0253d,../TestVideoKirk_REAL.mp4,29.93253202505007,51.24858794826376,development,TestVideoKirk_REAL.labels.json,legacy-coarse-v1,unknown
+PickleballVideo,b13ef80a202ddf0d4469b59c7919b87ede5712a87ee66c87e6363ac1b2eab88e,../PickleballVideo.mp4,59.95198265329751,51.658008008008004,evaluation,,,unknown

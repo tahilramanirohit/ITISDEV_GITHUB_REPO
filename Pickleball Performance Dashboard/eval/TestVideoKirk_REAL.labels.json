@@ -1,4 +1,8 @@
 {
+  "recording_sha256": "739e11d3e0556f200ec7746cfed188f26eeba31a6ea0bca973c84a389ec0253d",
+  "original_fps": 29.93253202505007,
+  "source_id": "TestVideoKirk_REAL",
+  "label_version": "legacy-coarse-v1",
   "video": "TestVideoKirk_REAL.mp4",
   "labelled_by": "PicklePro team (Claude_PickleballTest.pdf), 29 Sep 2026",
   "time_resolution_s": 1.0,

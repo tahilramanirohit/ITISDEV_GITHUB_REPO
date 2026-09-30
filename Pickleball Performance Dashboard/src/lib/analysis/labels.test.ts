@@ -91,3 +91,28 @@ describe("from a PicklePro result", () => {
     expect(drafts[0]).toMatchObject({ t: 1, player: 2, type: "unclassified", draft: true });
   });
 });
+
+describe("v2 recording identity", () => {
+  it("round trips hash/FPS/source/version without upgrading coarse timestamps", () => {
+    const identity = { recording_sha256: "a".repeat(64), original_fps: 29.93253202505007,
+      source_id: "kirk-real-development", label_version: "v2-1" };
+    const parsed = parseLabelFile({ video: "clip.mp4", ...identity, time_resolution_s: 1,
+      shots: [{ t: 18, player: 2, type: "drive" }] });
+    expect(parsed.meta).toMatchObject(identity);
+    const exported = toLabelFile(parsed.labels, parsed.meta);
+    expect(exported).toMatchObject(identity);
+    expect(exported.shots[0].resolution_s).toBe(1);
+  });
+
+  it("does not turn imported drafts into confirmed labels", () => {
+    const parsed = parseLabelFile({ time_resolution_s: .1,
+      shots: [{ t: 1, player: 1, type: "drive", confirmed: false },
+              { t: 2, player: 1, type: "dink", draft: true }] });
+    expect(toLabelFile(parsed.labels, parsed.meta).shots).toEqual([]);
+  });
+
+  it("rejects malformed recording identity", () => {
+    expect(() => parseLabelFile({ recording_sha256: "invalid", shots: [] })).toThrow(LabelFileError);
+    expect(() => parseLabelFile({ original_fps: 0, shots: [] })).toThrow(LabelFileError);
+  });
+});

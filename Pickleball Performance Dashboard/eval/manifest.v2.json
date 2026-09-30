@@ -1,0 +1,27 @@
+{
+  "manifest_version": "v2-1",
+  "recordings": [
+    {
+      "source_id": "TestVideoKirk_REAL",
+      "sha256": "739e11d3e0556f200ec7746cfed188f26eeba31a6ea0bca973c84a389ec0253d",
+      "path": "../TestVideoKirk_REAL.mp4",
+      "original_fps": 29.93253202505007,
+      "duration_s": 51.24858794826376,
+      "partition": "development",
+      "label_path": "TestVideoKirk_REAL.labels.json",
+      "label_version": "legacy-coarse-v1",
+      "consent_status": "unknown"
+    },
+    {
+      "source_id": "PickleballVideo",
+      "sha256": "b13ef80a202ddf0d4469b59c7919b87ede5712a87ee66c87e6363ac1b2eab88e",
+      "path": "../PickleballVideo.mp4",
+      "original_fps": 59.95198265329751,
+      "duration_s": 51.658008008008004,
+      "partition": "evaluation",
+      "label_path": null,
+      "label_version": null,
+      "consent_status": "unknown"
+    }
+  ]
+}

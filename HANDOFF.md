@@ -1,12 +1,24 @@
 # HANDOFF: PicklePro shot and ball detection (for the next AI or developer)
 
+
+## Current v2 work — 1 October 2026 (overrides older branch/next-step guidance below)
+
+- Work only on **`integrated-v2`**, created from integrated commit `f3d3c3b`. No deploys, default changes, raw-video/checkpoint commits, fine-tuning or classifier training. User adviser sign-off confirmation gates Phase 3/4 training; TrackNet investigation only is allowed before it, with no integration.
+- Approved order: **evaluation foundation → 30-FPS retune → ball model → hit classifier**. Measure the cheap change first. [V2 evaluation protocol and run instructions](docs/V2_EVALUATION.md) are authoritative for this work; older coarse-label scores below remain historical development results.
+- Phase 1: JSON/CSV split manifests; source/hash/FPS-linked label exports that preserve coarse labels; fixed 0.2-second time-only maximum-pair/minimum-error scorer; class confusion/F1/support, timing/unmatched/unknown rates; provenance benchmark runner; **26-contact frame-stepping queue, all initially unconfirmed** at `/Users/kiro/Desktop/THESIS/output/contact-review-v2/index.html`. The queue was the first concrete task after the scorer. Human review is required, including the two old negatives separately; no contacts were confirmed by the agent.
+- `PickleballVideo.mp4` is candidate evaluation only and is rejected by the tuning selector before file access. One held-out recording is insufficient for thesis claims: **target 2–3**. Consent is explicitly unknown in both manifest rows.
+- Frozen Phase 2 gate: recall +≥5 percentage points, precision loss ≤2 points, median runtime of 3 runs ≤2.2× baseline, on identical verified development data/checkpoints/hardware. Failed gate retains baseline. Phase 3: near-contact visible-ball recall +≥5 points, precision loss ≤2 points, neighboring-court FP/min ≤YOLO, runtime ≤2.5×YOLO, with fixed localization threshold and labeled subset detailed in the protocol. No comparison has run; coarse labels block it.
+- **Data plan:** ~300 verified contacts plus ~300–600 negatives: budget 12–18 short development clips across 4–6 recording sessions, plus 2–3 separate held-out recordings. Estimated 12–20 primary-labeler hours, 3–5 hours from a **required second labeler** for an independent 20–25% subset, and 2–4 adjudication hours (17–29 person-hours total), plus 2–4 collection/consent hours. The existing 26 coarse contacts count as zero verified until human review. Estimates and assumptions are in the protocol.
+- Verification on 1 October: frontend **98 tests**, TypeScript and production build passed; backend **201 passed**, 1 long synthetic positioning test deselected (per existing check instructions). Queue browser check showed 0/26 confirmed and one-frame stepping. Strict coarse-label rejection and held-out tuning rejection were checked; no inference benchmark run.
+- Replay cache/rule sweeps belong to Phase 2. Training/model integration and broad workflow automation are deferred. No new detection accuracy claim.
+
 Paste this file into a new AI session to continue the work. It covers the state of the computer-vision work on **`integration/consolidated-cv`** as of 30 September 2026, what was tried, what was measured, and what to do next.
 
 For installing, running the website, the local prototype and the worker, read [PICKLEPRO_RUN_AND_HANDOFF.md](PICKLEPRO_RUN_AND_HANDOFF.md) (Kirk's run guide). This file does not repeat it.
 
 ## Ground rules (do not break these)
 
-- **Branches.** Work on `integration/consolidated-cv`. `picklepro-coaching` is the older app branch; `main` may be behind both. Kirk Orino pushes to the same branch: `git fetch` and **merge** before pushing. Never rebase or force-push other people's commits.
+- **Branches.** Current work is on `integrated-v2`; the integrated baseline is `integration/consolidated-cv`. `picklepro-coaching` is the older app branch; `main` may be behind both. Kirk Orino pushes to the same branch: `git fetch` and **merge** before pushing. Never rebase or force-push other people's commits.
 - **Secrets.**
   - Never put the Supabase service-role key (or any `sb_secret_…` key) in a `VITE_` variable or in browser code. The website uses only `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `.env.local`. The worker uses `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in `server/.env`.
   - Never commit `.env`, `.env.local` or model weights (`server/models/`).
