@@ -44,6 +44,7 @@ MAX_SHARED_FRAMES = 1
 ON_COURT_SIDE_MARGIN_M = 0.9   # referees stand just outside a sideline
 ON_COURT_END_MARGIN_M = 3.5
 MIN_ON_COURT_SHARE = 0.5
+MAX_PLAYERS_PER_SIDE = 2          # doubles; a singles match simply has one
 THUMB_HEIGHT = 128
 SLIVER_FRAMES = 30               # about 3 s at 10 samples per second
 SLIVER_MAX_COLOUR_DISTANCE = 0.6
@@ -175,7 +176,7 @@ class PlayerCollector:
             del groups[j]
         groups = _absorb_slivers(groups)
 
-        summaries = [_summary(g) for g in groups]
+        summaries = _limit_per_side([_summary(g) for g in groups])
         # Stable, readable numbering: players on court by side and position, then everyone else.
         def order(s):
             on, side, pos, g = s
@@ -242,6 +243,54 @@ def _on_court(pieces: Sequence[_Piece]) -> bool:
 
 def _summary(g: List[_Piece]):
     return (_on_court(g), _side(g), _median_pos(g), g)
+
+
+def _colour_distance(a: List[_Piece], b: List[_Piece]) -> float:
+    ha = [p.mean_hist() for p in a if p.mean_hist() is not None]
+    hb = [p.mean_hist() for p in b if p.mean_hist() is not None]
+    if not ha or not hb:
+        return 1.0
+    return float(cv2.compareHist(np.mean(ha, axis=0).astype(np.float32), np.mean(hb, axis=0).astype(np.float32),
+                                 cv2.HISTCMP_BHATTACHARYYA))
+
+
+def _limit_per_side(summaries):
+    """At most MAX_PLAYERS_PER_SIDE players on each side of the net, per camera view.
+
+    A doubles court holds four players. The two most-seen on each side are
+    kept; any other on-court piece is the same person seen again (the tracker
+    lost them), so it joins the kept player whose clothes match best, as long
+    as the two are never seen at the same moment. A piece that overlaps both
+    kept players in time is someone else (a coach, a ball fetcher) and is set
+    aside as off court.
+    """
+    out = list(summaries)
+    buckets: Dict[Tuple[frozenset, Optional[str]], List[int]] = {}
+    for i, (on, side, _pos, g) in enumerate(out):
+        if on:
+            buckets.setdefault((frozenset(p.segment for p in g), side), []).append(i)
+    dropped: set = set()
+    for idx in buckets.values():
+        if len(idx) <= MAX_PLAYERS_PER_SIDE:
+            continue
+        idx.sort(key=lambda i: -sum(len(p.frames) for p in out[i][3]))
+        kept, extra = idx[:MAX_PLAYERS_PER_SIDE], idx[MAX_PLAYERS_PER_SIDE:]
+        for e in extra:
+            e_frames = {f for p in out[e][3] for f in p.frames}
+            options = []
+            for k in kept:
+                k_frames = {f for p in out[k][3] for f in p.frames}
+                if len(e_frames & k_frames) <= MAX_SHARED_FRAMES:
+                    options.append((_colour_distance(out[e][3], out[k][3]), k))
+            if options:
+                _d, k = min(options)
+                g = sorted(out[k][3] + out[e][3], key=lambda p: p.start)
+                out[k] = _summary(g)
+                dropped.add(e)
+            else:
+                on, side, pos, g = out[e]
+                out[e] = (False, side, pos, g)
+    return [s for i, s in enumerate(out) if i not in dropped]
 
 
 def _label(on: bool, side: Optional[str], pos: Optional[Tuple[float, float]]) -> str:

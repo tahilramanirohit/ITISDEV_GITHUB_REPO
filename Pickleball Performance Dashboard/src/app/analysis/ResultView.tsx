@@ -105,7 +105,9 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
   const shotMetric = result.metrics.shot_classification;
   const shotDisplayResult = experimentalReview ? result : publicShotResult(result);
   const shotsValidated = result.data_origin === "measured" && shotMetric.validation === "evaluated_on_real_footage";
-  const allowShotDisplay = experimentalReview || shotsValidated;
+  // Team direction (30 Sep 2026): show shot estimates in saved reports too,
+  // marked experimental until they pass evaluation on labelled real footage.
+  const allowShotDisplay = true;
   const shotsShown = allowShotDisplay && !!shotMetric.value?.shots.length;
   const analysedId = sel?.method === "track_id" ? sel.track_id : null;
   const [myPlayerId, setMyPlayerId] = useMyPlayer(
@@ -137,7 +139,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
           <Pill color={devMock ? ORANGE : result.status === "ok" ? NEON : ORANGE}>
             {devMock ? "SAMPLE" : result.status === "ok" ? "RESULT" : "INSUFFICIENT DATA"}
           </Pill>
-          {experimentalReview && <button type="button" onClick={() => downloadResult(result)} className="ml-auto text-sm font-semibold underline"
+          {result.data_origin === "measured" && <button type="button" onClick={() => downloadResult(result)} className="ml-auto text-sm font-semibold underline"
             style={{ color: BLUE_SKY }} title="For the Label shots page and for scoring shot detection">
             Download research result (JSON)
           </button>}
@@ -249,7 +251,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
       <section aria-labelledby="video-heading" className="space-y-3">
         <div>
           <h2 id="video-heading" className="text-lg font-bold text-[#101827]">Watch your video</h2>
-          <p className="text-base" style={{ color: WHITE_DIM }}>Press play to review the recording. Player boxes, observed ball positions and court lines are shown when available.{shotsValidated ? " Evaluated shot estimates are also shown." : experimentalReview ? " Experimental shot suggestions are also shown." : " Shot labels remain hidden until validated."}</p>
+          <p className="text-base" style={{ color: WHITE_DIM }}>Press play to review the recording. Player boxes, observed ball positions and court lines are shown when available.{shotsValidated ? " Evaluated shot estimates are also shown." : " Experimental shot estimates are also shown; check them against the video."}</p>
         </div>
         {videoUrl && onSelectTrack && result.tracks.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">

@@ -147,10 +147,13 @@ describe("ResultView", () => {
         last_seen_s: 5, observed_frames: 20, median_court_m: [-2, 6], thumbnail: null },
     ];
     window.localStorage.clear();
+    // A saved player report shows the same estimates, marked experimental.
     const report = render(<ResultView result={parseAnalysisResult(result)} videoUrl="/demo.mp4" />);
-    expect(screen.queryByRole("tab", { name: "All players (4)" })).toBeNull();
-    expect(screen.queryByRole("table", { name: "Shots by player" })).toBeNull();
+    expect(screen.getByRole("tab", { name: "All players (4)" })).toBeTruthy();
+    expect(screen.getAllByText("EXPERIMENTAL").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: /Watch the serve at 0:01/ })).toBeTruthy();
     report.unmount();
+    window.localStorage.clear();
     render(<ResultView result={parseAnalysisResult(result)} videoUrl="/demo.mp4" experimentalReview />);
     expect(screen.getByText("The selected player was tracked.")).toBeTruthy();
     expect(screen.queryByText(/4 hits were estimated/)).toBeNull();

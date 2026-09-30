@@ -63,7 +63,9 @@ The person model (`yolo11n.pt`, COCO person class) runs at 1280 px so that playe
 - They are plausibly close in time and place.
 - Their shirt and shorts colours match. The colour signature includes brightness, which separates black and white shirts.
 
-Very short sightings are folded into the matching player on the same side. People standing mostly off the court (a referee, spectators) are listed separately and never counted as hitters. The app shows a photo of each player so you can pick yourself; "My shots" then shows only your shots.
+Very short sightings are folded into the matching player on the same side. **A side never has more than two players** (doubles): within one camera view, the two people seen most on each side are the players, and any other on-court piece is joined to the one whose clothes match best, as long as the two are never seen at the same moment. Someone on court alongside both players (a coach, a ball fetcher) is set aside. People standing mostly off the court (a referee, spectators) are listed separately, are not drawn on the video, and are never counted as hitters.
+
+**Ball outside the court.** Keeping only ball detections over the court was tested (30 Sep 2026) and not adopted. With the camera just behind the baseline, every line of sight passes through the space above the near court, so a 3-D check rejected nothing. A picture-based boundary rejected 100 of 251 ball points, mostly real high balls, because a ball in the air appears above the narrower far court. Look-alikes outside play are instead removed because they do not move like a ball in flight. The app shows a photo of each player so you can pick yourself; "My shots" then shows only your shots.
 
 ## Labelling a clip
 
