@@ -3,6 +3,8 @@
 
 export type AppConfig = {
   supabase: { url: string; anonKey: string } | null;
+  /** Why `supabase` is null, in plain words; empty when it is configured. */
+  supabaseProblems: string[];
   maxUploadBytes: number;
   cvBackendUrl: string;
   /** Sample-data dashboard. Never on in a production build unless explicitly enabled. */
@@ -28,14 +30,45 @@ type EnvLike = Record<string, string | boolean | undefined>;
 export const DEFAULT_MAX_UPLOAD_MB = 50;
 export const FREE_MAX_UPLOAD_MB = 50;
 
+/** The `role` inside a Supabase JWT key, if the key is one. */
+function jwtRole(key: string): string | null {
+  const part = key.split(".")[1];
+  if (!part) return null;
+  try {
+    const json = JSON.parse(atob(part.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(part.length / 4) * 4, "=")));
+    return typeof json?.role === "string" ? json.role : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Plain-language reasons the Supabase settings cannot be used. */
+export function supabaseProblems(url: string, anonKey: string): string[] {
+  const problems: string[] = [];
+  if (!url) {
+    problems.push("VITE_SUPABASE_URL is missing or empty.");
+  } else if (!/^https?:\/\/[^\s<>]+$/.test(url) || url.includes("your-project")) {
+    problems.push(`VITE_SUPABASE_URL is not a web address (it should look like https://abcdefghijkl.supabase.co).`);
+  }
+  if (!anonKey) {
+    problems.push("VITE_SUPABASE_ANON_KEY is missing or empty.");
+  } else if (anonKey.startsWith("sb_secret_") || jwtRole(anonKey) === "service_role") {
+    // Anything in a VITE_ variable is sent to every visitor's browser.
+    problems.push("VITE_SUPABASE_ANON_KEY holds the secret service-role key. Use the public anon key; the service-role key belongs only in server/.env.");
+  }
+  return problems;
+}
+
 export function getConfig(env: EnvLike): AppConfig {
-  const url = String(env.VITE_SUPABASE_URL ?? "").trim();
-  const anonKey = String(env.VITE_SUPABASE_ANON_KEY ?? "").trim();
+  const url = String(env.VITE_SUPABASE_URL ?? "").trim().replace(/^["']|["']$/g, "");
+  const anonKey = String(env.VITE_SUPABASE_ANON_KEY ?? "").trim().replace(/^["']|["']$/g, "");
+  const problems = supabaseProblems(url, anonKey);
   const dev = env.DEV === true || env.DEV === "true";
   const mb = Number(env.VITE_MAX_UPLOAD_MB ?? DEFAULT_MAX_UPLOAD_MB);
   const safeMb = Number.isFinite(mb) && mb > 0 ? Math.min(mb, FREE_MAX_UPLOAD_MB) : DEFAULT_MAX_UPLOAD_MB;
   return {
-    supabase: url && anonKey ? { url: url.replace(/\/+$/, ""), anonKey } : null,
+    supabase: problems.length === 0 ? { url: url.replace(/\/+$/, ""), anonKey } : null,
+    supabaseProblems: problems,
     maxUploadBytes: Math.round(safeMb * 1_000_000),
     cvBackendUrl: String(env.VITE_CV_BACKEND_URL ?? "http://localhost:8000").replace(/\/+$/, ""),
     designPreviewEnabled: dev || env.VITE_ENABLE_DESIGN_PREVIEW === "true",

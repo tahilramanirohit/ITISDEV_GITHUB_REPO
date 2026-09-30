@@ -36,10 +36,35 @@ function SetupRequired({ cfg }: { cfg: AppConfig }) {
     <AppShell nav={<DevLinks cfg={cfg} />}>
       <Card accent={ORANGE}>
         <WidgetHeader title="Supabase is not configured" subtitle="Accounts, sessions and uploads need a Supabase project." accent={ORANGE} />
+        {cfg.supabaseProblems.length > 0 && (
+          <div className="mb-3">
+            <Notice tone="warn">
+              <strong>What is wrong:</strong>
+              <ul className="list-disc pl-5 mt-1">
+                {cfg.supabaseProblems.map((p) => <li key={p}>{p}</li>)}
+              </ul>
+            </Notice>
+          </div>
+        )}
         <ol className="text-sm space-y-2 list-decimal pl-5" style={{ color: WHITE_DIM }}>
-          <li>Copy <code>.env.example</code> to <code>.env.local</code> in the dashboard folder.</li>
-          <li>Set <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code> (public anon key only).</li>
-          <li>Apply the migrations in <code>supabase/migrations</code> and restart <code>npm run dev</code>.</li>
+          <li>
+            Open <code>Pickleball Performance Dashboard\.env.local</code> (the dashboard folder, not the repository
+            root or <code>server</code>). If it does not exist, copy <code>.env.example</code> to that name.
+          </li>
+          <li>
+            Fill in both lines with values from the Supabase dashboard, <em>Project Settings → API</em>:
+            <pre className="mt-1 rounded-lg p-2 text-xs overflow-x-auto" style={{ background: "#f3f4f6" }}>
+{`VITE_SUPABASE_URL=https://<project-ref>.supabase.co
+VITE_SUPABASE_ANON_KEY=<the "anon" public key>`}
+            </pre>
+            The names must start with <code>VITE_</code>. Never use the service-role key here.
+          </li>
+          <li>
+            On Windows, check that Notepad did not save the file as <code>.env.local.txt</code>: in File Explorer, turn on
+            <em> View → File name extensions</em>, and rename it if needed.
+          </li>
+          <li>Stop the website (Ctrl+C) and start it again (<code>start_website.bat</code> or <code>npm run dev</code>). Changes to this file only apply after a restart.</li>
+          <li>The Supabase project needs this repository's migrations applied once (see docs/SUPABASE_SETUP.md).</li>
         </ol>
         <p className="text-sm mt-4" style={{ color: WHITE_SUB }}>See docs/SUPABASE_SETUP.md. No sample results are shown in place of real ones.</p>
       </Card>

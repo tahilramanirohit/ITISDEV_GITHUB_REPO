@@ -72,7 +72,7 @@ The command explicitly disables automatic model discovery so this smoke test is 
 
 ## Optional: saved Sessions and uploads
 
-Saved Sessions require a **deliberately selected** Supabase project with the repository's migrations, a public project URL and anon key in `Pickleball Performance Dashboard/.env.local`, and a trusted worker machine with the project URL and service-role key in `Pickleball Performance Dashboard/server/.env`. Keep the service-role key out of browser variables and Git. See [Supabase setup](docs/SUPABASE_SETUP.md) before changing a database; a code checkout does not apply migrations.
+Saved Sessions require a **deliberately selected** Supabase project with the repository's migrations, a public project URL and anon key in `Pickleball Performance Dashboard/.env.local` (`VITE_SUPABASE_URL=https://<project-ref>.supabase.co` and `VITE_SUPABASE_ANON_KEY=<anon key>` from the dashboard's Project Settings → API; restart the website after editing, and if the home page says "Supabase is not configured" it lists which value is missing or wrong), and a trusted worker machine with the project URL and service-role key in `Pickleball Performance Dashboard/server/.env`. Keep the service-role key out of browser variables and Git. See [Supabase setup](docs/SUPABASE_SETUP.md) before changing a database; a code checkout does not apply migrations.
 
 From `server/`, check the worker configuration and start actual analysis:
 

@@ -160,7 +160,7 @@ The local prototype (`#/local-prototype`) shows the same kind of bar: first the 
 
 | What you see | What to do |
 | --- | --- |
-| "Supabase is not configured" | `.env.local` is missing or empty. See step 3, then restart `start_website.bat`. |
+| "Supabase is not configured" | The page now says what is wrong. Usually `Pickleball Performance Dashboard\.env.local` is missing, still the empty template, saved as `.env.local.txt`, or uses names without `VITE_` (copied from `server\.env`). Fill in `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (step 3), then restart `start_website.bat`; the batch file checks both values before starting. |
 | Sign-in says the email or password is wrong | You are using the Supabase dashboard login. Use your PicklePro account (step 5). |
 | Upload stays on **Waiting** | No worker is running. Start `server\start_worker.bat` on one computer. |
 | The worker says the projects don't match | `server\.env` and `.env.local` name different Supabase projects. Copy both from the same place. |

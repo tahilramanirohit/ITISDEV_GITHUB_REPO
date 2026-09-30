@@ -25,6 +25,7 @@ describe("application entry point", () => {
     render(<App cfg={prodConfig} sb={null} />);
     expect(await screen.findByText("Supabase is not configured")).toBeTruthy();
     expect(screen.queryByText(/Design preview/)).toBeNull();
+    expect(screen.getByText("VITE_SUPABASE_URL is missing or empty.")).toBeTruthy();
     expectNoSampleData();
   });
 

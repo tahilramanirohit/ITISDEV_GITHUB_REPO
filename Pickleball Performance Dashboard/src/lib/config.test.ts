@@ -42,3 +42,33 @@ describe("getConfig", () => {
     expect(getConfig({ VITE_TRIAL_NO_WORKER: "true" }).trialNoWorker).toBe(true);
   });
 });
+
+describe("Supabase settings", () => {
+  const jwt = (role: string) => `x.${btoa(JSON.stringify({ iss: "supabase", role })).replace(/=+$/, "")}.sig`;
+  const url = "https://abcdefghijkl.supabase.co";
+
+  it("is configured with a URL and the public anon key", () => {
+    const cfg = getConfig({ VITE_SUPABASE_URL: `${url}/`, VITE_SUPABASE_ANON_KEY: jwt("anon") });
+    expect(cfg.supabase).toEqual({ url, anonKey: jwt("anon") });
+    expect(cfg.supabaseProblems).toEqual([]);
+  });
+
+  it("names each missing value", () => {
+    expect(getConfig({}).supabaseProblems).toEqual([
+      "VITE_SUPABASE_URL is missing or empty.", "VITE_SUPABASE_ANON_KEY is missing or empty.",
+    ]);
+  });
+
+  it("refuses the secret service-role key in the browser", () => {
+    for (const key of [jwt("service_role"), "sb_secret_abc123"]) {
+      const cfg = getConfig({ VITE_SUPABASE_URL: url, VITE_SUPABASE_ANON_KEY: key });
+      expect(cfg.supabase).toBeNull();
+      expect(cfg.supabaseProblems[0]).toMatch(/service-role/);
+    }
+  });
+
+  it("rejects a URL that is not a web address and tolerates quotes", () => {
+    expect(getConfig({ VITE_SUPABASE_URL: "abcdefghijkl", VITE_SUPABASE_ANON_KEY: jwt("anon") }).supabase).toBeNull();
+    expect(getConfig({ VITE_SUPABASE_URL: `"${url}"`, VITE_SUPABASE_ANON_KEY: `'${jwt("anon")}'` }).supabase?.url).toBe(url);
+  });
+});
