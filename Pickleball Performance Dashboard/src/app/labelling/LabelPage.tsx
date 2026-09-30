@@ -13,7 +13,7 @@ const typeColor = (t: LabelType) => (t === "not_a_shot" ? NOT_A_SHOT_COLOR : SHO
 const PLAYER_COLORS = ["#66707c", "#293df2", "#0f766e", "#ad2545", "#b5651d", "#6543a4", "#1f7a4d", "#9f1239", "#4f5fd6", "#a94318"];
 const playerColor = (p: number | null) => PLAYER_COLORS[(p ?? 0) % PLAYER_COLORS.length];
 
-type Meta = { video: string; labelled_by: string; notes: string; players?: Record<string, string> };
+type Meta = { video: string; labelled_by: string; notes: string; identity_scheme?: "human"; players?: Record<string, string>; tracker_mapping?: Record<string, number> };
 type Saved = { labels: ShotLabel[]; meta: Meta };
 
 const storageKey = (file: File) => `picklepro:labels:${file.name}:${file.size}`;
@@ -58,7 +58,7 @@ export default function LabelPage() {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [result, setResult] = useState<AnalysisResultV1 | null>(null);
   const [labels, setLabels] = useState<ShotLabel[]>([]);
-  const [meta, setMeta] = useState<Meta>({ video: "", labelled_by: "", notes: "" });
+  const [meta, setMeta] = useState<Meta>({ video: "", labelled_by: "", notes: "", identity_scheme: "human" });
   const [player, setPlayer] = useState<number | null>(1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [now, setNow] = useState(0);
@@ -83,10 +83,11 @@ export default function LabelPage() {
   }, [videoFile, labels, meta]);
 
   const players = useMemo(() => {
-    const fromResult = (result?.players ?? []).filter((p) => p.on_court);
-    if (fromResult.length) return fromResult.map((p) => ({ id: p.player_id, label: p.label, thumbnail: p.thumbnail }));
-    return [1, 2, 3, 4].map((id) => ({ id, label: meta.players?.[String(id)] ?? `Player ${id}`, thumbnail: null as string | null }));
-  }, [result, meta.players]);
+    return [1, 2, 3, 4].map((id) => {
+      const tracked = (result?.players ?? []).find((p) => p.player_id === meta.tracker_mapping?.[String(id)]);
+      return { id, label: meta.players?.[String(id)] ?? `Person ${id}`, thumbnail: tracked?.thumbnail ?? null };
+    });
+  }, [result, meta.players, meta.tracker_mapping]);
 
   // ── Loading files ────────────────────────────────────────────────────────
   function onVideo(e: ChangeEvent<HTMLInputElement>) {
@@ -100,7 +101,8 @@ export default function LabelPage() {
       setMeta({ ...saved.meta, video: file.name });
       setMessage({ tone: "info", text: `Restored ${saved.labels.length} labels saved in this browser for ${file.name}.` });
     } else {
-      setMeta((m) => ({ ...m, video: file.name }));
+      setLabels([]);
+      setMeta({ video: file.name, labelled_by: meta.labelled_by, notes: "", identity_scheme: "human" });
       setMessage(null);
     }
   }
@@ -112,9 +114,8 @@ export default function LabelPage() {
       const parsed = parseAnalysisResult(await readJson(file));
       setResult(parsed);
       const onCourt = (parsed.players ?? []).filter((p) => p.on_court);
-      if (onCourt.length) setPlayer(onCourt[0].player_id);
       const n = parsed.metrics.shot_classification.value?.shots.length ?? 0;
-      setMessage({ tone: "info", text: `Loaded the PicklePro result: ${onCourt.length} players, ${n} detected shots. Player boxes and IDs are drawn on the video.` });
+      setMessage({ tone: "info", text: `Loaded the PicklePro result: ${onCourt.length} tracks, ${n} detected shots. Match tracker IDs to your person labels below before scoring hitter accuracy.` });
     } catch (err) {
       const why = err instanceof ContractError || err instanceof SyntaxError ? err.message : String(err);
       setMessage({ tone: "error", text: `That file is not a PicklePro result: ${why}` });
@@ -128,10 +129,12 @@ export default function LabelPage() {
     try {
       const { labels: loaded, meta: m } = parseLabelFile(await readJson(file));
       setLabels(loaded);
-      setMeta({ video: videoFile?.name ?? m.video, labelled_by: m.labelled_by, notes: m.notes, players: m.players });
+      setMeta({ video: videoFile?.name ?? m.video, labelled_by: m.labelled_by, notes: m.notes,
+        identity_scheme: m.identity_scheme, players: m.players, tracker_mapping: m.tracker_mapping });
       const rough = loaded.filter((l) => l.resolution_s > 0.2).length;
-      setMessage({ tone: rough ? "warn" : "info", text: `Loaded ${loaded.length} labels.` + (rough
-        ? ` ${rough} have whole-second times: select each one, find the exact contact frame, and press "Move here".` : "") });
+      setMessage({ tone: rough || !m.identity_scheme ? "warn" : "info", text: `Loaded ${loaded.length} labels.` + (rough
+        ? ` ${rough} have whole-second times: select each one, find the exact contact frame, and press "Move here".` : "") +
+        (!m.identity_scheme ? " This older file treats player numbers as tracker IDs; keep using those IDs for this file." : "") });
     } catch (err) {
       const why = err instanceof LabelFileError || err instanceof SyntaxError ? err.message : String(err);
       setMessage({ tone: "error", text: `Could not read the labels file: ${why}` });
@@ -141,7 +144,7 @@ export default function LabelPage() {
 
   function addSuggestions() {
     if (!result) return;
-    const extra = draftsFromResult(result, labels, fps);
+    const extra = draftsFromResult(result, labels, fps, meta.tracker_mapping);
     setLabels((ls) => sortLabels([...ls, ...extra]));
     setMessage({ tone: "info", text: `Added ${extra.length} suggestions from PicklePro's detections (dashed). Check each one: fix the player or type, press Enter to confirm, or Delete to remove it.` });
   }
@@ -411,16 +414,33 @@ export default function LabelPage() {
                   </button>
                 ))}
               </div>
-              {!result && (
-                <label className="block text-xs mt-2" style={{ color: WHITE_SUB }}>
-                  Describe the players (saved in the file), e.g. "1 = near left, black shirt":
+              <label className="block text-xs mt-2" style={{ color: WHITE_SUB }}>
+                  Describe people independently of tracker IDs, e.g. "1 = near left, black shirt":
                   <input className="mt-1 w-full rounded-md px-2 py-1 text-sm" style={fieldStyle}
                     value={Object.entries(meta.players ?? {}).map(([k, v]) => `${k} = ${v}`).join("; ")}
                     onChange={(e) => setMeta((m) => ({ ...m, players: Object.fromEntries(e.target.value.split(";")
                       .map((part) => part.split("=").map((s) => s.trim())).filter(([k, v]) => k && v && /^\d+$/.test(k))
                       .map(([k, v]) => [k, v])) }))} />
-                </label>
-              )}
+              </label>
+              {result && <div className="grid grid-cols-2 gap-2 text-xs" style={{ color: WHITE_SUB }}>
+                {players.map((p) => <label key={p.id}>Person {p.id} matches track
+                  <select className="ml-2 rounded px-1 py-1" style={fieldStyle}
+                    value={meta.tracker_mapping?.[String(p.id)] ?? ""}
+                    onChange={(e) => setMeta((m) => {
+                      const mapping = { ...m.tracker_mapping };
+                      if (e.target.value) mapping[String(p.id)] = Number(e.target.value);
+                      else delete mapping[String(p.id)];
+                      return { ...m, tracker_mapping: mapping };
+                    })}>
+                    <option value="">Unmapped</option>
+                    {(result.players ?? []).filter((person) => person.on_court).map((person) =>
+                      <option key={person.player_id} value={person.player_id}
+                        disabled={Object.entries(meta.tracker_mapping ?? {}).some(([human, track]) => human !== String(p.id) && track === person.player_id)}>
+                        Track {person.player_id} ({person.label})
+                      </option>)}
+                  </select>
+                </label>)}
+              </div>}
             </Card>
 
             <Card>

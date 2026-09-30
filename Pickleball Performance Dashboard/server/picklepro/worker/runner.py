@@ -33,6 +33,7 @@ from typing import Literal, Optional
 
 from ..contract import AnalysisResultV1
 from ..court import CalibrationError, calibration_from_dict
+from ..court_review import checked_review
 from ..detection import DetectorUnavailable
 from ..pipeline import AnalysisOptions, analyze_video
 from ..spatial import Selection
@@ -91,7 +92,16 @@ class WorkerConfig:
 
 def options_from_params(params: dict, cfg: WorkerConfig, filename: Optional[str]) -> AnalysisOptions:
     """Translate a job's ``params`` JSON into pipeline options. Raises ValueError on bad input."""
-    calibration = calibration_from_dict(params["calibration"]) if params.get("calibration") else None
+    source = params.get("calibration_source")
+    if source not in (None, "user_confirmed"):
+        raise ValueError("Unsupported calibration source")
+    calibration = (checked_review(params["calibration"]) if source == "user_confirmed" else
+                   calibration_from_dict(params["calibration"])) if params.get("calibration") else None
+    if source == "user_confirmed" and calibration is None:
+        raise ValueError("Confirmed court correction needs calibration points")
+    frame_s = params.get("calibration_frame_s", 0.0)
+    if isinstance(frame_s, bool) or not isinstance(frame_s, (int, float)) or not math.isfinite(frame_s) or frame_s < 0:
+        raise ValueError("calibration_frame_s must be a non-negative number")
     sel = params.get("selection") or None
     selection = None
     if sel:
@@ -112,6 +122,7 @@ def options_from_params(params: dict, cfg: WorkerConfig, filename: Optional[str]
                            court_weights=cfg.court_weights, ball_weights=cfg.ball_weights,
                            target_fps=cfg.target_fps,
                            calibration=calibration, selection=selection, selection_time_s=selection_time_s,
+                           calibration_source=source, calibration_frame_s=frame_s,
                            experimental_zones=bool(params.get("experimental_zones")), source_filename=filename)
 
 
@@ -237,6 +248,8 @@ def process_one(store: JobStore, cfg: WorkerConfig, stop: Optional[threading.Eve
             return fail("low_quality_video", str(exc), False)
         except DetectorUnavailable as exc:
             return fail("detector_unavailable", f"Worker misconfiguration: {exc}", False)
+        except CalibrationError as exc:
+            return fail("invalid_court_correction", f"The corrected court could not be used: {exc}", False)
         except Interrupted:
             return fail("worker_interrupted", "The worker was stopped during processing; the job will be retried.", True)
         except Exception as exc:  # noqa: BLE001

@@ -16,6 +16,8 @@ import { hasUploadConsent, recordUploadConsent } from "../../lib/api/capture";
 import { BLUE_SKY, BORDER, DISPLAY_FONT, LAVENDER, NAVY, NEON, NEON_D, ORANGE, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Card, Notice } from "../shell/primitives";
 import { AnalysisParamsForm, ProgressBar, type AnalysisParams } from "../analysis/AnalysisStatus";
+import { CourtCorrection } from "../analysis/CourtCorrection";
+import { analysisJobParams, updatedJobParams, type CourtConfirmation } from "../../lib/analysis/courtReview";
 import { ResultView } from "../analysis/ResultView";
 import type { PreviousSession } from "../analysis/CoachingPanel";
 import { GoalFields } from "./GoalFields";
@@ -32,6 +34,11 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
   const [localUpload, setLocalUpload] = useState<LocalUpload>(null);
   const [params, setParams] = useState<AnalysisParams | null>({});
   const [paramsError, setParamsError] = useState<string | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [confirmedCourt, setConfirmedCourt] = useState<CourtConfirmation | null>(null);
+  const [reanalysisFile, setReanalysisFile] = useState<File | null>(null);
+  const [reanalysisCourt, setReanalysisCourt] = useState<CourtConfirmation | null>(null);
+  const [useAutomaticCourt, setUseAutomaticCourt] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [previous, setPrevious] = useState<PreviousSession | null>(null);
@@ -115,7 +122,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sessionKey tracks the fields used
   }, [sb, sessionKey, hasResult]);
 
-  async function onFileSelected(file: File) {
+  async function onFileSelected(file: File, court: CourtConfirmation) {
     if (!bundle || inFlight.current || !config.supabase || !params) return;
     setError("");
     if (!consentConfirmed && !consentChecked) return setError("Confirm recording consent before uploading.");
@@ -142,7 +149,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
       });
       await uploadRef.current.done;
       setLocalUpload({ phase: "finalizing", progress: 1 });
-      await finalizeUpload(sb, video.id, params as Record<string, unknown>);
+      await finalizeUpload(sb, video.id, analysisJobParams(params, court));
     } catch (e) {
       setError(`Upload failed: ${e instanceof Error ? e.message : String(e)}. Select the same file again to resume.`);
     } finally {
@@ -332,11 +339,22 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
             </label>}
             <label className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold cursor-pointer"
               style={{ background: params ? NEON : `${NEON}50`, color: NEON_D }}>
-              <Upload size={14} /> {state === "upload_incomplete" ? "Resume upload (select the same file)" : "Choose video & upload"}
+              <Upload size={14} /> {state === "upload_incomplete" ? "Resume upload (select the same file)" : "Choose video & review court"}
               <input type="file" accept="video/mp4,video/quicktime,video/webm,video/x-msvideo" className="hidden"
                 disabled={!params || !!localUpload}
-                onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void onFileSelected(f); }} />
+                onChange={(e) => {
+                  const f = e.target.files?.[0]; e.target.value = "";
+                  if (!f) return;
+                  const check = validateVideoFile(f, config.maxUploadBytes);
+                  if (!check.ok) { setError(check.error); return; }
+                  setError(""); setPendingFile(f); setConfirmedCourt(null);
+                }} />
             </label>
+            {pendingFile && <CourtCorrection key={`${pendingFile.name}:${pendingFile.size}`} file={pendingFile}
+              onConfirm={(court) => {
+                setConfirmedCourt(court); setPendingFile(null);
+                void onFileSelected(pendingFile, court);
+              }} onCancel={() => setPendingFile(null)} />}
             <p className="text-sm" style={{ color: WHITE_SUB }}>
               MP4, MOV, WEBM or AVI up to {formatBytes(config.maxUploadBytes)}. On the Free plan, choose a short rally clip and trim it on your device before uploading. Keep the clip at 720p, 30 fps or higher. Full-match uploads are not supported yet. Your upload is private.
             </p>
@@ -346,9 +364,9 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
             </details>
             {state === "upload_incomplete" && video && (
               <div className="flex flex-wrap gap-2">
-                <button type="button" disabled={busy} onClick={() => void run(() => finalizeUpload(sb, video.id, (params ?? {}) as Record<string, unknown>))}
+                <button type="button" disabled={busy || !confirmedCourt} onClick={() => void run(() => finalizeUpload(sb, video.id, analysisJobParams(params ?? {}, confirmedCourt!)))}
                   className="rounded-xl px-3 py-1.5 text-sm font-semibold disabled:opacity-40" style={{ color: BLUE_SKY, border: `1px solid ${BLUE_SKY}60` }}>
-                  Check if the upload finished
+                  Check if the upload finished{!confirmedCourt ? " (review the court first)" : ""}
                 </button>
                 <button type="button" disabled={busy} onClick={() => void run(() => removeVideo(sb, video))}
                   className="rounded-xl px-3 py-1.5 text-sm font-semibold disabled:opacity-40" style={{ color: ORANGE, border: `1px solid ${ORANGE}60` }}>
@@ -364,8 +382,30 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
             <summary className="text-sm font-semibold cursor-pointer" style={{ color: BLUE_SKY }}>Re-run analysis with different inputs</summary>
             <div className="mt-3 space-y-3">
               <AnalysisParamsForm onChange={(p, err) => { setParams(p); setParamsError(err); }} />
+              <p className="text-sm" style={{ color: WHITE_SUB }}>The saved court setup is kept unless you choose a new correction or automatic mapping.</p>
+              <label className="flex items-center gap-2 text-sm" style={{ color: WHITE_DIM }}>
+                <input type="checkbox" checked={useAutomaticCourt} onChange={(e) => { setUseAutomaticCourt(e.target.checked); setReanalysisCourt(null); setReanalysisFile(null); }} />
+                Use automatic court mapping instead
+              </label>
+              {!useAutomaticCourt && <label className="block text-sm" style={{ color: WHITE_DIM }}>
+                Correct the saved court using the same local video
+                <input type="file" accept="video/mp4,video/quicktime,video/webm,video/x-msvideo" className="mt-1 block text-sm"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] ?? null; e.target.value = "";
+                    if (!file) return;
+                    if (file.name.slice(0, 255) !== video?.original_filename || file.size !== video?.byte_size) {
+                      setError("Choose the same local video used for this upload to correct its court."); return;
+                    }
+                    setError(""); setReanalysisFile(file);
+                  }} />
+              </label>}
+              {reanalysisFile && !useAutomaticCourt && <CourtCorrection file={reanalysisFile}
+                onConfirm={(court) => { setReanalysisCourt(court); setReanalysisFile(null); }}
+                onCancel={() => setReanalysisFile(null)} />}
+              {reanalysisCourt && <Notice tone="info">New court correction ready for the next analysis run.</Notice>}
               <button type="button" disabled={busy || !params}
-                onClick={() => void run(() => requestReanalysis(sb, job.id, params as Record<string, unknown>))}
+                onClick={() => void run(() => requestReanalysis(sb, job.id,
+                  updatedJobParams(job.params, params ?? {}, reanalysisCourt, useAutomaticCourt)))}
                 className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold disabled:opacity-40"
                 style={{ background: BLUE_SKY, color: "#ffffff" }}>
                 <RefreshCw size={14} /> Re-run analysis

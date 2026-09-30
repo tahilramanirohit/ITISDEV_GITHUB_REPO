@@ -6,7 +6,7 @@ A frame-precise label (made on the app's Label shots page, ``#/label``)
 matches a detected shot within ``MARGIN_S`` of it. An older whole-second label
 ("18" meaning 18.0-18.99 s, ``time_resolution_s`` or a shot's
 ``resolution_s`` of 1) matches anywhere in that second, with the same margin.
-Matching keeps time order and prefers the labelled player. Reported:
+Matching uses contact time, independently of the predicted hitter. Reported:
 
 * hits found (recall) and detected hits that match a label (precision);
 * hitter accuracy and shot-type accuracy on matched shots;
@@ -40,18 +40,32 @@ def evaluate(result: dict, labels: dict) -> Dict[str, object]:
     negatives = [l for l in labels["shots"] if l["type"] == "not_a_shot"]
     used = set()
     matches = []
+    mapping = labels.get("tracker_mapping") or {}
+    human_ids = labels.get("identity_scheme") == "human"
+    if human_ids and len(set(mapping.values())) != len(mapping):
+        raise ValueError("Each human player must map to a different tracker ID")
+
+    def expected_track(label: dict):
+        person = label.get("player")
+        if person is None:
+            return None
+        if human_ids:
+            return mapping.get(str(person))
+        return person  # Legacy files used tracker IDs directly.
+
     for lab in real:
         lo, hi = _window(lab, res)
         options = [i for i, s in enumerate(detected) if i not in used and lo <= s["time_seconds"] < hi]
         if not options:
             matches.append((lab, None))
             continue
-        same = [i for i in options if detected[i].get("hitter_track_id") == lab["player"]]
-        i = (same or options)[0]
+        centre = lab["t"] + (float(lab.get("resolution_s", res)) / 2 if float(lab.get("resolution_s", res)) >= 0.5 else 0)
+        i = min(options, key=lambda index: abs(detected[index]["time_seconds"] - centre))
         used.add(i)
         matches.append((lab, detected[i]))
     found = [(l, d) for l, d in matches if d is not None]
-    hitter_ok = sum(1 for l, d in found if d.get("hitter_track_id") == l["player"])
+    hitter_scored = [(l, d) for l, d in found if expected_track(l) is not None]
+    hitter_ok = sum(1 for l, d in hitter_scored if d.get("hitter_track_id") == expected_track(l))
     type_ok = sum(1 for l, d in found if ALIASES.get(d["shot_type"], d["shot_type"]) == l["type"])
     confusion = Counter((l["type"], ALIASES.get(d["shot_type"], d["shot_type"])) for l, d in found
                         if ALIASES.get(d["shot_type"], d["shot_type"]) != l["type"])
@@ -64,9 +78,10 @@ def evaluate(result: dict, labels: dict) -> Dict[str, object]:
         "matched": len(found),
         "recall": round(len(found) / len(real), 3) if real else None,
         "precision": round(len(found) / len(detected), 3) if detected else None,
-        "hitter_accuracy": round(hitter_ok / len(found), 3) if found else None,
+        "hitter_accuracy": round(hitter_ok / len(hitter_scored), 3) if hitter_scored else None,
+        "hitter_labels_scored": len(hitter_scored),
         "type_accuracy": round(type_ok / len(found), 3) if found else None,
-        "type_and_hitter_correct": sum(1 for l, d in found if d.get("hitter_track_id") == l["player"]
+        "type_and_hitter_correct": sum(1 for l, d in hitter_scored if d.get("hitter_track_id") == expected_track(l)
                                        and ALIASES.get(d["shot_type"], d["shot_type"]) == l["type"]),
         "detections_at_not_a_shot_moments": false_at_negatives,
         "wrong_types": {f"{a} -> {b}": n for (a, b), n in confusion.most_common()},

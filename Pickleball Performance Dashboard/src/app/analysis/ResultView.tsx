@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle2, CircleDashed, FlaskConical, Info } from "lucide-react";
 import {
-  METRIC_KEYS, METRIC_LABELS, VALIDATION_LABELS,
+  METRIC_KEYS, METRIC_LABELS, VALIDATION_LABELS, publicShotResult,
   type AnalysisResultV1, type MetricKey, type MetricStatus,
 } from "../../lib/analysis/contract";
 import { GOAL_LABELS, type SessionRow } from "../../lib/api/types";
@@ -89,9 +89,11 @@ function Row({ k, v }: { k: string; v: React.ReactNode }) {
   );
 }
 
-export function ResultView({ result, videoUrl, previous, session, onSelectTrack }: {
+export function ResultView({ result, videoUrl, previous, session, onSelectTrack, experimentalReview = false }: {
   result: AnalysisResultV1; videoUrl: string | null; previous?: PreviousSession | null;
   session?: SessionRow; onSelectTrack?: (trackId: number, timeSeconds: number) => void;
+  /** Research-only local prototype. Never used by saved player reports. */
+  experimentalReview?: boolean;
 }) {
   const c = result.coverage;
   const heat = result.metrics.court_heatmap;
@@ -101,9 +103,10 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack 
   const [selectingPlayer, setSelectingPlayer] = useState(false);
   const [jump, setJump] = useState<JumpRequest>(null);
   const shotMetric = result.metrics.shot_classification;
-  const shotsValidated = shotMetric.validation === "evaluated_on_real_footage";
-  // Experimental shot labels are shown, clearly marked, so they can be checked against the video.
-  const shotsShown = !!shotMetric.value?.shots.length;
+  const shotDisplayResult = experimentalReview ? result : publicShotResult(result);
+  const shotsValidated = result.data_origin === "measured" && shotMetric.validation === "evaluated_on_real_footage";
+  const allowShotDisplay = experimentalReview || shotsValidated;
+  const shotsShown = allowShotDisplay && !!shotMetric.value?.shots.length;
   const analysedId = sel?.method === "track_id" ? sel.track_id : null;
   const [myPlayerId, setMyPlayerId] = useMyPlayer(
     `picklepro:me:${session?.id ?? result.provenance.source.sha256 ?? result.provenance.generated_at}`, analysedId);
@@ -112,7 +115,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack 
   // Keep that count hidden until the shot detector has real-footage evaluation.
   const visibleMessage = shotsValidated ? result.message
     : result.message.replace(/\s+\d+ hits? were estimated from the ball's flight\./, "");
-  const shotCount = focusShots(result, myPlayerId);
+  const shotCount = focusShots(shotDisplayResult, myPlayerId);
   const devMock = isDevMock(result);
   const heatValidated = devMock || heat.validation === "evaluated_on_real_footage";
   const zonesValidated = devMock || zones.validation === "evaluated_on_real_footage";
@@ -134,10 +137,10 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack 
           <Pill color={devMock ? ORANGE : result.status === "ok" ? NEON : ORANGE}>
             {devMock ? "SAMPLE" : result.status === "ok" ? "RESULT" : "INSUFFICIENT DATA"}
           </Pill>
-          <button type="button" onClick={() => downloadResult(result)} className="ml-auto text-sm font-semibold underline"
+          {experimentalReview && <button type="button" onClick={() => downloadResult(result)} className="ml-auto text-sm font-semibold underline"
             style={{ color: BLUE_SKY }} title="For the Label shots page and for scoring shot detection">
-            Download result (JSON)
-          </button>
+            Download research result (JSON)
+          </button>}
         </div>
         <p className="text-base text-[#101827]">{devMock ? "This sample shows the kind of practice plan PicklePro can display. It is not feedback about your play." : visibleMessage}</p>
         {warnings.length > 0 && (
@@ -195,7 +198,8 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack 
             detail: shotsShown
               ? shotsValidated ? "Tap Watch next to a shot to check it."
                 : "Experimental: not yet checked against hand-labelled videos. Tap Watch to check a shot."
-              : shotMetric.reason ?? "Shot types are not available for this video.",
+              : !allowShotDisplay ? "Shot labels are hidden until they pass evaluation on labelled real footage."
+                : shotMetric.reason ?? "Shot types are not available for this video.",
           },
         ].map((item) => (
           <div key={item.label} className="rounded-2xl border bg-white p-4" style={{ borderColor: BORDER }}>
@@ -216,13 +220,10 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack 
           <ul className="space-y-2">
             {session.improvement_goals.map((goal) => {
               const rating = session[`${goal}_rating`];
-              const shotsAvailable = shotsShown;
-              const observed = (goal === "positioning" && coaching.available) || (goal === "shot_outcomes" && shotsAvailable);
+              const observed = goal === "positioning" && coaching.available;
               const reason = goal === "positioning" ? coaching.introduction
                 : goal === "shot_outcomes"
-                  ? shotsAvailable
-                    ? "See the estimated shot types below. Ball landing and shot success are not assessed."
-                    : "Shot outcomes cannot be assessed. Shot success and in/out calls are outside this analysis scope."
+                  ? "Shot outcomes cannot be assessed. Shot success and in/out calls are outside this analysis scope."
                   : "Technique cannot be assessed yet. The current analysis does not measure body and paddle mechanics.";
               return <li key={goal} className="rounded-xl p-3 text-sm" style={{ border: `1px solid ${BORDER}` }}>
                 <p className="text-base font-semibold text-[#101827]">{GOAL_LABELS[goal]} · {observed ? (goal === "positioning" ? "video feedback available" : "early estimate available") : "cannot assess from this analysis"}</p>
@@ -238,7 +239,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack 
         <CoachingPanel result={result} previous={previous} />}
 
       {result.data_origin === "measured" && !devMock && hasPlayers && (
-        <PlayerPicker result={result} myPlayerId={myPlayerId} onPick={setMyPlayerId}
+        <PlayerPicker result={shotDisplayResult} myPlayerId={myPlayerId} onPick={setMyPlayerId} showShotCounts={allowShotDisplay}
           onUpdateCourt={onSelectTrack && myPlayerId != null ? () => {
             const me = result.players?.find((p) => p.player_id === myPlayerId);
             onSelectTrack(myPlayerId, me?.first_seen_s ?? 0);
@@ -248,7 +249,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack 
       <section aria-labelledby="video-heading" className="space-y-3">
         <div>
           <h2 id="video-heading" className="text-lg font-bold text-[#101827]">Watch your video</h2>
-          <p className="text-base" style={{ color: WHITE_DIM }}>Press play to review the recording. Player numbers, the ball's trail and each estimated shot name are drawn on the video.</p>
+          <p className="text-base" style={{ color: WHITE_DIM }}>Press play to review the recording. Player boxes, observed ball positions and court lines are shown when available.{shotsValidated ? " Evaluated shot estimates are also shown." : experimentalReview ? " Experimental shot suggestions are also shown." : " Shot labels remain hidden until validated."}</p>
         </div>
         {videoUrl && onSelectTrack && result.tracks.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
@@ -262,14 +263,15 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack 
         <VideoOverlayPlayer src={videoUrl}
           positions={heatValidated || selectingPlayer || hasPlayers ? result.player_positions : []}
           ballPositions={result.ball_positions ?? []}
-          courtLines={result.court_lines ?? []} shots={shotMetric.value?.shots ?? []}
-          bounces={shotMetric.value?.bounces ?? []}
+          courtLines={result.court_lines ?? []} shots={allowShotDisplay ? shotDisplayResult.metrics.shot_classification.value?.shots ?? [] : []}
+          bounces={allowShotDisplay ? shotMetric.value?.bounces ?? [] : []}
           selectedTrackId={myPlayerId} jump={jump}
           onSelectTrack={selectingPlayer ? (id, time) => { setSelectingPlayer(false); setMyPlayerId(id); onSelectTrack?.(id, time); } : undefined} />
       </section>
 
-      {result.data_origin === "measured" && !devMock && (
-        <ShotsPanel result={result} myPlayerId={myPlayerId} onWatch={videoUrl ? (time) => setJump({ time, id: Date.now() }) : undefined} />
+      {result.data_origin === "measured" && !devMock && allowShotDisplay && (
+        <ShotsPanel result={shotDisplayResult} myPlayerId={myPlayerId} research={experimentalReview}
+          onWatch={videoUrl ? (time) => setJump({ time, id: Date.now() }) : undefined} />
       )}
 
       <details className="rounded-2xl p-4" style={{ border: `1px solid ${BORDER}` }}>
@@ -280,8 +282,8 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack 
 
             <Card>
               <WidgetHeader title="Metrics" subtitle={heat.scope === "selected_view"
-                ? "Court measures cover one camera view. Shot and rally findings are not available."
-                : "Each metric reports its own status. Nothing here is a rally-level or shot-level finding."} />
+                ? "Court measures cover one camera view. Other estimates report their own scope and status."
+                : "Each metric reports its own status and validation level."} />
               <ul className="space-y-2">
                 {METRIC_KEYS.map((key: MetricKey) => {
                   const m = result.metrics[key];
@@ -347,7 +349,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack 
               <Row k="Calibration" v={result.calibration
                 ? result.calibration.method === "auto_painted_lines"
                   ? "automatic · checked against the painted lines in every frame"
-                  : `${result.calibration.method === "auto_model_landmarks" ? "automatic" : "manual"} · ${result.calibration.landmarks_used.length} landmarks · ${result.calibration.quality} (${result.calibration.reprojection_rmse_m.toFixed(2)} m)`
+                  : `${result.calibration.method === "auto_model_landmarks" ? "automatic" : result.calibration.method === "user_confirmed_landmarks" ? "user confirmed, checked against painted lines" : "manual"} · ${result.calibration.landmarks_used.length} landmarks · ${result.calibration.quality} (${result.calibration.reprojection_rmse_m.toFixed(2)} m)`
                 : "none"} />
               <Row k="Player selection" v={sel
                 ? `${sel.method === "court_half" ? `${sel.court_half} half` : `track #${sel.track_id}`} · tracked ${pct(sel.tracked_fraction)}`

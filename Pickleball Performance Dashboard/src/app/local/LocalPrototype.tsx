@@ -5,6 +5,8 @@ import { validateVideoFile } from "../../lib/upload/validate";
 import { BLUE_SKY, WHITE_DIM } from "../theme";
 import { Card, Notice, WidgetHeader, fieldStyle } from "../shell/primitives";
 import { AnalysisParamsForm, ProgressBar, type AnalysisParams } from "../analysis/AnalysisStatus";
+import { CourtCorrection } from "../analysis/CourtCorrection";
+import type { CourtConfirmation } from "../../lib/analysis/courtReview";
 import { ResultView } from "../analysis/ResultView";
 
 type Phase = "idle" | "uploading" | "processing" | "done" | "error";
@@ -37,6 +39,7 @@ export default function LocalPrototype() {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [params, setParams] = useState<AnalysisParams | null>({});
   const [paramsError, setParamsError] = useState<string | null>(null);
+  const [court, setCourt] = useState<CourtConfirmation | null>(null);
   const [maxSeconds, setMaxSeconds] = useState(120);
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState("");
@@ -51,13 +54,19 @@ export default function LocalPrototype() {
   }, [file]);
 
   async function analyze() {
-    if (!file || !params) return;
+    if (!file || !params || !court) return;
+    if (court.calibration_frame_s >= maxSeconds) {
+      setError("The court frame is after the analysis time limit. Choose an earlier frame or increase the time limit.");
+      return;
+    }
     setPhase("processing");
     setError("");
     setResult(null);
     const form = new FormData();
     form.append("file", file);
-    if (params.calibration) form.append("calibration", JSON.stringify(params.calibration));
+    form.append("calibration", JSON.stringify(court.calibration));
+    form.append("calibration_source", court.calibration_source);
+    form.append("calibration_frame_s", String(court.calibration_frame_s));
     const q = new URLSearchParams({ max_seconds: String(maxSeconds) });
     if (params.selection?.method === "court_half") q.set("court_half", params.selection.court_half);
     if (params.selection?.method === "track_id") q.set("track_id", String(params.selection.track_id));
@@ -121,7 +130,10 @@ export default function LocalPrototype() {
               const check = f ? validateVideoFile(f, 150 * 1024 * 1024) : null;
               setError(check && !check.ok ? check.error : "");
               setFile(check?.ok ? f : null);
+              setCourt(null);
             }} />
+          {file && !court && <CourtCorrection file={file} onConfirm={setCourt} onCancel={() => setFile(null)} />}
+          {court && <p className="text-sm" style={{ color: WHITE_DIM }}>Court mapping confirmed for the chosen fixed-camera frame. The analyzer will reject it if painted lines do not match.</p>}
           <AnalysisParamsForm onChange={(p, err) => { setParams(p); setParamsError(err); }} />
           <label className="flex items-center gap-2 text-sm" style={{ color: WHITE_DIM }}>
             Stop after
@@ -130,7 +142,7 @@ export default function LocalPrototype() {
             seconds of video
           </label>
           {paramsError && <Notice tone="error">{paramsError}</Notice>}
-          <button type="button" onClick={analyze} disabled={!file || !params || phase === "processing" || phase === "uploading"}
+          <button type="button" onClick={analyze} disabled={!file || !params || !court || phase === "processing" || phase === "uploading"}
             className="rounded-xl px-4 py-2 text-sm font-bold disabled:opacity-40" style={{ background: BLUE_SKY, color: "#ffffff" }}>
             {phase === "uploading" ? "Sending…" : phase === "processing" ? "Analyzing…" : "Analyze"}
           </button>
@@ -143,7 +155,7 @@ export default function LocalPrototype() {
           {error && <Notice tone="error">{error}</Notice>}
         </div>
       </Card>
-      {result && <ResultView result={result} videoUrl={videoUrl} />}
+      {result && <ResultView result={result} videoUrl={videoUrl} experimentalReview />}
     </div>
   );
 }

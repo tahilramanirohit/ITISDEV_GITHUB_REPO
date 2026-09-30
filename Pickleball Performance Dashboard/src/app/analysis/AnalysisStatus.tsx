@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { STATE_LABELS, type AnalysisUiState } from "../../lib/analysis/state";
-import { BLUE_SKY, BORDER, NEON, ORANGE, ROSE, WHITE_DIM, WHITE_SUB } from "../theme";
+import { BLUE_SKY, NEON, ORANGE, ROSE, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Pill, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
 
 const STATE_COLORS: Record<AnalysisUiState, string> = {
@@ -32,26 +32,23 @@ export function ProgressBar({ fraction, label }: { fraction: number | null; labe
 }
 
 export type AnalysisParams = {
-  calibration?: unknown;
   selection?: { method: "court_half"; court_half: "near" | "far" } | { method: "track_id"; track_id: number };
   experimental_zones?: boolean;
 };
 
 /**
  * The worker selects the near player by default and detects court landmarks
- * when an optional court model is configured. Manual calibration remains an
- * advanced fallback for videos where the model cannot locate the court.
+ * when an optional court model is configured. Court correction is handled by
+ * the visible review step before upload.
  */
 export function AnalysisParamsForm({ onChange }: { onChange: (params: AnalysisParams | null, error: string | null) => void }) {
   const [mode, setMode] = useState<"none" | "near" | "far" | "track">("near");
   const [trackId, setTrackId] = useState("");
-  const [calibration, setCalibration] = useState("");
   const [zones, setZones] = useState(false);
 
-  function emit(next: { mode?: typeof mode; trackId?: string; calibration?: string; zones?: boolean }) {
+  function emit(next: { mode?: typeof mode; trackId?: string; zones?: boolean }) {
     const m = next.mode ?? mode;
     const t = next.trackId ?? trackId;
-    const c = next.calibration ?? calibration;
     const z = next.zones ?? zones;
     const params: AnalysisParams = {};
     if (m === "near" || m === "far") params.selection = { method: "court_half", court_half: m };
@@ -59,15 +56,6 @@ export function AnalysisParamsForm({ onChange }: { onChange: (params: AnalysisPa
       const n = Number.parseInt(t, 10);
       if (!Number.isInteger(n) || n < 0) return onChange(null, "Enter a whole-number track id.");
       params.selection = { method: "track_id", track_id: n };
-    }
-    if (c.trim()) {
-      try {
-        const parsed = JSON.parse(c);
-        if (!parsed || !Array.isArray(parsed.points)) throw new Error("missing points");
-        params.calibration = parsed;
-      } catch {
-        return onChange(null, "Calibration must be the JSON produced for `picklepro.cli analyze --calibration`.");
-      }
     }
     if (z) params.experimental_zones = true;
     onChange(params, null);
@@ -96,15 +84,8 @@ export function AnalysisParamsForm({ onChange }: { onChange: (params: AnalysisPa
       </div>
       <div>
         <p className="text-sm" style={{ color: WHITE_DIM }}>
-          Court mapping runs automatically when a court model is configured on the analysis worker.
+          Review and correct the court on your video before analysis. Re-running an upload keeps its saved court setup.
         </p>
-        <details className="mt-2">
-          <summary className="text-sm cursor-pointer" style={{ color: BLUE_SKY }}>Manual court calibration (advanced fallback)</summary>
-          <label className={labelClass} style={labelStyle} htmlFor="calibration-json">Court calibration JSON</label>
-          <textarea id="calibration-json" rows={4} value={calibration} placeholder='{"image_width": 1920, "image_height": 1080, "points": [...]}'
-            className="w-full rounded-xl px-3 py-2 text-sm font-mono" style={{ ...fieldStyle, border: `1px solid ${BORDER}` }}
-            onChange={(e) => { setCalibration(e.target.value); emit({ calibration: e.target.value }); }} />
-        </details>
       </div>
     </div>
   );

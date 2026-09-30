@@ -96,6 +96,28 @@ def test_worker_passes_selected_video_time_and_rejects_invalid_time():
         runner.options_from_params({"selection_time_s": -1}, _cfg(), "clip.mp4")
 
 
+def test_worker_uses_confirmed_court_points(synthetic_clip):
+    params = {"calibration": synthetic_clip.calibration, "calibration_source": "user_confirmed",
+              "calibration_frame_s": 1.2}
+    opts = runner.options_from_params(params, _cfg(), "clip.mp4")
+    assert opts.calibration is not None
+    assert opts.calibration_source == "user_confirmed" and opts.calibration_frame_s == 1.2
+    with pytest.raises(ValueError, match="needs calibration"):
+        runner.options_from_params({"calibration_source": "user_confirmed"}, _cfg(), "clip.mp4")
+
+
+def test_worker_rejects_court_correction_that_misses_painted_lines(synthetic_clip):
+    wrong = {**synthetic_clip.calibration, "points": [
+        {**point, "pixel": [point["pixel"][0] + 100, point["pixel"][1]]}
+        for point in synthetic_clip.calibration["points"]]}
+    store = InMemoryJobStore()
+    store.add_job(_job(params={"calibration": wrong, "calibration_source": "user_confirmed"}),
+                  video_bytes=synthetic_clip.path.read_bytes())
+    outcome = process_one(store, _cfg())
+    assert outcome.status == "failed" and outcome.error_code == "invalid_court_correction"
+    assert store.row("job-1").result is None
+
+
 def test_missing_video_fails_without_retry():
     store = InMemoryJobStore()
     store.add_job(_job())  # no bytes in storage

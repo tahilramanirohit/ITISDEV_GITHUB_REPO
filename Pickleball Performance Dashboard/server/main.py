@@ -18,6 +18,8 @@ import time
 from pathlib import Path
 from typing import Dict, Literal, Optional
 
+import cv2
+import numpy as np
 import uvicorn
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,6 +27,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from picklepro import PIPELINE_VERSION
 from picklepro.contract import AnalysisResultV1
 from picklepro.court import CalibrationError, calibration_from_dict
+from picklepro.court_review import checked_review, proposed_calibration, review_points
 from picklepro.detection import DetectorUnavailable
 from picklepro.models import load_dotenv, log_setup, resolve_models
 from picklepro.pipeline import AnalysisOptions, analyze_video
@@ -84,6 +87,44 @@ async def health() -> Dict[str, object]:
     return {"status": "ok", "pipeline_version": PIPELINE_VERSION, "models": resolve_models().describe()}
 
 
+def _read_still(frame: UploadFile) -> np.ndarray:
+    if frame.content_type not in ("image/jpeg", "image/png"):
+        raise HTTPException(status_code=415, detail="Court preview needs a JPEG or PNG still frame.")
+    data = frame.file.read(5_000_001)
+    if len(data) > 5_000_000:
+        raise HTTPException(status_code=413, detail="Court preview image is too large.")
+    image = cv2.imdecode(np.frombuffer(data, dtype=np.uint8), cv2.IMREAD_COLOR)
+    if image is None or image.shape[1] < 320 or image.shape[0] < 240:
+        raise HTTPException(status_code=422, detail="Could not read a usable court preview image.")
+    return image
+
+
+@app.post("/court/preview")
+def court_preview(frame: UploadFile = File(...)) -> Dict[str, object]:
+    """Propose editable painted-court landmarks; never publish measurements."""
+    image = _read_still(frame)
+    models = resolve_models()
+    try:
+        cal = proposed_calibration(image, models.court_weights)
+    except DetectorUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    if cal is None:
+        raise HTTPException(status_code=422, detail="Court lines could not be mapped reliably. Place points manually or use a clearer fixed-camera frame.")
+    return {"image_width": image.shape[1], "image_height": image.shape[0], "points": review_points(cal),
+            "origin": "automatic_proposal"}
+
+
+@app.post("/court/validate")
+def court_validate(frame: UploadFile = File(...), calibration: str = Form(...)) -> Dict[str, object]:
+    """Check the player's corrected geometry against the painted lines."""
+    image = _read_still(frame)
+    try:
+        cal = checked_review(json.loads(calibration), image)
+    except (CalibrationError, ValueError, TypeError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=422, detail=f"Court correction: {exc}") from exc
+    return {"valid": True, "landmarks_used": cal.landmarks_used}
+
+
 @app.post("/analyze/video", response_model=AnalysisResultV1)
 def analyze_video_endpoint(
     file: UploadFile = File(...),
@@ -92,6 +133,8 @@ def analyze_video_endpoint(
     court_half: Optional[Literal["near", "far"]] = Query(None),
     track_id: Optional[int] = Query(None),
     calibration: Optional[str] = Form(None, description="Calibration JSON (see `python -m picklepro.cli landmarks`)."),
+    calibration_source: Optional[Literal["user_confirmed"]] = Form(None),
+    calibration_frame_s: float = Form(0.0),
     progress_id: Optional[str] = Query(None, description="Poll GET /analyze/progress/{progress_id} while this runs."),
 ):
     if progress_id is not None and not _PROGRESS_ID.match(progress_id):
@@ -103,7 +146,8 @@ def analyze_video_endpoint(
         )
 
     try:
-        calib = calibration_from_dict(json.loads(calibration)) if calibration else None
+        calib = checked_review(json.loads(calibration)) if calibration and calibration_source else (
+            calibration_from_dict(json.loads(calibration)) if calibration else None)
     except (CalibrationError, json.JSONDecodeError) as exc:
         raise HTTPException(status_code=422, detail=f"Calibration: {exc}")
 
@@ -140,6 +184,7 @@ def analyze_video_endpoint(
         result = analyze_video(tmp_path, AnalysisOptions(
             max_seconds=min(max_seconds, MAX_SECONDS_LIMIT), target_fps=target_fps,
             calibration=calib, selection=selection, source_filename=file.filename,
+            calibration_source=calibration_source, calibration_frame_s=calibration_frame_s,
             detector=models.detector, yolo_weights=models.yolo_weights,
             court_weights=models.court_weights, ball_weights=models.ball_weights,
         ), progress=lambda f: _set_progress(progress_id, "analyzing", f))
@@ -149,6 +194,8 @@ def analyze_video_endpoint(
         raise HTTPException(status_code=422, detail=str(exc))
     except DetectorUnavailable as exc:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc))
+    except CalibrationError as exc:
+        raise HTTPException(status_code=422, detail=f"Court correction: {exc}")
     except Exception as exc:  # noqa: BLE001 - surface as a failure, never as a result
         logger.exception("Unexpected error during analysis")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Analysis failed: {exc}")

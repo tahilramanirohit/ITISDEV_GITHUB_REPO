@@ -15,6 +15,7 @@ export const SHOT_TYPES = [
   "serve", "return", "drive", "drop", "dink", "reset",
   "speed_up", "counter", "volley", "lob", "overhead", "erne", "unclassified",
 ] as const;
+export const PUBLIC_SHOT_TYPES = ["serve", "volley", "dink", "drive", "lob", "unclassified"] as const;
 
 const LEGACY_SHOT_TYPES: Record<string, string> = { third_shot_drop: "drop", third_shot_drive: "drive" };
 
@@ -75,6 +76,19 @@ export type PlayerBox = {
 export type CourtLinesSnapshot = { time_seconds: number; lines: [number, number, number, number][] };
 
 export type ShotType = (typeof SHOT_TYPES)[number];
+export type PublicShotType = (typeof PUBLIC_SHOT_TYPES)[number];
+export const publicShotType = (type: ShotType): PublicShotType =>
+  (PUBLIC_SHOT_TYPES as readonly string[]).includes(type) ? type as PublicShotType : "unclassified";
+
+/** Use the revision-4 vocabulary when an evaluated result is shown to players. */
+export function publicShotResult(result: AnalysisResultV1): AnalysisResultV1 {
+  const value = result.metrics.shot_classification.value;
+  if (!value) return result;
+  const shots = value.shots.map((shot) => ({ ...shot, shot_type: shot.public_shot_type ?? publicShotType(shot.shot_type) }));
+  return { ...result, metrics: { ...result.metrics, shot_classification: {
+    ...result.metrics.shot_classification, value: { ...value, shots },
+  } } };
+}
 export type ShotEvent = {
   time_seconds: number;
   rally_index: number;
@@ -84,6 +98,7 @@ export type ShotEvent = {
   by_selected_player: boolean;
   hitter_court_m: [number, number] | null;
   shot_type: ShotType;
+  public_shot_type?: PublicShotType | null;
   contact: "volley" | "after_bounce" | "unknown";
   ground_speed_mps: number | null;
   landing_court_m: [number, number] | null;
@@ -117,7 +132,7 @@ export type PlayerSummary = {
   /** Small JPEG data URI. */
   thumbnail: string | null;
 };
-export type BallSnapshot = { time_seconds: number; bbox: [number, number, number, number]; confidence: number };
+export type BallSnapshot = { time_seconds: number; bbox: [number, number, number, number]; confidence: number; observation_kind?: "observed" };
 
 export type AnalysisResultV1 = {
   schema_version: "1.0";
@@ -129,6 +144,7 @@ export type AnalysisResultV1 = {
     generated_at: string;
     detector: { name: string; confidence_is_model_score: boolean };
     ball_detector?: { name: string; confidence_is_model_score: boolean } | null;
+    ball_tracking?: Record<string, number> | null;
     source: { filename: string | null; sha256: string | null };
   };
   video: {
@@ -155,7 +171,7 @@ export type AnalysisResultV1 = {
     selected_view_duration_s?: number | null;
   };
   calibration: {
-    method: "manual_landmarks" | "auto_model_landmarks" | "auto_painted_lines";
+    method: "manual_landmarks" | "user_confirmed_landmarks" | "auto_model_landmarks" | "auto_painted_lines";
     court_model: string;
     landmarks_used: string[];
     reprojection_rmse_px: number;
@@ -291,6 +307,7 @@ export function parseAnalysisResult(input: unknown): AnalysisResultV1 {
       }
       num(ball.time_seconds, "ball_positions.time_seconds");
       num(ball.confidence, "ball_positions.confidence");
+      if (ball.observation_kind !== undefined) oneOf(ball.observation_kind, ["observed"] as const, "ball_positions.observation_kind");
       ball.bbox.forEach((value) => num(value, "ball_positions.bbox"));
     }
   }
@@ -319,6 +336,11 @@ export function parseAnalysisResult(input: unknown): AnalysisResultV1 {
       }
       num(shot.time_seconds, "metrics.shot_classification.shots.time_seconds");
       oneOf(shot.shot_type, SHOT_TYPES, "metrics.shot_classification.shots.shot_type");
+      if (shot.public_shot_type === undefined || shot.public_shot_type === null) {
+        shot.public_shot_type = publicShotType(shot.shot_type as ShotType);
+      } else {
+        oneOf(shot.public_shot_type, PUBLIC_SHOT_TYPES, "metrics.shot_classification.shots.public_shot_type");
+      }
     }
   }
   return { ...input, metrics } as unknown as AnalysisResultV1;

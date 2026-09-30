@@ -11,6 +11,7 @@
       "confidence_is_model_score": false
     },
     "ball_detector": null,
+    "ball_tracking": null,
     "source": {
       "filename": "synthetic_fixture.mp4",
       "sha256": null
@@ -33,7 +34,7 @@
     "decode_failures": 0,
     "stopped_early_reason": null,
     "fraction_of_video_analyzed": 1.0,
-    "frames_with_detections": 145,
+    "frames_with_detections": 146,
     "frames_with_ball_detections": 0,
     "ball_sample_stride": null,
     "frames_with_carried_court_map": null,
@@ -58,9 +59,9 @@
     "method": "court_half",
     "track_id": null,
     "court_half": "near",
-    "tracked_time_s": 18.4,
-    "tracked_fraction": 0.92,
-    "ambiguous_frames": 7
+    "tracked_time_s": 18.667,
+    "tracked_fraction": 0.9333,
+    "ambiguous_frames": 6
   },
   "players": [
     {
@@ -68,14 +69,14 @@
       "label": "Near side, right",
       "on_court": true,
       "side": "near",
-      "first_seen_s": 0.667,
+      "first_seen_s": 0.533,
       "last_seen_s": 19.867,
-      "observed_frames": 145,
+      "observed_frames": 146,
       "median_court_m": [
-        3.9,
-        3.3
+        3.89,
+        3.26
       ],
-      "thumbnail": "data:image/jpeg;base64,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"
+      "thumbnail": "data:image/jpeg;base64,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"
     },
     {
       "player_id": 2,
@@ -84,29 +85,45 @@
       "side": "near",
       "first_seen_s": 1.6,
       "last_seen_s": 2.4,
-      "observed_frames": 7,
+      "observed_frames": 6,
       "median_court_m": [
-        4.97,
-        1.4
+        4.92,
+        1.37
       ],
-      "thumbnail": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAkGBwgHBgkIBwgKCgkLDRYPDQwMDRsUFRAWIB0iIiAdHx8kKDQsJCYxJx8fLT0tMTU3Ojo6Iys/RD84QzQ5Ojf/2wBDAQoKCg0MDRoPDxo3JR8lNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzf/wAARCACAAA0DASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDm6K20tovJ+VIGfBLAYOBjjv14/nWXeKqTFUGAB6VyypuKuccqTjubjs+TJj95kn7hGTjofQYPt9ayNVYNdnG3G0Y2jitcSxoyiNQS8p2OmQGGPQ9zj2/KsO9XZOVJ+YAbjkent7YrWtrG5pW2Nl1+TayjaX3blBO/jHJ9McVZXw6+uRLLpRQSxEpPFK4BXup+hBI/4DVVJGkVlVGCg7srHk9OmO54PcZrMv7y5t72T7PNJHlVBKvjdjoTXVCh7T3GViJWV2bLESyRtE+1lYlSWALDHJx+fTj9BWfcapDaymJtJsJyP45kk3fo4FWTCqk+UygxP0XJzgdPpyOKxNTbfdlsgkqOhzWmGXNPyFiXywsmb9tKEmX5kRQd3TAznp+Of0rD1nb9ubZyoVQG/vYGM1twxrxGoQpndjb0GMEA56cHnOKwdTUrdsGJY4Hzc8jt19qeGX7z5E4mzhc3YXch1eJPLI4AyN3PJx+PtWLrC7L1hgD5R0Oe1byDzIBBhgqqBuK4zk+3I7j8D2FYOspsvmHl7OM47c88e1GFd6m1gxLfJsb4aNmbcMRM4C8YAwRgcDJ4GO9YGsri+fBYgjI3da2I1KQhTIPMXGfkwTyRyCcd/wCf4YuqEtcg4C5QHG3GPYilhEo1LIeJ+C/mbT6naecy+ePLAJ3YJJP4/hWJqkyXF20qkHIGSKq0V1U8PGnLmTOapWc1Zo//2Q=="
+      "thumbnail": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAkGBwgHBgkIBwgKCgkLDRYPDQwMDRsUFRAWIB0iIiAdHx8kKDQsJCYxJx8fLT0tMTU3Ojo6Iys/RD84QzQ5Ojf/2wBDAQoKCg0MDRoPDxo3JR8lNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzf/wAARCACAAA0DASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDm6K20tovJ+VIGfBLAYOBjjv14/nWVeKqTEIMDHpiuWVNxVzilScdzddn5kx+8yT9wjJx0PXAwfb61kaqwa7JG3btGNo4rXEkaMojUZeQ7HUkBhjpg9zj/ACKw71dlwV5JCjJyPT29sVrW1jc1rLQ2XXCYZRtL7tygnfxjk+mOKsr4dfXI1l0ooJYiUnikkAK91P4gkf8AAaqpI8ilVRgoOcrHk9OmO54PcZrM1C8uLe+k+zzSR5VQxVsbsdCa6oUXU9xjxErJORssRLJG0T4YMSpLAFhjk4/Ppx+grPn1SG1lMTaTYTkfxzJJu/RwKsmFVJ8plBjbouTnA6fTkcViam++7LZBJA6HNaYZc0/IWJ92FkzftpQky/MiKCW9ADnp+Of0rD1jb9ubZyu0AN/ewMZrbhjXIjUIU+8Bt6DGCAc/XvisHUlK3bAkscD5ueR26+1PDL958hYqzhdG7Cz/ADq8SeWRwBkbueT+vtWLq67L5hgD5R0Oe1byDzIBBhgqqBuK4zk+3I7j8D2FYOsrsvmXy9nGcdBzzx7UYV3qbCxLfJsb4eNmbcMRM4C/LgDBGBwMngY71gayu2+fBYg8jd1rYjXZCFMg8xcZygBPJHIJx3/n+GLqh3XQOAuUBxjGPYilhElUsisT8F/M2n1O080qJx5YGd2CST9D+FYmpzrcXbSoQcgZIqpRXVTw8acuZM5alZzjZo//2Q=="
     }
   ],
   "tracks": [
     {
       "track_id": 1,
-      "first_seen_s": 0.667,
+      "first_seen_s": 0.533,
       "last_seen_s": 19.867,
-      "observed_frames": 145
+      "observed_frames": 146
     },
     {
       "track_id": 2,
       "first_seen_s": 1.6,
       "last_seen_s": 2.4,
-      "observed_frames": 7
+      "observed_frames": 6
     }
   ],
   "player_positions": [
+    {
+      "time_seconds": 0.533,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            476,
+            156,
+            536,
+            416
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
     {
       "time_seconds": 0.667,
       "players": [
@@ -114,9 +131,9 @@
           "track_id": 1,
           "bbox": [
             534,
-            156,
+            155,
             582,
-            412
+            413
           ],
           "confidence": null,
           "selected": true
@@ -130,7 +147,7 @@
           "track_id": 1,
           "bbox": [
             546,
-            156,
+            155,
             592,
             413
           ],
@@ -146,9 +163,9 @@
           "track_id": 1,
           "bbox": [
             558,
-            156,
+            155,
             604,
-            411
+            410
           ],
           "confidence": null,
           "selected": true
@@ -164,7 +181,7 @@
             570,
             156,
             614,
-            409
+            410
           ],
           "confidence": null,
           "selected": true
@@ -177,9 +194,9 @@
         {
           "track_id": 1,
           "bbox": [
-            581,
-            155,
-            623,
+            582,
+            156,
+            624,
             407
           ],
           "confidence": null,
@@ -212,7 +229,7 @@
             560,
             155,
             640,
-            401
+            400
           ],
           "confidence": null,
           "selected": true
@@ -237,7 +254,7 @@
           "track_id": 2,
           "bbox": [
             632,
-            155,
+            154,
             650,
             399
           ],
@@ -250,22 +267,22 @@
       "time_seconds": 1.733,
       "players": [
         {
-          "track_id": 2,
+          "track_id": 1,
           "bbox": [
-            640,
-            155,
-            656,
-            395
+            580,
+            156,
+            616,
+            394
           ],
           "confidence": null,
           "selected": false
         },
         {
-          "track_id": 1,
+          "track_id": 2,
           "bbox": [
-            578,
+            640,
             155,
-            616,
+            656,
             395
           ],
           "confidence": null,
@@ -277,22 +294,22 @@
       "time_seconds": 1.867,
       "players": [
         {
-          "track_id": 2,
+          "track_id": 1,
           "bbox": [
-            640,
-            155,
-            664,
+            586,
+            156,
+            624,
             393
           ],
           "confidence": null,
           "selected": false
         },
         {
-          "track_id": 1,
+          "track_id": 2,
           "bbox": [
-            586,
+            640,
             155,
-            624,
+            664,
             393
           ],
           "confidence": null,
@@ -308,7 +325,7 @@
           "bbox": [
             592,
             154,
-            635,
+            638,
             389
           ],
           "confidence": null,
@@ -319,7 +336,7 @@
           "bbox": [
             648,
             153,
-            672,
+            670,
             389
           ],
           "confidence": null,
@@ -345,7 +362,7 @@
           "track_id": 2,
           "bbox": [
             656,
-            152,
+            153,
             672,
             384
           ],
@@ -366,18 +383,7 @@
             381
           ],
           "confidence": null,
-          "selected": false
-        },
-        {
-          "track_id": 2,
-          "bbox": [
-            663,
-            153,
-            678,
-            354
-          ],
-          "confidence": null,
-          "selected": false
+          "selected": true
         }
       ]
     },
@@ -387,9 +393,9 @@
         {
           "track_id": 1,
           "bbox": [
-            610,
+            609,
             155,
-            652,
+            654,
             377
           ],
           "confidence": null,
@@ -398,9 +404,9 @@
         {
           "track_id": 2,
           "bbox": [
-            666,
+            667,
             153,
-            680,
+            682,
             376
           ],
           "confidence": null,
@@ -414,9 +420,9 @@
         {
           "track_id": 1,
           "bbox": [
-            612,
+            611,
             153,
-            687,
+            686,
             375
           ],
           "confidence": null,
@@ -448,7 +454,7 @@
           "bbox": [
             617,
             152,
-            688,
+            686,
             365
           ],
           "confidence": null,
@@ -463,7 +469,7 @@
           "track_id": 1,
           "bbox": [
             618,
-            152,
+            151,
             674,
             361
           ],
@@ -478,7 +484,7 @@
         {
           "track_id": 1,
           "bbox": [
-            618,
+            619,
             151,
             672,
             357
@@ -510,7 +516,7 @@
         {
           "track_id": 1,
           "bbox": [
-            620,
+            618,
             149,
             683,
             349
@@ -528,8 +534,8 @@
           "bbox": [
             618,
             149,
-            682,
-            346
+            681,
+            345
           ],
           "confidence": null,
           "selected": true
@@ -559,7 +565,7 @@
           "track_id": 1,
           "bbox": [
             614,
-            147,
+            148,
             672,
             336
           ],
@@ -575,7 +581,7 @@
           "track_id": 1,
           "bbox": [
             610,
-            147,
+            148,
             670,
             331
           ],
@@ -592,7 +598,7 @@
           "bbox": [
             604,
             147,
-            666,
+            664,
             327
           ],
           "confidence": null,
@@ -607,7 +613,7 @@
           "track_id": 1,
           "bbox": [
             600,
-            145,
+            146,
             660,
             323
           ],
@@ -624,7 +630,7 @@
           "bbox": [
             594,
             145,
-            654,
+            653,
             319
           ],
           "confidence": null,
@@ -641,7 +647,7 @@
             592,
             144,
             648,
-            315
+            316
           ],
           "confidence": null,
           "selected": true
@@ -654,9 +660,9 @@
         {
           "track_id": 1,
           "bbox": [
-            586,
+            585,
             144,
-            640,
+            639,
             311
           ],
           "confidence": null,
@@ -670,7 +676,7 @@
         {
           "track_id": 1,
           "bbox": [
-            579,
+            578,
             141,
             632,
             307
@@ -686,7 +692,7 @@
         {
           "track_id": 1,
           "bbox": [
-            571,
+            570,
             140,
             624,
             303
@@ -703,7 +709,7 @@
           "track_id": 1,
           "bbox": [
             564,
-            141,
+            140,
             616,
             299
           ],
@@ -718,9 +724,9 @@
         {
           "track_id": 1,
           "bbox": [
-            558,
-            139,
-            608,
+            557,
+            138,
+            609,
             295
           ],
           "confidence": null,
@@ -734,8 +740,8 @@
         {
           "track_id": 1,
           "bbox": [
-            550,
-            138,
+            549,
+            139,
             600,
             291
           ],
@@ -750,8 +756,8 @@
         {
           "track_id": 1,
           "bbox": [
-            542,
-            136,
+            541,
+            137,
             592,
             287
           ],
@@ -766,9 +772,9 @@
         {
           "track_id": 1,
           "bbox": [
-            534,
-            137,
-            584,
+            533,
+            136,
+            582,
             283
           ],
           "confidence": null,
@@ -799,25 +805,9 @@
           "track_id": 1,
           "bbox": [
             516,
-            133,
+            134,
             566,
             277
-          ],
-          "confidence": null,
-          "selected": true
-        }
-      ]
-    },
-    {
-      "time_seconds": 5.867,
-      "players": [
-        {
-          "track_id": 1,
-          "bbox": [
-            506,
-            133,
-            555,
-            273
           ],
           "confidence": null,
           "selected": true
@@ -1037,7 +1027,7 @@
             0.0,
             0.0,
             0.667,
-            1.333,
+            1.467,
             0.133,
             0.0,
             0.0,
@@ -1054,7 +1044,7 @@
             0.0,
             0.0,
             0.0,
-            1.2,
+            1.333,
             0.8,
             0.0,
             0.0,
@@ -1115,8 +1105,8 @@
             0.0,
             0.0,
             0.0,
-            0.133,
-            1.467,
+            0.267,
+            1.333,
             0.267,
             0.0,
             0.0,
@@ -1130,7 +1120,7 @@
             0.0,
             0.0,
             0.0,
-            1.067,
+            1.2,
             1.067,
             0.0,
             0.0,
@@ -1144,9 +1134,9 @@
             0.0,
             0.0,
             0.0,
-            1.867,
             2.0,
-            0.533,
+            1.867,
+            0.4,
             0.0,
             0.0,
             0.0,
@@ -1429,7 +1419,7 @@
             0.0
           ]
         ],
-        "tracked_time_s": 18.4,
+        "tracked_time_s": 18.667,
         "outside_mapped_area_s": 0.0
       }
     },
@@ -1446,12 +1436,12 @@
         },
         "seconds": {
           "kitchen": 5.467,
-          "mid_court": 12.933,
+          "mid_court": 13.2,
           "outside_court_lines": 0.0
         },
         "fraction_of_tracked_time": {
-          "kitchen": 0.2971,
-          "mid_court": 0.7029,
+          "kitchen": 0.2929,
+          "mid_court": 0.7071,
           "outside_court_lines": 0.0
         }
       }
@@ -1472,26 +1462,26 @@
         },
         "seconds": {
           "behind_baseline": 0.0,
-          "baseline_area": 3.067,
-          "transition": 6.667,
-          "kitchen_line": 4.267,
-          "inside_kitchen": 4.4
+          "baseline_area": 3.2,
+          "transition": 6.8,
+          "kitchen_line": 4.4,
+          "inside_kitchen": 4.267
         },
         "fraction_of_mapped_time": {
           "behind_baseline": 0.0,
-          "baseline_area": 0.1667,
-          "transition": 0.3623,
-          "kitchen_line": 0.2319,
-          "inside_kitchen": 0.2391
+          "baseline_area": 0.1714,
+          "transition": 0.3643,
+          "kitchen_line": 0.2357,
+          "inside_kitchen": 0.2286
         },
-        "mapped_time_s": 18.4,
-        "left_side_fraction": 0.3623,
+        "mapped_time_s": 18.667,
+        "left_side_fraction": 0.3643,
         "transition_lingers": 2,
         "longest_transition_linger_s": 3.467,
-        "approaches_to_kitchen_line": 0,
-        "median_approach_s": null,
+        "approaches_to_kitchen_line": 1,
+        "median_approach_s": 4.267,
         "retreats_to_baseline": 1,
-        "distance_covered_m": 13.93
+        "distance_covered_m": 15.02
       }
     },
     "rally_segmentation": {
@@ -1511,6 +1501,6 @@
   },
   "warnings": [
     "Motion-based detection finds moving objects, not specifically people: stationary players can be missed and non-players (balls, shadows, passers-by) can be detected. Detection confidence is not available.",
-    "7 frame(s) excluded because more than one detection matched the selection."
+    "6 frame(s) excluded because more than one detection matched the selection."
   ]
 }

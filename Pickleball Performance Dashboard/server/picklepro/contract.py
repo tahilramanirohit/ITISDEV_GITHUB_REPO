@@ -55,6 +55,7 @@ class Provenance(_Model):
     generated_at: str
     detector: DetectorInfo
     ball_detector: Optional[DetectorInfo] = None
+    ball_tracking: Optional[Dict[str, int]] = Field(None, description="Candidate filtering counts; retained boxes are observed, never interpolated.")
     source: SourceInfo
 
 
@@ -94,7 +95,7 @@ class Coverage(_Model):
 
 
 class CalibrationSummary(_Model):
-    method: Literal["manual_landmarks", "auto_model_landmarks", "auto_painted_lines"]
+    method: Literal["manual_landmarks", "user_confirmed_landmarks", "auto_model_landmarks", "auto_painted_lines"]
     court_model: str
     landmarks_used: List[str]
     reprojection_rmse_px: float
@@ -146,6 +147,7 @@ class BallSnapshot(_Model):
     time_seconds: float
     bbox: List[int] = Field(min_length=4, max_length=4)
     confidence: float = Field(ge=0, le=1)
+    observation_kind: Literal["observed"] = "observed"
 
 
 class CourtLinesSnapshot(_Model):
@@ -209,6 +211,7 @@ class PositioningMetric(Metric):
 
 ShotType = Literal["serve", "return", "drive", "drop", "dink", "reset",
                    "speed_up", "counter", "volley", "lob", "overhead", "erne", "unclassified"]
+PublicShotType = Literal["serve", "volley", "dink", "drive", "lob", "unclassified"]
 ContactType = Literal["volley", "after_bounce", "unknown"]
 
 
@@ -221,6 +224,8 @@ class ShotEvent(_Model):
     by_selected_player: bool = False
     hitter_court_m: Optional[List[float]] = Field(None, min_length=2, max_length=2)
     shot_type: ShotType
+    public_shot_type: Optional[PublicShotType] = Field(
+        None, description="Conservative revision-4 class. Other experimental classes remain unclassified.")
     contact: ContactType = "unknown"
     ground_speed_mps: Optional[float] = Field(
         None, description="Horizontal ground distance to the next bounce or hitter divided by the time taken.")

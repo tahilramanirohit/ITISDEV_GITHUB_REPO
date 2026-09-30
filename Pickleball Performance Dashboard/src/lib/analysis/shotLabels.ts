@@ -34,11 +34,12 @@ export function isMine(shot: ShotEvent, myPlayerId: number | null | undefined): 
   return myPlayerId != null ? shot.hitter_track_id === myPlayerId : shot.by_selected_player;
 }
 
-/** Whose shots to summarise: the chosen player's when there are any, otherwise everyone's. */
+/** Never substitute everyone's shots when a chosen player has no detected shots. */
 export function focusShots(result: AnalysisResultV1, myPlayerId?: number | null): { shots: ShotEvent[]; mine: boolean } {
   const all = shotsOf(result);
+  if (myPlayerId == null) return { shots: all, mine: false };
   const mine = all.filter((s) => isMine(s, myPlayerId));
-  return mine.length > 0 ? { shots: mine, mine: true } : { shots: all, mine: false };
+  return { shots: mine, mine: true };
 }
 
 /** Players who can be chosen: people on the court, in the analysis's order. */

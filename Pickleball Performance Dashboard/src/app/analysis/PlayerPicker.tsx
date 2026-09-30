@@ -8,12 +8,13 @@ import { Card, WidgetHeader } from "../shell/primitives";
  * Every person PicklePro followed on the court, with a photo from the video.
  * Choosing "This is me" makes "My shots" show that player's shots at once.
  */
-export function PlayerPicker({ result, myPlayerId, onPick, onUpdateCourt }: {
+export function PlayerPicker({ result, myPlayerId, onPick, onUpdateCourt, showShotCounts = false }: {
   result: AnalysisResultV1;
   myPlayerId: number | null;
   onPick: (playerId: number) => void;
   /** Re-run the court analysis for the chosen player; absent when reanalysis is not possible. */
   onUpdateCourt?: () => void;
+  showShotCounts?: boolean;
 }) {
   const players = courtPlayers(result);
   const others = (result.players ?? []).filter((p) => !p.on_court);
@@ -25,7 +26,7 @@ export function PlayerPicker({ result, myPlayerId, onPick, onUpdateCourt }: {
   return (
     <Card accent={BLUE_SKY}>
       <WidgetHeader title="Which player are you?"
-        subtitle="PicklePro found these players in your video. Pick yourself so “My shots” shows only your shots." />
+        subtitle={showShotCounts ? "Pick yourself to filter research shot suggestions." : "Pick yourself before updating player-specific court feedback."} />
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Players found in the video">
         {players.map((p) => {
           const mine = p.player_id === myPlayerId;
@@ -38,7 +39,7 @@ export function PlayerPicker({ result, myPlayerId, onPick, onUpdateCourt }: {
                 : <div className="h-28 w-20 rounded-lg bg-[#f6f5ef]" aria-hidden="true" />}
               <p className="mt-2 text-base font-bold" style={{ color: INK }}>{mine ? "You" : `Player ${p.player_id}`}</p>
               <p className="text-sm" style={{ color: WHITE_DIM }}>{p.label}</p>
-              <p className="text-sm" style={{ color: WHITE_DIM }}>{count} shot{count === 1 ? "" : "s"} · seen {Math.round(p.observed_frames * secondsPerFrame)} s</p>
+              <p className="text-sm" style={{ color: WHITE_DIM }}>{showShotCounts ? `${count} ${result.metrics.shot_classification.validation === "evaluated_on_real_footage" ? "estimated" : "experimental"} shot${count === 1 ? "" : "s"} · ` : ""}seen {Math.round(p.observed_frames * secondsPerFrame)} s</p>
               <button type="button" onClick={() => onPick(p.player_id)} aria-pressed={mine}
                 className="mt-2 inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold min-h-[44px]"
                 style={mine ? { background: BLUE_SKY, color: "#ffffff" } : { color: BLUE_SKY, border: `1px solid ${BLUE_SKY}60` }}>
@@ -51,7 +52,7 @@ export function PlayerPicker({ result, myPlayerId, onPick, onUpdateCourt }: {
       {myPlayerId != null && onUpdateCourt && analysed !== myPlayerId && (
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <p className="text-sm flex-1 min-w-[14rem]" style={{ color: INK }}>
-            Your shots are updated. The court heatmap and positioning still describe {analysed != null ? `Player ${analysed}` : "the near-side player"}.
+            The saved analysis still describes {analysed != null ? `Player ${analysed}` : "the near-side player"}. Re-run it before treating this choice as your court feedback.
           </p>
           <button type="button" onClick={onUpdateCourt}
             className="rounded-lg px-4 py-2.5 text-sm font-semibold min-h-[44px]" style={{ background: BLUE_SKY, color: "#ffffff" }}>
@@ -60,7 +61,7 @@ export function PlayerPicker({ result, myPlayerId, onPick, onUpdateCourt }: {
         </div>
       )}
       <p className="mt-3 text-sm" style={{ color: WHITE_DIM }}>
-        Players are grouped by clothing colour, court side and movement. If one person appears twice, pick the entry with more shots.
+        Player groups are estimates based on clothing, side and movement. A person can appear twice or be confused with someone else; check the video before selecting.
       </p>
       {others.length > 0 && (
         <details className="mt-2">

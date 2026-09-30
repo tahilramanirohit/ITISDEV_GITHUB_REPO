@@ -21,6 +21,12 @@
           "minimum": 0,
           "title": "Confidence",
           "type": "number"
+        },
+        "observation_kind": {
+          "const": "observed",
+          "default": "observed",
+          "title": "Observation Kind",
+          "type": "string"
         }
       },
       "required": [
@@ -80,6 +86,7 @@
         "method": {
           "enum": [
             "manual_landmarks",
+            "user_confirmed_landmarks",
             "auto_model_landmarks",
             "auto_painted_lines"
           ],
@@ -863,6 +870,22 @@
           ],
           "default": null
         },
+        "ball_tracking": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Candidate filtering counts; retained boxes are observed, never interpolated.",
+          "title": "Ball Tracking"
+        },
         "source": {
           "$ref": "#/$defs/SourceInfo"
         }
@@ -1137,6 +1160,27 @@
           ],
           "title": "Shot Type",
           "type": "string"
+        },
+        "public_shot_type": {
+          "anyOf": [
+            {
+              "enum": [
+                "serve",
+                "volley",
+                "dink",
+                "drive",
+                "lob",
+                "unclassified"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Conservative revision-4 class. Other experimental classes remain unclassified.",
+          "title": "Public Shot Type"
         },
         "contact": {
           "default": "unknown",

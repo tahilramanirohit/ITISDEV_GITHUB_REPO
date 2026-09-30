@@ -1,5 +1,6 @@
 import json
 import sys
+import cv2
 
 from conftest import write_constant_video
 from fastapi.testclient import TestClient
@@ -42,6 +43,36 @@ def test_calibrated_synthetic_upload(synthetic_clip):
     assert body["status"] == "ok"
     assert body["metrics"]["court_heatmap"]["status"] == "measured"
     assert body["coverage"]["fraction_of_video_analyzed"] == 1.0
+
+
+def test_court_review_is_checked_and_used_by_analysis(synthetic_clip):
+    capture = cv2.VideoCapture(str(synthetic_clip.path))
+    ok, frame = capture.read()
+    capture.release()
+    assert ok
+    ok, encoded = cv2.imencode(".jpg", frame)
+    assert ok
+    still = {"frame": ("court.jpg", encoded.tobytes(), "image/jpeg")}
+    review = client.post("/court/validate", files=still,
+                         data={"calibration": json.dumps(synthetic_clip.calibration)})
+    assert review.status_code == 200, review.text
+    run = client.post("/analyze/video?max_seconds=3", files={"file": (
+        "synthetic.mp4", synthetic_clip.path.read_bytes(), "video/mp4")},
+        data={"calibration": json.dumps(synthetic_clip.calibration),
+              "calibration_source": "user_confirmed", "calibration_frame_s": "0"})
+    assert run.status_code == 200, run.text
+    assert run.json()["calibration"]["method"] == "user_confirmed_landmarks"
+
+
+def test_court_review_rejects_malformed_points(synthetic_clip):
+    from picklepro.court_review import checked_review
+    import pytest
+
+    invalid = dict(synthetic_clip.calibration)
+    invalid["points"] = [dict(point) for point in invalid["points"]]
+    invalid["points"][0]["pixel"] = [-1, 50]
+    with pytest.raises(ValueError, match="inside"):
+        checked_review(invalid)
 
 
 def test_rejects_missing_file():

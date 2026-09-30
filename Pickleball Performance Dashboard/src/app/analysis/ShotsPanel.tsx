@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { PlayCircle } from "lucide-react";
 import type { AnalysisResultV1, ShotEvent, ShotType } from "../../lib/analysis/contract";
-import { SHOT_TYPES } from "../../lib/analysis/contract";
+import { PUBLIC_SHOT_TYPES, SHOT_TYPES } from "../../lib/analysis/contract";
 import {
   SHOT_INFO, countByType, formatClock, isMine, playerName, shotsByPlayer, shotsOf,
 } from "../../lib/analysis/shotLabels";
@@ -16,14 +16,15 @@ type Tab = "all" | "mine";
  * the user chose. The labels are experimental: each one links to the moment
  * in the video so it can be checked.
  */
-export function ShotsPanel({ result, myPlayerId, onWatch }: {
-  result: AnalysisResultV1; myPlayerId: number | null; onWatch?: (time: number) => void;
+export function ShotsPanel({ result, myPlayerId, onWatch, research = false }: {
+  result: AnalysisResultV1; myPlayerId: number | null; onWatch?: (time: number) => void; research?: boolean;
 }) {
   const metric = result.metrics.shot_classification;
   const all = shotsOf(result);
   const mine = all.filter((s) => isMine(s, myPlayerId));
   const [tab, setTab] = useState<Tab>("all");
-  const rallies = result.metrics.rally_segmentation.value?.rallies ?? [];
+  const rallies = research || result.metrics.rally_segmentation.validation === "evaluated_on_real_footage"
+    ? result.metrics.rally_segmentation.value?.rallies ?? [] : [];
   const validated = metric.validation === "evaluated_on_real_footage";
 
   if (!metric.value || all.length === 0) {
@@ -77,7 +78,7 @@ export function ShotsPanel({ result, myPlayerId, onWatch }: {
             {listed.length} {tab === "mine" ? "of your" : ""} hits
             {tab === "all" && rallies.length ? ` in ${rallies.length} rall${rallies.length === 1 ? "y" : "ies"}` : ""}
           </p>
-          {tab === "all" && <PlayerTable result={result} myPlayerId={myPlayerId} />}
+          {tab === "all" && <PlayerTable result={result} myPlayerId={myPlayerId} research={research} />}
           <h4 className="mt-5 text-base font-bold" style={{ color: INK }}>Every hit, in order</h4>
           <ol className="mt-2 divide-y" style={{ borderColor: BORDER }}>
             {listed.slice(0, LIST_LIMIT).map((shot) => (
@@ -94,7 +95,7 @@ export function ShotsPanel({ result, myPlayerId, onWatch }: {
       <details className="mt-5">
         <summary className="cursor-pointer text-sm font-semibold" style={{ color: BLUE_SKY }}>What each shot type means</summary>
         <dl className="mt-2 grid gap-2 sm:grid-cols-2">
-          {SHOT_TYPES.map((type) => (
+          {(research ? SHOT_TYPES : PUBLIC_SHOT_TYPES).map((type) => (
             <div key={type} className="text-sm">
               <dt className="font-semibold" style={{ color: INK }}>
                 <span className="inline-block h-2.5 w-2.5 rounded-full mr-1.5" style={{ background: SHOT_INFO[type].color }} aria-hidden="true" />
@@ -125,9 +126,9 @@ function ShotCounts({ shots }: { shots: ShotEvent[] }) {
   );
 }
 
-function PlayerTable({ result, myPlayerId }: { result: AnalysisResultV1; myPlayerId: number | null }) {
+function PlayerTable({ result, myPlayerId, research }: { result: AnalysisResultV1; myPlayerId: number | null; research: boolean }) {
   const rows = shotsByPlayer(result).filter((r) => r.shots.length > 0);
-  const types = SHOT_TYPES.filter((t) => rows.some((r) => r.shots.some((s) => s.shot_type === t)));
+  const types = (research ? SHOT_TYPES : PUBLIC_SHOT_TYPES).filter((t) => rows.some((r) => r.shots.some((s) => s.shot_type === t)));
   if (!rows.length) return null;
   return (
     <div className="mt-4 overflow-x-auto">

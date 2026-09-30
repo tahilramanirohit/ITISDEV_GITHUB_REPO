@@ -1,6 +1,6 @@
 # Pickleball shot types and how PicklePro names them
 
-PicklePro names every detected hit with one of the shot types below. The names follow common coaching usage and the USA Pickleball rules. The rules that assign them use only what the video measures. **The labels are experimental.** They have been scored against one hand-labelled clip (see below), and accuracy is still low. The app marks them `EXPERIMENTAL` and links each one to its moment in the video.
+PicklePro estimates a research `shot_type` for each detected hit using the categories below. Revision 4's separate `public_shot_type` has only **serve, volley, dink, drive, lob, and unclassified**. A return, drop, reset, speed-up, counter, overhead, or erne remains in the research field and is `unclassified` in the public field; those meanings are not collapsed into another class. **All automatic shot labels are experimental.** One development clip was used to tune the rules, so it is not independent validation. The local prototype shows estimated events for review; the player report withholds them until real-footage evaluation is recorded.
 
 ## Shot types
 
@@ -49,16 +49,16 @@ Very short sightings are folded into the matching player on the same side. Peopl
 
 Scores need hand labels. The web app has a labelling page at `#/label` (the **Label shots** link in the header; no account needed). The video is played from your own disk and never uploaded.
 
-1. Open a session's results and press **Download result (JSON)**. This file is optional, but with it the page draws each player's box and ID on the video, so labels use the same player numbers as PicklePro.
+1. Open the local prototype's research result and export its JSON if useful. This file is optional; with it the page draws player boxes and tracker IDs on the video. Human player numbers in the label file are separate.
 2. On `#/label`, choose the video, then the result file. To continue an earlier file, also choose it under **Existing labels**.
 3. Pause on the frame where the paddle meets the ball. Use ← and → to step one frame, and Shift+← → for half a second.
-4. Press the player's number (1–9), then the shot's letter: **S** serve, **R** return, **D** dink, **P** drop, **I** drive, **E** reset, **U** speed-up, **C** counter, **V** volley, **L** lob, **O** overhead, **N** erne, **X** not a shot. **F** marks the selected shot as a fault, error or winner.
+4. Give each person a stable human number (1–9), then press that number and the shot's letter: **S** serve, **R** return, **D** dink, **P** drop, **I** drive, **E** reset, **U** speed-up, **C** counter, **V** volley, **L** lob, **O** overhead, **N** erne, **H** unclassified, **X** not a shot. **F** marks the selected shot as a fault, error or winner. Describe the people and explicitly map each human number to a tracker ID if an analysis result is loaded.
 5. Optionally, **Add PicklePro's detections as suggestions**. They appear dashed. Use ↑ and ↓ to jump between them, fix the player or type with the keys, and press Enter to confirm or Delete to remove. Unconfirmed suggestions are never saved into the file.
 6. Press **Download labels** and save the file in `eval/` next to the clip's name.
 
-Labels are saved in the browser as you go. The file keeps each shot's exact time (`time_resolution_s: 0.1`). `picklepro.evaluate` matches a frame-precise label to a detection within 0.35 s. Older whole-second labels stay marked `±1 s` until they are moved to their exact frame (**Move here** or **M**).
+Labels are saved in the browser as you go. The downloaded file has `identity_scheme: human` and keeps each shot's exact time (`time_resolution_s: 0.1`). `picklepro.evaluate` matches a frame-precise label to the nearest unused detection within 0.35 s, independent of predicted hitter; it scores hitter identity only when a human-to-tracker mapping is supplied. Older whole-second labels stay marked `±1 s` until they are moved to their exact frame (**Move here** or **M**). Older files without an identity scheme still interpret `player` as a tracker ID.
 
-## Accuracy on `TestVideoKirk_REAL.mp4` (29 Sep 2026)
+## Historical development checks on `TestVideoKirk_REAL.mp4` (29 Sep 2026)
 
 This is a 51 s doubles clip, 1080p at 30 fps, filmed from behind the near baseline with a slightly moving handheld camera. A team member labelled every shot to the nearest second: 26 shots, plus 2 moments that are not shots (`eval/TestVideoKirk_REAL.labels.json`). Score a result with:
 
@@ -66,7 +66,7 @@ This is a 51 s doubles clip, 1080p at 30 fps, filmed from behind the near baseli
 python -m picklepro.evaluate result.json ../eval/TestVideoKirk_REAL.labels.json
 ```
 
-A detected hit matches a label when it falls in that second (±0.35 s), preferring the labelled player.
+A detected hit matches a label when it falls in that second (±0.35 s). The revised evaluator picks by time without preferring the labelled player; the historical development numbers below were produced by the older scorer and should not be compared directly with new runs.
 
 Players and court on the same clip:
 
@@ -78,11 +78,11 @@ Players and court on the same clip:
 | --- | --- | --- | --- | --- | --- | --- |
 | First version (29 Sep, one ball model) | 62% | 76% | 63% | – | 6% | 1 of 26 |
 | Side alternation, three ball models (29 Sep) | 100% | 39% (67 detections) | 69% | 85% | 23% | 5 of 26 |
-| **Current (30 Sep): one ball model, stricter hits, no shoe-level hits** | **73%** | **83% (23 detections)** | **53%** | **89%** | **42%** | **1 of 26** |
+| Earlier 30 Sep run: one ball model, stricter hits, no shoe-level hits | 73% | 83% (23 detections) | 53% | 89% | 42% | 1 of 26 |
 
-The team judged the three-model version unusable: it reported many shots that were never played, for example while the ball was dead after the service fault at 0:01. The current version reports about as many shots as were played.
+The team judged the three-model version unusable: it reported many shots that were never played, for example while the ball was dead after the service fault at 0:01. These rows record past development runs; they are not a score for this integration branch.
 
-What this means:
+What the earlier development run suggested:
 
 - **Few false shots.** Most detections are real shots. The remaining false ones are a ball rolling across the far court after a point (0:33, 0:50), which in the picture passes a near player at knee height, and extra hits in fast exchanges.
 - **Missed shots:** both serves at 0:15 and 0:45 (the server's feet are out of the picture), the overhead at 0:31, and some volleys in the 0:28–0:31 exchange.

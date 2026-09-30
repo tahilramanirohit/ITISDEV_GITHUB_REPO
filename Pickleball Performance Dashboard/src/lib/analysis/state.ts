@@ -127,6 +127,10 @@ export const FAILURE_HELP: Record<string, { title: string; action: string }> = {
     title: "The analysis settings were not valid",
     action: "Open \u201cRe-run analysis\u201d, keep the default settings, and try again.",
   },
+  invalid_court_correction: {
+    title: "The corrected court did not match the video",
+    action: "Open Re-run analysis and choose your local video again to correct the court, or use automatic mapping.",
+  },
   detector_unavailable: {
     title: "The analyzer is not set up correctly",
     action: "This is not a problem with your video. Ask the person running PicklePro to run \u201cpython -m picklepro.worker --check\u201d.",

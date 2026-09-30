@@ -147,7 +147,11 @@ describe("ResultView", () => {
         last_seen_s: 5, observed_frames: 20, median_court_m: [-2, 6], thumbnail: null },
     ];
     window.localStorage.clear();
-    render(<ResultView result={parseAnalysisResult(result)} videoUrl="/demo.mp4" />);
+    const report = render(<ResultView result={parseAnalysisResult(result)} videoUrl="/demo.mp4" />);
+    expect(screen.queryByRole("tab", { name: "All players (4)" })).toBeNull();
+    expect(screen.queryByRole("table", { name: "Shots by player" })).toBeNull();
+    report.unmount();
+    render(<ResultView result={parseAnalysisResult(result)} videoUrl="/demo.mp4" experimentalReview />);
     expect(screen.getByText("The selected player was tracked.")).toBeTruthy();
     expect(screen.queryByText(/4 hits were estimated/)).toBeNull();
     // Experimental labels are shown, clearly marked, for every player.

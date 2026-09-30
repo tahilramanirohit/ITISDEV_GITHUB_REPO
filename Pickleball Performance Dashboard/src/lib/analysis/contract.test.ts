@@ -3,8 +3,8 @@ import schema from "../../../contracts/analysis_result.v1.schema.json";
 import testFixture from "../../../contracts/fixtures/analysis_result.test_fixture.v1.json";
 import insufficient from "../../../contracts/fixtures/analysis_result.insufficient.v1.json";
 import {
-  ContractError, DATA_ORIGINS, METRIC_KEYS, SHOT_TYPES, METRIC_STATUSES, RESULT_KEYS, RESULT_STATUSES, VALIDATION_LEVELS,
-  parseAnalysisResult,
+  ContractError, DATA_ORIGINS, METRIC_KEYS, SHOT_TYPES, PUBLIC_SHOT_TYPES, METRIC_STATUSES, RESULT_KEYS, RESULT_STATUSES, VALIDATION_LEVELS,
+  parseAnalysisResult, publicShotResult,
 } from "./contract";
 
 type Json = Record<string, any>;
@@ -22,6 +22,7 @@ describe("TypeScript contract mirrors the Python schema", () => {
     expect([...VALIDATION_LEVELS]).toEqual(enumOf(s.$defs.CourtHeatmapMetric.properties.validation));
     expect([...METRIC_KEYS].sort()).toEqual(Object.keys(s.$defs.Metrics.properties).sort());
     expect([...SHOT_TYPES]).toEqual(enumOf(s.$defs.ShotEvent.properties.shot_type));
+    expect([...PUBLIC_SHOT_TYPES]).toEqual(enumOf(s.$defs.ShotEvent.properties.public_shot_type));
   });
 });
 
@@ -58,6 +59,10 @@ describe("parseAnalysisResult", () => {
     };
     const types = parseAnalysisResult(old).metrics.shot_classification.value?.shots.map((s) => s.shot_type);
     expect(types).toEqual(["drop", "drive", "dink"]);
+    expect(old.metrics.shot_classification.value.shots.map((s: Json) => s.public_shot_type))
+      .toEqual(["unclassified", "drive", "dink"]);
+    expect(publicShotResult(parseAnalysisResult(old)).metrics.shot_classification.value?.shots.map((s) => s.shot_type))
+      .toEqual(["unclassified", "drive", "dink"]);
     old.metrics.shot_classification.value.shots = [shot("toString")];
     expect(() => parseAnalysisResult(old)).toThrow(ContractError);
   });

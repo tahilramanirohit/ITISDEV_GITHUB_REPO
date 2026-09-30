@@ -10,6 +10,7 @@ from typing import Callable, Dict, List, Optional
 from . import PIPELINE_VERSION
 from .auto_court import CourtPoseDetector
 from .court_lines import CourtTracker
+from .court_review import validate_confirmed_frame
 from .ball_detection import BallDetector
 from .ball_tracking import BallCandidate, track_ball
 from .camera_view import likely_scene_cut, view_changed
@@ -43,7 +44,7 @@ from .contract import (
     ZoneOccupancyValue,
     utc_now_iso,
 )
-from .court import COURT_MODEL, CourtCalibration
+from .court import COURT_MODEL, CalibrationError, CourtCalibration
 from .detection import PlayerTracker
 from .players import PlayerCollector
 from .positioning import positioning_patterns
@@ -69,6 +70,8 @@ class AnalysisOptions:
     auto_court: bool = True
     max_seconds: Optional[float] = None
     calibration: Optional[CourtCalibration] = None
+    calibration_source: Optional[str] = None
+    calibration_frame_s: float = 0.0
     selection: Optional[Selection] = None
     selection_time_s: Optional[float] = None
     experimental_zones: bool = False
@@ -95,7 +98,9 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
     # painted lines (no model needed) and, when configured, the court model.
     # Every map is confirmed against the painted lines before it is used.
     court_tracker = CourtTracker(court_detector) if calibration is None and opts.auto_court else None
-    calibration_method = "auto_painted_lines" if court_tracker else "manual_landmarks"
+    calibration_method = "auto_painted_lines" if court_tracker else (
+        "user_confirmed_landmarks" if opts.calibration_source == "user_confirmed" else "manual_landmarks")
+    correction_checked = opts.calibration_source != "user_confirmed"
     if calibration is not None and calibration.image_size != (props.width, props.height):
         warnings.append(
             f"Calibration was made on a {calibration.image_size[0]}x{calibration.image_size[1]} image and "
@@ -138,6 +143,11 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
                                      for c in ball_detector.candidates(frame)]))
         if not player_frame:
             continue
+        if not correction_checked and ts + frame_interval_s / 2 >= opts.calibration_frame_s:
+            if calibration is None:
+                raise CalibrationError("A confirmed court correction needs calibration points.")
+            validate_confirmed_frame(calibration, frame)
+            correction_checked = True
         if previous_sample is not None and likely_scene_cut(previous_sample, frame):
             segment += 1
             if court_tracker is not None:
@@ -148,11 +158,11 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
         if court_tracker is not None:
             frame_calibration = court_tracker.update(ts, frame, [d["bbox"] for d in detections])
         else:
-            if calibration is not None and manual_reference is None:
+            if calibration is not None and correction_checked and manual_reference is None:
                 manual_reference = frame.copy()
-            if calibration is not None and manual_reference is not None and not manual_view_lost:
+            if calibration is not None and correction_checked and manual_reference is not None and not manual_view_lost:
                 manual_view_lost = view_changed(manual_reference, frame)
-            frame_calibration = None if manual_view_lost else calibration
+            frame_calibration = calibration if correction_checked and not manual_view_lost else None
         per_frame_calibration.append(frame_calibration)
         # Tracker IDs are local to a camera view. A cut cannot establish that
         # a person in the new view is the same player as before the cut.
@@ -172,6 +182,8 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
             progress(min(0.99, ts / progress_total))
 
     frames_analyzed = len(per_frame)
+    if not correction_checked:
+        raise CalibrationError("The court correction's chosen frame was not reached in this video.")
     players, per_frame = _identify_players(collector, per_frame, opts.selection)
     frames_with_detections = sum(1 for dets in per_frame if dets)
     tracks: Dict[int, List[float]] = {}  # player id -> [first, last, count]
@@ -295,6 +307,7 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
                                   confidence_is_model_score=tracker.confidence_is_model_score),
             ball_detector=DetectorInfo(name="ultralytics-yolo-ball", confidence_is_model_score=True)
             if ball_detector is not None else None,
+            ball_tracking=ball_stats if ball_detector is not None else None,
             source=SourceInfo(filename=opts.source_filename or Path(path).name,
                               sha256=sha256_of(path) if opts.compute_sha256 else None),
         ),
@@ -454,6 +467,9 @@ def _shot_metrics(ball_model: bool, ball_snapshots, times, per_frame, calibratio
                 RallySegmentationMetric(status="insufficient_data", scope=scope, reason=SHOTS_NOT_COMPUTED))
     frames = [FrameObs(t, dets, cal, idx) for t, dets, cal, idx in zip(times, per_frame, calibrations, selected_indices)]
     found = analyze_shots([(b.time_seconds, b.bbox) for b in ball_snapshots], frames, frame_h, frame_interval_s)
+    public_types = {"serve", "volley", "dink", "drive", "lob"}
+    for shot in found["shots"]:
+        shot["public_shot_type"] = shot["shot_type"] if shot["shot_type"] in public_types else "unclassified"
     if not found["shots"]:
         reason = "The ball was seen, but no hits near a player were detected."
         return (ShotClassificationMetric(status="insufficient_data", scope=scope, reason=reason),

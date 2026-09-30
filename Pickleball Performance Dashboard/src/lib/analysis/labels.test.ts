@@ -30,6 +30,16 @@ describe("labels file", () => {
     ]);
   });
 
+  it("keeps human identities and explicit tracker mappings separate from legacy files", () => {
+    const human = toLabelFile([label(1.4, { player: 1 })], {
+      video: "v.mp4", labelled_by: "reviewer", notes: "", identity_scheme: "human",
+      players: { "1": "near left, blue shirt" }, tracker_mapping: { "1": 8 },
+    });
+    expect(human.identity_scheme).toBe("human");
+    expect(parseLabelFile(human).meta.tracker_mapping).toEqual({ "1": 8 });
+    expect(toLabelFile(parseLabelFile(kirkLabels).labels, parseLabelFile(kirkLabels).meta).identity_scheme).toBeUndefined();
+  });
+
   it("maps the retired third-shot names and rejects unknown types", () => {
     const { labels } = parseLabelFile({ shots: [{ t: 3, player: 2, type: "third_shot_drop" }] });
     expect(labels[0].type).toBe("drop");
@@ -76,8 +86,8 @@ describe("from a PicklePro result", () => {
           landed_in: null, evidence: "" },
       ],
     };
-    const drafts = draftsFromResult(withShots, [label(2.1, { player: 3 })], 30);
+    const drafts = draftsFromResult(withShots, [label(2.1, { player: 3 })], 30, { "2": 2 });
     expect(drafts).toHaveLength(1);
-    expect(drafts[0]).toMatchObject({ t: 1, player: 2, type: "volley", draft: true });
+    expect(drafts[0]).toMatchObject({ t: 1, player: 2, type: "unclassified", draft: true });
   });
 });

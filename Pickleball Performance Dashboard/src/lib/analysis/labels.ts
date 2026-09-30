@@ -9,7 +9,7 @@
 
 import { SHOT_TYPES, type AnalysisResultV1 } from "./contract";
 
-export const LABEL_TYPES = [...SHOT_TYPES.filter((t) => t !== "unclassified"), "not_a_shot"] as const;
+export const LABEL_TYPES = [...SHOT_TYPES, "not_a_shot"] as const;
 export type LabelType = (typeof LABEL_TYPES)[number];
 export const OUTCOMES = ["fault", "error", "winner"] as const;
 export type Outcome = (typeof OUTCOMES)[number];
@@ -31,10 +31,13 @@ export type ShotLabel = {
 
 export type LabelFile = {
   video: string;
+  identity_scheme?: "human";
   labelled_by: string;
   time_resolution_s: number;
   notes: string;
   players?: Record<string, string>;
+  /** Human player ID (1-9) to tracker ID in this one result. Missing means unverified. */
+  tracker_mapping?: Record<string, number>;
   shots: { t: number; player: number | null; type: LabelType; outcome?: Outcome; note?: string; resolution_s?: number }[];
 };
 
@@ -42,11 +45,12 @@ export type LabelFile = {
 export const TYPE_KEYS: Record<LabelType, string> = {
   serve: "s", return: "r", drive: "i", drop: "p", dink: "d", reset: "e", speed_up: "u", counter: "c",
   volley: "v", lob: "l", overhead: "o", erne: "n", not_a_shot: "x",
+  unclassified: "h",
 };
 
 export const TYPE_NAMES: Record<LabelType, string> = {
   serve: "Serve", return: "Return", drive: "Drive", drop: "Drop", dink: "Dink", reset: "Reset", speed_up: "Speed-up",
-  counter: "Counter", volley: "Volley", lob: "Lob", overhead: "Overhead", erne: "Erne", not_a_shot: "Not a shot",
+  counter: "Counter", volley: "Volley", lob: "Lob", overhead: "Overhead", erne: "Erne", unclassified: "Unclassified", not_a_shot: "Not a shot",
 };
 
 export function typeForKey(key: string): LabelType | null {
@@ -94,6 +98,9 @@ export function parseLabelFile(input: unknown): { labels: ShotLabel[]; meta: Omi
   const players = isObj(input.players)
     ? Object.fromEntries(Object.entries(input.players).filter(([, v]) => typeof v === "string")) as Record<string, string>
     : undefined;
+  const tracker_mapping = isObj(input.tracker_mapping)
+    ? Object.fromEntries(Object.entries(input.tracker_mapping).filter(([k, v]) => /^[1-9]$/.test(k) && typeof v === "number" && Number.isInteger(v))) as Record<string, number>
+    : undefined;
   return {
     labels: sortLabels(labels),
     meta: {
@@ -101,7 +108,9 @@ export function parseLabelFile(input: unknown): { labels: ShotLabel[]; meta: Omi
       labelled_by: typeof input.labelled_by === "string" ? input.labelled_by : "",
       time_resolution_s: PRECISE_RESOLUTION_S,
       notes: typeof input.notes === "string" ? input.notes : "",
+      identity_scheme: input.identity_scheme === "human" ? "human" : undefined,
       players,
+      tracker_mapping,
     },
   };
 }
@@ -116,18 +125,22 @@ export function toLabelFile(labels: ShotLabel[], meta: Omit<LabelFile, "shots" |
     return out;
   });
   const players = meta.players && Object.keys(meta.players).length ? meta.players : undefined;
+  const tracker_mapping = meta.tracker_mapping && Object.keys(meta.tracker_mapping).length ? meta.tracker_mapping : undefined;
   return { video: meta.video, labelled_by: meta.labelled_by, time_resolution_s: PRECISE_RESOLUTION_S, notes: meta.notes,
-    ...(players ? { players } : {}), shots };
+    ...(meta.identity_scheme === "human" ? { identity_scheme: "human" as const } : {}),
+    ...(players ? { players } : {}), ...(tracker_mapping ? { tracker_mapping } : {}), shots };
 }
 
 /** PicklePro's detected shots as unconfirmed suggestions, so labelling starts from something. */
-export function draftsFromResult(result: AnalysisResultV1, existing: ShotLabel[], fps: number): ShotLabel[] {
+export function draftsFromResult(result: AnalysisResultV1, existing: ShotLabel[], fps: number,
+  trackerMapping: Record<string, number> = {}): ShotLabel[] {
   const shots = result.metrics.shot_classification.value?.shots ?? [];
   return shots
-    .filter((s) => !existing.some((l) => Math.abs(l.t - s.time_seconds) < 0.3 && l.player === s.hitter_track_id))
+    .filter((s) => !existing.some((l) => Math.abs(l.t - s.time_seconds) < 0.3))
     .map((s) => ({
-      id: newId(), t: snapToFrame(s.time_seconds, fps), player: s.hitter_track_id,
-      type: s.shot_type === "unclassified" ? "volley" : s.shot_type,
+      id: newId(), t: snapToFrame(s.time_seconds, fps),
+      player: Number(Object.entries(trackerMapping).find(([, trackId]) => trackId === s.hitter_track_id)?.[0]) || null,
+      type: s.shot_type,
       resolution_s: PRECISE_RESOLUTION_S, draft: true,
     }));
 }
