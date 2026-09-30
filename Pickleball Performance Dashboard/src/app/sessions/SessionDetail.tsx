@@ -378,7 +378,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
         {error && <div className="mt-3"><Notice tone="error">{error}</Notice></div>}
       </Card>
 
-      <CapturePanel sb={sb} session={session} onSessionUpdated={() => void load()} />
+      <CapturePanel key={session.id} sb={sb} session={session} onSessionUpdated={() => void load()} />
 
       {runHistory.length > 0 && <Card>
         <h2 className="text-lg font-bold text-[#101827]">Analysis history</h2>
