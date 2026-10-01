@@ -1,0 +1,5 @@
+# Not part of increments 1–2. Only needed when PICKLEPRO_ENABLE_EXPERIMENTAL_RAG=1.
+# rag_coach.py downloads an ONNX embedding model on first use and calls Claude
+# (set ANTHROPIC_API_KEY in server/.env; optional PICKLEPRO_RAG_MODEL).
+chromadb
+anthropic>=1.0

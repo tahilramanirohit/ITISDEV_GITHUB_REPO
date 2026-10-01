@@ -1,0 +1,145 @@
+import type { ReactNode } from "react";
+import {
+  BLUE_MID, BORDER, CARD_GLOW, COBALT, DISPLAY_FONT, INK, LAVENDER, NEON, NEON_D, ORANGE, VIOLET, WHITE, WHITE_DIM, WHITE_SUB,
+} from "../theme";
+
+// ── Card ──────────────────────────────────────────────────────────────────
+export function Card({ children, className = "", accent }: { children: ReactNode; className?: string; accent?: string }) {
+  return (
+    <div
+        className={`rounded-2xl p-5 text-[#101827] ${className}`}
+      style={{
+        background: BLUE_MID,
+        boxShadow: CARD_GLOW,
+        borderTop: accent ? `3px solid ${accent}` : `1px solid ${BORDER}`,
+        border: accent ? undefined : `1px solid ${BORDER}`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+// ── Section Banner ────────────────────────────────────────────────────────
+export function SectionBanner({ n, eyebrow, title, subtitle, bg, accent, badge }: {
+  n: string; eyebrow: string; title: string; subtitle: string; bg: string; accent: string; badge?: string;
+}) {
+  return (
+    <div className="rounded-2xl px-6 py-4 mb-5 flex items-start gap-4" style={{ background: bg, border: `1px solid ${accent}40` }}>
+      <div
+        className="rounded-xl w-12 h-12 flex items-center justify-center flex-shrink-0 font-mono font-bold text-lg"
+        style={{ background: accent, color: WHITE }}
+      >
+        {n}
+      </div>
+      <div className="flex-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="text-sm font-bold tracking-widest mb-0.5" style={{ color: accent }}>{eyebrow}</div>
+          {badge && <Pill color={ORANGE}>{badge}</Pill>}
+        </div>
+        <div className="font-bold text-lg text-[#101827]" style={{ fontFamily: DISPLAY_FONT, letterSpacing: "0.04em" }}>{title}</div>
+        <div className="text-sm mt-0.5" style={{ color: WHITE_DIM }}>{subtitle}</div>
+      </div>
+    </div>
+  );
+}
+
+// ── Widget Header ─────────────────────────────────────────────────────────
+export function WidgetHeader({ title, subtitle, accent }: { title: string; subtitle: string; accent?: string }) {
+  return (
+    <div className="mb-4">
+      <h3 className="font-bold text-lg text-[#101827] mb-0.5">{title}</h3>
+      {accent
+        ? <div className="flex items-center gap-1.5 mt-1">
+            <div className="h-0.5 w-4 rounded" style={{ background: accent }} />
+            <p className="text-sm" style={{ color: WHITE_DIM }}>{subtitle}</p>
+          </div>
+        : <p className="text-sm" style={{ color: WHITE_DIM }}>{subtitle}</p>
+      }
+    </div>
+  );
+}
+
+// ── Chart Tooltip ─────────────────────────────────────────────────────────
+export function ChartTip({ active, payload, label, suffix = "" }: {
+  active?: boolean; payload?: any[]; label?: string; suffix?: string;
+}) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-xl border px-3 py-2 text-sm shadow-lg" style={{ background: WHITE, borderColor: BORDER }}>
+      {label && <div className="font-bold mb-1.5 text-[#101827]">{label}</div>}
+      {payload.map(p => (
+        <div key={p.name} className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full" style={{ background: p.color ?? NEON }} />
+          <span style={{ color: WHITE_DIM }}>{p.name}:</span>
+          <span className="font-bold text-[#101827]">{typeof p.value === "number" ? `${p.value.toFixed(p.value < 10 ? 1 : 0)}${suffix}` : p.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Small labelled chip ───────────────────────────────────────────────────
+export function Pill({ children, color = VIOLET, title }: { children: ReactNode; color?: string; title?: string }) {
+  return (
+    <span
+      title={title}
+      className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold tracking-wide"
+      style={{ background: `${color}25`, color, border: `1px solid ${color}60` }}
+    >
+      {children}
+    </span>
+  );
+}
+
+export function Notice({ tone = "info", onDark = false, children }: { tone?: "info" | "warn" | "error"; onDark?: boolean; children: ReactNode }) {
+  const color = tone === "error" ? "#ad2545" : tone === "warn" ? ORANGE : COBALT;
+  const darkColor = tone === "error" ? "#ffb5c6" : tone === "warn" ? "#ffc19f" : LAVENDER;
+  return (
+    <div
+      role={tone === "error" ? "alert" : "status"}
+      className="rounded-xl px-4 py-3 text-base leading-relaxed"
+      style={onDark
+        ? { background: "rgba(255,255,255,0.08)", border: `1px solid ${darkColor}70`, color: darkColor }
+        : { background: `${color}0d`, border: `1px solid ${color}50`, color }}
+    >
+      {children}
+    </div>
+  );
+}
+
+// ── Brand mark ────────────────────────────────────────────────────────────
+export function PickleProLogo({ size = "md", tone = "dark" }: { size?: "sm" | "md" | "lg"; tone?: "dark" | "light" }) {
+  const box = size === "lg" ? 56 : size === "sm" ? 36 : 44;
+  return (
+    <div className="flex items-center gap-2">
+      <div
+        className="rounded-xl flex items-center justify-center flex-shrink-0"
+        style={{ width: box, height: box, background: tone === "light" ? COBALT : NEON,
+          boxShadow: tone === "light" ? "none" : `0 0 18px ${NEON}80` }}
+      >
+        <svg viewBox="0 0 20 30" width={box * 0.55} height={box * 0.68} fill="none" aria-hidden>
+          <path d="M10 1C5.5 1 1.5 4.5 1.5 9.5C1.5 14.5 5 17.5 10 17.5C15 17.5 18.5 14.5 18.5 9.5C18.5 4.5 14.5 1 10 1Z" fill={tone === "light" ? WHITE : NEON_D} />
+          <line x1="5" y1="7" x2="15" y2="7" stroke={NEON} strokeWidth="0.8" strokeOpacity="0.5" />
+          <line x1="4" y1="10" x2="16" y2="10" stroke={NEON} strokeWidth="0.8" strokeOpacity="0.5" />
+          <line x1="5" y1="13" x2="15" y2="13" stroke={NEON} strokeWidth="0.8" strokeOpacity="0.5" />
+          <path d="M7.5 17.5 L8.5 20 L11.5 20 L12.5 17.5Z" fill={tone === "light" ? WHITE : NEON_D} />
+          <rect x="8" y="19.5" width="4" height="9.5" rx="2" fill={tone === "light" ? WHITE : NEON_D} />
+        </svg>
+      </div>
+      <span style={{ fontFamily: DISPLAY_FONT, fontWeight: 800, fontSize: size === "lg" ? "2.8rem" : size === "sm" ? "1.8rem" : "2.2rem", letterSpacing: "0.02em", lineHeight: 1, color: tone === "light" ? INK : WHITE }}>
+        Pickle<span style={{ color: tone === "light" ? COBALT : LAVENDER }}>Pro</span>
+      </span>
+    </div>
+  );
+}
+
+export const fieldStyle = {
+  background: WHITE,
+  border: `1px solid ${BORDER}`,
+  color: INK,
+} as const;
+
+export const labelClass = "block text-base font-semibold mb-1.5";
+export const labelStyle = { color: WHITE_DIM } as const;
+export const subtleText = { color: WHITE_SUB } as const;

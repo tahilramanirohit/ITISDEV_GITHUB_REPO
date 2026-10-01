@@ -1,0 +1,50 @@
+# ── Secrets & local environment ─────────────────────────────
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+env.local
+*.pem
+*.key
+supabase/.temp/
+supabase/.branches/
+
+# ── Node / Vite ──────────────────────────────────────────────
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+coverage/
+
+# ── Python ───────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.chroma_cache/
+
+# ── Model weights (download explicitly; check licence first) ─
+*.pt
+*.onnx
+
+# ── Local videos, CV outputs, scratch data ───────────────────
+*.mp4
+*.mov
+*.MOV
+*.avi
+*.webm
+*.mkv
+local_media/
+cv_outputs/
+**/test_tmp_video.*
+
+# ── OS / editor ──────────────────────────────────────────────
+.DS_Store
+.idea/
+.vscode/

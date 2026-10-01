@@ -1,0 +1,849 @@
+{
+  "schema_version": "1.0",
+  "status": "insufficient_data",
+  "data_origin": "measured",
+  "message": "Detections are available for review, but court metrics were not produced: Court not calibrated: at least 4 court landmarks are required.",
+  "provenance": {
+    "pipeline_version": "0.7.0-dev",
+    "generated_at": "2026-01-01T00:00:00+00:00",
+    "detector": {
+      "name": "opencv-mog2-motion",
+      "confidence_is_model_score": false
+    },
+    "ball_detector": null,
+    "source": {
+      "filename": "synthetic_fixture.mp4",
+      "sha256": null
+    }
+  },
+  "video": {
+    "width": 960,
+    "height": 540,
+    "fps": 15.0,
+    "frame_count_reported": 300,
+    "container_duration_s": 20.0
+  },
+  "coverage": {
+    "analyzed_start_s": 0.0,
+    "analyzed_end_s": 20.0,
+    "analyzed_duration_s": 20.0,
+    "frames_decoded": 300,
+    "frames_analyzed": 150,
+    "sample_stride": 2,
+    "decode_failures": 0,
+    "stopped_early_reason": null,
+    "fraction_of_video_analyzed": 1.0,
+    "frames_with_detections": 145,
+    "frames_with_ball_detections": 0,
+    "ball_sample_stride": null,
+    "frames_with_carried_court_map": 0,
+    "selected_view_duration_s": null
+  },
+  "calibration": null,
+  "player_selection": null,
+  "players": [
+    {
+      "player_id": 1,
+      "label": "Player",
+      "on_court": true,
+      "side": null,
+      "first_seen_s": 0.667,
+      "last_seen_s": 19.867,
+      "observed_frames": 145,
+      "median_court_m": null,
+      "thumbnail": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAkGBwgHBgkIBwgKCgkLDRYPDQwMDRsUFRAWIB0iIiAdHx8kKDQsJCYxJx8fLT0tMTU3Ojo6Iys/RD84QzQ5Ojf/2wBDAQoKCg0MDRoPDxo3JR8lNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzf/wAARCACAAC0DASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDL/siz/wCg/p//AHzN/wDEUf2RZf8AQf0//vmb/wCIqppUcb3JMy7o0QswwPb1rUhtrafywtuu8AMVAHP4+/pXo1aypuzf5HDTo+0V0Vv7Hs/+g/p//fM3/wARSppVojB08QWCspyCFmBB/wC+Ktiyh2RutshQDJbAI3dgTnHT/OalawsxOm9I1RshsryOMjpn+Xasni4rv+A/YPQTxNbxXMcWrWk8Nx5p8u7aBWCrMBnPIB+Yc9Oua5+untbe1jE1vdv9mt5n2yGMZGMfKe3QnPeufv7SawvJrW4XbJE20+/v9D1rzcRBRleOzCpBxepBot0kl04tnV5BGT1xgZHft6fjXQ/MIt6qWzyTv5789c9B+X1rD0KOFL7/AFSDKEZ2D1HrW5M6tcLJGhZRhRjoSAcA+2Mf5FduJuqmprQs46IUMZFUq3mNnA4PzHPqf/1fjSEGOAROAVVtyg8nOfl57d/yolIChTIckM+SuWLHjBPTH4jrSukSsDKgDFyBuAY8An6cZHHT+uKa3R03Sdite3EX9n3U4CopUfe9COv+fT8ktb/RNdsoG1LWYLK8tl8pnkBPnIPuH6jkfgKdqCZsHTygIthyvGOvqffn9K5nyIf+eUf/AHyK6Y0VWg0clecVPVGlpAzdE5KkISGHY5Fbk0zLghgFzxGEXdg5Hce9ZGlW9wt180EoQqQxwV4+vatYhFgLGQoVXOCc8kfw+vXvSxNnU37FYa6jsKhjtxukQNGpBVcklegyOwzx19DSgypEpwC3VvmAbb16/gOfb8aQblnOCX4VzgcYx09Mnjv+VI0gcQFtzqx2gEAd/Y8EeufWuVbnRzOTuiDUFWGxlRQwfBBKuCPoR265rna6W9jf7A4iXhl4EeehH3ffGB/kVgfZbj/n3l/74NejhdIWOHEu8kzUsdW1G6kdLu+vLhAhYRyTOw3AjBxn/IzWlAULHKsUBAwz8ZBHv1BJrn9MdUuGZgSAh6f5/Ct6BpFZUh2AEArIGxlcZ59/x9fw58X7stDXD/A7gZXaR0dmZSWJLjO75eB6g5Oe+SaEdE4lADI2eTjjnnOT3J496cXVZJFEjFi3G8dT9MdecfgPpTHDlg77d/mBfujeeeAMjHt+Arn0tqdGrZFNLLBbGWGSaLblopE4dT3ORjAJ9Kzf7f1n/oL6h/4FP/jV2/uQ9rN/q2DJgMDtJA9vTqfx/CsCu/Cq8XddTjxTkp2LulDN0QVz8vQjPcflW7tXbgOXDMcnJJbrnHbsBjmsTSBuuXA/55txx83tWxH5aGZ3+Uyfwg7VXnvkDPT/APXWGL1mbYbWnZD2ZeQy/vOXJDYCnA6Z6dBx+Heov3SA7Y0HzABSoyxwB36frT0i8tflAXfySzfcwP8AD/8AVTWtwdpeUgkEhhwyDnjJ/D16/SudWdzoTTd+wy+YNp5LEKoj2KijJOMYP8u3audroL8L9hkRDnYpJwpB5I4PPYY/KuervwfwM4MV8SZd0n/j5OFRiF+63Q8jit8KqoWAHm5GWGNuMdfSsTRGVLp2diF8sg4OM8jjPatwSr5jfvS7KCwz93GOnPYYHT+lc2Mb9obYdN07ogj3Av8AIMAFgAvzY9/8jrnvwrNkGTdC23+EZLEkDpnvnj881E3lyoDlZEGQeQRtzgcH6tz7VYR03GVQxzHlgUHX1API9enc1ldJux0uHXcguol/s+4LSLlQcDp37fX6fjXO10N6oOnuzAHCEjjBH+cjsOn1rna7sG04u3c4MVrJM0NE3fbCFGSVxgHGckCttDGQbYI2COuAcjPPr/kdK5/TNwugVyDtIyOoB44/Oug8t4lKsgjHJ2k4IPPccA4+lY4pfvN+hvhmlSuNSRd7xrgIyblxx1PHI/r7UtyyRRof+Wig4wuflAzkjnvj/wCv1qXZt2/PgA7lZjjaCckc4yOc5psI2RxnYGUgj5wGBORzknjJ56D/AB53qzZStqyjdNG2nShZOnI6AMO3ck9vQCsCuh1ExmKRFCnMZbudp4OCfXJ/SuervwitF27nJjPjXoXNMkjjuC0smwbCM88/lWmb22EWFuXB3DnpnHc4/H86waKuph1UlzNmNOs4KyR0H26z8td04Zgm3OwjHt9OB+ZpV1CDyGBulZ1IKblJz2Ht6enSueorP6nDu/wNPrU+xuXV/atayxRSMcoVGfr9Oent1rCpaSt6dKNNOxhObm7n/9k="
+    },
+    {
+      "player_id": 2,
+      "label": "Player",
+      "on_court": true,
+      "side": null,
+      "first_seen_s": 1.6,
+      "last_seen_s": 2.4,
+      "observed_frames": 7,
+      "median_court_m": null,
+      "thumbnail": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAkGBwgHBgkIBwgKCgkLDRYPDQwMDRsUFRAWIB0iIiAdHx8kKDQsJCYxJx8fLT0tMTU3Ojo6Iys/RD84QzQ5Ojf/2wBDAQoKCg0MDRoPDxo3JR8lNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzf/wAARCACAAA0DASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDm6K20tovJ+VIGfBLAYOBjjv14/nWXeKqTFUGAB6VyypuKuccqTjubjs+TJj95kn7hGTjofQYPt9ayNVYNdnG3G0Y2jitcSxoyiNQS8p2OmQGGPQ9zj2/KsO9XZOVJ+YAbjkent7YrWtrG5pW2Nl1+TayjaX3blBO/jHJ9McVZXw6+uRLLpRQSxEpPFK4BXup+hBI/4DVVJGkVlVGCg7srHk9OmO54PcZrMv7y5t72T7PNJHlVBKvjdjoTXVCh7T3GViJWV2bLESyRtE+1lYlSWALDHJx+fTj9BWfcapDaymJtJsJyP45kk3fo4FWTCqk+UygxP0XJzgdPpyOKxNTbfdlsgkqOhzWmGXNPyFiXywsmb9tKEmX5kRQd3TAznp+Of0rD1nb9ubZyoVQG/vYGM1twxrxGoQpndjb0GMEA56cHnOKwdTUrdsGJY4Hzc8jt19qeGX7z5E4mzhc3YXch1eJPLI4AyN3PJx+PtWLrC7L1hgD5R0Oe1byDzIBBhgqqBuK4zk+3I7j8D2FYOspsvmHl7OM47c88e1GFd6m1gxLfJsb4aNmbcMRM4C8YAwRgcDJ4GO9YGsri+fBYgjI3da2I1KQhTIPMXGfkwTyRyCcd/wCf4YuqEtcg4C5QHG3GPYilhEo1LIeJ+C/mbT6naecy+ePLAJ3YJJP4/hWJqkyXF20qkHIGSKq0V1U8PGnLmTOapWc1Zo//2Q=="
+    }
+  ],
+  "tracks": [
+    {
+      "track_id": 1,
+      "first_seen_s": 0.667,
+      "last_seen_s": 19.867,
+      "observed_frames": 145
+    },
+    {
+      "track_id": 2,
+      "first_seen_s": 1.6,
+      "last_seen_s": 2.4,
+      "observed_frames": 7
+    }
+  ],
+  "player_positions": [
+    {
+      "time_seconds": 0.667,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            534,
+            156,
+            582,
+            412
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 0.8,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            546,
+            156,
+            592,
+            413
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 0.933,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            558,
+            156,
+            604,
+            411
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 1.067,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            570,
+            156,
+            614,
+            409
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 1.2,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            581,
+            155,
+            623,
+            407
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 1.333,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            554,
+            155,
+            634,
+            405
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 1.467,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            560,
+            155,
+            640,
+            401
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 1.6,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            572,
+            156,
+            624,
+            399
+          ],
+          "confidence": null,
+          "selected": false
+        },
+        {
+          "track_id": 2,
+          "bbox": [
+            632,
+            155,
+            650,
+            399
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 1.733,
+      "players": [
+        {
+          "track_id": 2,
+          "bbox": [
+            640,
+            155,
+            656,
+            395
+          ],
+          "confidence": null,
+          "selected": false
+        },
+        {
+          "track_id": 1,
+          "bbox": [
+            578,
+            155,
+            616,
+            395
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 1.867,
+      "players": [
+        {
+          "track_id": 2,
+          "bbox": [
+            640,
+            155,
+            664,
+            393
+          ],
+          "confidence": null,
+          "selected": false
+        },
+        {
+          "track_id": 1,
+          "bbox": [
+            586,
+            155,
+            624,
+            393
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 2.0,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            592,
+            154,
+            635,
+            389
+          ],
+          "confidence": null,
+          "selected": false
+        },
+        {
+          "track_id": 2,
+          "bbox": [
+            648,
+            153,
+            672,
+            389
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 2.133,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            598,
+            154,
+            640,
+            384
+          ],
+          "confidence": null,
+          "selected": false
+        },
+        {
+          "track_id": 2,
+          "bbox": [
+            656,
+            152,
+            672,
+            384
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 2.267,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            602,
+            154,
+            654,
+            381
+          ],
+          "confidence": null,
+          "selected": false
+        },
+        {
+          "track_id": 2,
+          "bbox": [
+            663,
+            153,
+            678,
+            354
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 2.4,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            610,
+            155,
+            652,
+            377
+          ],
+          "confidence": null,
+          "selected": false
+        },
+        {
+          "track_id": 2,
+          "bbox": [
+            666,
+            153,
+            680,
+            376
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 2.533,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            612,
+            153,
+            687,
+            375
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 2.667,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            614,
+            153,
+            686,
+            371
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 2.8,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            617,
+            152,
+            688,
+            365
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 2.933,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            618,
+            152,
+            674,
+            361
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 3.067,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            618,
+            151,
+            672,
+            357
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 3.2,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            620,
+            151,
+            684,
+            352
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 3.333,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            620,
+            149,
+            683,
+            349
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 3.467,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            618,
+            149,
+            682,
+            346
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 3.6,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            616,
+            149,
+            680,
+            341
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 3.733,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            614,
+            147,
+            672,
+            336
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 3.867,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            610,
+            147,
+            670,
+            331
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 4.0,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            604,
+            147,
+            666,
+            327
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 4.133,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            600,
+            145,
+            660,
+            323
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 4.267,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            594,
+            145,
+            654,
+            319
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 4.4,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            592,
+            144,
+            648,
+            315
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 4.533,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            586,
+            144,
+            640,
+            311
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 4.667,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            579,
+            141,
+            632,
+            307
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 4.8,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            571,
+            140,
+            624,
+            303
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 4.933,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            564,
+            141,
+            616,
+            299
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 5.067,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            558,
+            139,
+            608,
+            295
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 5.2,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            550,
+            138,
+            600,
+            291
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 5.333,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            542,
+            136,
+            592,
+            287
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 5.467,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            534,
+            137,
+            584,
+            283
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 5.6,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            526,
+            135,
+            573,
+            281
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 5.733,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            516,
+            133,
+            566,
+            277
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 5.867,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            506,
+            133,
+            555,
+            273
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    }
+  ],
+  "ball_positions": [],
+  "court_lines": [
+    {
+      "time_seconds": 0.0,
+      "lines": []
+    }
+  ],
+  "metrics": {
+    "court_heatmap": {
+      "status": "insufficient_data",
+      "validation": "not_evaluated",
+      "scope": "whole_clip",
+      "reason": "Court not calibrated: at least 4 court landmarks are required.",
+      "value": null
+    },
+    "zone_occupancy": {
+      "status": "not_computed",
+      "validation": "not_evaluated",
+      "scope": "whole_clip",
+      "reason": "Zone occupancy is experimental and disabled by default (enable with experimental_zones).",
+      "value": null
+    },
+    "positioning": {
+      "status": "insufficient_data",
+      "validation": "not_evaluated",
+      "scope": "whole_clip",
+      "reason": "Court not calibrated: at least 4 court landmarks are required.",
+      "value": null
+    },
+    "rally_segmentation": {
+      "status": "not_computed",
+      "validation": "not_evaluated",
+      "scope": "whole_clip",
+      "reason": "Rallies are found from detected ball hits, which needs a ball model. All other metrics are whole-clip metrics.",
+      "value": null
+    },
+    "shot_classification": {
+      "status": "not_computed",
+      "validation": "not_evaluated",
+      "scope": "whole_clip",
+      "reason": "No ball model is set up, so hits and shot types cannot be found.",
+      "value": null
+    }
+  },
+  "warnings": [
+    "Motion-based detection finds moving objects, not specifically people: stationary players can be missed and non-players (balls, shadows, passers-by) can be detected. Detection confidence is not available.",
+    "Court landmarks were usable in 0 of 150 sampled frames for this analysis. Other frames were excluded from court-position measures."
+  ]
+}

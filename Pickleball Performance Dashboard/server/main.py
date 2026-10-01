@@ -1,116 +1,175 @@
-from rag_coach import RAGRequest, RAGResponse as RAGOutput, generate_coach_response
-from pathlib import Path
-import tempfile
-from typing import Any, Dict, List
+"""Local development API for the CV pipeline.
+
+``POST /analyze/video`` is a *synchronous local prototype*: it analyzes an
+uploaded file inside the request. The application flow uses Supabase Storage
+plus the job worker (``python -m picklepro.worker``) instead; this endpoint
+exists so the pipeline can be exercised from the browser without Supabase.
+"""
+
+from __future__ import annotations
+
+import json
 import logging
+import os
+import re
+import tempfile
+import threading
+import time
+from pathlib import Path
+from typing import Dict, Literal, Optional
 
 import uvicorn
-from fastapi import FastAPI, File, HTTPException, UploadFile, status
+from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 
-from player_tracking import PlayerTracker
-from event_extraction import EventExtractor
-from video_capture import VideoCaptureService
+from picklepro import PIPELINE_VERSION
+from picklepro.contract import AnalysisResultV1
+from picklepro.court import CalibrationError, calibration_from_dict
+from picklepro.detection import DetectorUnavailable
+from picklepro.models import load_dotenv, log_setup, resolve_models
+from picklepro.pipeline import AnalysisOptions, analyze_video
+from picklepro.spatial import Selection
+from picklepro.video_io import VideoOpenError
 
 logger = logging.getLogger(__name__)
+load_dotenv()
+log_setup(resolve_models(), logger)
 
-app = FastAPI(title="Pickleball CV Backend", version="0.1.0")
+app = FastAPI(title="PicklePro CV Backend (local prototype)", version=PIPELINE_VERSION)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=[o.strip() for o in os.getenv(
+        "CORS_ALLOW_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if o.strip()],
     allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["*"]
+    allow_headers=["*"],
 )
 
 # --- Configuration for Uploads ---
-MAX_FILE_SIZE_MB = 150 # Increased limit for full match highlights
+MAX_FILE_SIZE_MB = int(os.getenv("LOCAL_API_MAX_FILE_SIZE_MB", "150"))
 ALLOWED_MIME_TYPES = ["video/mp4", "video/x-msvideo", "video/quicktime", "video/webm"]
-MAX_FRAMES_LIMIT = 500
+# The request blocks while analyzing, so the prototype caps analyzed time.
+MAX_SECONDS_LIMIT = float(os.getenv("LOCAL_API_MAX_SECONDS", "600"))
 
-class EventItem(BaseModel):
-    time_seconds: float
-    label: str
-    description: str
-    track_id: int | None = None
 
-class PositionSnapshot(BaseModel):
-    time_seconds: float
-    players: List[Dict[str, Any]]
+# Progress of analyses in this process, keyed by an id the browser chooses, so
+# the page can show a progress bar while the analysis request is still open.
+_PROGRESS: Dict[str, Dict[str, object]] = {}
+_PROGRESS_LOCK = threading.Lock()
+_PROGRESS_KEEP_S = 600
+_PROGRESS_ID = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 
-class AnalysisResult(BaseModel):
-    duration_seconds: float
-    frame_count: int
-    fps: float
-    event_timeline: List[EventItem]
-    heatmap: List[List[float]]
-    player_positions: List[PositionSnapshot]
-    message: str
+
+def _set_progress(progress_id: Optional[str], stage: str, fraction: float) -> None:
+    if not progress_id:
+        return
+    now = time.time()
+    with _PROGRESS_LOCK:
+        for key in [k for k, v in _PROGRESS.items() if now - float(v["updated"]) > _PROGRESS_KEEP_S]:
+            del _PROGRESS[key]
+        _PROGRESS[progress_id] = {"stage": stage, "progress": round(min(1.0, max(0.0, fraction)), 4), "updated": now}
+
+
+@app.get("/analyze/progress/{progress_id}")
+def analysis_progress(progress_id: str) -> Dict[str, object]:
+    with _PROGRESS_LOCK:
+        entry = _PROGRESS.get(progress_id)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="No analysis with this id is running.")
+    return {"stage": entry["stage"], "progress": entry["progress"]}
+
 
 @app.get("/health")
-async def health() -> Dict[str, str]:
-    return {"status": "ok"}
+async def health() -> Dict[str, object]:
+    # Resolved on each call so newly added model files are picked up without a restart.
+    return {"status": "ok", "pipeline_version": PIPELINE_VERSION, "models": resolve_models().describe()}
 
-@app.post("/api/v1/rag-coach", response_model=RAGOutput)
-async def rag_coach_endpoint(payload: RAGRequest):
-    try:
-        return generate_coach_response(payload)
-    except Exception as e:
-        logger.error(f"RAG Coaching Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/analyze/video", response_model=AnalysisResult)
-async def analyze_video(file: UploadFile = File(...), max_frames: int = 300):
+@app.post("/analyze/video", response_model=AnalysisResultV1)
+def analyze_video_endpoint(
+    file: UploadFile = File(...),
+    max_seconds: float = Query(120.0, gt=0, description="Stop after this many seconds (reported in coverage)."),
+    target_fps: float = Query(10.0, gt=0, le=60),
+    court_half: Optional[Literal["near", "far"]] = Query(None),
+    track_id: Optional[int] = Query(None),
+    calibration: Optional[str] = Form(None, description="Calibration JSON (see `python -m picklepro.cli landmarks`)."),
+    progress_id: Optional[str] = Query(None, description="Poll GET /analyze/progress/{progress_id} while this runs."),
+):
+    if progress_id is not None and not _PROGRESS_ID.match(progress_id):
+        raise HTTPException(status_code=422, detail="progress_id must be 8-64 letters, digits, - or _.")
     if file.content_type not in ALLOWED_MIME_TYPES:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail=f"Unsupported file type: {file.content_type}. Allowed: MP4, AVI, MOV, WEBM."
+            detail=f"Unsupported file type: {file.content_type}. Allowed: MP4, AVI, MOV, WEBM.",
         )
 
-    if max_frames > MAX_FRAMES_LIMIT:
-        max_frames = MAX_FRAMES_LIMIT
+    try:
+        calib = calibration_from_dict(json.loads(calibration)) if calibration else None
+    except (CalibrationError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=422, detail=f"Calibration: {exc}")
 
-    suffix = Path(file.filename).suffix or ".mp4"
-    
+    selection = None
+    if track_id is not None:
+        selection = Selection("track_id", track_id=track_id)
+    elif court_half:
+        selection = Selection("court_half", court_half=court_half)
+    else:
+        selection = Selection("court_half", court_half="near")
+
+    suffix = Path(file.filename or "upload.mp4").suffix or ".mp4"
     # Safely write the file in chunks to prevent Memory (RAM) crashes
     file_size = 0
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         tmp_path = Path(tmp.name)
         while True:
-            chunk = await file.read(1024 * 1024) # read 1MB at a time
+            chunk = file.file.read(1024 * 1024)  # read 1MB at a time
             if not chunk:
                 break
             file_size += len(chunk)
-            if file_size > (MAX_FILE_SIZE_MB * 1024 * 1024):
-                tmp_path.unlink() 
+            if file_size > MAX_FILE_SIZE_MB * 1024 * 1024:
+                tmp.close()
+                tmp_path.unlink(missing_ok=True)
                 raise HTTPException(
                     status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                    detail=f"File exceeds maximum allowed size of {MAX_FILE_SIZE_MB}MB."
+                    detail=f"File exceeds maximum allowed size of {MAX_FILE_SIZE_MB}MB.",
                 )
             tmp.write(chunk)
 
+    models = resolve_models()
+    _set_progress(progress_id, "analyzing", 0.0)
     try:
-        # Run CV Pipeline
-        capture = VideoCaptureService(str(tmp_path))
-        frames, fps, duration = capture.read_frames(max_frames=max_frames)
-        tracker = PlayerTracker()
-        tracked_frames = tracker.track(frames)
-        extractor = EventExtractor()
-        result = extractor.extract(tracked_frames, fps=fps, duration=duration)
+        result = analyze_video(tmp_path, AnalysisOptions(
+            max_seconds=min(max_seconds, MAX_SECONDS_LIMIT), target_fps=target_fps,
+            calibration=calib, selection=selection, source_filename=file.filename,
+            detector=models.detector, yolo_weights=models.yolo_weights,
+            court_weights=models.court_weights, ball_weights=models.ball_weights,
+        ), progress=lambda f: _set_progress(progress_id, "analyzing", f))
+        _set_progress(progress_id, "finishing", 1.0)
         return result
-    except ValueError as ve:
-        logger.error(f"Video processing ValueError: {ve}")
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(ve))
-    except Exception as exc:
-        logger.error(f"Unexpected error during analysis: {exc}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
+    except VideoOpenError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except DetectorUnavailable as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc))
+    except Exception as exc:  # noqa: BLE001 - surface as a failure, never as a result
+        logger.exception("Unexpected error during analysis")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Analysis failed: {exc}")
     finally:
+        tmp_path.unlink(missing_ok=True)
+
+
+# The RAG coaching prototype is outside the first two increments. It is only
+# mounted when explicitly enabled, so the analysis API does not depend on
+# chromadb/anthropic and never serves coaching text built from sample metrics.
+if os.getenv("PICKLEPRO_ENABLE_EXPERIMENTAL_RAG") == "1":  # pragma: no cover
+    from rag_coach import RAGRequest, RAGResponse as RAGOutput, generate_coach_response
+
+    @app.post("/api/v1/rag-coach", response_model=RAGOutput)
+    async def rag_coach_endpoint(payload: RAGRequest):
         try:
-            if tmp_path.exists():
-                tmp_path.unlink()
-        except OSError:
-            pass
+            return generate_coach_response(payload)
+        except Exception as e:
+            logger.error(f"RAG Coaching Error: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
