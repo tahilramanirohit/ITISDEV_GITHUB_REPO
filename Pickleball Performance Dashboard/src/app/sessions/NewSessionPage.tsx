@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ArrowLeft, Camera, Check, ClipboardCheck } from "lucide-react";
+import { ArrowLeft, Camera, Check, ClipboardCheck, Target, Trophy, Users } from "lucide-react";
 import { createSession, type NewSession } from "../../lib/api/sessions";
 import { friendlyDbError } from "../../lib/api/selfAssessment";
 import { getProfile } from "../../lib/api/profile";
@@ -10,8 +10,8 @@ import {
   type MatchResult, type PlayFormat, type ReviewMode, type SessionContext, type SessionKind,
 } from "../../lib/api/types";
 import { saveOtherPlayers, type OtherPlayer } from "../../lib/api/players";
-import { BORDER, CARD_GLOW, GREEN, GREEN_BG, INK, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
-import { Chip, Notice, PrimaryButton, ScreenTitle, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
+import { BORDER, CARD_GLOW, DEEP, GREEN, GREEN_BG, INK, PICKLE, WHITE, WHITE_DIM, WHITE_SUB, YELLOW } from "../theme";
+import { Chip, HeroProgress, Notice, PageHero, PrimaryButton, Sheet, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
 import { GoalFields } from "./GoalFields";
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -21,6 +21,12 @@ function defaultTitle(date: string, context: NewSession["session_context"]) {
   const weekday = new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { weekday: "long" });
   return `${weekday} ${CONTEXT_LABELS[context].toLowerCase()}`;
 }
+
+const KIND_META: Record<SessionKind, { Icon: typeof Trophy; detail: string; bg: string; fg: string }> = {
+  solo: { Icon: Target, detail: "Drills, wall practice or a ball machine", bg: "#e3f6ea", fg: "#15803d" },
+  match: { Icon: Users, detail: "Open play, ladders and friendlies", bg: "#e0f2fe", fg: "#0369a1" },
+  tournament: { Icon: Trophy, detail: "Official match with round, result and score", bg: YELLOW, fg: "#2b2100" },
+};
 
 function ModeCard({ selected, onSelect, icon, title, detail, tag }: {
   selected: boolean; onSelect: () => void; icon: ReactNode; title: string; detail: string; tag: string;
@@ -116,15 +122,15 @@ export default function NewSessionPage({ sb, userId, trialNoWorker = false }: { 
   }
 
   return (
-    <div className="space-y-5 lg:mx-auto lg:max-w-3xl">
-      {step === 2 && <button type="button" onClick={() => setStep(1)} className="inline-flex items-center gap-1 text-sm font-semibold" style={{ color: GREEN }}>
-        <ArrowLeft size={16} /> Back
-      </button>}
-      <div>
-        <p className="text-xs font-bold uppercase tracking-wider" style={{ color: GREEN }}>Step {step} of 2</p>
-        <ScreenTitle title={step === 1 ? "Log a session" : "About this session"}
-          subtitle={step === 1 ? "How do you want to review your game?" : "A few taps. Everything except your focus is optional."} />
-      </div>
+    <div>
+      <PageHero eyebrow={`Step ${step} of 2`} title={step === 1 ? "Log a session" : "What did you play?"}
+        subtitle={step === 1 ? "How do you want to review your game?" : "A few taps. Everything except your focus is optional."}
+        action={step === 2 ? <button type="button" onClick={() => setStep(1)} className="inline-flex min-h-[40px] shrink-0 items-center gap-1 rounded-full px-3 text-sm font-semibold"
+          style={{ background: "rgba(255,255,255,0.12)", color: WHITE }}><ArrowLeft size={16} /> Back</button> : undefined}>
+        <HeroProgress value={step / 2} label={`Step ${step} of 2`} />
+      </PageHero>
+      <Sheet>
+      <div className="space-y-5 lg:mx-auto lg:max-w-3xl">
 
       {step === 1 && <>
         <div className="grid gap-3 lg:grid-cols-2">
@@ -142,14 +148,19 @@ export default function NewSessionPage({ sb, userId, trialNoWorker = false }: { 
       {step === 2 && <>
         <section className="space-y-2">
           <p className={labelClass} style={labelStyle}>What kind of session?</p>
-          <div className="grid grid-cols-3 gap-2" role="group" aria-label="Session kind">
-            {(["solo", "match", "tournament"] as SessionKind[]).map((k) => <button key={k} type="button" aria-pressed={kind === k} onClick={() => setKind(k)}
-              className="min-h-[52px] rounded-full px-2 text-sm font-bold" style={kind === k ? { background: INK, color: WHITE } : { background: WHITE, color: INK, border: `1px solid ${BORDER}` }}>
-              {KIND_LABELS[k]}</button>)}
+          <div className="grid gap-2 lg:grid-cols-3" role="group" aria-label="Session kind">
+            {(["solo", "match", "tournament"] as SessionKind[]).map((k) => {
+              const on = kind === k;
+              const meta = KIND_META[k];
+              return <button key={k} type="button" aria-pressed={on} onClick={() => setKind(k)}
+                className="grid grid-cols-[2.75rem_1fr_auto] items-center gap-3 rounded-2xl p-2.5 text-left"
+                style={{ background: WHITE, border: on ? `2px solid ${DEEP}` : `1.5px solid ${BORDER}`, boxShadow: CARD_GLOW }}>
+                <span className="grid h-11 w-11 place-items-center rounded-full" style={{ background: meta.bg, color: meta.fg }}><meta.Icon size={20} aria-hidden="true" /></span>
+                <span className="min-w-0"><b className="block text-sm" style={{ color: INK }}>{KIND_LABELS[k]}</b><span className="block text-xs" style={{ color: WHITE_SUB }}>{meta.detail}</span></span>
+                <span aria-hidden="true" className="grid h-6 w-6 place-items-center rounded-full text-xs font-black" style={on ? { background: DEEP, color: YELLOW } : { border: `1.5px solid ${BORDER}` }}>{on ? "✓" : ""}</span>
+              </button>;
+            })}
           </div>
-          <p className="text-xs" style={{ color: WHITE_SUB }}>
-            {kind === "solo" ? "On your own: drills, wall practice or a ball machine." : kind === "match" ? "Games against other players outside a tournament." : "An official tournament match, with its round and score."}
-          </p>
         </section>
         {kind !== "tournament" && <section className="space-y-2">
           <p className={labelClass} style={labelStyle}>{kind === "solo" ? "Type of practice" : "Setting"}</p>
@@ -171,7 +182,7 @@ export default function NewSessionPage({ sb, userId, trialNoWorker = false }: { 
           {kind === "solo" && form.review_mode === "video" && form.play_format !== "drill_other" &&
             <p className="text-xs" style={{ color: WHITE_SUB }}>Wall and ball-machine sessions are rated only; video analysis needs a court view.</p>}
         </section>
-        {kind === "tournament" && <section className="space-y-3 rounded-2xl p-4" style={{ background: WHITE, border: `1px solid ${BORDER}` }}>
+        {kind === "tournament" && <section className="space-y-3 rounded-2xl p-4" style={{ background: WHITE, border: `6px solid ${PICKLE}` }}>
           <p className="text-sm font-bold" style={{ color: INK }}>Tournament match</p>
           <div>
             <label className={labelClass} style={labelStyle} htmlFor="tournament-name">Tournament</label>
@@ -230,6 +241,8 @@ export default function NewSessionPage({ sb, userId, trialNoWorker = false }: { 
         </PrimaryButton>
         <p className="text-center text-xs" style={{ color: WHITE_SUB }}>Your sessions are private to your account.</p>
       </>}
+      </div>
+      </Sheet>
     </div>
   );
 }

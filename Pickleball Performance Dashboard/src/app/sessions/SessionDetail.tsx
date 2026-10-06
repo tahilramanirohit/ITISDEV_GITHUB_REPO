@@ -16,11 +16,11 @@ import {
   DEFAULT_UPLOAD_LIMITS, formatDuration, getUploadLimits, getUploadUsage, limitErrorText, probeVideo, uploadBlocker,
   type UploadLimits, type UploadUsage,
 } from "../../lib/upload/limits";
-import { listOtherPlayers, saveOtherPlayers, shortId, type OtherPlayer } from "../../lib/api/players";
+import { initials, listOtherPlayers, saveOtherPlayers, shortId, type OtherPlayer } from "../../lib/api/players";
 import { AvatarStack } from "./sessionUi";
 import { hasUploadConsent, recordUploadConsent } from "../../lib/api/capture";
-import { BLUE_SKY, BORDER, DISPLAY_FONT, LAVENDER, NAVY, NEON, NEON_D, ORANGE, WHITE_DIM, WHITE_SUB } from "../theme";
-import { Card, Chip, Notice, SegmentedTabs, fieldStyle, tabPanelProps } from "../shell/primitives";
+import { BLUE_SKY, BORDER, DEEP_2, DISPLAY_FONT, LAVENDER, NAVY, NEON, NEON_D, ORANGE, PICKLE, WHITE_DIM, WHITE_SUB } from "../theme";
+import { Card, Chip, Notice, SegmentedTabs, Sheet, fieldStyle, tabPanelProps } from "../shell/primitives";
 import { SelfAssessmentPanel } from "../selfAssessment/SelfAssessmentPanel";
 import { AnalysisParamsForm, ProgressBar, type AnalysisParams } from "../analysis/AnalysisStatus";
 import { CourtCorrection } from "../analysis/CourtCorrection";
@@ -32,7 +32,7 @@ import { CapturePanel } from "./CapturePanel";
 
 const POLL_MS = 3000;
 
-type DetailTab = "plan" | "video" | "journal";
+type DetailTab = "plan" | "players" | "video" | "journal";
 
 export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; userId: string }) {
   const { sessionId = "" } = useParams();
@@ -60,7 +60,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
   } | null>(null);
   const [consentConfirmed, setConsentConfirmed] = useState(false);
   const [consentChecked, setConsentChecked] = useState(false);
-  const [tab, setTab] = useState<DetailTab | null>(requestedTab === "plan" || requestedTab === "video" || requestedTab === "journal" ? requestedTab : null);
+  const [tab, setTab] = useState<DetailTab | null>(requestedTab === "plan" || requestedTab === "players" || requestedTab === "video" || requestedTab === "journal" ? requestedTab : null);
   const [loadError, setLoadError] = useState("");
   const loadedOnce = useRef(false);
   const [slow, setSlow] = useState(false);
@@ -252,16 +252,19 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
     : hasFeedback ? "Your video review is ready" : "Uploading your video";
 
   return (
-    <div className="space-y-4">
-      <a href="#/sessions" className="inline-flex items-center gap-1 text-sm font-semibold" style={{ color: BLUE_SKY }}><ArrowLeft size={16} /> Sessions</a>
-
-      <section className="rounded-2xl p-5" style={{ background: NAVY, color: "white" }}>
+    <div>
+      <section className="relative -mx-4 -mt-5 overflow-hidden px-4 pb-12 pt-4 md:-mx-6 md:-mt-6 md:px-6 lg:-mx-10 lg:-mt-8 lg:px-10 lg:pt-8"
+        style={{ background: `radial-gradient(130% 120% at 100% 0%, ${DEEP_2} 0%, ${NAVY} 62%)`, color: "white" }}>
+        <a href="#/sessions" className="mb-3 inline-flex items-center gap-1 text-sm font-semibold" style={{ color: LAVENDER }}><ArrowLeft size={16} /> Sessions</a>
+        <span className="mb-2 block w-fit rounded-full px-2.5 py-1 text-[11px] font-extrabold" style={{ background: LAVENDER, color: "#2b2100" }}>
+          {KIND_LABELS[sessionKind(session)]}{session.tournament_round ? ` · ${session.tournament_round}` : ""}
+        </span>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-wider" style={{ color: LAVENDER }}>
               {new Date(`${session.session_date}T12:00:00`).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })} · {CONTEXT_LABELS[session.session_context]} · {FORMAT_LABELS[session.play_format]}
             </p>
-            <h1 className="mt-1 break-words text-2xl font-extrabold leading-tight" style={{ fontFamily: DISPLAY_FONT }}>{session.title}</h1>
+            <h1 className="mt-1 break-words text-[1.65rem] font-black leading-[1.05] tracking-tight md:text-4xl" style={{ fontFamily: DISPLAY_FONT }}>{session.title}</h1>
           </div>
           <button type="button" title="Delete session" aria-label="Delete session" disabled={busy || state === "uploading" || state === "processing"}
             onClick={() => { if (window.confirm("Delete this session, its ratings, video and results?")) void run(async () => { await deleteSession(sb, bundle); navigate("/sessions"); }); }}
@@ -274,14 +277,14 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
             {[session.tournament_name, session.tournament_round, session.match_result === "win" ? "Won" : session.match_result === "loss" ? "Lost" : null, session.match_score].filter(Boolean).join(" · ")}
           </p>
         )}
-        {players.length > 0 && <div className="mt-3 flex flex-wrap items-center gap-2 text-sm" style={{ color: "#dfe3ff" }}>
+        {players.length > 0 && <div className="mt-3 flex flex-wrap items-center gap-2 text-sm" style={{ color: "#c9dccf" }}>
           <AvatarStack names={players.map((p) => p.display_name)} size={30} />
           <span>
             {players.some((p) => p.role === "partner") && <>With {players.filter((p) => p.role === "partner").map((p) => p.display_name).join(", ")}{" · "}</>}
             {players.some((p) => p.role === "opponent") && <>vs {players.filter((p) => p.role === "opponent").map((p) => p.display_name).join(" & ")}</>}
           </span>
         </div>}
-        {session.notes && <p className="text-sm mt-2" style={{ color: "#dfe3ff" }}>{session.notes}</p>}
+        {session.notes && <p className="text-sm mt-2" style={{ color: "#c9dccf" }}>{session.notes}</p>}
         {session.improvement_goals?.length > 0 && (
           <ul className="mt-4 flex flex-wrap gap-2" aria-label="Your focus">
             {session.improvement_goals.map((goal: ImprovementGoal) => (
@@ -298,79 +301,13 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
             shot_outcomes_rating: session.shot_outcomes_rating ?? null,
             shot_technique_rating: session.shot_technique_rating ?? null,
         })}>Edit focus</button>
-        <button type="button" className="ml-4 text-sm mt-3 font-semibold underline" style={{ color: LAVENDER }}
-          onClick={() => setDetailsDraft({
-            title: session.title, session_date: session.session_date,
-            tournament_name: session.tournament_name ?? "", tournament_round: session.tournament_round ?? "",
-            match_result: session.match_result ?? null, match_score: session.match_score ?? "",
-            partner: players.find((p) => p.role === "partner")?.display_name ?? "",
-            opponents: [0, 1].map((i) => players.filter((p) => p.role === "opponent")[i]?.display_name ?? ""),
-          })}>Edit details &amp; players</button>
-        <p className="mt-3 text-[11px]" style={{ color: "#c7cdff" }}>
+
+        <p className="mt-3 text-[11px]" style={{ color: "#a7c4b2" }}>
           {KIND_LABELS[sessionKind(session)]} · Session ID <span className="font-mono" title={session.id}>{shortId(session.id)}</span> · created {new Date(session.created_at).toLocaleString()}
         </p>
       </section>
-
-      {detailsDraft && (
-        <Card accent={BLUE_SKY}>
-          <h2 className="text-lg font-extrabold">Edit details &amp; players</h2>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <label className="grid gap-1 text-sm font-semibold">Name
-              <input maxLength={120} value={detailsDraft.title} onChange={(e) => setDetailsDraft({ ...detailsDraft, title: e.target.value })} className="rounded-2xl px-4 py-3 text-base font-normal" style={fieldStyle} />
-            </label>
-            <label className="grid gap-1 text-sm font-semibold">Date
-              <input type="date" value={detailsDraft.session_date} onChange={(e) => setDetailsDraft({ ...detailsDraft, session_date: e.target.value })} className="rounded-2xl px-4 py-3 text-base font-normal" style={fieldStyle} />
-            </label>
-            {sessionKind(session) === "tournament" && <>
-              <label className="grid gap-1 text-sm font-semibold">Tournament
-                <input maxLength={120} value={detailsDraft.tournament_name} onChange={(e) => setDetailsDraft({ ...detailsDraft, tournament_name: e.target.value })} className="rounded-2xl px-4 py-3 text-base font-normal" style={fieldStyle} />
-              </label>
-              <label className="grid gap-1 text-sm font-semibold">Round
-                <input maxLength={60} value={detailsDraft.tournament_round} onChange={(e) => setDetailsDraft({ ...detailsDraft, tournament_round: e.target.value })} placeholder="e.g. Semifinal" className="rounded-2xl px-4 py-3 text-base font-normal" style={fieldStyle} />
-              </label>
-              <div className="grid gap-1 text-sm font-semibold">Result
-                <div className="flex gap-2">{(["win", "loss"] as const).map((r) => <Chip key={r} selected={detailsDraft.match_result === r}
-                  onClick={() => setDetailsDraft({ ...detailsDraft, match_result: detailsDraft.match_result === r ? null : r })}>{r === "win" ? "Won" : "Lost"}</Chip>)}</div>
-              </div>
-              <label className="grid gap-1 text-sm font-semibold">Score
-                <input maxLength={40} value={detailsDraft.match_score} onChange={(e) => setDetailsDraft({ ...detailsDraft, match_score: e.target.value })} placeholder="11-7, 9-11, 11-5" className="rounded-2xl px-4 py-3 text-base font-normal" style={fieldStyle} />
-              </label>
-            </>}
-            {sessionKind(session) !== "solo" && <>
-              {session.play_format === "doubles" && <label className="grid gap-1 text-sm font-semibold">Partner
-                <input maxLength={80} value={detailsDraft.partner} onChange={(e) => setDetailsDraft({ ...detailsDraft, partner: e.target.value })} className="rounded-2xl px-4 py-3 text-base font-normal" style={fieldStyle} />
-              </label>}
-              {detailsDraft.opponents.slice(0, session.play_format === "doubles" ? 2 : 1).map((name, i) => <label key={i} className="grid gap-1 text-sm font-semibold">{session.play_format === "doubles" ? `Opponent ${i + 1}` : "Opponent"}
-                <input maxLength={80} value={name} onChange={(e) => setDetailsDraft({ ...detailsDraft, opponents: detailsDraft.opponents.map((v, j) => j === i ? e.target.value : v) })} className="rounded-2xl px-4 py-3 text-base font-normal" style={fieldStyle} />
-              </label>)}
-            </>}
-          </div>
-          <div className="mt-4 flex gap-2">
-            <button type="button" disabled={busy || !detailsDraft.title.trim()}
-              onClick={() => void run(async () => {
-                const d = detailsDraft;
-                await updateSessionDetails(sb, session.id, {
-                  title: d.title.trim(), session_date: d.session_date,
-                  ...(sessionKind(session) === "tournament" ? {
-                    tournament_name: d.tournament_name.trim() || null, tournament_round: d.tournament_round.trim() || null,
-                    match_result: d.match_result, match_score: d.match_score.trim() || null,
-                  } : {}),
-                });
-                if (sessionKind(session) !== "solo") {
-                  const next: OtherPlayer[] = [
-                    ...(session.play_format === "doubles" ? [{ role: "partner" as const, display_name: d.partner }] : []),
-                    ...d.opponents.slice(0, session.play_format === "doubles" ? 2 : 1).map((n) => ({ role: "opponent" as const, display_name: n })),
-                  ];
-                  await saveOtherPlayers(sb, session.id, next);
-                  setPlayers(next.filter((p) => p.display_name.trim()));
-                }
-                setDetailsDraft(null);
-              })}
-              className="inline-flex min-h-[44px] items-center rounded-full px-6 text-sm font-bold disabled:opacity-40" style={{ background: BLUE_SKY, color: "#ffffff" }}>Save details</button>
-            <button type="button" onClick={() => setDetailsDraft(null)} className="text-sm px-3 py-2" style={{ color: WHITE_DIM }}>Cancel</button>
-          </div>
-        </Card>
-      )}
+      <Sheet>
+      <div className="space-y-4">
 
       {goalDraft && (
         <Card accent={BLUE_SKY}>
@@ -390,12 +327,108 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
 
       <SegmentedTabs label="Session views" idBase="session" value={activeTab} onChange={setTab} tabs={[
         { value: "plan", label: "Rate & plan" },
+        { value: "players", label: "Players" },
         { value: "video", label: "Video", badge: selfMode ? "optional" : undefined },
         { value: "journal", label: "Journal" },
       ]} />
 
       {activeTab === "plan" && <div {...tabPanelProps("session", "plan")} className="outline-none"><SelfAssessmentPanel sb={sb} session={session} /></div>}
       {activeTab === "journal" && <div {...tabPanelProps("session", "journal")} className="outline-none"><CapturePanel key={session.id} sb={sb} session={session} onSessionUpdated={() => void load()} /></div>}
+
+      {activeTab === "players" && <div {...tabPanelProps("session", "players")} className="space-y-4 outline-none">
+        {(session.tournament_name || session.match_result || session.match_score) && <Card>
+          <p className="text-[11px] font-extrabold uppercase tracking-wider" style={{ color: WHITE_SUB }}>Result</p>
+          <p className="mt-1 text-2xl font-black" style={{ color: "#16181d" }}>{session.match_result === "win" ? "Won" : session.match_result === "loss" ? "Lost" : "Not set"}
+            {session.match_score && <span className="ml-2 text-base font-semibold" style={{ color: WHITE_DIM }}>{session.match_score}</span>}</p>
+          {session.tournament_name && <p className="text-sm" style={{ color: WHITE_DIM }}>{session.tournament_name}{session.tournament_round ? ` · ${session.tournament_round}` : ""}</p>}
+        </Card>}
+        <Card>
+          <p className="text-[11px] font-extrabold uppercase tracking-wider" style={{ color: WHITE_SUB }}>Players</p>
+          {sessionKind(session) === "solo" ? <p className="mt-2 text-sm" style={{ color: WHITE_DIM }}>Solo practice: just you.</p> : (
+            <ul className="mt-3 grid grid-cols-4 gap-2 text-center text-xs font-semibold">
+              {[{ name: "You", role: "You" }, ...players.map((p) => ({ name: p.display_name, role: p.role === "partner" ? "Partner" : "Opponent" }))].map((p, i) => (
+                <li key={`${p.name}-${i}`} className="min-w-0">
+                  <span className="mx-auto mb-1 grid h-12 w-12 place-items-center rounded-full text-sm font-black"
+                    style={{ background: ["#febc17", "#e3f6ea", "#fde68a", "#fecdd3"][i % 4], color: "#16181d" }}>{p.name === "You" ? "ME" : initials(p.name)}</span>
+                  <span className="block truncate" style={{ color: "#16181d" }}>{p.name}</span>
+                  <span className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-extrabold text-white"
+                    style={{ background: p.role === "You" ? NAVY : p.role === "Partner" ? PICKLE : "#94a3b8" }}>{p.role}</span>
+                </li>
+              ))}
+            </ul>)}
+          {sessionKind(session) !== "solo" && players.length === 0 && <p className="mt-2 text-sm" style={{ color: WHITE_DIM }}>No names added yet.</p>}
+          {!detailsDraft && <button type="button" className="mt-4 inline-flex min-h-[44px] items-center rounded-full px-5 text-sm font-bold"
+            style={{ border: `1px solid ${BORDER}`, color: "#16181d" }}
+            onClick={() => setDetailsDraft({
+              title: session.title, session_date: session.session_date,
+              tournament_name: session.tournament_name ?? "", tournament_round: session.tournament_round ?? "",
+              match_result: session.match_result ?? null, match_score: session.match_score ?? "",
+              partner: players.find((p) => p.role === "partner")?.display_name ?? "",
+              opponents: [0, 1].map((i) => players.filter((p) => p.role === "opponent")[i]?.display_name ?? ""),
+            })}>Edit details &amp; players</button>}
+        </Card>
+      {detailsDraft && (
+          <Card accent={BLUE_SKY}>
+            <h2 className="text-lg font-extrabold">Edit details &amp; players</h2>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <label className="grid gap-1 text-sm font-semibold">Name
+                <input maxLength={120} value={detailsDraft.title} onChange={(e) => setDetailsDraft({ ...detailsDraft, title: e.target.value })} className="rounded-2xl px-4 py-3 text-base font-normal" style={fieldStyle} />
+              </label>
+              <label className="grid gap-1 text-sm font-semibold">Date
+                <input type="date" value={detailsDraft.session_date} onChange={(e) => setDetailsDraft({ ...detailsDraft, session_date: e.target.value })} className="rounded-2xl px-4 py-3 text-base font-normal" style={fieldStyle} />
+              </label>
+              {sessionKind(session) === "tournament" && <>
+                <label className="grid gap-1 text-sm font-semibold">Tournament
+                  <input maxLength={120} value={detailsDraft.tournament_name} onChange={(e) => setDetailsDraft({ ...detailsDraft, tournament_name: e.target.value })} className="rounded-2xl px-4 py-3 text-base font-normal" style={fieldStyle} />
+                </label>
+                <label className="grid gap-1 text-sm font-semibold">Round
+                  <input maxLength={60} value={detailsDraft.tournament_round} onChange={(e) => setDetailsDraft({ ...detailsDraft, tournament_round: e.target.value })} placeholder="e.g. Semifinal" className="rounded-2xl px-4 py-3 text-base font-normal" style={fieldStyle} />
+                </label>
+                <div className="grid gap-1 text-sm font-semibold">Result
+                  <div className="flex gap-2">{(["win", "loss"] as const).map((r) => <Chip key={r} selected={detailsDraft.match_result === r}
+                    onClick={() => setDetailsDraft({ ...detailsDraft, match_result: detailsDraft.match_result === r ? null : r })}>{r === "win" ? "Won" : "Lost"}</Chip>)}</div>
+                </div>
+                <label className="grid gap-1 text-sm font-semibold">Score
+                  <input maxLength={40} value={detailsDraft.match_score} onChange={(e) => setDetailsDraft({ ...detailsDraft, match_score: e.target.value })} placeholder="11-7, 9-11, 11-5" className="rounded-2xl px-4 py-3 text-base font-normal" style={fieldStyle} />
+                </label>
+              </>}
+              {sessionKind(session) !== "solo" && <>
+                {session.play_format === "doubles" && <label className="grid gap-1 text-sm font-semibold">Partner
+                  <input maxLength={80} value={detailsDraft.partner} onChange={(e) => setDetailsDraft({ ...detailsDraft, partner: e.target.value })} className="rounded-2xl px-4 py-3 text-base font-normal" style={fieldStyle} />
+                </label>}
+                {detailsDraft.opponents.slice(0, session.play_format === "doubles" ? 2 : 1).map((name, i) => <label key={i} className="grid gap-1 text-sm font-semibold">{session.play_format === "doubles" ? `Opponent ${i + 1}` : "Opponent"}
+                  <input maxLength={80} value={name} onChange={(e) => setDetailsDraft({ ...detailsDraft, opponents: detailsDraft.opponents.map((v, j) => j === i ? e.target.value : v) })} className="rounded-2xl px-4 py-3 text-base font-normal" style={fieldStyle} />
+                </label>)}
+              </>}
+            </div>
+            <div className="mt-4 flex gap-2">
+              <button type="button" disabled={busy || !detailsDraft.title.trim()}
+                onClick={() => void run(async () => {
+                  const d = detailsDraft;
+                  await updateSessionDetails(sb, session.id, {
+                    title: d.title.trim(), session_date: d.session_date,
+                    ...(sessionKind(session) === "tournament" ? {
+                      tournament_name: d.tournament_name.trim() || null, tournament_round: d.tournament_round.trim() || null,
+                      match_result: d.match_result, match_score: d.match_score.trim() || null,
+                    } : {}),
+                  });
+                  if (sessionKind(session) !== "solo") {
+                    const next: OtherPlayer[] = [
+                      ...(session.play_format === "doubles" ? [{ role: "partner" as const, display_name: d.partner }] : []),
+                      ...d.opponents.slice(0, session.play_format === "doubles" ? 2 : 1).map((n) => ({ role: "opponent" as const, display_name: n })),
+                    ];
+                    await saveOtherPlayers(sb, session.id, next);
+                    setPlayers(next.filter((p) => p.display_name.trim()));
+                  }
+                  setDetailsDraft(null);
+                })}
+                className="inline-flex min-h-[44px] items-center rounded-full px-6 text-sm font-bold disabled:opacity-40" style={{ background: BLUE_SKY, color: "#ffffff" }}>Save details</button>
+              <button type="button" onClick={() => setDetailsDraft(null)} className="text-sm px-3 py-2" style={{ color: WHITE_DIM }}>Cancel</button>
+            </div>
+          </Card>
+        )}
+  
+        </div>}
 
       {activeTab === "video" && <div {...tabPanelProps("session", "video")} className="space-y-4 outline-none">
       {selfMode && !video && <Notice tone="info">Video analysis is optional. Your practice plan comes from your ratings in <strong>Rate &amp; plan</strong>. Add a clip here if you also want court positions measured.</Notice>}
@@ -607,6 +640,8 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
         </ul>
       </details>}
       </div>}
+      </div>
+      </Sheet>
     </div>
   );
 }

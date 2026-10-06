@@ -21,7 +21,7 @@ export function sessionKind(s: Pick<SessionRow, "session_context" | "play_format
   if (s.session_context === "tournament") return "tournament";
   return SOLO_FORMATS.includes(s.play_format) ? "solo" : "match";
 }
-export const KIND_LABELS: Record<SessionKind, string> = { solo: "Solo practice", match: "Match", tournament: "Tournament" };
+export const KIND_LABELS: Record<SessionKind, string> = { solo: "Solo practice", match: "Casual game", tournament: "Tournament" };
 
 export const GOAL_LABELS: Record<ImprovementGoal, string> = {
   positioning: "Court positioning",

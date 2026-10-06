@@ -64,7 +64,7 @@ describe("SelfAssessmentPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Many" }));
     fireEvent.click(screen.getByRole("button", { name: "See my practice plan" }));
 
-    expect(await screen.findByText("Your practice plan")).toBeTruthy();
+    expect(await screen.findByText("This week's drill")).toBeTruthy();
     expect(screen.getByText("Build your dinking")).toBeTruthy();
     expect(screen.getAllByText(/Cross-court dink count/).length).toBeGreaterThan(0);
     expect(upserts[0]).toMatchObject({ session_id: "s1", ratings: { serve: 4, dinking: 2, volleys: 3 }, unforced_errors: "many" });

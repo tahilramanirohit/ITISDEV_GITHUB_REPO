@@ -4,9 +4,9 @@ import { ArrowLeft, ChevronRight } from "lucide-react";
 import { getProfile, saveSessionDefaults, type SessionDefaults } from "../../lib/api/profile";
 import { friendlyDbError } from "../../lib/api/selfAssessment";
 import { FORMAT_LABELS, KIND_LABELS, SOLO_FORMATS, type PlayFormat, type SessionKind } from "../../lib/api/types";
-import { Card, Chip, Notice, PrimaryButton, ScreenTitle, SectionTitle, labelClass, labelStyle } from "../shell/primitives";
+import { Card, Chip, Notice, PageHero, PrimaryButton, SectionTitle, Sheet, labelClass, labelStyle } from "../shell/primitives";
 import { LargeTextToggle } from "../shell/AppShell";
-import { BLUE, BORDER, INK, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
+import { BORDER, INK, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
 
 function LinkRow({ href, title, detail }: { href: string; title: string; detail: string }) {
   return (
@@ -46,9 +46,10 @@ export default function SettingsPage({ sb, userId, account, devLinks }: {
     } finally { setSavingDefaults(false); }
   }
 
-  return <div className="space-y-6">
-    <a href="#/profile" className="inline-flex items-center gap-1 text-sm font-semibold" style={{ color: BLUE }}><ArrowLeft size={16} /> Profile</a>
-    <ScreenTitle title="Settings" subtitle={account} />
+  return <div>
+    <PageHero eyebrow={<a href="#/profile" className="inline-flex items-center gap-1"><ArrowLeft size={14} /> Profile</a>} title="Settings" subtitle={account} />
+    <Sheet>
+    <div className="space-y-6">
     <div className="space-y-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
     <Card>
       <SectionTitle>Default settings</SectionTitle>
@@ -100,5 +101,7 @@ export default function SettingsPage({ sb, userId, account, devLinks }: {
     <p className="text-xs" style={{ color: WHITE_SUB }}>PicklePro research prototype · DLSU CAPIT-01</p>
     </div>
     </div>
+    </div>
+    </Sheet>
   </div>;
 }

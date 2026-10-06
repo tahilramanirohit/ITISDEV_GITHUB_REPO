@@ -2,7 +2,7 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 import logoUrl from "../../assets/picklepro-logo.webp";
 import logo2xUrl from "../../assets/picklepro-logo@2x.webp";
 import {
-  BORDER, CARD_GLOW, COBALT, DISPLAY_FONT, GREEN, GREEN_BG, INK, NEON, OPTIC, OPTIC_INK, ORANGE, VIOLET, WHITE, WHITE_DIM, WHITE_SUB,
+  BORDER, CARD_GLOW, COBALT, DEEP, DEEP_2, DISPLAY_FONT, DOT_BG, GREEN, GREEN_BG, INK, NEON, OPTIC, OPTIC_INK, ORANGE, PICKLE, VIOLET, WHITE, WHITE_DIM, WHITE_SUB, YELLOW,
 } from "../theme";
 
 // ── Card ──────────────────────────────────────────────────────────────────
@@ -89,7 +89,7 @@ export function Chip({ selected, children, onClick, label }: { selected: boolean
     <button type="button" aria-pressed={selected} aria-label={label} onClick={onClick}
       className="inline-flex min-h-[40px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-colors"
       style={selected
-        ? { background: GREEN, color: WHITE, border: `1px solid ${GREEN}` }
+        ? { background: DEEP, color: YELLOW, border: `1px solid ${DEEP}` }
         : { background: WHITE, color: INK, border: `1px solid ${BORDER}` }}>
       {children}
     </button>
@@ -140,19 +140,77 @@ export function SegmentedTabs<T extends string>({ tabs, value, onChange, label, 
     document.getElementById(`${idBase}-tab-${tabs[next].value}`)?.focus();
   }
   return (
-    <div role="tablist" aria-label={label} className="flex gap-1 rounded-full p-1" style={{ background: "#eceef2" }}>
+    <div role="tablist" aria-label={label} className="flex gap-4 overflow-x-auto border-b sm:gap-6" style={{ borderColor: BORDER }}>
       {tabs.map((tab, index) => {
         const active = tab.value === value;
         return (
           <button key={tab.value} type="button" role="tab" id={`${idBase}-tab-${tab.value}`} aria-controls={`${idBase}-panel-${tab.value}`}
             aria-selected={active} tabIndex={active ? 0 : -1} onClick={() => onChange(tab.value)} onKeyDown={(e) => onKeyDown(e, index)}
-            className="flex-1 min-h-[44px] rounded-full px-2 py-2 text-sm font-semibold transition-colors"
-            style={active ? { background: WHITE, color: INK, boxShadow: CARD_GLOW } : { color: WHITE_DIM }}>
+            className="-mb-px min-h-[44px] shrink-0 whitespace-nowrap border-b-[3px] px-0.5 py-2 text-sm font-semibold transition-colors"
+            style={active ? { color: INK, borderColor: PICKLE } : { color: WHITE_DIM, borderColor: "transparent" }}>
             {tab.label}
             {tab.badge && <span className="ml-1 text-[11px] font-bold uppercase" style={{ color: active ? GREEN : WHITE_SUB }}>{tab.badge}</span>}
           </button>
         );
       })}
+    </div>
+  );
+}
+
+/** Full-width green page header with an optional pickle, sitting under the content panel. */
+export function PageHero({ eyebrow, title, subtitle, mascot = false, action, children }: {
+  eyebrow?: ReactNode; title: ReactNode; subtitle?: ReactNode; mascot?: boolean; action?: ReactNode; children?: ReactNode;
+}) {
+  return (
+    <section className="relative -mx-4 -mt-5 overflow-hidden px-4 pb-12 pt-5 md:-mx-6 md:-mt-6 md:px-6 lg:-mx-10 lg:-mt-8 lg:px-10 lg:pt-8"
+      style={{ background: `radial-gradient(130% 120% at 100% 0%, ${DEEP_2} 0%, ${DEEP} 62%)`, color: WHITE }}>
+      {mascot && <img src={logo2xUrl} alt="" aria-hidden="true" className="pointer-events-none absolute -bottom-1 right-2 h-24 w-auto rotate-[9deg] md:h-28 lg:right-10" />}
+      <div className={`relative flex items-start justify-between gap-3 ${mascot ? "pr-20 md:pr-24" : ""}`}>
+        <div className="min-w-0">
+          {eyebrow && <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: YELLOW }}>{eyebrow}</p>}
+          <h1 className="mt-1 text-[1.65rem] font-black leading-[1.05] tracking-tight md:text-4xl" style={{ fontFamily: DISPLAY_FONT }}>{title}</h1>
+          {subtitle && <div className="mt-1.5 text-sm" style={{ color: "#c9dccf" }}>{subtitle}</div>}
+        </div>
+        {action}
+      </div>
+      {children && <div className="relative mt-3">{children}</div>}
+    </section>
+  );
+}
+
+/** The white, dotted content panel that slides up over a PageHero. */
+export function Sheet({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return (
+    <div className={`relative -mx-4 -mb-28 -mt-7 min-h-[70vh] rounded-t-[28px] px-4 pb-28 pt-5 md:-mx-6 md:px-6 lg:-mx-10 lg:-mb-12 lg:px-10 lg:pb-12 ${className}`}
+      style={{ background: WHITE, backgroundImage: DOT_BG, backgroundSize: "16px 16px" }}>
+      {children}
+    </div>
+  );
+}
+
+/** A thin progress bar for headers (yellow on green). */
+export function HeroProgress({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="h-1.5 overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.18)" }} role="progressbar"
+      aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(value * 100)}>
+      <div className="h-full rounded-full" style={{ width: `${Math.round(value * 100)}%`, background: YELLOW }} />
+    </div>
+  );
+}
+
+/** Progress ring tile: label, big value and a ring (design D). */
+export function RingTile({ label, value, fraction, color = PICKLE }: { label: string; value: string; fraction: number; color?: string }) {
+  const p = Math.round(Math.max(0, Math.min(1, fraction)) * 100);
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-2xl p-3" style={{ background: WHITE, border: `1px solid ${BORDER}`, boxShadow: CARD_GLOW }}>
+      <div className="min-w-0">
+        <p className="text-[10px] font-extrabold uppercase tracking-wider" style={{ color: WHITE_SUB }}>{label}</p>
+        {/* Words (like a level name) wrap at a smaller size instead of overflowing the tile. */}
+        <p className={`${value.length > 6 ? "text-base leading-tight" : "text-2xl"} font-black tracking-tight`} style={{ color: INK }}>{value}</p>
+      </div>
+      <span aria-hidden="true" className="grid h-11 w-11 shrink-0 place-items-center rounded-full" style={{ background: `conic-gradient(${color} ${p}%, #edf1ee 0)` }}>
+        <span className="h-8 w-8 rounded-full" style={{ background: WHITE }} />
+      </span>
     </div>
   );
 }

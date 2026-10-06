@@ -62,7 +62,7 @@ export default function PrivacyPage() {
             </ul>
           </section>
         ))}
-        <section className="rounded-2xl p-5" style={{ background: "#eef0ff" }} aria-labelledby="privacy-contact">
+        <section className="rounded-2xl p-5" style={{ background: "#e3f6ea" }} aria-labelledby="privacy-contact">
           <h2 id="privacy-contact" className="text-lg font-bold" style={{ fontFamily: DISPLAY_FONT }}>Questions or deletion requests</h2>
           <p className="mt-2 text-sm" style={{ color: INK }}>
             {config.contactEmail

@@ -3,8 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { Plus, Trophy } from "lucide-react";
 import { getProfile } from "../../lib/api/profile";
 import { sessionKind } from "../../lib/api/types";
-import { Chip, Notice, ScreenTitle } from "../shell/primitives";
-import { BLUE, INK, WHITE, WHITE_SUB, YELLOW, YELLOW_INK } from "../theme";
+import { Chip, Notice, PageHero, Sheet } from "../shell/primitives";
+import { INK, WHITE_SUB, YELLOW, YELLOW_INK } from "../theme";
 import { EmptySessions, reviewMode, SessionCard, useSessionsData } from "./sessionUi";
 
 type Filter = "all" | "self" | "video" | "tournament" | "solo";
@@ -32,9 +32,11 @@ export default function SessionsPage({ sb, userId }: { sb: SupabaseClient; userI
     : [["", shown]];
 
   return (
-    <div className="space-y-5">
-      <ScreenTitle title="Your sessions" subtitle={items ? `${items.length} logged` : undefined}
-        action={<a href="#/new" aria-label="Log a session" className="flex h-11 w-11 items-center justify-center rounded-full" style={{ background: BLUE, color: WHITE }}><Plus size={22} /></a>} />
+    <div>
+      <PageHero eyebrow="Your games" title="Sessions" subtitle={items ? `${items.length} logged` : undefined}
+        action={<a href="#/new" aria-label="Log a session" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl" style={{ background: YELLOW, color: YELLOW_INK }}><Plus size={22} /></a>} />
+      <Sheet>
+      <div className="space-y-5">
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 lg:mx-0 lg:flex-wrap lg:px-0" role="group" aria-label="Filter sessions">
         <Chip selected={filter === "all"} onClick={() => setFilter("all")}>All</Chip>
         <Chip selected={filter === "self"} onClick={() => setFilter("self")}>Self-assessed</Chip>
@@ -60,6 +62,8 @@ export default function SessionsPage({ sb, userId }: { sb: SupabaseClient; userI
             </ul>
           </section>
         ))}
+      </div>
+      </Sheet>
     </div>
   );
 }

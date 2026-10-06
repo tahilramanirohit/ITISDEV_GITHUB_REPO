@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { ChevronDown, Dumbbell, Target, TrendingDown, TrendingUp, Minus, Sparkles } from "lucide-react";
 import type { SelfProgressRow, SelfReport } from "../../lib/coaching/selfAssessment";
-import { BORDER, DISPLAY_FONT, GREEN, GREEN_BG, INK, NAVY, OPTIC, ORANGE, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
-import { Card, SectionTitle } from "../shell/primitives";
+import { BORDER, DISPLAY_FONT, GREEN, GREEN_BG, INK, OPTIC, ORANGE, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
+import { Card, RingTile, SectionTitle } from "../shell/primitives";
+import mascotUrl from "../../assets/picklepro-logo@2x.webp";
 
 /** Circular 1-5 score, drawn as an SVG ring. */
 export function ScoreRing({ value, size = 88 }: { value: number; size?: number }) {
@@ -64,14 +65,19 @@ export function SelfReportView({ report, progress, previousLabel, onEdit }: {
   }
   return (
     <div className="space-y-5">
-      <section className="flex items-center gap-4 rounded-2xl p-5" style={{ background: NAVY, color: WHITE }}>
-        <span className="shrink-0"><ScoreRing value={report.overall} /></span>
-        <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-wider" style={{ color: OPTIC }}>Your practice plan</p>
-          <p className="text-xl font-extrabold leading-tight" style={{ fontFamily: DISPLAY_FONT }}>{report.level}</p>
-          <p className="mt-1 text-sm" style={{ color: "#dfe3ff" }}>{report.introduction}</p>
-        </div>
-      </section>
+      {report.focus[0] && (
+        <section className="relative overflow-hidden rounded-lg p-4 pr-28" style={{ background: OPTIC, color: "#2b2100" }} aria-label="This week's drill">
+          <img src={mascotUrl} alt="" aria-hidden="true" className="pointer-events-none absolute -bottom-3 right-1 h-28 w-auto -rotate-[8deg]" />
+          <p className="text-[11px] font-extrabold uppercase tracking-wider">This week's drill</p>
+          <p className="mt-1 text-xl font-black leading-tight">{report.focus[0].drill.name}</p>
+          <p className="mt-1 text-sm">For your {report.focus[0].label.toLowerCase()} · 15 minutes, 3 times this week</p>
+        </section>
+      )}
+      <div className="grid grid-cols-2 gap-3">
+        <RingTile label="Self rating" value={report.overall.toFixed(1)} fraction={(report.overall - 1) / 4} />
+        <RingTile label="Level" value={report.level ?? "–"} fraction={(report.overall - 1) / 4} color={OPTIC} />
+      </div>
+      <p className="text-sm" style={{ color: WHITE_DIM }}>{report.introduction}</p>
 
       <div className="space-y-5 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start lg:gap-6 lg:space-y-0">
       <div className="space-y-5">

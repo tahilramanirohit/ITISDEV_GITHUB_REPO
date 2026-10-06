@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { TrendingDown, TrendingUp, Minus } from "lucide-react";
 import { buildSelfReport, SELF_SKILLS, SKILL_INFO, type SelfSkill } from "../../lib/coaching/selfAssessment";
 import { BORDER, DISPLAY_FONT, GREEN, INK, NAVY, OPTIC, ORANGE, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
-import { Card, Notice, ScreenTitle, SectionTitle } from "../shell/primitives";
+import { Card, Notice, PageHero, SectionTitle, Sheet } from "../shell/primitives";
 import { useSessionsData } from "../sessions/sessionUi";
 
 type Point = { sessionId: string; date: string; title: string; overall: number; ratings: Partial<Record<SelfSkill, number>> };
@@ -42,8 +42,10 @@ export default function ProgressPage({ sb }: { sb: SupabaseClient }) {
   const change = first && last && points.length > 1 ? Math.round((last.overall - first.overall) * 10) / 10 : null;
 
   return (
-    <div className="space-y-6">
-      <ScreenTitle title="Self-rated progress" subtitle="How your own skill ratings change over time. Video measurements are not turned into skill scores." />
+    <div>
+      <PageHero eyebrow="Self-rated" title="Progress" subtitle="How your own skill ratings change over time. Video measurements are not turned into skill scores." />
+      <Sheet>
+      <div className="space-y-6">
       {error && <Notice tone="error">{error}</Notice>}
       {items && <p className="text-sm font-semibold" style={{ color: INK }}>
         {items.length} session{items.length === 1 ? "" : "s"} logged · {points.length} rated
@@ -73,9 +75,9 @@ export default function ProgressPage({ sb }: { sb: SupabaseClient }) {
           <div className="flex items-end justify-between gap-3">
             <div>
               <p className="text-xs font-bold uppercase tracking-wider" style={{ color: OPTIC }}>Average self rating</p>
-              <p className="text-4xl font-extrabold" style={{ fontFamily: DISPLAY_FONT }}>{last!.overall.toFixed(1)}<span className="text-lg" style={{ color: "#c7cdff" }}>/5</span></p>
+              <p className="text-4xl font-extrabold" style={{ fontFamily: DISPLAY_FONT }}>{last!.overall.toFixed(1)}<span className="text-lg" style={{ color: "#a7c4b2" }}>/5</span></p>
             </div>
-            {change != null && <p className="text-sm font-bold" style={{ color: change > 0 ? OPTIC : change < 0 ? "#ffb08a" : "#dfe3ff" }}>
+            {change != null && <p className="text-sm font-bold" style={{ color: change > 0 ? OPTIC : change < 0 ? "#ffb08a" : "#c9dccf" }}>
               {change > 0 ? "+" : ""}{change.toFixed(1)} since first</p>}
           </div>
           <div className="mt-4 flex h-28 items-end gap-1.5 lg:h-48" role="img" aria-label={`Average rating for the last ${recent.length} rated sessions`}>
@@ -83,7 +85,7 @@ export default function ProgressPage({ sb }: { sb: SupabaseClient }) {
               <div className="w-full rounded-t-lg" style={{ height: `${(p.overall / 5) * 100}%`, background: i === recent.length - 1 ? OPTIC : "rgba(254,188,23,0.45)" }} />
             </div>)}
           </div>
-          <p className="mt-2 text-xs" style={{ color: "#c7cdff" }}>{recent.length} most recent rated session{recent.length === 1 ? "" : "s"}</p>
+          <p className="mt-2 text-xs" style={{ color: "#a7c4b2" }}>{recent.length} most recent rated session{recent.length === 1 ? "" : "s"}</p>
         </section>
 
         <section className="space-y-3">
@@ -111,6 +113,8 @@ export default function ProgressPage({ sb }: { sb: SupabaseClient }) {
           <p className="text-xs" style={{ color: WHITE_SUB }}>Self ratings, not measurements. Video sessions add measured court positions in each session's Video tab.</p>
         </section>
       </div>}
+      </div>
+      </Sheet>
     </div>
   );
 }

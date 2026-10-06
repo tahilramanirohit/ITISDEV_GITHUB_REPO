@@ -4,8 +4,8 @@ import { ChevronRight, LogOut, Settings } from "lucide-react";
 import { getProfile, saveProfile, type ProfileInput } from "../../lib/api/profile";
 import { useSessionsData, weekStreak } from "../sessions/sessionUi";
 import { playerCode } from "../../lib/api/players";
-import { Card, Chip, Notice, PrimaryButton, SectionTitle, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
-import { BLUE, BORDER, HERO, INK, OPTIC, ROSE, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
+import { Card, Chip, Notice, PageHero, PrimaryButton, SectionTitle, Sheet, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
+import { BORDER, INK, OPTIC, ROSE, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
 
 const empty: ProfileInput = {
   display_name: "", dominant_hand: null, years_playing: null, usual_format: null,
@@ -59,13 +59,15 @@ export default function ProfilePage({ sb, userId, account, signOut }: {
   const rated = sessions.filter((i) => assessments.some((x) => x.session_id === i.session.id)).length;
   const streak = weekStreak(sessions.map((i) => i.session.session_date));
   if (loading) return <p className="text-sm" style={{ color: WHITE_SUB }}>Loading profile…</p>;
-  return <div className="space-y-6">
-    {/* Profile header in the style of a sports app: banner, avatar, name, ID and a stats row. */}
-    <section className="overflow-hidden rounded-2xl" style={{ background: WHITE, border: `1px solid ${BORDER}` }} aria-label="Your profile">
-      <div className="h-20 md:h-24" style={{ background: `linear-gradient(120deg, ${HERO}, ${BLUE})` }} />
+  return <div>
+    <PageHero mascot eyebrow="Profile" title={form.display_name || "Player"} subtitle={account} />
+    <Sheet>
+    <div className="space-y-6">
+    {/* Profile card in the style of a sports app: avatar, name, ID and a stats row. */}
+    <section className="rounded-2xl pt-10" style={{ background: WHITE, border: `1px solid ${BORDER}`, boxShadow: "0 4px 12px rgba(15,23,42,0.05)" }} aria-label="Your profile">
       <div className="px-4 pb-4">
         <div className="-mt-10 flex items-end justify-between gap-3">
-          <span className="flex h-20 w-20 items-center justify-center rounded-full text-3xl font-extrabold" style={{ background: OPTIC, color: INK, border: `4px solid ${WHITE}` }}>{letter}</span>
+          <span className="-mt-20 flex h-20 w-20 items-center justify-center rounded-full text-3xl font-extrabold" style={{ background: OPTIC, color: INK, border: `4px solid ${WHITE}` }}>{letter}</span>
           <a href="#/settings" className="mb-1 inline-flex min-h-[40px] items-center gap-1.5 rounded-full px-4 text-sm font-bold" style={{ border: `1px solid ${BORDER}`, color: INK }}>
             <Settings size={16} aria-hidden="true" /> Settings
           </a>
@@ -143,5 +145,7 @@ export default function ProfilePage({ sb, userId, account, signOut }: {
     </div>}
     </div>
     </div>
+    </div>
+    </Sheet>
   </div>;
 }

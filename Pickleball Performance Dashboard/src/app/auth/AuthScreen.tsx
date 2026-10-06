@@ -97,7 +97,7 @@ export function AuthScreen({ sb, devMode, guestMode, samplePreviewEnabled = fals
           <h1 id="intro-title" className="mt-2 text-[2rem] font-extrabold leading-[1.05] md:text-5xl lg:text-[clamp(2.25rem,4.2vh,3.5rem)]" style={{ fontFamily: DISPLAY_FONT }}>
             Your pickleball coach, in your pocket.
           </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-relaxed md:text-base" style={{ color: "#dfe3ff" }}>
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed md:text-base" style={{ color: "#c9dccf" }}>
             {trialNoWorker
               ? "Rate your own game for an instant practice plan, or explore the sample dashboard. Video analysis is not running on this public trial."
               : "PicklePro turns a quick look back at your game into a clear plan: what is working, what to work on, and the drills to get there. Your sessions stay private to you."}
@@ -108,7 +108,7 @@ export function AuthScreen({ sb, devMode, guestMode, samplePreviewEnabled = fals
           {features.map(({ icon: Icon, title, text }) => (
             <li key={title} className="flex items-start gap-3 rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)" }}>
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: OPTIC, color: OPTIC_INK }}><Icon size={20} /></span>
-              <span><strong className="block text-sm md:text-base">{title}</strong><span className="mt-0.5 block text-sm" style={{ color: "#d7dcff" }}>{text}</span></span>
+              <span><strong className="block text-sm md:text-base">{title}</strong><span className="mt-0.5 block text-sm" style={{ color: "#c9dccf" }}>{text}</span></span>
             </li>
           ))}
         </ul>
@@ -214,7 +214,7 @@ export function AuthScreen({ sb, devMode, guestMode, samplePreviewEnabled = fals
             <p id="example-plan-title" className="text-xs font-bold uppercase tracking-wider" style={{ color: GREEN }}>Example from a practice plan</p>
             <p className="mt-2 text-base font-bold">Build your dinking · rated 2/5</p>
             <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Low, patient dinks force opponents to hit up, giving you the first chance to attack.</p>
-            <div className="mt-3 rounded-2xl p-3 text-sm" style={{ background: "#eef0ff" }}>
+            <div className="mt-3 rounded-2xl p-3 text-sm" style={{ background: "#e3f6ea" }}>
               <strong style={{ color: GREEN }}>Drill: Cross-court dink count.</strong> Dink cross-court with a partner and count rallies without a ball going above net height plus 30 cm. Three rounds of two minutes; try to beat your best count.
             </div>
             <p className="mt-3 text-sm font-semibold">Next session: aim for 3/5, "Steady when unhurried".</p>

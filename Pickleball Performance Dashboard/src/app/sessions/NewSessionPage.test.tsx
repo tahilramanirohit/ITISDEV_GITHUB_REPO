@@ -33,7 +33,7 @@ describe("NewSessionPage", () => {
   it("logs a tournament match with its result and named players", async () => {
     const { sb, inserts } = fakeSupabase();
     renderPage(sb);
-    fireEvent.click(await screen.findByRole("button", { name: "Tournament" }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Tournament/ }));
     fireEvent.change(screen.getByLabelText("Tournament"), { target: { value: "Manila Open" } });
     fireEvent.click(screen.getByRole("button", { name: "Semifinal" }));
     fireEvent.click(screen.getByRole("button", { name: "Won" }));
@@ -57,7 +57,7 @@ describe("NewSessionPage", () => {
   it("starts from saved default settings and sends no tournament fields for solo practice", async () => {
     const { sb, inserts } = fakeSupabase({ id: "u1", main_goals: ["shot_technique"], default_session_kind: "solo", default_play_format: "ball_machine" });
     renderPage(sb);
-    await waitFor(() => expect(screen.getByRole("button", { name: "Solo practice" }).getAttribute("aria-pressed")).toBe("true"));
+    await waitFor(() => expect(screen.getByRole("button", { name: /^Solo practice/ }).getAttribute("aria-pressed")).toBe("true"));
     expect(screen.getByRole("button", { name: "Ball machine" }).getAttribute("aria-pressed")).toBe("true");
     expect(screen.queryByLabelText("Partner name")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Start rating" }));

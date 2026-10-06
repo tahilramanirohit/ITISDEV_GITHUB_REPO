@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useLocation } from "react-router";
 import { BarChart3, CalendarDays, Home, Plus, UserRound } from "lucide-react";
-import { BODY_FONT, BORDER, GREEN, INK, OPTIC, OPTIC_INK, PAGE_BG, WHITE, WHITE_SUB } from "../theme";
+import { BODY_FONT, BORDER, DEEP, GREEN, INK, OPTIC, OPTIC_INK, PAGE_BG, WHITE, WHITE_SUB } from "../theme";
 import { PickleProLogo } from "./primitives";
 
 const TEXT_SIZE_KEY = "picklepro.largeText";
@@ -30,7 +30,7 @@ export function LargeTextToggle({ tone = "light" }: { tone?: "light" | "dark" })
     <button type="button" aria-pressed={large} onClick={() => setLarge((v) => !v)}
       className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold min-h-[40px]"
       style={{ color: dark ? WHITE : INK, border: `1px solid ${large ? GREEN : dark ? "rgba(255,255,255,0.3)" : BORDER}`,
-        background: large ? (dark ? "#23332a" : "#eef0ff") : "transparent" }}>
+        background: large ? (dark ? "#23332a" : "#e3f6ea") : "transparent" }}>
       <span aria-hidden="true" style={{ fontSize: "0.8em" }}>A</span><span aria-hidden="true" style={{ fontSize: "1.2em" }}>A</span>
       {large ? "Normal text" : "Larger text"}
     </button>
@@ -60,9 +60,9 @@ function BottomTabs() {
             <li key={tab.href}>
               <a href={tab.href} aria-current={active ? "page" : undefined}
                 className="flex min-h-[60px] flex-col items-center justify-center gap-0.5 text-[11px] font-semibold"
-                style={{ color: active ? GREEN : WHITE_SUB }}>
+                style={{ color: active ? DEEP : WHITE_SUB }}>
                 {"primary" in tab
-                  ? <span className="-mt-5 flex h-12 w-12 items-center justify-center rounded-2xl shadow-lg"
+                  ? <span className="-mt-6 flex h-12 w-12 items-center justify-center rounded-2xl shadow-lg"
                       style={{ background: OPTIC, color: OPTIC_INK, border: `3px solid ${WHITE}` }}><Icon size={24} strokeWidth={2.6} /></span>
                   : <Icon size={22} strokeWidth={active ? 2.5 : 2} />}
                 <span>{tab.label}</span>
@@ -93,7 +93,7 @@ function SideNav({ account }: { account?: ReactNode }) {
               <li key={tab.href}>
                 <a href={tab.href} aria-current={active ? "page" : undefined}
                   className="flex min-h-[44px] items-center gap-3 rounded-xl px-3 text-sm font-semibold transition-colors hover:bg-[#f4f5f7]"
-                  style={active ? { background: GREEN, color: WHITE } : { color: INK }}>
+                  style={active ? { background: DEEP, color: OPTIC } : { color: INK }}>
                   <Icon size={19} strokeWidth={active ? 2.5 : 2} />{tab.label}
                 </a>
               </li>
@@ -119,7 +119,7 @@ export function AppShell({ children, right, nav, tabs = false, wide = false }: {
 }) {
   // Phones: one column. Tablets: the same layout, wider and with larger type.
   // Desktop: the signed-in app uses the whole screen beside the sidebar.
-  const width = wide ? "max-w-6xl" : tabs ? "max-w-xl md:max-w-3xl lg:max-w-none" : "max-w-xl md:max-w-3xl";
+  const width = wide ? "max-w-6xl" : tabs ? "max-w-xl md:max-w-none" : "max-w-xl md:max-w-3xl";
   return (
     <div style={{ background: PAGE_BG, minHeight: "100vh", color: INK, fontFamily: BODY_FONT }}>
       {/* A button rather than a "#" link, because the hash holds the app's route. */}
@@ -128,10 +128,11 @@ export function AppShell({ children, right, nav, tabs = false, wide = false }: {
         style={{ background: INK, color: WHITE }}>Skip to main content</button>
       {tabs && <SideNav account={right} />}
       <div className={tabs ? "lg:pl-64" : undefined}>
-        <header className={`sticky top-0 z-20 border-b ${tabs ? "lg:hidden" : ""}`} style={{ background: "rgba(255,255,255,0.94)", backdropFilter: "blur(12px)", borderColor: BORDER,
-          paddingTop: "env(safe-area-inset-top)" }}>
-          <div className={`${width} mx-auto flex min-h-[56px] items-center justify-between gap-3 px-4`}>
-            <a href="#/" aria-label="PicklePro home"><PickleProLogo size="sm" tone="light" /></a>
+        {/* In the app the bar is deep green so it runs straight into each screen's green header. */}
+        <header className={`sticky top-0 z-20 ${tabs ? "lg:hidden" : "border-b"}`} style={{ background: tabs ? DEEP : "rgba(255,255,255,0.94)",
+          color: tabs ? WHITE : INK, backdropFilter: "blur(12px)", borderColor: BORDER, paddingTop: "env(safe-area-inset-top)" }}>
+          <div className={`${width} mx-auto flex min-h-[56px] items-center justify-between gap-3 px-4 md:px-6`}>
+            <a href="#/" aria-label="PicklePro home"><PickleProLogo size="sm" tone={tabs ? "dark" : "light"} /></a>
             <div className="flex min-w-0 items-center gap-2">{right}</div>
           </div>
           {nav && <nav className={`${width} mx-auto flex flex-wrap gap-x-4 gap-y-1 px-4 pb-2 text-sm font-semibold`}>{nav}</nav>}

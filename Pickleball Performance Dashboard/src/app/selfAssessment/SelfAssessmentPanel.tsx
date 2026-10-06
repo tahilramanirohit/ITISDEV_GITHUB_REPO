@@ -10,7 +10,7 @@ import {
   buildSelfReport, compareSelfRatings, MIN_RATED_SKILLS, ratedSkills, SELF_SKILLS, SKILL_GROUPS, SKILL_INFO,
   type ErrorLevel, type SelfRatings, type SelfSkill, type SkillRating,
 } from "../../lib/coaching/selfAssessment";
-import { BORDER, GREEN, INK, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
+import { BORDER, GREEN, INK, PICKLE, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Chip, Notice, PrimaryButton, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
 import { SelfReportView } from "./SelfReportView";
 import { SkillRater } from "./SkillRater";
@@ -121,12 +121,16 @@ export function SelfAssessmentPanel({ sb, session }: { sb: SupabaseClient; sessi
   return (
     <div className="space-y-4">
       <div>
-        <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider" style={{ color: GREEN }}>
-          <span>Rate your game · {group}</span><span style={{ color: WHITE_SUB }}>{ratedCount} of {SELF_SKILLS.length} rated</span>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-xl font-black tracking-tight" style={{ color: INK }}>Rate your game</h2>
+          <span className="text-xs font-bold" style={{ color: WHITE_SUB }}>{ratedCount} of {SELF_SKILLS.length} rated</span>
         </div>
-        <div className="mt-2 grid grid-cols-4 gap-1.5" aria-hidden="true">
-          {STEPS.map((s, i) => <span key={s} className="h-1.5 rounded-full" style={{ background: i <= step ? INK : "#e2e5ea" }} />)}
-        </div>
+        {/* Steps as underlined tabs; any step can be opened directly. */}
+        <nav aria-label="Rating steps" className="mt-2 flex gap-5 overflow-x-auto border-b" style={{ borderColor: BORDER }}>
+          {STEPS.map((s, i) => <button key={s} type="button" onClick={() => { setError(""); setStep(i); }} aria-current={i === step ? "step" : undefined}
+            className="-mb-px min-h-[40px] shrink-0 border-b-[3px] py-2 text-sm font-semibold"
+            style={i === step ? { color: INK, borderColor: PICKLE } : { color: i < step ? GREEN : WHITE_DIM, borderColor: "transparent" }}>{s}</button>)}
+        </nav>
         {step === 0 && <p className="mt-3 text-sm" style={{ color: WHITE_DIM }}>Think about this session only. 3 means "okay for my level". Skip anything that didn't come up.</p>}
       </div>
 

@@ -21,7 +21,7 @@ export function GoalFields({ value, onChange }: { value: GoalValues; onChange: (
           const ratingKey = `${goal}_rating` as const;
           const selected = value.improvement_goals.includes(goal);
           return (
-            <div key={goal} className="rounded-2xl p-3 focus-within:ring-2 focus-within:ring-[#4355fe]" style={{ border: `${selected ? 2 : 1}px solid ${selected ? INK : BORDER}`, background: WHITE }}>
+            <div key={goal} className="rounded-2xl p-3 focus-within:ring-2 focus-within:ring-[#15803d]" style={{ border: `${selected ? 2 : 1}px solid ${selected ? INK : BORDER}`, background: WHITE }}>
               <label className="flex cursor-pointer items-center gap-3 text-sm" style={{ color: INK }}>
                 <input type="checkbox" aria-label={GOAL_LABELS[goal]} checked={selected} className="sr-only" onChange={() => onChange({
                   ...value,
