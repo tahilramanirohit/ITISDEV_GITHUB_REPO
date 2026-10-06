@@ -58,4 +58,4 @@ Migration `20261006100000_player_onboarding.sql` (safe to run again; run it afte
 
 Local SQL tests: `supabase/tests/local/30_self_assessment.sql`, run by `supabase/tests/run_local_rls_tests.sh`.
 
-**Hosted projects need both migrations before the branch is deployed.** Until they are applied, onboarding and session creation show a message naming the missing file. Existing screens still load.
+**Hosted projects need both migrations before the branch is deployed.** The quickest way: paste `supabase/scripts/pickleproapp_upgrade.sql` into the Supabase SQL Editor and run it. Until they are applied, onboarding and session creation show a message naming the missing file. Existing screens still load.

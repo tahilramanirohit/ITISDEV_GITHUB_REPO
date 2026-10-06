@@ -50,6 +50,9 @@ done
 "${PSQL[@]}" -c "set client_min_messages = warning" -f "$MIGRATIONS/20261006090000_self_assessment.sql" >/dev/null
 "${PSQL[@]}" -c "set client_min_messages = warning" -f "$MIGRATIONS/20261006100000_player_onboarding.sql" >/dev/null
 echo "  PASS self-assessment and onboarding migrations can be applied twice"
+# The copy-paste script for the hosted SQL editor must also run cleanly on top.
+"${PSQL[@]}" -c "set client_min_messages = warning" -f "$HERE/../scripts/pickleproapp_upgrade.sql" >/dev/null
+echo "  PASS pickleproapp_upgrade.sql runs on an up-to-date database"
 
 # Concurrency: 20 simultaneous finalize calls (double clicks, two tabs) → one job.
 "${PSQL[@]}" <<'SQL'
