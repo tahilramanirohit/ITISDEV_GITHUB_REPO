@@ -116,7 +116,7 @@ export default function NewSessionPage({ sb, userId, trialNoWorker = false }: { 
   }
 
   return (
-    <div className="space-y-5 md:mx-auto md:max-w-2xl">
+    <div className="space-y-5 lg:mx-auto lg:max-w-3xl">
       {step === 2 && <button type="button" onClick={() => setStep(1)} className="inline-flex items-center gap-1 text-sm font-semibold" style={{ color: GREEN }}>
         <ArrowLeft size={16} /> Back
       </button>}
@@ -127,7 +127,7 @@ export default function NewSessionPage({ sb, userId, trialNoWorker = false }: { 
       </div>
 
       {step === 1 && <>
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3 lg:grid-cols-2">
           <ModeCard selected={form.review_mode === "self"} onSelect={() => chooseMode("self")} icon={<ClipboardCheck size={24} />}
             title="Rate my own game" tag="No video · about 2 minutes"
             detail="Rate ten skills from how the session felt. You get focus areas, drills and a practice plan right away." />

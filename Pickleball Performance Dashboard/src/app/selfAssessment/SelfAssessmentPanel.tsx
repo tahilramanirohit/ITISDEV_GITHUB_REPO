@@ -155,7 +155,7 @@ export function SelfAssessmentPanel({ sb, session }: { sb: SupabaseClient; sessi
         {step === 0 && <p className="mt-3 text-sm" style={{ color: WHITE_DIM }}>Think about this session only. 3 means "okay for my level". Skip anything that didn't come up.</p>}
       </div>
 
-      {group !== "Wrap-up" ? <div className="grid gap-4 md:grid-cols-2">{skills.map((skill) => <SkillRater key={skill} skill={skill} value={draft.ratings[skill]} onChange={(v) => rate(skill, v)} />)}</div> : <div className="space-y-4 lg:max-w-xl">
+      {group !== "Wrap-up" ? <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">{skills.map((skill) => <SkillRater key={skill} skill={skill} value={draft.ratings[skill]} onChange={(v) => rate(skill, v)} />)}</div> : <div className="space-y-4 lg:max-w-xl">
         {!solo && <>
         <Stepper label="Games played" value={draft.games_played} max={50}
           onChange={(v) => setDraft((d) => ({ ...d, games_played: v, games_won: v == null ? null : Math.min(d.games_won ?? 0, v) }))} />

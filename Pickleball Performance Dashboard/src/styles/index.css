@@ -1,3 +1,19 @@
 @import './fonts.css';
 @import './tailwind.css';
 @import './theme.css';
+
+/* Tablets use the phone layout at a larger size. The "Larger text" toggle sets
+   an inline font size on <html>, which still takes precedence. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  html { font-size: 112.5%; }
+}
+
+/* The welcome mascot sways gently, unless the visitor prefers less motion. */
+@keyframes pickle-hello {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+.pickle-hello { transform-origin: 50% 90%; animation: pickle-hello 3.2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .pickle-hello { animation: none; }
+}
