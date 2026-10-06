@@ -1,7 +1,10 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { LogOut } from "lucide-react";
-import { getProfile, saveProfile, type ProfileInput } from "../../lib/api/profile";
+import { getProfile, saveProfile, saveSessionDefaults, type ProfileInput, type SessionDefaults } from "../../lib/api/profile";
+import { playerCode } from "../../lib/api/players";
+import { friendlyDbError } from "../../lib/api/selfAssessment";
+import { FORMAT_LABELS, KIND_LABELS, SOLO_FORMATS, type PlayFormat, type SessionKind } from "../../lib/api/types";
 import { Card, Chip, Notice, PrimaryButton, ScreenTitle, SectionTitle, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
 import { LargeTextToggle } from "../shell/AppShell";
 import { DISPLAY_FONT, INK, OPTIC, ROSE, WHITE_DIM, WHITE_SUB } from "../theme";
@@ -23,6 +26,19 @@ export default function ProfilePage({ sb, userId, account, signOut, devLinks }: 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  const [defaults, setDefaults] = useState<SessionDefaults>({ default_review_mode: null, default_session_kind: null, default_play_format: null });
+  const [savingDefaults, setSavingDefaults] = useState(false);
+  const [defaultsMessage, setDefaultsMessage] = useState("");
+
+  async function submitDefaults() {
+    setSavingDefaults(true); setDefaultsMessage("");
+    try {
+      await saveSessionDefaults(sb, userId, defaults);
+      setDefaultsMessage("Saved. New sessions start with these settings.");
+    } catch (e) {
+      setDefaultsMessage(friendlyDbError(e instanceof Error ? e.message : String((e as { message?: string })?.message ?? e)));
+    } finally { setSavingDefaults(false); }
+  }
 
   useEffect(() => {
     let active = true;
@@ -31,6 +47,9 @@ export default function ProfilePage({ sb, userId, account, signOut, devLinks }: 
         display_name: profile.display_name ?? "", dominant_hand: profile.dominant_hand ?? null,
         years_playing: profile.years_playing ?? null, usual_format: profile.usual_format ?? null,
         self_level: profile.self_level ?? null, is_adult_confirmed: !!profile.is_adult_confirmed,
+      }); if (active && profile) setDefaults({
+        default_review_mode: profile.default_review_mode ?? null, default_session_kind: profile.default_session_kind ?? null,
+        default_play_format: profile.default_play_format ?? null,
       }); })
       .catch((e) => { if (active) setError(e instanceof Error ? e.message : String(e)); })
       .finally(() => { if (active) setLoading(false); });
@@ -61,6 +80,9 @@ export default function ProfilePage({ sb, userId, account, signOut, devLinks }: 
       <div className="min-w-0">
         <p className="truncate text-lg font-bold" style={{ color: INK }}>{form.display_name || "Player"}</p>
         {account && <p className="truncate text-sm" style={{ color: WHITE_DIM }}>{account}</p>}
+        <p className="mt-1 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold" style={{ background: "#e6e8e3", color: INK }} title="Your player ID">
+          Player ID <span className="font-mono">{playerCode(userId)}</span>
+        </p>
       </div>
     </div>
 
@@ -108,6 +130,40 @@ export default function ProfilePage({ sb, userId, account, signOut, devLinks }: 
     <a href="#/welcome" className="flex items-center justify-between rounded-3xl p-4 text-sm font-bold" style={{ background: OPTIC, color: INK }}>
       Update my game and starting skills <span aria-hidden="true">→</span>
     </a>
+
+    <Card>
+      <SectionTitle>Default settings</SectionTitle>
+      <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Used to fill in new sessions. You can still change them each time.</p>
+      <div className="mt-4 space-y-4">
+        <div>
+          <p className={labelClass} style={labelStyle}>How to review</p>
+          <div className="flex flex-wrap gap-2">
+            {([["self", "Rate my game"], ["video", "Video analysis"]] as const).map(([v, l]) =>
+              <Chip key={v} selected={defaults.default_review_mode === v} onClick={() => setDefaults({ ...defaults, default_review_mode: defaults.default_review_mode === v ? null : v })}>{l}</Chip>)}
+          </div>
+        </div>
+        <div>
+          <p className={labelClass} style={labelStyle}>Kind of session</p>
+          <div className="flex flex-wrap gap-2">
+            {(["solo", "match", "tournament"] as SessionKind[]).map((k) =>
+              <Chip key={k} selected={defaults.default_session_kind === k} onClick={() => setDefaults({ ...defaults, default_session_kind: defaults.default_session_kind === k ? null : k,
+                default_play_format: k === "solo" ? (SOLO_FORMATS.includes(defaults.default_play_format as PlayFormat) ? defaults.default_play_format : null)
+                  : defaults.default_play_format === "singles" || defaults.default_play_format === "doubles" ? defaults.default_play_format : null })}>{KIND_LABELS[k]}</Chip>)}
+          </div>
+        </div>
+        <div>
+          <p className={labelClass} style={labelStyle}>Format</p>
+          <div className="flex flex-wrap gap-2">
+            {(defaults.default_session_kind === "solo" ? SOLO_FORMATS : ["singles", "doubles"] as PlayFormat[]).map((f) =>
+              <Chip key={f} selected={defaults.default_play_format === f} onClick={() => setDefaults({ ...defaults, default_play_format: defaults.default_play_format === f ? null : f })}>{FORMAT_LABELS[f]}</Chip>)}
+          </div>
+        </div>
+        {defaultsMessage && <Notice tone={defaultsMessage.startsWith("Saved") ? "info" : "error"}>{defaultsMessage}</Notice>}
+        <PrimaryButton type="button" tone="light" className="w-full" disabled={savingDefaults} onClick={() => void submitDefaults()}>
+          {savingDefaults ? "Saving…" : "Save default settings"}
+        </PrimaryButton>
+      </div>
+    </Card>
 
     <Card>
       <SectionTitle>Display</SectionTitle>

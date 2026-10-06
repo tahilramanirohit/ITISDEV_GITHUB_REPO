@@ -12,6 +12,16 @@ export type PerformanceScope = (typeof PERFORMANCE_SCOPES)[number];
 export type ImprovementGoal = (typeof IMPROVEMENT_GOALS)[number];
 export type SelfRating = 1 | 2 | 3 | 4 | 5;
 export type ReviewMode = "self" | "video";
+export type SessionKind = "solo" | "match" | "tournament";
+export type MatchResult = "win" | "loss";
+
+export const SOLO_FORMATS: PlayFormat[] = ["wall_practice", "ball_machine", "drill_other"];
+/** Solo practice, a match, or a tournament match, from the stored context and format. */
+export function sessionKind(s: Pick<SessionRow, "session_context" | "play_format">): SessionKind {
+  if (s.session_context === "tournament") return "tournament";
+  return SOLO_FORMATS.includes(s.play_format) ? "solo" : "match";
+}
+export const KIND_LABELS: Record<SessionKind, string> = { solo: "Solo practice", match: "Match", tournament: "Tournament" };
 
 export const GOAL_LABELS: Record<ImprovementGoal, string> = {
   positioning: "Court positioning",
@@ -47,6 +57,11 @@ export type SessionRow = {
   performance_scope: PerformanceScope;
   /** Missing before the self-assessment migration is applied; treat as "video". */
   review_mode?: ReviewMode;
+  // Tournament details; missing until the adviser-notes migration is applied.
+  tournament_name?: string | null;
+  tournament_round?: string | null;
+  match_result?: MatchResult | null;
+  match_score?: string | null;
   notes: string | null;
   improvement_goals: ImprovementGoal[];
   positioning_rating: SelfRating | null;
@@ -75,6 +90,8 @@ export type VideoAssetRow = {
   raw_video_kept: boolean;
   raw_video_deleting_at: string | null;
   raw_video_deleted_at: string | null;
+  /** Clip length measured in the browser before upload; null for older uploads. */
+  duration_s?: number | null;
 };
 
 export type JobStatus = "queued" | "processing" | "completed" | "failed";

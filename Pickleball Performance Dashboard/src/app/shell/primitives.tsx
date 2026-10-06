@@ -166,6 +166,18 @@ export function Notice({ tone = "info", onDark = false, children }: { tone?: "in
 }
 
 // ── Brand mark ────────────────────────────────────────────────────────────
+/** The ball mark on its own, for narrow spaces such as the tablet rail. */
+export function PickleProMark({ size = 40 }: { size?: number }) {
+  return (
+    <span className="flex items-center justify-center rounded-xl" style={{ width: size, height: size, background: INK }} aria-hidden>
+      <svg viewBox="0 0 24 24" width={size * 0.62} height={size * 0.62} fill="none">
+        <circle cx="12" cy="12" r="9" fill={OPTIC} />
+        {[[9, 8], [15, 8], [12, 12], [8, 15], [16, 15], [12, 17]].map(([x, y]) => <circle key={`${x}-${y}`} cx={x} cy={y} r="1.3" fill={INK} />)}
+      </svg>
+    </span>
+  );
+}
+
 export function PickleProLogo({ size = "md", tone = "dark" }: { size?: "sm" | "md" | "lg"; tone?: "dark" | "light" }) {
   const box = size === "lg" ? 48 : size === "sm" ? 32 : 40;
   const onLight = tone === "light";

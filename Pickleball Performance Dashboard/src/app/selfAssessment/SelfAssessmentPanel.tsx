@@ -5,7 +5,7 @@ import {
   friendlyDbError, getSelfAssessment, listSelfAssessments, previousAssessment, saveSelfAssessment, type SelfAssessment,
 } from "../../lib/api/selfAssessment";
 import { listSessions } from "../../lib/api/sessions";
-import type { SessionRow } from "../../lib/api/types";
+import { sessionKind, type SessionRow } from "../../lib/api/types";
 import {
   buildSelfReport, compareSelfRatings, MIN_RATED_SKILLS, ratedSkills, SELF_SKILLS, SKILL_GROUPS, SKILL_INFO,
   type ErrorLevel, type SelfRatings, type SelfSkill, type SkillRating,
@@ -108,6 +108,7 @@ export function SelfAssessmentPanel({ sb, session }: { sb: SupabaseClient; sessi
   const rate = (skill: SelfSkill, v: SkillRating | undefined) =>
     setDraft((d) => { const ratings = { ...d.ratings }; if (v) ratings[skill] = v; else delete ratings[skill]; return { ...d, ratings }; });
   const ratedCount = ratedSkills(draft.ratings).length;
+  const solo = sessionKind(session) === "solo";
 
   async function save() {
     if (ratedCount < MIN_RATED_SKILLS) return setError(`Rate at least ${MIN_RATED_SKILLS} skills. You have rated ${ratedCount}.`);
@@ -154,11 +155,13 @@ export function SelfAssessmentPanel({ sb, session }: { sb: SupabaseClient; sessi
         {step === 0 && <p className="mt-3 text-sm" style={{ color: WHITE_DIM }}>Think about this session only. 3 means "okay for my level". Skip anything that didn't come up.</p>}
       </div>
 
-      {group !== "Wrap-up" ? <div className="grid gap-4 lg:grid-cols-2">{skills.map((skill) => <SkillRater key={skill} skill={skill} value={draft.ratings[skill]} onChange={(v) => rate(skill, v)} />)}</div> : <div className="space-y-4 lg:max-w-xl">
+      {group !== "Wrap-up" ? <div className="grid gap-4 md:grid-cols-2">{skills.map((skill) => <SkillRater key={skill} skill={skill} value={draft.ratings[skill]} onChange={(v) => rate(skill, v)} />)}</div> : <div className="space-y-4 lg:max-w-xl">
+        {!solo && <>
         <Stepper label="Games played" value={draft.games_played} max={50}
           onChange={(v) => setDraft((d) => ({ ...d, games_played: v, games_won: v == null ? null : Math.min(d.games_won ?? 0, v) }))} />
         {draft.games_played != null && <Stepper label="Games won" value={draft.games_won} max={draft.games_played}
           onChange={(v) => setDraft((d) => ({ ...d, games_won: v }))} />}
+        </>}
         <div>
           <p className={labelClass} style={labelStyle}>Unforced errors</p>
           <div className="flex gap-2">

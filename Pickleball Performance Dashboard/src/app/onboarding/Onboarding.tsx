@@ -172,7 +172,7 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
         </p>
         {SKILL_GROUPS.map((group) => <section key={group} className="space-y-3">
           <h2 className="text-sm font-bold uppercase tracking-wider" style={{ color: WHITE_SUB }}>{group}</h2>
-          <div className="grid gap-3 lg:grid-cols-2">
+          <div className="grid gap-3 md:grid-cols-2">
           {SELF_SKILLS.filter((s) => SKILL_INFO[s].group === group).map((skill) => (
             <SkillRater key={skill} skill={skill} value={form.baseline_ratings[skill]} question="Your usual level"
               onChange={(v?: SkillRating) => setForm((f) => {

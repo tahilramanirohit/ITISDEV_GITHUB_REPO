@@ -6,13 +6,16 @@ import { createSession, type NewSession } from "../../lib/api/sessions";
 import { friendlyDbError } from "../../lib/api/selfAssessment";
 import { getProfile } from "../../lib/api/profile";
 import {
-  CONTEXT_LABELS, FORMAT_LABELS, PLAY_FORMATS, SESSION_CONTEXTS, type ReviewMode,
+  CONTEXT_LABELS, FORMAT_LABELS, KIND_LABELS, SOLO_FORMATS,
+  type MatchResult, type PlayFormat, type ReviewMode, type SessionContext, type SessionKind,
 } from "../../lib/api/types";
+import { saveOtherPlayers, type OtherPlayer } from "../../lib/api/players";
 import { BORDER, CARD_GLOW, GREEN, GREEN_BG, INK, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Chip, Notice, PrimaryButton, ScreenTitle, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
 import { GoalFields } from "./GoalFields";
 
 const today = () => new Date().toISOString().slice(0, 10);
+const ROUNDS = ["Pool play", "Round of 16", "Quarterfinal", "Semifinal", "Final", "Other"];
 
 function defaultTitle(date: string, context: NewSession["session_context"]) {
   const weekday = new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { weekday: "long" });
@@ -49,22 +52,38 @@ export default function NewSessionPage({ sb, userId, trialNoWorker = false }: { 
     performance_scope: "individual", review_mode: preset === "video" ? "video" : "self", notes: null, improvement_goals: [],
     positioning_rating: null, shot_outcomes_rating: null, shot_technique_rating: null,
   });
+  const [kind, setKindState] = useState<SessionKind>("match");
+  const [partner, setPartner] = useState("");
+  const [opponents, setOpponents] = useState(["", ""]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const set = <K extends keyof NewSession>(k: K, v: NewSession[K]) => setForm((f) => ({ ...f, [k]: v }));
+  const setKind = (next: SessionKind, format?: PlayFormat | null) => {
+    setKindState(next);
+    setForm((f) => {
+      const court = f.play_format === "singles" || f.play_format === "doubles";
+      if (next === "solo") return { ...f, session_context: "practice", play_format: format && SOLO_FORMATS.includes(format) ? format : "drill_other" };
+      const play_format: PlayFormat = format === "singles" || format === "doubles" ? format : court ? f.play_format : "doubles";
+      return { ...f, play_format, session_context: next === "tournament" ? "tournament" : f.session_context === "tournament" || f.session_context === "drill" ? "casual_match" : f.session_context };
+    });
+  };
   // Start from what the player told us when they joined; they can still change it.
   useEffect(() => {
     if (!userId) return;
     let active = true;
     getProfile(sb, userId).then((p) => {
       if (!active || !p) return;
+      // Saved default settings win over the onboarding answers.
+      const format = p.default_play_format ?? (p.usual_format === "singles" || p.usual_format === "doubles" ? p.usual_format : null);
       setForm((f) => ({
         ...f,
         improvement_goals: f.improvement_goals.length ? f.improvement_goals : p.main_goals ?? [],
-        play_format: p.usual_format === "singles" ? "singles" : p.usual_format === "doubles" ? "doubles" : f.play_format,
+        review_mode: preset ? f.review_mode : p.default_review_mode ?? f.review_mode,
       }));
+      setKind(p.default_session_kind ?? "match", format);
     }).catch(() => {});
     return () => { active = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per player
   }, [sb, userId]);
   const chooseMode = (mode: ReviewMode) => set("review_mode", mode);
 
@@ -73,8 +92,22 @@ export default function NewSessionPage({ sb, userId, trialNoWorker = false }: { 
     setBusy(true);
     setError("");
     try {
-      const title = form.title.trim() || defaultTitle(form.session_date, form.session_context);
-      const s = await createSession(sb, { ...form, title, notes: form.notes?.trim() || null });
+      const title = form.title.trim() || (kind === "tournament" && form.tournament_name?.trim()) || defaultTitle(form.session_date, form.session_context);
+      const { tournament_name, tournament_round, match_result, match_score, ...base } = form;
+      // Tournament fields are only sent for tournaments, so other sessions also work on older databases.
+      const tournament = kind === "tournament" ? {
+        tournament_name: tournament_name?.trim() || null, tournament_round: tournament_round || null,
+        match_result: match_result ?? null, match_score: match_score?.trim() || null,
+      } : {};
+      const s = await createSession(sb, { ...base, ...tournament, title, notes: form.notes?.trim() || null });
+      const players: OtherPlayer[] = kind === "solo" ? [] : [
+        ...(form.play_format === "doubles" ? [{ role: "partner" as const, display_name: partner }] : []),
+        ...opponents.slice(0, form.play_format === "doubles" ? 2 : 1).map((name) => ({ role: "opponent" as const, display_name: name })),
+      ];
+      if (players.some((p) => p.display_name.trim())) {
+        // Names are a convenience: the session is already saved, so a failure here does not block it.
+        await saveOtherPlayers(sb, s.id, players).catch(() => {});
+      }
       navigate(`/sessions/${s.id}`);
     } catch (err) {
       setError(friendlyDbError(err instanceof Error ? err.message : String(err)));
@@ -83,7 +116,7 @@ export default function NewSessionPage({ sb, userId, trialNoWorker = false }: { 
   }
 
   return (
-    <div className="space-y-5 lg:mx-auto lg:max-w-2xl">
+    <div className="space-y-5 md:mx-auto md:max-w-2xl">
       {step === 2 && <button type="button" onClick={() => setStep(1)} className="inline-flex items-center gap-1 text-sm font-semibold" style={{ color: GREEN }}>
         <ArrowLeft size={16} /> Back
       </button>}
@@ -94,7 +127,7 @@ export default function NewSessionPage({ sb, userId, trialNoWorker = false }: { 
       </div>
 
       {step === 1 && <>
-        <div className="grid gap-3 lg:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-2">
           <ModeCard selected={form.review_mode === "self"} onSelect={() => chooseMode("self")} icon={<ClipboardCheck size={24} />}
             title="Rate my own game" tag="No video · about 2 minutes"
             detail="Rate ten skills from how the session felt. You get focus areas, drills and a practice plan right away." />
@@ -109,16 +142,62 @@ export default function NewSessionPage({ sb, userId, trialNoWorker = false }: { 
       {step === 2 && <>
         <section className="space-y-2">
           <p className={labelClass} style={labelStyle}>What kind of session?</p>
-          <div className="flex flex-wrap gap-2">
-            {SESSION_CONTEXTS.map((c) => <Chip key={c} selected={form.session_context === c} onClick={() => set("session_context", c)}>{CONTEXT_LABELS[c]}</Chip>)}
+          <div className="grid grid-cols-3 gap-2" role="group" aria-label="Session kind">
+            {(["solo", "match", "tournament"] as SessionKind[]).map((k) => <button key={k} type="button" aria-pressed={kind === k} onClick={() => setKind(k)}
+              className="min-h-[52px] rounded-2xl px-2 text-sm font-bold" style={kind === k ? { background: INK, color: WHITE } : { background: WHITE, color: INK, border: `1px solid ${BORDER}` }}>
+              {KIND_LABELS[k]}</button>)}
           </div>
         </section>
+        {kind !== "tournament" && <section className="space-y-2">
+          <p className={labelClass} style={labelStyle}>{kind === "solo" ? "Type of practice" : "Setting"}</p>
+          <div className="flex flex-wrap gap-2">
+            {(kind === "solo" ? ["practice", "drill"] : ["casual_match", "leveling_game", "practice"] as SessionContext[]).map((c) =>
+              <Chip key={c} selected={form.session_context === c} onClick={() => set("session_context", c as SessionContext)}>{CONTEXT_LABELS[c as SessionContext]}</Chip>)}
+          </div>
+        </section>}
         <section className="space-y-2">
           <p className={labelClass} style={labelStyle}>Format</p>
           <div className="flex flex-wrap gap-2">
-            {PLAY_FORMATS.map((f) => <Chip key={f} selected={form.play_format === f} onClick={() => set("play_format", f)}>{FORMAT_LABELS[f]}</Chip>)}
+            {(kind === "solo" ? SOLO_FORMATS : ["singles", "doubles"] as PlayFormat[]).map((f) => <Chip key={f} selected={form.play_format === f} onClick={() => set("play_format", f)}>{FORMAT_LABELS[f]}</Chip>)}
           </div>
+          {kind === "solo" && form.review_mode === "video" && form.play_format !== "drill_other" &&
+            <p className="text-xs" style={{ color: WHITE_SUB }}>Wall and ball-machine sessions are rated only; video analysis needs a court view.</p>}
         </section>
+        {kind === "tournament" && <section className="space-y-3 rounded-3xl p-4" style={{ background: WHITE, border: `1px solid ${BORDER}` }}>
+          <p className="text-sm font-bold" style={{ color: INK }}>Tournament match</p>
+          <div>
+            <label className={labelClass} style={labelStyle} htmlFor="tournament-name">Tournament</label>
+            <input id="tournament-name" maxLength={120} value={form.tournament_name ?? ""} onChange={(e) => set("tournament_name", e.target.value)}
+              placeholder="e.g. Manila Open 2026" className="w-full rounded-2xl px-4 py-3 text-base" style={fieldStyle} />
+          </div>
+          <div>
+            <p className={labelClass} style={labelStyle}>Round</p>
+            <div className="flex flex-wrap gap-2">{ROUNDS.map((r) => <Chip key={r} selected={form.tournament_round === r} onClick={() => set("tournament_round", form.tournament_round === r ? null : r)}>{r}</Chip>)}</div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className={labelClass} style={labelStyle}>Result</p>
+              <div className="flex gap-2">{(["win", "loss"] as MatchResult[]).map((r) => <Chip key={r} selected={form.match_result === r}
+                onClick={() => set("match_result", form.match_result === r ? null : r)}>{r === "win" ? "Won" : "Lost"}</Chip>)}</div>
+            </div>
+            <div className="min-w-0">
+              <label className={labelClass} style={labelStyle} htmlFor="score">Score</label>
+              <input id="score" maxLength={40} value={form.match_score ?? ""} onChange={(e) => set("match_score", e.target.value)}
+                placeholder="11-7, 9-11, 11-5" className="w-full min-w-0 rounded-2xl px-4 py-3 text-base" style={fieldStyle} />
+            </div>
+          </div>
+        </section>}
+        {kind !== "solo" && <section className="space-y-2">
+          <p className={labelClass} style={labelStyle}>Who did you play with? (optional)</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {form.play_format === "doubles" && <input aria-label="Partner name" maxLength={80} value={partner} onChange={(e) => setPartner(e.target.value)}
+              placeholder="Partner" className="w-full rounded-2xl px-4 py-3 text-base sm:col-span-2" style={fieldStyle} />}
+            {opponents.slice(0, form.play_format === "doubles" ? 2 : 1).map((name, i) => <input key={i} aria-label={`Opponent ${i + 1} name`} maxLength={80} value={name}
+              onChange={(e) => setOpponents((o) => o.map((v, j) => j === i ? e.target.value : v))}
+              placeholder={form.play_format === "doubles" ? `Opponent ${i + 1}` : "Opponent"} className="w-full rounded-2xl px-4 py-3 text-base" style={fieldStyle} />)}
+          </div>
+          <p className="text-xs" style={{ color: WHITE_SUB }}>Names stay private to you and are not linked to other accounts.</p>
+        </section>}
         <GoalFields value={form} onChange={(goals) => setForm((current) => ({ ...current, ...goals }))} />
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2">

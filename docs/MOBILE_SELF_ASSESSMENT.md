@@ -5,6 +5,22 @@ This branch responds to adviser feedback:
 1. Make the product mobile-focused, taking design cues from the Reclub app.
 2. Let players improve **without** computer vision: they assess themselves and still get things to work on. Video analysis becomes one part of the app, not the whole of it.
 
+## Adviser notes checklist (6 Oct 2026)
+
+| Note | Where |
+| --- | --- |
+| Tailored to tablet | Icon rail and two-column grids from 768 px, full sidebar from 1024 px, bottom tabs on phones |
+| Different screens for different functions | Home, Sessions, Log, Progress and Profile, plus Rate & plan, Video and Journal tabs per session |
+| Reclub-style UI | Same style of rounded cards, chips and bottom tabs; not a pixel copy |
+| Default settings/options | Profile → Default settings: how to review, kind of session, format |
+| Internal ID + timestamps for uploads | Video tab upload record: upload ID, registered, upload finished, length, analysis job ID and finish time. Session header shows the session ID and creation time |
+| Video upload optional | Rate my own game needs no video |
+| Names/IDs for players | Player ID (`PP-XXXXXX`) on Profile; partner and opponent names per session |
+| Create database | Supabase migrations; copy-paste scripts in `supabase/scripts/` |
+| Tournament + solo | Log asks Solo practice, Match or Tournament. Tournaments record name, round, result and score. Solo practice skips the games and players questions |
+| Signup + onboarding questions | Five-step "getting to know you" after account creation |
+| Video upload restrictions | 50 MB per video, 10 s to 5 min long, 5 uploads a day, 1 GB stored per player. Checked in the browser before upload and enforced by the database |
+
 ## Layout
 
 - Phone-width column (`max-w-xl`) with a sticky top bar and a fixed bottom tab bar: **Home**, **Sessions**, **Log** (raised optic-yellow button), **Progress**, **Profile**. Safe-area insets are respected, so it can be added to an iPhone or Android home screen.
@@ -56,6 +72,13 @@ Migration `20261006090000_self_assessment.sql` (safe to run again):
 
 Migration `20261006100000_player_onboarding.sql` (safe to run again; run it after the one above) adds to `profiles`: `play_frequency`, `play_reasons text[]`, `main_goals text[]`, `baseline_ratings jsonb` (validated the same way as session ratings) and `onboarding_completed_at`.
 
+Migration `20261006110000_adviser_notes.sql` (safe to run again):
+
+- `profiles.default_review_mode`, `default_session_kind` and `default_play_format`.
+- `sessions.tournament_name`, `tournament_round`, `match_result` (`win` or `loss`) and `match_score`.
+- `session_participants.display_name`. A policy lets the session owner add, rename and remove partner and opponent rows. These rows are never linked to other accounts.
+- `video_assets.duration_s`, the `video_upload_limits()` function, and a trigger that refuses uploads over the limits. Older web builds that do not send a length are only checked on size, storage and daily count.
+
 Local SQL tests: `supabase/tests/local/30_self_assessment.sql`, run by `supabase/tests/run_local_rls_tests.sh`.
 
-**Hosted projects need both migrations before the branch is deployed.** The quickest way: paste `supabase/scripts/pickleproapp_upgrade.sql` into the Supabase SQL Editor and run it. Until they are applied, onboarding and session creation show a message naming the missing file. Existing screens still load.
+**Hosted projects need both migrations before the branch is deployed.** The quickest way: paste `supabase/scripts/pickleproapp_upgrade.sql`, then `supabase/scripts/pickleproapp_upgrade_2.sql`, into the Supabase SQL Editor and run each. Until they are applied, onboarding and session creation show a message naming the missing file. Existing screens still load.

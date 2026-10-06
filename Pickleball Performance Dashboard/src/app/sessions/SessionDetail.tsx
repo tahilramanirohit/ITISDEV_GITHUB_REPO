@@ -6,12 +6,17 @@ import {
   deleteSession, finalizeUpload, findPreviousCoachableResult, getSessionBundle, listAnalysisRuns, registerVideo, removeVideo, requestReanalysis, setRawVideoKeep, signedVideoUrl,
   updateSessionGoals, type SessionBundle,
 } from "../../lib/api/sessions";
-import { CONTEXT_LABELS, FORMAT_LABELS, GOAL_LABELS, type AnalysisRunSummary, type GoalValues, type ImprovementGoal } from "../../lib/api/types";
+import { CONTEXT_LABELS, FORMAT_LABELS, GOAL_LABELS, KIND_LABELS, sessionKind, type AnalysisRunSummary, type GoalValues, type ImprovementGoal } from "../../lib/api/types";
 import { ContractError, parseAnalysisResult } from "../../lib/analysis/contract";
 import { analysisProgress, deriveAnalysisState, failureHelp, shouldPoll, stateDescription, STATE_LABELS, type LocalUpload } from "../../lib/analysis/state";
 import { config } from "../../lib/config";
 import { startResumableUpload, type UploadHandle } from "../../lib/upload/tusUpload";
 import { formatBytes, validateVideoFile } from "../../lib/upload/validate";
+import {
+  DEFAULT_UPLOAD_LIMITS, formatDuration, getUploadLimits, getUploadUsage, limitErrorText, probeVideoDuration, uploadBlocker,
+  type UploadLimits, type UploadUsage,
+} from "../../lib/upload/limits";
+import { listOtherPlayers, shortId, type OtherPlayer } from "../../lib/api/players";
 import { hasUploadConsent, recordUploadConsent } from "../../lib/api/capture";
 import { BLUE_SKY, BORDER, DISPLAY_FONT, LAVENDER, NAVY, NEON, NEON_D, ORANGE, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Card, Notice, SegmentedTabs } from "../shell/primitives";
@@ -49,6 +54,10 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
   const [consentConfirmed, setConsentConfirmed] = useState(false);
   const [consentChecked, setConsentChecked] = useState(false);
   const [tab, setTab] = useState<DetailTab | null>(null);
+  const [limits, setLimits] = useState<UploadLimits>(DEFAULT_UPLOAD_LIMITS);
+  const [usage, setUsage] = useState<UploadUsage | null>(null);
+  const [pendingDuration, setPendingDuration] = useState<number | null>(null);
+  const [players, setPlayers] = useState<OtherPlayer[]>([]);
   const uploadRef = useRef<UploadHandle | null>(null);
   const inFlight = useRef(false); // guards against double clicks before React re-renders
 
@@ -61,6 +70,9 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
   }, [sb, sessionId]);
 
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void getUploadLimits(sb).then(setLimits); }, [sb]);
+  useEffect(() => { getUploadUsage(sb).then(setUsage).catch(() => setUsage(null)); }, [sb, bundle?.video?.id]);
+  useEffect(() => { listOtherPlayers(sb, sessionId).then(setPlayers).catch(() => setPlayers([])); }, [sb, sessionId]);
   useEffect(() => { void hasUploadConsent(sb).then(setConsentConfirmed).catch(() => setConsentConfirmed(false)); }, [sb]);
   const currentRunId = bundle?.job?.current_run_id;
   const runStatus = bundle?.job?.status;
@@ -143,7 +155,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
         setConsentConfirmed(true);
       }
       if (!video) {
-        video = await registerVideo(sb, { ownerId: userId, sessionId: bundle.session.id, file, mimeType: check.mimeType, extension: check.extension });
+        video = await registerVideo(sb, { ownerId: userId, sessionId: bundle.session.id, file, mimeType: check.mimeType, extension: check.extension, durationS: pendingDuration });
         setBundle({ ...bundle, video });
       }
       uploadRef.current = startResumableUpload(sb, config.supabase.url, {
@@ -154,7 +166,8 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
       setLocalUpload({ phase: "finalizing", progress: 1 });
       await finalizeUpload(sb, video.id, analysisJobParams(params, court));
     } catch (e) {
-      setError(`Upload failed: ${e instanceof Error ? e.message : String(e)}. Select the same file again to resume.`);
+      const message = e instanceof Error ? e.message : String((e as { message?: string })?.message ?? e);
+      setError(limitErrorText(message) ?? `Upload failed: ${message}. Select the same file again to resume.`);
     } finally {
       uploadRef.current = null;
       inFlight.current = false;
@@ -216,6 +229,15 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
             <Trash2 size={16} />
           </button>
         </div>
+        {(session.tournament_name || session.tournament_round || session.match_result || session.match_score) && (
+          <p className="mt-2 text-sm font-semibold" style={{ color: "#eef0f3" }}>
+            {[session.tournament_name, session.tournament_round, session.match_result === "win" ? "Won" : session.match_result === "loss" ? "Lost" : null, session.match_score].filter(Boolean).join(" · ")}
+          </p>
+        )}
+        {players.length > 0 && <p className="mt-1 text-sm" style={{ color: "#c9cdd4" }}>
+          {players.some((p) => p.role === "partner") && <>With {players.filter((p) => p.role === "partner").map((p) => p.display_name).join(", ")}{" · "}</>}
+          {players.some((p) => p.role === "opponent") && <>vs {players.filter((p) => p.role === "opponent").map((p) => p.display_name).join(" & ")}</>}
+        </p>}
         {session.notes && <p className="text-sm mt-2" style={{ color: "#c9cdd4" }}>{session.notes}</p>}
         {session.improvement_goals?.length > 0 && (
           <ul className="mt-4 flex flex-wrap gap-2" aria-label="Your focus">
@@ -233,6 +255,9 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
             shot_outcomes_rating: session.shot_outcomes_rating ?? null,
             shot_technique_rating: session.shot_technique_rating ?? null,
         })}>Edit focus</button>
+        <p className="mt-3 text-[11px]" style={{ color: "#8d939c" }}>
+          {KIND_LABELS[sessionKind(session)]} · Session ID <span className="font-mono" title={session.id}>{shortId(session.id)}</span> · created {new Date(session.created_at).toLocaleString()}
+        </p>
       </section>
 
       {goalDraft && (
@@ -274,10 +299,15 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
             style={{ background: NEON, color: NEON_D }}>See your feedback <ArrowDown size={16} aria-hidden="true" /></button>
         )}
         {video && (
-          <p className="text-sm mb-3" style={{ color: WHITE_DIM }}>
-            {video.original_filename} · {formatBytes(video.byte_size)}
-            {job && job.attempts > 0 && ` · attempt ${job.attempts} of ${job.max_attempts}`}
-          </p>
+          <dl className="mb-3 grid grid-cols-2 gap-x-4 gap-y-1 rounded-2xl p-3 text-sm sm:grid-cols-3" style={{ background: "#f6f7f3", border: `1px solid ${BORDER}` }} aria-label="Upload record">
+            <div className="col-span-2 sm:col-span-3"><dt className="sr-only">File</dt><dd className="truncate font-semibold" style={{ color: "#0e1116" }}>{video.original_filename}</dd></div>
+            <div><dt className="text-xs" style={{ color: WHITE_SUB }}>Upload ID</dt><dd className="font-mono" title={video.id}>{shortId(video.id)}</dd></div>
+            <div><dt className="text-xs" style={{ color: WHITE_SUB }}>Size{video.duration_s ? " · length" : ""}</dt><dd>{formatBytes(video.byte_size)}{video.duration_s ? ` · ${formatDuration(video.duration_s)}` : ""}</dd></div>
+            <div><dt className="text-xs" style={{ color: WHITE_SUB }}>Registered</dt><dd>{new Date(video.created_at).toLocaleString()}</dd></div>
+            <div><dt className="text-xs" style={{ color: WHITE_SUB }}>Upload finished</dt><dd>{video.uploaded_at ? new Date(video.uploaded_at).toLocaleString() : "Not yet"}</dd></div>
+            {job && <div><dt className="text-xs" style={{ color: WHITE_SUB }}>Analysis job</dt><dd className="font-mono" title={job.id}>{shortId(job.id)}{job.attempts > 0 ? ` · try ${job.attempts}/${job.max_attempts}` : ""}</dd></div>}
+            {job?.finished_at && <div><dt className="text-xs" style={{ color: WHITE_SUB }}>Analysis finished</dt><dd>{new Date(job.finished_at).toLocaleString()}</dd></div>}
+          </dl>
         )}
         {video?.raw_video_deleted_at && <Notice tone="info">The raw recording has expired and was removed. Your saved report remains available.</Notice>}
         {video?.raw_video_deleting_at && !video.raw_video_deleted_at && <Notice tone="info">The raw recording is being removed. Your saved report remains available.</Notice>}
@@ -353,9 +383,15 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
                 onChange={(e) => {
                   const f = e.target.files?.[0]; e.target.value = "";
                   if (!f) return;
-                  const check = validateVideoFile(f, config.maxUploadBytes);
+                  const check = validateVideoFile(f, Math.min(config.maxUploadBytes, limits.max_file_bytes));
                   if (!check.ok) { setError(check.error); return; }
-                  setError(""); setPendingFile(f); setConfirmedCourt(null);
+                  setError("");
+                  // Resuming the same file skips the new-upload limits; it is already registered.
+                  void probeVideoDuration(f).then((duration) => {
+                    const blocker = state === "upload_incomplete" ? null : uploadBlocker(f, duration, limits, usage);
+                    if (blocker) { setError(blocker); return; }
+                    setPendingDuration(duration); setPendingFile(f); setConfirmedCourt(null);
+                  });
                 }} />
             </label>
             {pendingFile && <CourtCorrection key={`${pendingFile.name}:${pendingFile.size}`} file={pendingFile}
@@ -363,9 +399,16 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
                 setConfirmedCourt(court); setPendingFile(null);
                 void onFileSelected(pendingFile, court);
               }} onCancel={() => setPendingFile(null)} />}
-            <p className="text-sm" style={{ color: WHITE_SUB }}>
-              MP4, MOV, WEBM or AVI up to {formatBytes(config.maxUploadBytes)}. On the Free plan, choose a short rally clip and trim it on your device before uploading. Keep the clip at 720p, 30 fps or higher. Full-match uploads are not supported yet. Your upload is private.
-            </p>
+            <div className="rounded-2xl p-3 text-sm" style={{ background: "#f6f7f3", border: `1px solid ${BORDER}` }} data-testid="upload-limits">
+              <p className="font-semibold" style={{ color: "#0e1116" }}>Upload limits</p>
+              <ul className="mt-1 grid gap-x-4 gap-y-0.5 sm:grid-cols-2" style={{ color: WHITE_DIM }}>
+                <li>Up to {formatBytes(Math.min(config.maxUploadBytes, limits.max_file_bytes))} per video</li>
+                <li>{formatDuration(limits.min_duration_s)} to {formatDuration(limits.max_duration_s)} long</li>
+                <li>{usage ? `${usage.uploadsToday} of ${limits.max_uploads_per_day}` : `Up to ${limits.max_uploads_per_day}`} uploads today</li>
+                <li>{usage ? `${formatBytes(usage.storedBytes)} of ${formatBytes(limits.max_total_bytes)}` : formatBytes(limits.max_total_bytes)} storage used</li>
+              </ul>
+              <p className="mt-2 text-xs" style={{ color: WHITE_SUB }}>MP4, MOV, WEBM or AVI, 720p and 30 fps or higher. Trim to a rally clip on your device first. Your upload is private, and raw video is removed 30 days after analysis unless you keep it.</p>
+            </div>
             <details className="rounded-xl p-3" style={{ border: `1px solid ${BORDER}` }}>
               <summary className="text-sm font-semibold cursor-pointer" style={{ color: BLUE_SKY }}>Advanced analysis options</summary>
               <div className="mt-3"><AnalysisParamsForm onChange={(p, err) => { setParams(p); setParamsError(err); }} /></div>

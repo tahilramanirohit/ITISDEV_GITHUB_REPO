@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { ImprovementGoal } from "./types";
+import type { ImprovementGoal, PlayFormat, ReviewMode, SessionKind } from "./types";
 import { parseRatings, type SelfRatings } from "../coaching/selfAssessment";
 
 export const PLAY_FREQUENCIES = ["first_time", "monthly", "weekly", "few_per_week", "daily"] as const;
@@ -21,7 +21,13 @@ export type PlayerProfile = {
   main_goals?: ImprovementGoal[];
   baseline_ratings?: SelfRatings;
   onboarding_completed_at?: string | null;
+  // Default settings for new sessions; missing until the adviser-notes migration.
+  default_review_mode?: ReviewMode | null;
+  default_session_kind?: SessionKind | null;
+  default_play_format?: PlayFormat | null;
 };
+
+export type SessionDefaults = Required<Pick<PlayerProfile, "default_review_mode" | "default_session_kind" | "default_play_format">>;
 
 export type ProfileInput = Pick<PlayerProfile,
   "display_name" | "dominant_hand" | "years_playing" | "usual_format" | "self_level" | "is_adult_confirmed">;
@@ -49,4 +55,9 @@ export async function completeOnboarding(sb: SupabaseClient, userId: string, inp
 
 export function needsOnboarding(profile: PlayerProfile | null): boolean {
   return !profile?.onboarding_completed_at;
+}
+
+export async function saveSessionDefaults(sb: SupabaseClient, userId: string, defaults: SessionDefaults): Promise<void> {
+  const { error } = await sb.from("profiles").update(defaults).eq("id", userId);
+  if (error) throw error;
 }

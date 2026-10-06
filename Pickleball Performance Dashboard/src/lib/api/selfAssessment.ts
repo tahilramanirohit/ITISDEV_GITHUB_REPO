@@ -58,5 +58,7 @@ export function friendlyDbError(message: string): string {
     return "The database is missing the self-assessment update. Apply supabase/migrations/20261006090000_self_assessment.sql, then try again.";
   if (/play_frequency|play_reasons|main_goals|baseline_ratings|onboarding_completed_at/.test(message))
     return "The database is missing the onboarding update. Apply supabase/migrations/20261006100000_player_onboarding.sql, then try again.";
+  if (/default_review_mode|default_session_kind|default_play_format|tournament_|match_result|match_score|display_name.*session_participants|duration_s/.test(message))
+    return "The database is missing the latest update. Apply supabase/migrations/20261006110000_adviser_notes.sql, then try again.";
   return message;
 }

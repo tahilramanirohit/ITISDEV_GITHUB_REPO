@@ -27,7 +27,7 @@ export default function SessionsPage({ sb }: { sb: SupabaseClient }) {
       {items === null ? <p className="text-sm" style={{ color: WHITE_SUB }}>Loading your sessions…</p>
         : items.length === 0 ? <EmptySessions />
         : shown.length === 0 ? <p className="text-sm" style={{ color: WHITE_SUB }}>No sessions match this filter.</p>
-        : <ul className="grid gap-3 lg:grid-cols-2">{shown.map((item) => <li key={item.session.id}><SessionCard item={item} assessment={byId.get(item.session.id)} /></li>)}</ul>}
+        : <ul className="grid gap-3 md:grid-cols-2">{shown.map((item) => <li key={item.session.id}><SessionCard item={item} assessment={byId.get(item.session.id)} /></li>)}</ul>}
     </div>
   );
 }

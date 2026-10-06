@@ -7,6 +7,7 @@ import type {
   ImprovementGoal,
   PerformanceScope,
   PlayFormat,
+  MatchResult,
   ReviewMode,
   SessionContext,
   SessionRow,
@@ -110,6 +111,10 @@ export type NewSession = {
   play_format: PlayFormat;
   performance_scope: PerformanceScope;
   review_mode: ReviewMode;
+  tournament_name?: string | null;
+  tournament_round?: string | null;
+  match_result?: MatchResult | null;
+  match_score?: string | null;
   notes: string | null;
   improvement_goals: ImprovementGoal[];
   positioning_rating: SelfRating | null;
@@ -135,7 +140,7 @@ export async function deleteSession(sb: SupabaseClient, bundle: SessionBundle): 
 
 export async function registerVideo(
   sb: SupabaseClient,
-  args: { ownerId: string; sessionId: string; file: File; mimeType: string; extension: string },
+  args: { ownerId: string; sessionId: string; file: File; mimeType: string; extension: string; durationS?: number | null },
 ): Promise<VideoAssetRow> {
   const id = crypto.randomUUID();
   const row = {
@@ -145,6 +150,8 @@ export async function registerVideo(
     original_filename: args.file.name.slice(0, 255),
     mime_type: args.mimeType,
     byte_size: args.file.size,
+    // Only sent when known, so databases without the column keep working.
+    ...(args.durationS ? { duration_s: Math.round(args.durationS * 100) / 100 } : {}),
   };
   return check<VideoAssetRow>(await sb.from("video_assets").insert(row).select("*").single());
 }

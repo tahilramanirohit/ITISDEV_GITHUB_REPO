@@ -102,9 +102,9 @@ export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: s
           {latestPlan.starting ? "Your starting focus" : "Your focus"}
         </SectionTitle>
         {latestPlan.starting && <p className="-mt-1 text-sm" style={{ color: WHITE_DIM }}>From your starting answers. Rate a session after you play to update it.</p>}
-        <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0">
+        <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0">
           {latestPlan.report.focus.map((f, i) => (
-            <a key={f.skill} href={latestPlan.href} className="w-64 shrink-0 snap-start rounded-3xl p-4 lg:w-auto"
+            <a key={f.skill} href={latestPlan.href} className="w-64 shrink-0 snap-start rounded-3xl p-4 md:w-auto"
               style={{ background: i === 0 ? OPTIC : WHITE, border: `1px solid ${i === 0 ? OPTIC : BORDER}`, boxShadow: CARD_GLOW }}>
               <p className="text-xs font-bold uppercase tracking-wider" style={{ color: i === 0 ? OPTIC_INK : GREEN }}>Focus {i + 1} · {f.rating}/5</p>
               <p className="mt-1 text-base font-bold" style={{ color: INK }}>{SKILL_INFO[f.skill].label}</p>
