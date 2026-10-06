@@ -170,6 +170,12 @@ export default function ProfilePage({ sb, userId, account, signOut, devLinks }: 
       <div className="mt-3"><LargeTextToggle /></div>
     </Card>
 
+    <Card>
+      <SectionTitle>Your data</SectionTitle>
+      <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>What PicklePro stores, who can see it, how long it is kept and how to delete it.</p>
+      <a href="#/privacy" className="mt-3 inline-flex min-h-[44px] items-center text-sm font-bold underline" style={{ color: "#11804f" }}>Read about your data and privacy</a>
+    </Card>
+
     {devLinks && <Card>
       <SectionTitle>Research tools</SectionTitle>
       <div className="mt-2 flex flex-col gap-2 text-sm font-semibold">{devLinks}</div>

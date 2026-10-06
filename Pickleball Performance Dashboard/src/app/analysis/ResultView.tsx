@@ -90,7 +90,8 @@ function Row({ k, v }: { k: string; v: React.ReactNode }) {
   );
 }
 
-export function ResultView({ result, videoUrl, previous, session, onSelectTrack, experimentalReview = false }: {
+export function ResultView({ result, videoUrl, previous, session, onSelectTrack, onRateSession, experimentalReview = false }: {
+  onRateSession?: () => void;
   result: AnalysisResultV1; videoUrl: string | null; previous?: PreviousSession | null;
   session?: SessionRow; onSelectTrack?: (trackId: number, timeSeconds: number) => void;
   /** Research-only local prototype. Never used by saved player reports. */
@@ -134,16 +135,18 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
       )}
 
       <Card accent={result.status === "ok" ? NEON : ORANGE}>
-        <h2 className="mb-3 text-xl font-bold text-[#101827]">What PicklePro could assess</h2>
+        <h2 className="mb-1 text-xl font-bold text-[#101827]">Video review</h2>
+        {!devMock && result.data_origin === "measured" && (
+          <p className="mb-3 text-sm font-semibold" style={{ color: coaching.available ? NEON : ORANGE_L }}>
+            {coaching.available ? "Practice plan from this video: available below." : "Practice plan from this video: not available."}
+            {!coaching.available && onRateSession && <> <button type="button" onClick={onRateSession} className="underline" style={{ color: BLUE_SKY }}>Rate this session instead</button></>}
+          </p>
+        )}
         <div className="flex flex-wrap items-center gap-2 mb-2">
           <OriginBadge origin={result.data_origin} devMock={devMock} />
           <Pill color={devMock ? ORANGE : result.status === "ok" ? NEON : ORANGE}>
             {devMock ? "SAMPLE" : result.status === "ok" ? "RESULT" : "INSUFFICIENT DATA"}
           </Pill>
-          {result.data_origin === "measured" && <button type="button" onClick={() => downloadResult(result)} className="ml-auto text-sm font-semibold underline"
-            style={{ color: BLUE_SKY }} title="For the Label shots page and for scoring shot detection">
-            Download research result (JSON)
-          </button>}
         </div>
         <p className="text-base text-[#101827]">{devMock ? "This sample shows the kind of practice plan PicklePro can display. It is not feedback about your play." : visibleMessage}</p>
         {warnings.length > 0 && (
@@ -239,7 +242,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
       ) : null}
 
       {(!session?.improvement_goals?.length || session.improvement_goals.includes("positioning")) &&
-        <CoachingPanel result={result} previous={previous} />}
+        <CoachingPanel result={result} previous={previous} onRateSession={onRateSession} />}
 
       {result.data_origin === "measured" && !devMock && hasPlayers && (
         <PlayerPicker result={shotDisplayResult} myPlayerId={myPlayerId} onPick={setMyPlayerId} showShotCounts={allowShotDisplay}
@@ -280,7 +283,11 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
       {result.data_origin === "measured" && !devMock && <ZoneTimePanel result={result} myPlayerId={myPlayerId} />}
 
       <details className="rounded-2xl p-4" style={{ border: `1px solid ${BORDER}` }}>
-        <summary className="cursor-pointer text-base font-semibold" style={{ color: BLUE_SKY }}>Detailed measurements and analysis notes</summary>
+        <summary className="cursor-pointer text-base font-semibold" style={{ color: BLUE_SKY }}>Research details: measurements, analysis notes and export</summary>
+        {result.data_origin === "measured" && <button type="button" onClick={() => downloadResult(result)} className="mt-3 text-sm font-semibold underline"
+          style={{ color: BLUE_SKY }} title="For the Label shots page and for scoring shot detection">
+          Download research result (JSON)
+        </button>}
         <div className="mt-3"><Pill color={BLUE_SKY}>{heat.scope === "selected_view" ? "SELECTED-VIEW METRICS" : "WHOLE-CLIP METRICS"}</Pill></div>
         <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_340px]">
           <div className="space-y-4">

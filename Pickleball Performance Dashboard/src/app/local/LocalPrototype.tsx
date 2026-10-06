@@ -122,7 +122,7 @@ export default function LocalPrototype() {
         and the result reports how much of the video was covered.
       </Notice>
       <Card accent={BLUE_SKY}>
-        <WidgetHeader title="Analyze a local video" subtitle="Use a handheld or fixed-camera video you have permission to analyze." accent={BLUE_SKY} />
+        <WidgetHeader title="Analyze a local video" subtitle="Use a video you have permission to analyze. Best results need a fixed camera and a clear court view. Moving-camera clips may produce limited results." accent={BLUE_SKY} />
         <div className="space-y-3">
           <input type="file" accept="video/*" aria-label="Video file"
             className="w-full text-sm rounded-lg border p-3 cursor-pointer" style={fieldStyle}

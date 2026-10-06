@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ArrowDown, ArrowLeft, RefreshCw, Trash2, Upload } from "lucide-react";
 import {
@@ -19,7 +19,7 @@ import {
 import { listOtherPlayers, shortId, type OtherPlayer } from "../../lib/api/players";
 import { hasUploadConsent, recordUploadConsent } from "../../lib/api/capture";
 import { BLUE_SKY, BORDER, DISPLAY_FONT, LAVENDER, NAVY, NEON, NEON_D, ORANGE, WHITE_DIM, WHITE_SUB } from "../theme";
-import { Card, Notice, SegmentedTabs } from "../shell/primitives";
+import { Card, Notice, SegmentedTabs, tabPanelProps } from "../shell/primitives";
 import { SelfAssessmentPanel } from "../selfAssessment/SelfAssessmentPanel";
 import { AnalysisParamsForm, ProgressBar, type AnalysisParams } from "../analysis/AnalysisStatus";
 import { CourtCorrection } from "../analysis/CourtCorrection";
@@ -35,6 +35,8 @@ type DetailTab = "plan" | "video" | "journal";
 
 export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; userId: string }) {
   const { sessionId = "" } = useParams();
+  const [searchParams] = useSearchParams();
+  const requestedTab = searchParams.get("tab");
   const navigate = useNavigate();
   const [bundle, setBundle] = useState<SessionBundle | null | undefined>(undefined);
   const [error, setError] = useState("");
@@ -53,7 +55,10 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
   const [goalDraft, setGoalDraft] = useState<GoalValues | null>(null);
   const [consentConfirmed, setConsentConfirmed] = useState(false);
   const [consentChecked, setConsentChecked] = useState(false);
-  const [tab, setTab] = useState<DetailTab | null>(null);
+  const [tab, setTab] = useState<DetailTab | null>(requestedTab === "plan" || requestedTab === "video" || requestedTab === "journal" ? requestedTab : null);
+  const [loadError, setLoadError] = useState("");
+  const loadedOnce = useRef(false);
+  const [slow, setSlow] = useState(false);
   const [limits, setLimits] = useState<UploadLimits>(DEFAULT_UPLOAD_LIMITS);
   const [usage, setUsage] = useState<UploadUsage | null>(null);
   const [pendingDuration, setPendingDuration] = useState<number | null>(null);
@@ -64,10 +69,19 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
   const load = useCallback(async () => {
     try {
       setBundle(await getSessionBundle(sb, sessionId));
+      loadedOnce.current = true;
+      setLoadError("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      const message = e instanceof Error ? e.message : String(e);
+      // Before the first load, show a recoverable error instead of an endless "Loading".
+      if (loadedOnce.current) setError(message); else setLoadError(message);
     }
   }, [sb, sessionId]);
+  useEffect(() => {
+    if (bundle !== undefined) return setSlow(false);
+    const timer = window.setTimeout(() => setSlow(true), 10_000);
+    return () => window.clearTimeout(timer);
+  }, [bundle]);
 
   useEffect(() => { void load(); }, [load]);
   useEffect(() => { void getUploadLimits(sb).then(setLimits); }, [sb]);
@@ -192,7 +206,28 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
     }
   }
 
-  if (bundle === undefined) return <p className="text-sm" style={{ color: WHITE_SUB }}>Loading…</p>;
+  if (bundle === undefined) {
+    const retry = () => { setLoadError(""); setSlow(false); void load(); };
+    if (loadError || slow) {
+      return <div className="space-y-4">
+        <a href="#/sessions" className="inline-flex items-center gap-1 text-sm font-semibold" style={{ color: BLUE_SKY }}><ArrowLeft size={16} /> Sessions</a>
+        <Notice tone={loadError ? "error" : "warn"}>
+          {loadError ? `This session could not be loaded: ${loadError}` : "This session is taking longer than usual to load. Check your connection."}
+        </Notice>
+        <div className="flex gap-2">
+          <button type="button" onClick={retry} className="inline-flex min-h-[44px] items-center gap-2 rounded-xl px-4 text-sm font-bold" style={{ background: "#0e1116", color: "#ffffff" }}><RefreshCw size={14} /> Try again</button>
+          <a href="#/sessions" className="inline-flex min-h-[44px] items-center rounded-xl px-4 text-sm font-semibold" style={{ border: `1px solid ${BORDER}` }}>Back to sessions</a>
+        </div>
+      </div>;
+    }
+    return <div className="space-y-4" role="status" aria-live="polite" aria-label="Loading session">
+      <span className="sr-only">Loading session…</span>
+      <div className="h-5 w-24 animate-pulse rounded-full" style={{ background: "#e3e5df" }} />
+      <div className="h-36 animate-pulse rounded-3xl" style={{ background: "#d9dcd5" }} />
+      <div className="h-12 animate-pulse rounded-2xl" style={{ background: "#e3e5df" }} />
+      <div className="h-64 animate-pulse rounded-3xl" style={{ background: "#e9ebe6" }} />
+    </div>;
+  }
   if (bundle === null) {
     return <Notice tone="error">Session not found. It may have been deleted, or it belongs to another account.</Notice>;
   }
@@ -209,7 +244,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
     : state === "queued" ? "Waiting to analyze your video"
     : state === "processing" ? "Analyzing your video"
     : state === "failed" ? "Your video needs attention"
-    : hasFeedback ? "Your result is ready" : "Uploading your video";
+    : hasFeedback ? "Your video review is ready" : "Uploading your video";
 
   return (
     <div className="space-y-4">
@@ -276,16 +311,16 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
         </Card>
       )}
 
-      <SegmentedTabs label="Session views" value={activeTab} onChange={setTab} tabs={[
+      <SegmentedTabs label="Session views" idBase="session" value={activeTab} onChange={setTab} tabs={[
         { value: "plan", label: "Rate & plan" },
         { value: "video", label: "Video", badge: selfMode ? "optional" : undefined },
         { value: "journal", label: "Journal" },
       ]} />
 
-      {activeTab === "plan" && <SelfAssessmentPanel sb={sb} session={session} />}
-      {activeTab === "journal" && <CapturePanel key={session.id} sb={sb} session={session} onSessionUpdated={() => void load()} />}
+      {activeTab === "plan" && <div {...tabPanelProps("session", "plan")} className="outline-none"><SelfAssessmentPanel sb={sb} session={session} /></div>}
+      {activeTab === "journal" && <div {...tabPanelProps("session", "journal")} className="outline-none"><CapturePanel key={session.id} sb={sb} session={session} onSessionUpdated={() => void load()} /></div>}
 
-      {activeTab === "video" && <>
+      {activeTab === "video" && <div {...tabPanelProps("session", "video")} className="space-y-4 outline-none">
       {selfMode && !video && <Notice tone="info">Video analysis is optional. Your practice plan comes from your ratings in <strong>Rate &amp; plan</strong>. Add a clip here if you also want court positions measured.</Notice>}
       <Card>
         <p className="text-xs font-bold uppercase tracking-wider" style={{ color: BLUE_SKY }}>Video analysis{state ? ` · ${STATE_LABELS[state]}` : ""}</p>
@@ -299,7 +334,9 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
             style={{ background: NEON, color: NEON_D }}>See your feedback <ArrowDown size={16} aria-hidden="true" /></button>
         )}
         {video && (
-          <dl className="mb-3 grid grid-cols-2 gap-x-4 gap-y-1 rounded-2xl p-3 text-sm sm:grid-cols-3" style={{ background: "#f6f7f3", border: `1px solid ${BORDER}` }} aria-label="Upload record">
+          <details className="mb-3">
+            <summary className="cursor-pointer text-sm font-semibold" style={{ color: BLUE_SKY }}>Research details: upload record, IDs and times</summary>
+          <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 rounded-2xl p-3 text-sm sm:grid-cols-3" style={{ background: "#f6f7f3", border: `1px solid ${BORDER}` }} aria-label="Upload record">
             <div className="col-span-2 sm:col-span-3"><dt className="sr-only">File</dt><dd className="truncate font-semibold" style={{ color: "#0e1116" }}>{video.original_filename}</dd></div>
             <div><dt className="text-xs" style={{ color: WHITE_SUB }}>Upload ID</dt><dd className="font-mono" title={video.id}>{shortId(video.id)}</dd></div>
             <div><dt className="text-xs" style={{ color: WHITE_SUB }}>Size{video.duration_s ? " · length" : ""}</dt><dd>{formatBytes(video.byte_size)}{video.duration_s ? ` · ${formatDuration(video.duration_s)}` : ""}</dd></div>
@@ -308,6 +345,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
             {job && <div><dt className="text-xs" style={{ color: WHITE_SUB }}>Analysis job</dt><dd className="font-mono" title={job.id}>{shortId(job.id)}{job.attempts > 0 ? ` · try ${job.attempts}/${job.max_attempts}` : ""}</dd></div>}
             {job?.finished_at && <div><dt className="text-xs" style={{ color: WHITE_SUB }}>Analysis finished</dt><dd>{new Date(job.finished_at).toLocaleString()}</dd></div>}
           </dl>
+          </details>
         )}
         {video?.raw_video_deleted_at && <Notice tone="info">The raw recording has expired and was removed. Your saved report remains available.</Notice>}
         {video?.raw_video_deleting_at && !video.raw_video_deleted_at && <Notice tone="info">The raw recording is being removed. Your saved report remains available.</Notice>}
@@ -373,7 +411,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
             {!consentConfirmed && <label className="flex items-start gap-2 text-sm" style={{ color: WHITE_DIM }}>
               <input type="checkbox" checked={consentChecked} onChange={(e) => setConsentChecked(e.target.checked)} />
               <span>I confirm that every person visible in this recording agreed to be recorded and uploaded for PicklePro analysis.
-                Raw video is automatically removed 30 days after analysis unless I choose to keep it. The report remains saved.</span>
+                Raw video is automatically removed 30 days after analysis unless I choose to keep it. The report remains saved. <a href="#/privacy" className="underline" style={{ color: BLUE_SKY }}>Data and privacy</a></span>
             </label>}
             <label className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold cursor-pointer"
               style={{ background: params ? NEON : `${NEON}50`, color: NEON_D }}>
@@ -405,13 +443,13 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
                 <li>Up to {formatBytes(Math.min(config.maxUploadBytes, limits.max_file_bytes))} per video</li>
                 <li>{formatDuration(limits.min_duration_s)} to {formatDuration(limits.max_duration_s)} long</li>
                 <li>{usage ? `${usage.uploadsToday} of ${limits.max_uploads_per_day}` : `Up to ${limits.max_uploads_per_day}`} uploads today</li>
-                <li>{usage ? `${formatBytes(usage.storedBytes)} of ${formatBytes(limits.max_total_bytes)}` : formatBytes(limits.max_total_bytes)} storage used</li>
+                <li>{usage ? `${usage.storedBytes ? formatBytes(usage.storedBytes) : "0 MB"} of ${formatBytes(limits.max_total_bytes)}` : formatBytes(limits.max_total_bytes)} storage used</li>
               </ul>
               <p className="mt-2 text-xs" style={{ color: WHITE_SUB }}>MP4, MOV, WEBM or AVI, 720p and 30 fps or higher. Trim to a rally clip on your device first. Your upload is private, and raw video is removed 30 days after analysis unless you keep it.</p>
             </div>
             <details className="rounded-xl p-3" style={{ border: `1px solid ${BORDER}` }}>
               <summary className="text-sm font-semibold cursor-pointer" style={{ color: BLUE_SKY }}>Advanced analysis options</summary>
-              <div className="mt-3"><AnalysisParamsForm onChange={(p, err) => { setParams(p); setParamsError(err); }} /></div>
+              <div className="mt-3"><AnalysisParamsForm playFormat={session.play_format} onChange={(p, err) => { setParams(p); setParamsError(err); }} /></div>
             </details>
             {state === "upload_incomplete" && video && (
               <div className="flex flex-wrap gap-2">
@@ -432,7 +470,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
           <details className="mt-2">
             <summary className="text-sm font-semibold cursor-pointer" style={{ color: BLUE_SKY }}>Re-run analysis with different inputs</summary>
             <div className="mt-3 space-y-3">
-              <AnalysisParamsForm onChange={(p, err) => { setParams(p); setParamsError(err); }} />
+              <AnalysisParamsForm playFormat={session.play_format} onChange={(p, err) => { setParams(p); setParamsError(err); }} />
               <p className="text-sm" style={{ color: WHITE_SUB }}>The saved court setup is kept unless you choose a new correction or automatic mapping.</p>
               <label className="flex items-center gap-2 text-sm" style={{ color: WHITE_DIM }}>
                 <input type="checkbox" checked={useAutomaticCourt} onChange={(e) => { setUseAutomaticCourt(e.target.checked); setReanalysisCourt(null); setReanalysisFile(null); }} />
@@ -469,8 +507,19 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
         {error && <div className="mt-3"><Notice tone="error">{error}</Notice></div>}
       </Card>
 
-      {runHistory.length > 0 && <Card>
-        <h2 className="text-lg font-bold text-[#101827]">Analysis history</h2>
+
+      {parsed?.ok && job?.status === "failed" && <Notice tone="warn">The reanalysis failed. The report below is from the last completed run.</Notice>}
+      {parsed?.ok && (job?.status === "queued" || job?.status === "processing") && <Notice tone="info">A new analysis is in progress. The report below is the last published run.</Notice>}
+      {parsed?.ok && <ResultView result={parsed.result} videoUrl={videoUrl} previous={previous} session={session}
+        onRateSession={() => { setTab("plan"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+        onSelectTrack={job && finished && !video?.raw_video_deleted_at && !video?.raw_video_deleting_at && !config.trialNoWorker ? (trackId, timeSeconds) => void run(() => requestReanalysis(sb, job.id, {
+          ...job.params, selection: { method: "track_id", track_id: trackId }, selection_time_s: timeSeconds,
+        })) : undefined} />}
+      {parsed && !parsed.ok && (
+        <Notice tone="error">The stored result could not be read ({parsed.error}). It is not shown to avoid presenting it incorrectly.</Notice>
+      )}
+      {runHistory.length > 0 && <details className="rounded-2xl p-4" style={{ border: `1px solid ${BORDER}` }}>
+        <summary className="cursor-pointer text-base font-semibold" style={{ color: BLUE_SKY }}>Research details: analysis history ({runHistory.length} run{runHistory.length === 1 ? "" : "s"})</summary>
         <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Each reanalysis is saved as a separate run. The active report changes only after a new run completes.</p>
         <ul className="mt-3 space-y-2 text-sm">
           {runHistory.map((run) => <li key={run.id} className="flex flex-wrap justify-between gap-2 border-b py-2" style={{ borderColor: BORDER }}>
@@ -478,18 +527,8 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
             <span style={{ color: WHITE_DIM }}>{run.status}{run.result_status ? ` · ${run.result_status.replaceAll("_", " ")}` : ""} · {run.metric_definition_version}</span>
           </li>)}
         </ul>
-      </Card>}
-
-      {parsed?.ok && job?.status === "failed" && <Notice tone="warn">The reanalysis failed. The report below is from the last completed run.</Notice>}
-      {parsed?.ok && (job?.status === "queued" || job?.status === "processing") && <Notice tone="info">A new analysis is in progress. The report below is the last published run.</Notice>}
-      {parsed?.ok && <ResultView result={parsed.result} videoUrl={videoUrl} previous={previous} session={session}
-        onSelectTrack={job && finished && !video?.raw_video_deleted_at && !video?.raw_video_deleting_at && !config.trialNoWorker ? (trackId, timeSeconds) => void run(() => requestReanalysis(sb, job.id, {
-          ...job.params, selection: { method: "track_id", track_id: trackId }, selection_time_s: timeSeconds,
-        })) : undefined} />}
-      {parsed && !parsed.ok && (
-        <Notice tone="error">The stored result could not be read ({parsed.error}). It is not shown to avoid presenting it incorrectly.</Notice>
-      )}
-      </>}
+      </details>}
+      </div>}
     </div>
   );
 }

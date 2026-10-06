@@ -84,7 +84,8 @@ export const STATE_LABELS: Record<AnalysisUiState, string> = {
   upload_incomplete: "Upload incomplete",
   queued: "Waiting",
   processing: "Analyzing",
-  completed: "Feedback ready",
+  // Analysis finishing is not the same as a practice plan being available (review F01).
+  completed: "Video review ready",
   insufficient_data: "Limited result",
   failed: "Needs attention",
 };
@@ -92,7 +93,7 @@ export const STATE_LABELS: Record<AnalysisUiState, string> = {
 export function stateDescription(state: AnalysisUiState, job: AnalysisJobRow | null): string {
   switch (state) {
     case "not_uploaded":
-      return "Choose a video of your play. Handheld and fixed-camera recordings are welcome.";
+      return "Choose a video of your play. Best results need a fixed camera and a clear court view. Moving-camera clips may produce limited results.";
     case "uploading":
       return "Uploading directly to private storage. You can keep this tab open; an interrupted upload resumes if you select the same file again.";
     case "upload_incomplete":
@@ -104,7 +105,7 @@ export function stateDescription(state: AnalysisUiState, job: AnalysisJobRow | n
     case "processing":
       return "PicklePro is analyzing the video now. This page updates by itself; you can leave it open or come back later.";
     case "completed":
-      return "Your result is ready. Review what the video shows and what to practice next.";
+      return "Your video review is ready. See what the video shows below. Practice advice from video appears only when its measures support it.";
     case "insufficient_data":
       return "PicklePro checked the video, but could not reliably measure every skill. See what it could and could not assess below.";
     case "failed":

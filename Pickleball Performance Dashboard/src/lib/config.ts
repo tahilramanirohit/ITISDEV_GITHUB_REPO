@@ -21,6 +21,8 @@ export type AppConfig = {
   guestModeEnabled: boolean;
   /** Public sample site without an always-on analysis worker. */
   trialNoWorker: boolean;
+  /** Where players ask about their data or deletion; shown on the privacy page when set. */
+  contactEmail: string | null;
 };
 
 type EnvLike = Record<string, string | boolean | undefined>;
@@ -76,6 +78,7 @@ export function getConfig(env: EnvLike): AppConfig {
     devModeEnabled: dev || env.VITE_ENABLE_DEV_MODE === "true",
     guestModeEnabled: env.VITE_ENABLE_GUEST_MODE === "true",
     trialNoWorker: env.VITE_TRIAL_NO_WORKER === "true",
+    contactEmail: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(env.VITE_CONTACT_EMAIL ?? "").trim()) ? String(env.VITE_CONTACT_EMAIL).trim() : null,
   };
 }
 

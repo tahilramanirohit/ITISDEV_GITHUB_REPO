@@ -26,7 +26,7 @@ describe("ResultView", () => {
     expect(screen.getByText("Court lines found")).toBeTruthy();
     expect(screen.getByText("Not available")).toBeTruthy();
     expect(screen.getAllByText("Not available").length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByText("Detailed measurements and analysis notes"));
+    fireEvent.click(screen.getByText("Research details: measurements, analysis notes and export"));
     expect(screen.getByText(testFixture.provenance.pipeline_version)).toBeTruthy();
     expect(screen.getByText("Share of video analyzed")).toBeTruthy();
     expect(screen.getByText("Player track IDs")).toBeTruthy();
@@ -149,7 +149,7 @@ describe("ResultView", () => {
     window.localStorage.clear();
     // A saved player report shows the same estimates, marked experimental.
     const report = render(<ResultView result={parseAnalysisResult(result)} videoUrl="/demo.mp4" />);
-    expect(screen.getByRole("tab", { name: "All players (4)" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "All players (4)" })).toBeTruthy();
     expect(screen.getAllByText("EXPERIMENTAL").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: /Watch the serve at 0:01/ })).toBeTruthy();
     report.unmount();
@@ -159,7 +159,7 @@ describe("ResultView", () => {
     expect(screen.queryByText(/4 hits were estimated/)).toBeNull();
     // Experimental labels are shown, clearly marked, for every player.
     expect(screen.getAllByText("EXPERIMENTAL").length).toBeGreaterThan(0);
-    expect(screen.getByRole("tab", { name: "All players (4)" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "All players (4)" })).toBeTruthy();
     expect(screen.getByRole("table", { name: "Shots by player" })).toBeTruthy();
     expect(screen.getAllByRole("button", { name: /Watch the/ })).toHaveLength(4);
     // Only people on the court can be picked.
@@ -167,12 +167,12 @@ describe("ResultView", () => {
     expect(screen.getAllByRole("button", { name: /This is me/ })).toHaveLength(2);
 
     // Nobody chosen yet: "My shots" asks the player to pick themselves.
-    fireEvent.click(screen.getByRole("tab", { name: "My shots (?)" }));
+    fireEvent.click(screen.getByRole("button", { name: "My shots (?)" }));
     expect(screen.getByText(/to see only your shots/)).toBeTruthy();
 
     // Choosing Player 2 shows their two shots straight away.
     fireEvent.click(screen.getAllByRole("button", { name: /This is me/ })[1]);
-    fireEvent.click(screen.getByRole("tab", { name: "My shots (2)" }));
+    fireEvent.click(screen.getByRole("button", { name: "My shots (2)" }));
     expect(screen.getAllByRole("button", { name: /Watch the/ })).toHaveLength(2);
     expect(screen.getByRole("button", { name: /Watch the return at 0:02/ })).toBeTruthy();
     expect(window.localStorage.getItem(`picklepro:me:${result.provenance.source.sha256 ?? result.provenance.generated_at}`)).toBe("2");

@@ -318,7 +318,7 @@ export default function LabelPage() {
   return (
     <div className="space-y-4">
       <Card accent={COBALT}>
-        <WidgetHeader title="Label shots" subtitle="Mark the exact moment of every shot, who hit it and what it was. The labels score PicklePro's shot detection." accent={COBALT} />
+        <WidgetHeader level="h1" title="Label shots" subtitle="Mark the exact moment of every shot, who hit it and what it was. The labels score PicklePro's shot detection." accent={COBALT} />
         <p className="text-sm mb-3" style={{ color: WHITE_DIM }}>
           Everything stays on this computer: the video is played from your disk and never uploaded. Labels are saved in this
           browser as you go; press <strong>Download labels</strong> to keep a file. Score a result with{" "}

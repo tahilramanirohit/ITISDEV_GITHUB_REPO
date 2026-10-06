@@ -57,9 +57,10 @@ export function ShotsPanel({ result, myPlayerId, onWatch, research = false }: {
         Tap <strong>Watch</strong> to see a shot in the video.
       </p>
 
-      <div role="tablist" aria-label="Whose shots" className="mt-4 inline-flex rounded-lg overflow-hidden" style={{ border: `1px solid ${BLUE_SKY}` }}>
+      <p className="mt-3 text-sm font-semibold" style={{ color: INK }}>Choose whose shot suggestions to show <span className="font-normal" style={{ color: WHITE_DIM }}>(filter only; court measures are unchanged)</span></p>
+      <div role="group" aria-label="Whose shots" className="mt-2 inline-flex rounded-lg overflow-hidden" style={{ border: `1px solid ${BLUE_SKY}` }}>
         {([["all", `All players (${all.length})`], ["mine", `My shots (${myPlayerId != null ? mine.length : "?"})`]] as const).map(([value, label]) => (
-          <button key={value} type="button" role="tab" aria-selected={tab === value} onClick={() => setTab(value)}
+          <button key={value} type="button" aria-pressed={tab === value} onClick={() => setTab(value)}
             className="px-4 py-2 text-sm font-semibold min-h-[44px]"
             style={{ background: tab === value ? BLUE_SKY : "white", color: tab === value ? "white" : BLUE_SKY }}>
             {label}

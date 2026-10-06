@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ArrowRight, Camera, ClipboardCheck, Dumbbell, Flame } from "lucide-react";
 import { getProfile, type PlayerProfile } from "../../lib/api/profile";
-import { buildSelfReport, SKILL_INFO } from "../../lib/coaching/selfAssessment";
+import { buildSelfReport } from "../../lib/coaching/selfAssessment";
 import { BORDER, CARD_GLOW, DISPLAY_FONT, GREEN, GREEN_BG, INK, NAVY, OPTIC, OPTIC_INK, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Notice, SectionTitle } from "../shell/primitives";
 import { EmptySessions, SessionCard, useSessionsData } from "../sessions/sessionUi";
@@ -48,7 +48,7 @@ export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: s
     for (const item of items ?? []) {
       const a = byId.get(item.session.id);
       if (!a) continue;
-      const report = buildSelfReport({ ratings: a.ratings, goals: item.session.improvement_goals ?? [],
+      const report = buildSelfReport({ ratings: a.ratings, goals: item.session.improvement_goals ?? [], playFormat: item.session.play_format,
         biggestStruggle: a.biggest_struggle, unforcedErrors: a.unforced_errors });
       if (report.available) return { href: `#/sessions/${item.session.id}`, starting: false, report };
     }
@@ -101,13 +101,15 @@ export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: s
           {latestPlan.starting ? "Rate a session" : "Full plan"} <ArrowRight size={14} /></a>}>
           {latestPlan.starting ? "Your starting focus" : "Your focus"}
         </SectionTitle>
-        {latestPlan.starting && <p className="-mt-1 text-sm" style={{ color: WHITE_DIM }}>From your starting answers. Rate a session after you play to update it.</p>}
-        <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0">
+        {latestPlan.starting && <p className="-mt-1 text-sm" style={{ color: WHITE_DIM }}>From your setup answers, not updated by video analysis. Rate a session after you play to update it.</p>}
+        {latestPlan.report.focus.length > 1 && latestPlan.report.focus.every((f) => f.rating === latestPlan.report.focus[0].rating) &&
+          <p className="-mt-1 text-xs" style={{ color: WHITE_SUB }}>These skills have the same rating. They are ordered by your goals and what you said gave you trouble, then by skill order.</p>}
+        <div className="grid gap-3 lg:grid-cols-3">
           {latestPlan.report.focus.map((f, i) => (
-            <a key={f.skill} href={latestPlan.href} className="w-64 shrink-0 snap-start rounded-3xl p-4 lg:w-auto"
+            <a key={f.skill} href={latestPlan.href} className="rounded-3xl p-4"
               style={{ background: i === 0 ? OPTIC : WHITE, border: `1px solid ${i === 0 ? OPTIC : BORDER}`, boxShadow: CARD_GLOW }}>
               <p className="text-xs font-bold uppercase tracking-wider" style={{ color: i === 0 ? OPTIC_INK : GREEN }}>Focus {i + 1} · {f.rating}/5</p>
-              <p className="mt-1 text-base font-bold" style={{ color: INK }}>{SKILL_INFO[f.skill].label}</p>
+              <p className="mt-1 text-base font-bold" style={{ color: INK }}>{f.label}</p>
               <p className="mt-2 flex items-center gap-1.5 text-sm" style={{ color: i === 0 ? OPTIC_INK : WHITE_DIM }}><Dumbbell size={14} /> {f.drill.name}</p>
             </a>
           ))}

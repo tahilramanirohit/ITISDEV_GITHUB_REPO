@@ -22,6 +22,7 @@ const ProgressPage = lazy(() => import("./progress/ProgressPage"));
 const SessionDetail = lazy(() => import("./sessions/SessionDetail"));
 const ProfilePage = lazy(() => import("./profile/ProfilePage"));
 const LabelPage = lazy(() => import("./labelling/LabelPage"));
+const PrivacyPage = lazy(() => import("./privacy/PrivacyPage"));
 
 const Loading = () => <p className="p-8 text-sm" style={{ color: WHITE_SUB }}>Loading…</p>;
 
@@ -165,6 +166,7 @@ export default function App({ cfg = defaultConfig, sb = defaultSupabase }: { cfg
     <HashRouter>
       <Suspense fallback={<Loading />}>
         <Routes>
+          <Route path="/privacy" element={<PrivacyPage />} />
           {/* Works without an account: videos and labels stay on this computer. */}
           <Route path="/label" element={<AppShell wide nav={<><a href="#/" style={{ color: GREEN }}>Home</a><DevLinks cfg={cfg} /></>}><LabelPage /></AppShell>} />
           <Route path="/design-preview" element={cfg.designPreviewEnabled ? <DesignPreview /> : <NotAvailable />} />

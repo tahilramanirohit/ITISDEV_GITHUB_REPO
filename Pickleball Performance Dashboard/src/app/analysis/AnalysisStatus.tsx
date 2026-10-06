@@ -49,7 +49,10 @@ export type AnalysisParams = {
  * when an optional court model is configured. Court correction is handled by
  * the visible review step before upload.
  */
-export function AnalysisParamsForm({ onChange }: { onChange: (params: AnalysisParams | null, error: string | null) => void }) {
+export function AnalysisParamsForm({ onChange, playFormat }: {
+  onChange: (params: AnalysisParams | null, error: string | null) => void; playFormat?: string;
+}) {
+  const doubles = playFormat === "doubles";
   const [mode, setMode] = useState<"none" | "near" | "far" | "track">("near");
   const [trackId, setTrackId] = useState("");
   const [zones, setZones] = useState(false);
@@ -64,7 +67,7 @@ export function AnalysisParamsForm({ onChange }: { onChange: (params: AnalysisPa
     if (m === "near" || m === "far") params.selection = { method: "court_half", court_half: m };
     if (m === "track") {
       const n = Number.parseInt(t, 10);
-      if (!Number.isInteger(n) || n < 0) return onChange(null, "Enter a whole-number track id.");
+      if (!Number.isInteger(n) || n < 0) return onChange(null, "Enter the player number shown on the player cards.");
       params.selection = { method: "track_id", track_id: n };
     }
     if (z) params.experimental_zones = true;
@@ -75,19 +78,23 @@ export function AnalysisParamsForm({ onChange }: { onChange: (params: AnalysisPa
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       <div>
-        <label className={labelClass} style={labelStyle} htmlFor="player-selection">Player to analyze</label>
+        <label className={labelClass} style={labelStyle} htmlFor="player-selection">Choose the player for positioning analysis</label>
         <select id="player-selection" value={mode} className="w-full rounded-xl px-3 py-2 text-sm" style={fieldStyle}
           onChange={(e) => { const v = e.target.value as typeof mode; setMode(v); emit({ mode: v }); }}>
           <option value="none" className="bg-white">Not selected (no court metrics)</option>
-          <option value="near" className="bg-white">The single player on the near half</option>
-          <option value="far" className="bg-white">The single player on the far half</option>
-          <option value="track" className="bg-white">A specific track id</option>
+          <option value="near" className="bg-white">{doubles ? "The most-seen player on the near side" : "The player on the near side"}</option>
+          <option value="far" className="bg-white">{doubles ? "The most-seen player on the far side" : "The player on the far side"}</option>
+          <option value="track" className="bg-white">A specific player number (from the player cards)</option>
         </select>
         {mode === "track" && (
-          <input aria-label="Track id" inputMode="numeric" value={trackId} placeholder="e.g. 3"
+          <input aria-label="Player number" inputMode="numeric" value={trackId} placeholder="e.g. 3"
             className="w-full rounded-xl px-3 py-2 text-sm mt-2" style={fieldStyle}
             onChange={(e) => { setTrackId(e.target.value); emit({ trackId: e.target.value }); }} />
         )}
+        <p className="mt-1 text-xs" style={{ color: WHITE_DIM }}>
+          {doubles ? "In doubles, two players share each side. For an exact choice, pick yourself under “Which player are you?” after the first run. " : ""}
+          This choice changes the court-position measures. It does not filter shot suggestions.
+        </p>
         <label className="flex items-center gap-2 text-sm mt-3" style={{ color: WHITE_DIM }}>
           <input type="checkbox" checked={zones} onChange={(e) => { setZones(e.target.checked); emit({ zones: e.target.checked }); }} />
           Also compute experimental zone occupancy (not validated)

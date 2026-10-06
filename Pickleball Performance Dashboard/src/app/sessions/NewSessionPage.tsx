@@ -129,11 +129,11 @@ export default function NewSessionPage({ sb, userId, trialNoWorker = false }: { 
       {step === 1 && <>
         <div className="grid gap-3 lg:grid-cols-2">
           <ModeCard selected={form.review_mode === "self"} onSelect={() => chooseMode("self")} icon={<ClipboardCheck size={24} />}
-            title="Rate my own game" tag="No video · about 2 minutes"
+            title="Rate my own game" tag="No video · about 2 minutes to rate"
             detail="Rate ten skills from how the session felt. You get focus areas, drills and a practice plan right away." />
           <ModeCard selected={form.review_mode === "video"} onSelect={() => chooseMode("video")} icon={<Camera size={24} />}
             title="Analyze a video" tag="Computer vision · takes longer"
-            detail="Upload a clip from a fixed camera. PicklePro maps where you stood on court. You can rate yourself too." />
+            detail="Upload a rally clip. PicklePro maps where you stood on court. Best results need a fixed camera and a clear court view. Moving-camera clips may produce limited results. You can rate yourself too." />
         </div>
         {form.review_mode === "video" && trialNoWorker && <Notice tone="info">Video analysis is paused on this public trial. You can still create the session and rate yourself.</Notice>}
         <PrimaryButton type="button" className="w-full" onClick={() => setStep(2)}>Continue</PrimaryButton>
@@ -147,6 +147,9 @@ export default function NewSessionPage({ sb, userId, trialNoWorker = false }: { 
               className="min-h-[52px] rounded-2xl px-2 text-sm font-bold" style={kind === k ? { background: INK, color: WHITE } : { background: WHITE, color: INK, border: `1px solid ${BORDER}` }}>
               {KIND_LABELS[k]}</button>)}
           </div>
+          <p className="text-xs" style={{ color: WHITE_SUB }}>
+            {kind === "solo" ? "On your own: drills, wall practice or a ball machine." : kind === "match" ? "Games against other players outside a tournament." : "An official tournament match, with its round and score."}
+          </p>
         </section>
         {kind !== "tournament" && <section className="space-y-2">
           <p className={labelClass} style={labelStyle}>{kind === "solo" ? "Type of practice" : "Setting"}</p>
@@ -154,6 +157,11 @@ export default function NewSessionPage({ sb, userId, trialNoWorker = false }: { 
             {(kind === "solo" ? ["practice", "drill"] : ["casual_match", "leveling_game", "practice"] as SessionContext[]).map((c) =>
               <Chip key={c} selected={form.session_context === c} onClick={() => set("session_context", c as SessionContext)}>{CONTEXT_LABELS[c as SessionContext]}</Chip>)}
           </div>
+          {kind === "match" && <p className="text-xs" style={{ color: WHITE_SUB }}>
+            {form.session_context === "leveling_game" ? "Leveling game: a game used to place you in a skill level or group, such as at a club or open play."
+              : form.session_context === "practice" ? "Practice match: a game where trying things matters more than the score."
+              : "Casual match: a friendly game, such as open play."}
+          </p>}
         </section>}
         <section className="space-y-2">
           <p className={labelClass} style={labelStyle}>Format</p>

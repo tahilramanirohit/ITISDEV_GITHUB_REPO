@@ -65,7 +65,7 @@ export function AuthScreen({ sb, devMode, guestMode, samplePreviewEnabled = fals
   }
 
   const features = [
-    { icon: ClipboardCheck, title: "Rate your game in 2 minutes", text: "Ten quick skill ratings after you play. No video needed." },
+    { icon: ClipboardCheck, title: "Rate a game in about 2 minutes", text: "Ten quick skill ratings after you play, once your account is set up. No video needed." },
     { icon: Dumbbell, title: "Get a practice plan", text: "Focus areas, drills and targets picked for you, plus a week of practice." },
     { icon: TrendingUp, title: "See your progress", text: "Track solo practice, matches and tournaments over time." },
     { icon: Camera, title: "Add a video, if you like", text: trialNoWorker ? "Video analysis is paused on this trial." : "Computer vision maps where you stood on court." },
@@ -145,7 +145,7 @@ export function AuthScreen({ sb, devMode, guestMode, samplePreviewEnabled = fals
               {mode === "sign_in" ? "Sign in" : mode === "sign_up" ? "Create an account" : "Reset password"}
             </h2>
             <p className="text-sm mb-5" style={{ color: WHITE_DIM }}>
-              Your sessions, videos and results are private to your account.
+              Your sessions, videos and results are private to your account. <a href="#/privacy" className="font-semibold underline" style={{ color: GREEN }}>How we handle your data</a>
             </p>
             <form onSubmit={submit} className="space-y-4" noValidate>
               <div>
@@ -210,7 +210,19 @@ export function AuthScreen({ sb, devMode, guestMode, samplePreviewEnabled = fals
               ))}
             </ol>
           </section>
-          <p className="text-center text-xs" style={{ color: WHITE_SUB }}>PicklePro research prototype · DLSU CAPIT-01</p>
+          <section aria-labelledby="example-plan-title" className="rounded-3xl p-5" style={{ background: WHITE, border: `1px solid ${BORDER}` }}>
+            <p id="example-plan-title" className="text-xs font-bold uppercase tracking-wider" style={{ color: GREEN }}>Example from a practice plan</p>
+            <p className="mt-2 text-base font-bold">Build your dinking · rated 2/5</p>
+            <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Low, patient dinks force opponents to hit up, giving you the first chance to attack.</p>
+            <div className="mt-3 rounded-2xl p-3 text-sm" style={{ background: "#e6f4ec" }}>
+              <strong style={{ color: GREEN }}>Drill: Cross-court dink count.</strong> Dink cross-court with a partner and count rallies without a ball going above net height plus 30 cm. Three rounds of two minutes; try to beat your best count.
+            </div>
+            <p className="mt-3 text-sm font-semibold">Next session: aim for 3/5, "Steady when unhurried".</p>
+            <p className="mt-2 text-xs" style={{ color: WHITE_SUB }}>Sample only. Your plan comes from your own ratings.</p>
+          </section>
+          <p className="text-center text-xs" style={{ color: WHITE_SUB }}>
+            PicklePro research prototype · DLSU CAPIT-01 · <a href="#/privacy" className="underline" style={{ color: GREEN }}>Your data and privacy</a>
+          </p>
         </main>
       </div>
     </div>

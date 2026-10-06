@@ -44,6 +44,13 @@ describe("application entry point", () => {
     expect(screen.queryByText("Supabase is not configured")).toBeNull();
   });
 
+  it("explains data use without an account", async () => {
+    window.location.hash = "#/privacy";
+    render(<App cfg={prodConfig} sb={null} />);
+    expect(await screen.findByRole("heading", { name: "Your data and privacy" })).toBeTruthy();
+    expect(screen.getByText(/deleted automatically 30 days after analysis/)).toBeTruthy();
+  });
+
   it("production builds refuse the design-preview route", async () => {
     window.location.hash = "#/design-preview";
     render(<App cfg={prodConfig} sb={null} />);

@@ -7,11 +7,11 @@ import {
 import { listSessions } from "../../lib/api/sessions";
 import { sessionKind, type SessionRow } from "../../lib/api/types";
 import {
-  buildSelfReport, compareSelfRatings, MIN_RATED_SKILLS, ratedSkills, SELF_SKILLS, SKILL_GROUPS, SKILL_INFO,
+  buildSelfReport, compareSelfRatings, skillInfo, MIN_RATED_SKILLS, ratedSkills, SELF_SKILLS, SKILL_GROUPS, SKILL_INFO,
   type ErrorLevel, type SelfRatings, type SelfSkill, type SkillRating,
 } from "../../lib/coaching/selfAssessment";
 import { BORDER, GREEN, INK, OPTIC, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
-import { Card, Chip, Notice, PrimaryButton, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
+import { Card, Chip, Notice, PrimaryButton, fieldStyle, labelClass, labelStyle, rovingIndex } from "../shell/primitives";
 import { SelfReportView } from "./SelfReportView";
 
 type Draft = {
@@ -25,10 +25,10 @@ type Draft = {
 const emptyDraft: Draft = { ratings: {}, games_played: null, games_won: null, unforced_errors: null, biggest_struggle: "" };
 const STEPS = [...SKILL_GROUPS, "Wrap-up"] as const;
 
-export function SkillRater({ skill, value, onChange, question }: {
-  skill: SelfSkill; value: SkillRating | undefined; onChange: (v: SkillRating | undefined) => void; question?: string;
+export function SkillRater({ skill, value, onChange, question, playFormat }: {
+  skill: SelfSkill; value: SkillRating | undefined; onChange: (v: SkillRating | undefined) => void; question?: string; playFormat?: string;
 }) {
-  const info = SKILL_INFO[skill];
+  const info = skillInfo(skill, playFormat);
   return (
     <Card className="!p-4">
       <div className="flex items-start justify-between gap-2">
@@ -38,10 +38,19 @@ export function SkillRater({ skill, value, onChange, question }: {
         </div>
         {value && <button type="button" onClick={() => onChange(undefined)} className="shrink-0 text-xs font-semibold underline" style={{ color: WHITE_SUB }}>Clear</button>}
       </div>
+      {/* W3C radio group pattern: one tab stop; arrow keys move and select. */}
       <div className="mt-3 grid grid-cols-5 gap-1.5" role="radiogroup" aria-label={`${info.label} rating`}>
         {([1, 2, 3, 4, 5] as SkillRating[]).map((n) => {
           const selected = value === n;
           return <button key={n} type="button" role="radio" aria-checked={selected} aria-label={`${info.label} ${n} of 5: ${info.anchors[n - 1]}`}
+            id={`rate-${skill}-${n}`} tabIndex={selected || (!value && n === 1) ? 0 : -1}
+            onKeyDown={(e) => {
+              const next = rovingIndex(e.key, (value ?? 1) - 1, 5);
+              if (next === null) return;
+              e.preventDefault();
+              onChange((next + 1) as SkillRating);
+              document.getElementById(`rate-${skill}-${next + 1}`)?.focus();
+            }}
             onClick={() => onChange(n)} className="min-h-[48px] rounded-2xl text-lg font-extrabold transition-colors"
             style={selected ? { background: INK, color: OPTIC } : { background: "#f1f2ee", color: INK, border: `1px solid ${BORDER}` }}>{n}</button>;
         })}
@@ -102,8 +111,8 @@ export function SelfAssessmentPanel({ sb, session }: { sb: SupabaseClient; sessi
 
   const report = useMemo(() => saved ? buildSelfReport({
     ratings: saved.ratings, goals: session.improvement_goals ?? [], biggestStruggle: saved.biggest_struggle,
-    unforcedErrors: saved.unforced_errors, gamesPlayed: saved.games_played, gamesWon: saved.games_won,
-  }) : null, [saved, session.improvement_goals]);
+    unforcedErrors: saved.unforced_errors, gamesPlayed: saved.games_played, gamesWon: saved.games_won, playFormat: session.play_format,
+  }) : null, [saved, session.improvement_goals, session.play_format]);
 
   const rate = (skill: SelfSkill, v: SkillRating | undefined) =>
     setDraft((d) => { const ratings = { ...d.ratings }; if (v) ratings[skill] = v; else delete ratings[skill]; return { ...d, ratings }; });
@@ -155,7 +164,7 @@ export function SelfAssessmentPanel({ sb, session }: { sb: SupabaseClient; sessi
         {step === 0 && <p className="mt-3 text-sm" style={{ color: WHITE_DIM }}>Think about this session only. 3 means "okay for my level". Skip anything that didn't come up.</p>}
       </div>
 
-      {group !== "Wrap-up" ? <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">{skills.map((skill) => <SkillRater key={skill} skill={skill} value={draft.ratings[skill]} onChange={(v) => rate(skill, v)} />)}</div> : <div className="space-y-4 lg:max-w-xl">
+      {group !== "Wrap-up" ? <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">{skills.map((skill) => <SkillRater key={skill} skill={skill} playFormat={session.play_format} value={draft.ratings[skill]} onChange={(v) => rate(skill, v)} />)}</div> : <div className="space-y-4 lg:max-w-xl">
         {!solo && <>
         <Stepper label="Games played" value={draft.games_played} max={50}
           onChange={(v) => setDraft((d) => ({ ...d, games_played: v, games_won: v == null ? null : Math.min(d.games_won ?? 0, v) }))} />
@@ -178,12 +187,15 @@ export function SelfAssessmentPanel({ sb, session }: { sb: SupabaseClient; sessi
         </div>
       </div>}
 
+      {last && ratedCount < MIN_RATED_SKILLS && <Notice tone="warn">
+        A plan needs at least {MIN_RATED_SKILLS} skills that came up in this session. You have rated {ratedCount}. Go back and rate the ones you played; skipped skills count as "didn't come up", not as low scores.
+      </Notice>}
       {error && <Notice tone="error">{error}</Notice>}
       <div className="flex gap-2 lg:max-w-xl">
         {step > 0 && <button type="button" onClick={() => setStep(step - 1)} aria-label="Previous step"
           className="flex min-h-[48px] w-14 items-center justify-center rounded-2xl" style={{ border: `1px solid ${BORDER}`, background: WHITE }}><ArrowLeft size={18} /></button>}
         {last
-          ? <PrimaryButton type="button" className="flex-1" disabled={busy} onClick={() => void save()}>{busy ? "Saving…" : "See my practice plan"}</PrimaryButton>
+          ? <PrimaryButton type="button" className="flex-1" disabled={busy || ratedCount < MIN_RATED_SKILLS} onClick={() => void save()}>{busy ? "Saving…" : "See my practice plan"}</PrimaryButton>
           : <PrimaryButton type="button" className="flex-1" onClick={() => { setError(""); setStep(step + 1); window.scrollTo({ top: 0 }); }}>Next</PrimaryButton>}
       </div>
       {saved && <button type="button" onClick={() => { setEditing(false); setError(""); }} className="w-full text-sm font-semibold underline" style={{ color: WHITE_DIM }}>Cancel editing</button>}

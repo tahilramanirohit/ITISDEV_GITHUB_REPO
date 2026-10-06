@@ -100,16 +100,63 @@ export const SKILL_INFO: Record<SelfSkill, SkillInfo> = {
     keywords: ["error", "consistent", "consistency", "miss", "into the net", "hit out"],
   },
   strategy: {
-    label: "Shot choice & teamwork", group: "Game", question: "Did you choose sensible shots and work well with your partner?",
-    anchors: ["Mostly guessed", "Often rushed", "Some good choices", "Usually smart", "Planned and communicated"],
+    label: "Shot choice", group: "Game", question: "Did you choose sensible shots for each situation?",
+    anchors: ["Mostly guessed", "Often rushed", "Some good choices", "Usually smart", "Planned every point"],
     goal: "shot_outcomes",
-    why: "Choosing when to stay patient and when to attack, and talking with your partner, avoids easy mistakes.",
-    drill: { name: "Patience game", how: "Play to 7 where you may only attack a ball that is above the net. Call \"mine\" or \"yours\" on every middle ball." },
+    why: "Choosing when to stay patient and when to attack avoids easy mistakes.",
+    drill: { name: "Patience game", how: "Play to 7 where you may only attack a ball that is above the net. Everything else is a reset or a dink." },
     keywords: ["strategy", "partner", "communication", "choice", "rushed", "impatient", "attack"],
   },
 };
 
 export const SKILL_GROUPS: SkillGroup[] = ["Shots", "Court", "Game"];
+
+/** Sessions are rated against questions that fit how they were played. */
+export type FormatGroup = "singles" | "doubles" | "solo";
+export function formatGroup(playFormat: string | null | undefined): FormatGroup | null {
+  if (playFormat === "singles" || playFormat === "doubles") return playFormat;
+  if (playFormat === "wall_practice" || playFormat === "ball_machine" || playFormat === "drill_other") return "solo";
+  return null;
+}
+
+type SkillVariant = Partial<Pick<SkillInfo, "label" | "question" | "anchors" | "why" | "drill">>;
+// The stored key stays the same, so a skill's trend still lines up across formats.
+const VARIANTS: Partial<Record<SelfSkill, Partial<Record<FormatGroup, SkillVariant>>>> = {
+  strategy: {
+    doubles: {
+      label: "Shot choice & teamwork", question: "Did you choose sensible shots and work well with your partner?",
+      anchors: ["Mostly guessed", "Often rushed", "Some good choices", "Usually smart", "Planned and communicated"],
+      why: "Choosing when to stay patient and when to attack, and talking with your partner, avoids easy mistakes.",
+      drill: { name: "Patience game", how: "Play to 7 where you may only attack a ball that is above the net. Call \"mine\" or \"yours\" on every middle ball." },
+    },
+    singles: {
+      label: "Shot choice & placement", question: "Did you place the ball to move your opponent and recover in time?",
+      anchors: ["Mostly guessed", "Often hit to them", "Some good placement", "Usually moved them", "Planned every point"],
+      why: "In singles the court is yours to cover. Hitting into space and recovering to the middle wins more points than pace.",
+      drill: { name: "Corners and recover", how: "Play points where every shot must land in a back corner or the kitchen. After each shot, recover to the middle of your baseline before the next ball." },
+    },
+    solo: {
+      label: "Practice focus", question: "Did each drill have a clear goal?",
+      anchors: ["No real plan", "Drifted off-plan", "Some focused reps", "Mostly focused", "Clear goal every drill"],
+      why: "Practising with a target and a count makes solo time count for much more than hitting at random.",
+      drill: { name: "Target and count", how: "Before each drill, pick one target and a number to beat, for example 15 of 20 into a towel. Write the score down after every set." },
+    },
+  },
+  return: {
+    solo: {
+      label: "Returning fed balls", question: "Were your returns of fed or rebound balls deep and controlled?",
+      anchors: ["Often missed", "Short and loose", "In, sometimes deep", "Deep and steady", "Deep and placed on purpose"],
+      drill: { name: "Deep return reps", how: "Set the machine or wall feed to a serve-like ball. Return 20 balls past the service line, then 20 to a chosen corner." },
+    },
+  },
+};
+
+/** A skill's wording for a session format; falls back to the general wording. */
+export function skillInfo(skill: SelfSkill, playFormat?: string | null): SkillInfo {
+  const group = formatGroup(playFormat);
+  const variant = group ? VARIANTS[skill]?.[group] : undefined;
+  return variant ? { ...SKILL_INFO[skill], ...variant } : SKILL_INFO[skill];
+}
 
 export type SelfAssessmentInput = {
   ratings: SelfRatings;
@@ -118,10 +165,13 @@ export type SelfAssessmentInput = {
   unforcedErrors?: ErrorLevel | null;
   gamesPlayed?: number | null;
   gamesWon?: number | null;
+  /** The session's play format, so wording fits singles, doubles or solo practice. */
+  playFormat?: string | null;
 };
 
 export type SelfFocusItem = {
   skill: SelfSkill;
+  label: string;
   title: string;
   rating: SkillRating;
   observation: string;
@@ -185,11 +235,12 @@ export function buildSelfReport(input: SelfAssessmentInput): SelfReport {
   const overall = Math.round((rated.reduce((sum, skill) => sum + rating(skill), 0) / rated.length) * 10) / 10;
   const mentioned = new Set(skillsMentioned(input.biggestStruggle));
 
+  const info = (skill: SelfSkill) => skillInfo(skill, input.playFormat);
   const scored = rated.map((skill) => {
-    const info = SKILL_INFO[skill];
+    const i = info(skill);
     const reasons: string[] = [`You rated it ${rating(skill)}/5`];
     let score = 6 - rating(skill);
-    if (input.goals.includes(info.goal)) { score += 1; reasons.push("it matches a focus you chose"); }
+    if (input.goals.includes(i.goal)) { score += 1; reasons.push("it matches a focus you chose"); }
     if (mentioned.has(skill)) { score += 1.5; reasons.push("you mentioned it as a struggle"); }
     if (skill === "consistency" && input.unforcedErrors === "many") { score += 1.5; reasons.push("you made many unforced errors"); }
     return { skill, score, reasons };
@@ -199,16 +250,17 @@ export function buildSelfReport(input: SelfAssessmentInput): SelfReport {
   const candidates = scored.filter((s) => rating(s.skill) < 5).sort((a, b) =>
     b.score - a.score || rating(a.skill) - rating(b.skill) || SELF_SKILLS.indexOf(a.skill) - SELF_SKILLS.indexOf(b.skill));
   const focus: SelfFocusItem[] = candidates.slice(0, MAX_FOCUS).map(({ skill, reasons }) => {
-    const info = SKILL_INFO[skill];
+    const i = info(skill);
     const r = rating(skill);
     return {
       skill,
-      title: r <= 2 ? `Build your ${info.label.toLowerCase()}` : `Level up your ${info.label.toLowerCase()}`,
+      label: i.label,
+      title: r <= 2 ? `Build your ${i.label.toLowerCase()}` : `Level up your ${i.label.toLowerCase()}`,
       rating: r,
-      observation: `You rated your ${info.label.toLowerCase()} ${r}/5: "${info.anchors[r - 1]}".`,
-      why: info.why,
-      drill: info.drill,
-      target: `Next session: aim for ${r + 1}/5, "${(info.anchors as readonly string[])[r]}".`,
+      observation: `You rated your ${i.label.toLowerCase()} ${r}/5: "${i.anchors[r - 1]}".`,
+      why: i.why,
+      drill: i.drill,
+      target: `Next session: aim for ${r + 1}/5, "${(i.anchors as readonly string[])[r]}".`,
       reasons,
     };
   });
@@ -220,15 +272,16 @@ export function buildSelfReport(input: SelfAssessmentInput): SelfReport {
     .slice(0, 3)
     .map((skill) => ({
       skill,
-      title: SKILL_INFO[skill].label,
+      title: info(skill).label,
       rating: rating(skill),
-      observation: `"${SKILL_INFO[skill].anchors[rating(skill) - 1]}"`,
+      observation: `"${info(skill).anchors[rating(skill) - 1]}"`,
     }));
 
   const plan = buildPlan(focus);
   const record = input.gamesPlayed ? ` You won ${input.gamesWon ?? 0} of ${input.gamesPlayed} games.` : "";
+  const coverage = ` Based on ${rated.length} of ${SELF_SKILLS.length} skills; skipped skills were treated as not played, not as low scores.`;
   const introduction = focus.length
-    ? `${focus.length} thing${focus.length === 1 ? "" : "s"} to practice before your next session, picked from your ratings and goals.${record}`
+    ? `${focus.length} thing${focus.length === 1 ? "" : "s"} to practice before your next session, picked from your ratings and goals.${record}${coverage}`
     : `You rated every skill 5/5. Keep the same habits and rate yourself again after your next session.${record}`;
 
   return { available: true, introduction, overall, level: levelLabel(overall), strengths, focus, plan, limitation: LIMITATION };
@@ -238,7 +291,7 @@ function buildPlan(focus: SelfFocusItem[]): SelfReport["plan"] {
   if (!focus.length) return [];
   const [first, second, third] = focus;
   const plan = [
-    { day: "Session 1", title: first.drill.name, detail: `15 minutes on your ${SKILL_INFO[first.skill].label.toLowerCase()}. ${first.drill.how}` },
+    { day: "Session 1", title: first.drill.name, detail: `15 minutes on your ${first.label.toLowerCase()}. ${first.drill.how}` },
     { day: "Session 2", title: (second ?? first).drill.name, detail: `15 minutes. ${(second ?? first).drill.how}` },
   ];
   plan.push(third

@@ -122,6 +122,10 @@ export function AppShell({ children, right, nav, tabs = false, wide = false }: {
   const width = wide ? "max-w-6xl" : tabs ? "max-w-xl md:max-w-3xl lg:max-w-none" : "max-w-xl md:max-w-3xl";
   return (
     <div style={{ background: PAGE_BG, minHeight: "100vh", color: INK, fontFamily: BODY_FONT }}>
+      {/* A button rather than a "#" link, because the hash holds the app's route. */}
+      <button type="button" onClick={() => document.getElementById("main-content")?.focus()}
+        className="sr-only z-50 rounded-xl px-4 py-2 text-sm font-bold focus:not-sr-only focus:fixed focus:left-3 focus:top-3"
+        style={{ background: INK, color: WHITE }}>Skip to main content</button>
       {tabs && <SideNav account={right} />}
       <div className={tabs ? "lg:pl-64" : undefined}>
         <header className={`sticky top-0 z-20 border-b ${tabs ? "lg:hidden" : ""}`} style={{ background: "rgba(255,255,255,0.94)", backdropFilter: "blur(12px)", borderColor: BORDER,
@@ -132,7 +136,7 @@ export function AppShell({ children, right, nav, tabs = false, wide = false }: {
           </div>
           {nav && <nav className={`${width} mx-auto flex flex-wrap gap-x-4 gap-y-1 px-4 pb-2 text-sm font-semibold`}>{nav}</nav>}
         </header>
-        <main className={`${width} mx-auto px-4 pt-5 ${tabs ? "pb-28 md:px-6 md:pt-6 lg:px-10 lg:pb-12 lg:pt-8" : "pb-10 md:px-6"}`}>{children}</main>
+        <main id="main-content" tabIndex={-1} className={`${width} mx-auto px-4 pt-5 outline-none ${tabs ? "pb-28 md:px-6 md:pt-6 lg:px-10 lg:pb-12 lg:pt-8" : "pb-10 md:px-6"}`}>{children}</main>
         {!tabs && <footer className="px-4 pb-6 text-center text-xs" style={{ color: WHITE_SUB }}>
           PicklePro research prototype. Video findings depend on visibility and have not yet been validated on real footage.
         </footer>}

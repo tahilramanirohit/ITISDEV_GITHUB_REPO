@@ -37,10 +37,11 @@ export function SectionBanner({ n, eyebrow, title, subtitle, bg, accent, badge }
 }
 
 // ── Widget Header ─────────────────────────────────────────────────────────
-export function WidgetHeader({ title, subtitle, accent }: { title: string; subtitle: string; accent?: string }) {
+export function WidgetHeader({ title, subtitle, accent, level = "h3" }: { title: string; subtitle: string; accent?: string; level?: "h1" | "h2" | "h3" }) {
+  const Heading = level;
   return (
     <div className="mb-4">
-      <h3 className="font-bold text-lg text-[#0e1116] mb-0.5" style={{ fontFamily: DISPLAY_FONT }}>{title}</h3>
+      <Heading className="font-bold text-lg text-[#0e1116] mb-0.5" style={{ fontFamily: DISPLAY_FONT }}>{title}</Heading>
       {accent
         ? <div className="flex items-center gap-1.5 mt-1">
             <div className="h-1 w-4 rounded-full" style={{ background: accent }} />
@@ -110,17 +111,42 @@ export function PrimaryButton({ children, className = "", tone = "dark", ...rest
   );
 }
 
-/** Segmented control for switching between views of one screen. */
-export function SegmentedTabs<T extends string>({ tabs, value, onChange, label }: {
-  tabs: { value: T; label: string; badge?: string }[]; value: T; onChange: (v: T) => void; label: string;
+/** Moves focus among a group with the arrow keys, Home and End (W3C APG tabs and radio patterns). */
+export function rovingIndex(key: string, index: number, count: number): number | null {
+  if (key === "ArrowRight" || key === "ArrowDown") return (index + 1) % count;
+  if (key === "ArrowLeft" || key === "ArrowUp") return (index - 1 + count) % count;
+  if (key === "Home") return 0;
+  if (key === "End") return count - 1;
+  return null;
+}
+
+/** Props for the panel a SegmentedTabs tab controls. */
+export function tabPanelProps(idBase: string, value: string) {
+  return { role: "tabpanel", id: `${idBase}-panel-${value}`, "aria-labelledby": `${idBase}-tab-${value}`, tabIndex: 0 } as const;
+}
+
+/**
+ * Segmented control for switching between views of one screen. Follows the
+ * W3C tabs pattern: one tab stop, arrow keys move and select, panels linked.
+ */
+export function SegmentedTabs<T extends string>({ tabs, value, onChange, label, idBase = "tabs" }: {
+  tabs: { value: T; label: string; badge?: string }[]; value: T; onChange: (v: T) => void; label: string; idBase?: string;
 }) {
+  function onKeyDown(e: React.KeyboardEvent<HTMLButtonElement>, index: number) {
+    const next = rovingIndex(e.key, index, tabs.length);
+    if (next === null) return;
+    e.preventDefault();
+    onChange(tabs[next].value);
+    document.getElementById(`${idBase}-tab-${tabs[next].value}`)?.focus();
+  }
   return (
     <div role="tablist" aria-label={label} className="flex gap-1 rounded-2xl p-1" style={{ background: "#e6e8e3" }}>
-      {tabs.map((tab) => {
+      {tabs.map((tab, index) => {
         const active = tab.value === value;
         return (
-          <button key={tab.value} type="button" role="tab" aria-selected={active} onClick={() => onChange(tab.value)}
-            className="flex-1 min-h-[40px] rounded-xl px-2 py-2 text-sm font-semibold transition-colors"
+          <button key={tab.value} type="button" role="tab" id={`${idBase}-tab-${tab.value}`} aria-controls={`${idBase}-panel-${tab.value}`}
+            aria-selected={active} tabIndex={active ? 0 : -1} onClick={() => onChange(tab.value)} onKeyDown={(e) => onKeyDown(e, index)}
+            className="flex-1 min-h-[44px] rounded-xl px-2 py-2 text-sm font-semibold transition-colors"
             style={active ? { background: WHITE, color: INK, boxShadow: CARD_GLOW } : { color: WHITE_DIM }}>
             {tab.label}
             {tab.badge && <span className="ml-1 text-[11px] font-bold uppercase" style={{ color: active ? GREEN : WHITE_SUB }}>{tab.badge}</span>}

@@ -73,7 +73,11 @@ function ProgressTable({ rows, label }: { rows: ProgressRow[]; label: string }) 
   );
 }
 
-export function CoachingPanel({ result, previous }: { result: AnalysisResultV1; previous?: PreviousSession | null }) {
+export function CoachingPanel({ result, previous, onRateSession }: {
+  result: AnalysisResultV1; previous?: PreviousSession | null;
+  /** Offered when the video cannot support advice: plan from the player's own ratings instead. */
+  onRateSession?: () => void;
+}) {
   const report = useMemo(() => buildCoachingReport(result), [result]);
   const devMock = result.provenance.pipeline_version === "dev-mock";
   const progress = useMemo(() => previous ? compareProgress(result, previous.result) : null, [result, previous]);
@@ -106,7 +110,8 @@ export function CoachingPanel({ result, previous }: { result: AnalysisResultV1; 
   return (
     <Card accent={report.available ? NEON : undefined}>
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <WidgetHeader title="What to practice next" subtitle={devMock ? "Example practice plan using sample data." : "Practice plan based on court positioning observed in your video."} />
+        <WidgetHeader title="What to practice next" subtitle={devMock ? "Example practice plan using sample data."
+          : report.available ? "Practice plan based on court positioning observed in your video." : "No video-based practice plan yet."} />
         {report.available && (
           <button type="button" onClick={toggleAudio} disabled={!speechAvailable}
             aria-label={playing ? "Stop audio coaching" : "Play audio coaching"}
@@ -119,6 +124,14 @@ export function CoachingPanel({ result, previous }: { result: AnalysisResultV1; 
         )}
       </div>
       <p className="text-sm text-[#101827]">{devMock ? "Example only: these findings do not describe your play." : report.introduction}</p>
+      {!report.available && !devMock && onRateSession && (
+        <div className="mt-3 rounded-2xl p-3" style={{ background: "#e6f4ec" }}>
+          <p className="text-sm font-semibold text-[#101827]">Rate this session to get a plan from your own assessment.</p>
+          <button type="button" onClick={onRateSession} className="mt-2 inline-flex min-h-[44px] items-center rounded-xl px-4 text-sm font-bold" style={{ background: "#0e1116", color: "#ffffff" }}>
+            Rate this session
+          </button>
+        </div>
+      )}
       {report.strengths.length > 0 && (
         <div className="mt-3">
           <p className="text-sm font-semibold text-[#101827]">What's working</p>

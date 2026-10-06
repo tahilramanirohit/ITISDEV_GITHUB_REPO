@@ -97,7 +97,7 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
           <div aria-hidden="true" className="absolute -right-10 -top-10 h-36 w-36 rounded-full" style={{ background: OPTIC, opacity: 0.2 }} />
           <p className="text-xs font-bold uppercase tracking-wider" style={{ color: OPTIC }}>Welcome to PicklePro</p>
           <h1 className="mt-1 text-2xl font-extrabold leading-tight" style={{ fontFamily: DISPLAY_FONT }}>Let's get to know your game</h1>
-          <p className="mt-2 text-sm" style={{ color: "#c9cdd4" }}>Five quick steps, about two minutes. Your answers stay private and shape your first practice plan.</p>
+          <p className="mt-2 text-sm" style={{ color: "#c9cdd4" }}>Five quick steps, about two minutes. Your answers stay private and shape your first practice plan. <a href="#/privacy" className="font-semibold underline" style={{ color: OPTIC }}>How we handle your data</a></p>
         </section>
       ) : (
         <button type="button" onClick={() => { setError(""); setStep(step - 1); }} className="inline-flex items-center gap-1 text-sm font-semibold" style={{ color: GREEN }}>

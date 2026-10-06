@@ -26,7 +26,9 @@ export function PlayerPicker({ result, myPlayerId, onPick, onUpdateCourt, showSh
   return (
     <Card accent={BLUE_SKY}>
       <WidgetHeader title="Which player are you?"
-        subtitle={showShotCounts ? "Pick yourself to filter research shot suggestions." : "Pick yourself before updating player-specific court feedback."} />
+        subtitle={showShotCounts
+          ? "Pick yourself. This filters the shot suggestions right away. Use “Update court feedback for me” to also change the court-position measures."
+          : "Pick yourself, then update the court analysis so position measures follow you."} />
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Players found in the video">
         {players.map((p) => {
           const mine = p.player_id === myPlayerId;

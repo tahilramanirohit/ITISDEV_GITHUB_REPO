@@ -31,6 +31,9 @@ export default function ProgressPage({ sb }: { sb: SupabaseClient }) {
     }).sort((x, y) => x.date.localeCompare(y.date));
   }, [items, assessments]);
 
+  const ratedIds = new Set(points.map((p) => p.sessionId));
+  const unrated = (items ?? []).map((i) => i.session).filter((s) => !ratedIds.has(s.id));
+
   if (items === null && !error) return <p className="text-sm" style={{ color: WHITE_SUB }}>Loading…</p>;
 
   const recent = points.slice(-10);
@@ -40,13 +43,30 @@ export default function ProgressPage({ sb }: { sb: SupabaseClient }) {
 
   return (
     <div className="space-y-6">
-      <ScreenTitle title="Progress" subtitle="How your own ratings change over time." />
+      <ScreenTitle title="Self-rated progress" subtitle="How your own skill ratings change over time. Video measurements are not turned into skill scores." />
       {error && <Notice tone="error">{error}</Notice>}
+      {items && <p className="text-sm font-semibold" style={{ color: INK }}>
+        {items.length} session{items.length === 1 ? "" : "s"} logged · {points.length} rated
+      </p>}
+      {unrated.length > 0 && <Card>
+        <p className="text-base font-bold" style={{ color: INK }}>{points.length === 0 ? "Your sessions are saved. Skill trends appear after you add self-ratings." : "Add ratings to earlier sessions"}</p>
+        <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Rate a session you already logged, including video sessions. No need to create a new one.</p>
+        <ul className="mt-3 divide-y" style={{ borderColor: BORDER }}>
+          {unrated.slice(0, 5).map((s) => <li key={s.id}>
+            <a href={`#/sessions/${s.id}?tab=plan`} className="flex min-h-[48px] items-center justify-between gap-3 py-2 text-sm">
+              <span className="min-w-0"><span className="block truncate font-semibold" style={{ color: INK }}>{s.title}</span>
+                <span className="text-xs" style={{ color: WHITE_SUB }}>{s.session_date}</span></span>
+              <span className="shrink-0 font-bold" style={{ color: GREEN }}>Rate this session →</span>
+            </a>
+          </li>)}
+        </ul>
+        {unrated.length > 5 && <p className="mt-2 text-xs" style={{ color: WHITE_SUB }}>{unrated.length - 5} more in Sessions.</p>}
+      </Card>}
       {points.length === 0 ? (
         <Card>
           <p className="text-base font-bold" style={{ color: INK }}>Nothing to chart yet</p>
-          <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Rate yourself after a session and your progress shows up here. Two or more sessions show trends.</p>
-          <a href="#/new?mode=self" className="mt-4 inline-flex min-h-[44px] items-center rounded-2xl px-5 text-sm font-bold" style={{ background: INK, color: WHITE }}>Rate a session</a>
+          <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Rate at least 3 skills for a session and it shows up here. Two or more rated sessions show trends.</p>
+          <a href="#/new?mode=self" className="mt-4 inline-flex min-h-[44px] items-center rounded-2xl px-5 text-sm font-bold" style={{ background: INK, color: WHITE }}>Log and rate a new session</a>
         </Card>
       ) : <div className="space-y-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
         <section className="rounded-3xl p-5" style={{ background: NAVY, color: WHITE }}>
