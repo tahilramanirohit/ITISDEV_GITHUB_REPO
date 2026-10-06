@@ -73,6 +73,8 @@ export function SelfReportView({ report, progress, previousLabel, onEdit }: {
         </div>
       </section>
 
+      <div className="space-y-5 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start lg:gap-6 lg:space-y-0">
+      <div className="space-y-5">
       {report.focus.length > 0 && <section className="space-y-3">
         <SectionTitle>Focus next</SectionTitle>
         {report.focus.map((item, i) => <FocusCard key={item.skill} index={i} item={item} />)}
@@ -87,6 +89,8 @@ export function SelfReportView({ report, progress, previousLabel, onEdit }: {
         </div>
       </section>}
 
+      </div>
+      <div className="space-y-5">
       {report.plan.length > 0 && <section className="space-y-3">
         <SectionTitle>Your next week</SectionTitle>
         <Card>
@@ -125,8 +129,11 @@ export function SelfReportView({ report, progress, previousLabel, onEdit }: {
         </Card>
       </section>}
 
+      </div>
+      </div>
+
       <p className="text-xs leading-relaxed" style={{ color: WHITE_SUB }}>{report.limitation}</p>
-      <button type="button" onClick={onEdit} className="w-full rounded-2xl py-3 text-sm font-bold" style={{ border: `1px solid ${BORDER}`, background: WHITE, color: INK }}>
+      <button type="button" onClick={onEdit} className="w-full rounded-2xl py-3 text-sm font-bold lg:w-auto lg:px-8" style={{ border: `1px solid ${BORDER}`, background: WHITE, color: INK }}>
         Edit my ratings
       </button>
     </div>

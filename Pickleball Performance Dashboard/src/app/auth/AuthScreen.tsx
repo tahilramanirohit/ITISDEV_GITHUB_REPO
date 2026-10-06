@@ -57,15 +57,15 @@ export function AuthScreen({ sb, devMode, guestMode, samplePreviewEnabled = fals
 
   return (
     <div className="min-h-screen" style={{ background: PAGE_BG, color: INK, fontFamily: "'Inter', sans-serif" }}>
-      <main className="mx-auto max-w-md space-y-6 px-4 pb-10" style={{ paddingTop: "max(1rem, env(safe-area-inset-top))" }}>
-        <div className="flex items-center justify-between gap-3">
+      <main className="mx-auto max-w-md space-y-6 px-4 pb-10 lg:grid lg:max-w-5xl lg:grid-cols-[minmax(0,1fr)_420px] lg:items-start lg:gap-x-10 lg:gap-y-6 lg:space-y-0 lg:px-8 lg:pt-8" style={{ paddingTop: "max(1rem, env(safe-area-inset-top))" }}>
+        <div className="flex items-center justify-between gap-3 lg:col-span-2">
           <PickleProLogo size="sm" tone="light" />
           <LargeTextToggle />
         </div>
-        <section aria-labelledby="intro-title" className="relative overflow-hidden rounded-3xl p-6" style={{ background: NAVY, color: "white" }}>
+        <section aria-labelledby="intro-title" className="relative overflow-hidden rounded-3xl p-6 lg:col-start-1 lg:row-start-2 lg:p-10" style={{ background: NAVY, color: "white" }}>
           <div aria-hidden="true" className="absolute -right-12 -top-12 h-44 w-44 rounded-full" style={{ background: OPTIC, opacity: 0.2 }} />
           <p className="text-xs font-bold uppercase tracking-wider" style={{ color: OPTIC }}>Your pickleball coach</p>
-          <h1 id="intro-title" className="mt-2 text-[2rem] font-extrabold leading-[1.05]" style={{ fontFamily: DISPLAY_FONT }}>
+          <h1 id="intro-title" className="mt-2 text-[2rem] font-extrabold leading-[1.05] lg:text-5xl" style={{ fontFamily: DISPLAY_FONT }}>
             Know what to practice next.
           </h1>
           <p className="mt-3 text-sm leading-relaxed" style={{ color: "#c9cdd4" }}>
@@ -77,7 +77,7 @@ export function AuthScreen({ sb, devMode, guestMode, samplePreviewEnabled = fals
             style={{ background: "rgba(255,255,255,0.12)", color: "white" }}>Explore sample dashboard</a>}
         </section>
 
-        <section aria-labelledby="auth-title" className="rounded-3xl p-6" style={{ background: WHITE, color: INK, border: `1px solid ${BORDER}`, boxShadow: CARD_GLOW }}>
+        <section aria-labelledby="auth-title" className="rounded-3xl p-6 lg:col-start-2 lg:row-span-2 lg:row-start-2" style={{ background: WHITE, color: INK, border: `1px solid ${BORDER}`, boxShadow: CARD_GLOW }}>
           <p className="text-xs font-bold uppercase tracking-wider mb-4" style={{ color: GREEN }}>Get started</p>
           {guestMode && <div className="mb-6">
             <button type="button" onClick={guestMode.onEnter} disabled={guestMode.busy || busy}
@@ -141,7 +141,7 @@ export function AuthScreen({ sb, devMode, guestMode, samplePreviewEnabled = fals
             </button>
           </p>
         </section>
-        <section aria-labelledby="how-it-works-title">
+        <section aria-labelledby="how-it-works-title" className="lg:col-start-1 lg:row-start-3">
           <h2 id="how-it-works-title" className="text-xs font-bold uppercase tracking-wider" style={{ color: GREEN }}>How it works</h2>
           <ol className="mt-3 rounded-3xl px-4" style={{ background: WHITE, border: `1px solid ${BORDER}` }}>
             {(trialNoWorker ? [
@@ -161,7 +161,7 @@ export function AuthScreen({ sb, devMode, guestMode, samplePreviewEnabled = fals
           </ol>
         </section>
       </main>
-      <footer className="mx-auto max-w-md px-4 pb-6 text-center text-xs" style={{ color: WHITE_SUB }}>
+      <footer className="mx-auto max-w-md px-4 pb-6 text-center text-xs lg:max-w-5xl" style={{ color: WHITE_SUB }}>
         PicklePro research prototype · DLSU CAPIT-01
       </footer>
     </div>

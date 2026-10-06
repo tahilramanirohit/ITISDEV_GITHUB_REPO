@@ -64,6 +64,7 @@ export default function ProfilePage({ sb, userId, account, signOut, devLinks }: 
       </div>
     </div>
 
+    <div className="space-y-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)] lg:items-start lg:gap-6 lg:space-y-0">
     <Card>
       <SectionTitle>Player details</SectionTitle>
       <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Private to your account. Context for your plans, not a skill rating.</p>
@@ -103,6 +104,7 @@ export default function ProfilePage({ sb, userId, account, signOut, devLinks }: 
       </form>
     </Card>
 
+    <div className="space-y-6">
     <a href="#/welcome" className="flex items-center justify-between rounded-3xl p-4 text-sm font-bold" style={{ background: OPTIC, color: INK }}>
       Update my game and starting skills <span aria-hidden="true">→</span>
     </a>
@@ -124,5 +126,7 @@ export default function ProfilePage({ sb, userId, account, signOut, devLinks }: 
       </button>
       {signOut.warning && <p className="mt-2 text-center text-xs" style={{ color: WHITE_SUB }}>{signOut.warning}</p>}
     </div>}
+    </div>
+    </div>
   </div>;
 }

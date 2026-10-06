@@ -68,9 +68,11 @@ export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: s
     <div className="space-y-6">
       <div>
         <p className="text-sm font-semibold" style={{ color: WHITE_SUB }}>{greeting()}{name ? `, ${name}` : ""}</p>
-        <h1 className="text-[1.75rem] font-extrabold leading-tight" style={{ color: INK, fontFamily: DISPLAY_FONT }}>Ready to play better?</h1>
+        <h1 className="text-[1.75rem] font-extrabold leading-tight lg:text-4xl" style={{ color: INK, fontFamily: DISPLAY_FONT }}>Ready to play better?</h1>
       </div>
 
+      <div className="space-y-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] lg:items-start lg:gap-8 lg:space-y-0">
+      <div className="space-y-6">
       <section className="relative overflow-hidden rounded-3xl p-5" style={{ background: NAVY, color: WHITE }}>
         <div aria-hidden="true" className="absolute -right-10 -top-10 h-40 w-40 rounded-full" style={{ background: OPTIC, opacity: 0.18 }} />
         <p className="text-xs font-bold uppercase tracking-wider" style={{ color: OPTIC }}>After your game</p>
@@ -100,9 +102,9 @@ export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: s
           {latestPlan.starting ? "Your starting focus" : "Your focus"}
         </SectionTitle>
         {latestPlan.starting && <p className="-mt-1 text-sm" style={{ color: WHITE_DIM }}>From your starting answers. Rate a session after you play to update it.</p>}
-        <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+        <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0">
           {latestPlan.report.focus.map((f, i) => (
-            <a key={f.skill} href={latestPlan.href} className="w-64 shrink-0 snap-start rounded-3xl p-4"
+            <a key={f.skill} href={latestPlan.href} className="w-64 shrink-0 snap-start rounded-3xl p-4 lg:w-auto"
               style={{ background: i === 0 ? OPTIC : WHITE, border: `1px solid ${i === 0 ? OPTIC : BORDER}`, boxShadow: CARD_GLOW }}>
               <p className="text-xs font-bold uppercase tracking-wider" style={{ color: i === 0 ? OPTIC_INK : GREEN }}>Focus {i + 1} · {f.rating}/5</p>
               <p className="mt-1 text-base font-bold" style={{ color: INK }}>{SKILL_INFO[f.skill].label}</p>
@@ -112,6 +114,8 @@ export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: s
         </div>
       </section>}
 
+      </div>
+      <div className="space-y-6">
       {error && <Notice tone="error">{error}</Notice>}
       <section className="space-y-3">
         <SectionTitle action={sessions.length > 3 ? <a href="#/sessions" className="inline-flex items-center gap-1 text-sm font-semibold" style={{ color: GREEN }}>See all <ArrowRight size={14} /></a> : undefined}>
@@ -126,6 +130,8 @@ export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: s
         <p className="flex items-center gap-2 text-sm font-bold" style={{ color: GREEN }}><Camera size={16} /> Have a recording?</p>
         <p className="mt-1 text-sm" style={{ color: INK }}>Video analysis is an optional extra. It maps where you stood on court using computer vision, alongside your own ratings.</p>
       </section>
+      </div>
+      </div>
     </div>
   );
 }

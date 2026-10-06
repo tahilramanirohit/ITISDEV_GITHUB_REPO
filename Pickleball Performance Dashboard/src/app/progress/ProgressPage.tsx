@@ -48,7 +48,7 @@ export default function ProgressPage({ sb }: { sb: SupabaseClient }) {
           <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Rate yourself after a session and your progress shows up here. Two or more sessions show trends.</p>
           <a href="#/new?mode=self" className="mt-4 inline-flex min-h-[44px] items-center rounded-2xl px-5 text-sm font-bold" style={{ background: INK, color: WHITE }}>Rate a session</a>
         </Card>
-      ) : <>
+      ) : <div className="space-y-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
         <section className="rounded-3xl p-5" style={{ background: NAVY, color: WHITE }}>
           <div className="flex items-end justify-between gap-3">
             <div>
@@ -58,7 +58,7 @@ export default function ProgressPage({ sb }: { sb: SupabaseClient }) {
             {change != null && <p className="text-sm font-bold" style={{ color: change > 0 ? OPTIC : change < 0 ? "#ffb08a" : "#c9cdd4" }}>
               {change > 0 ? "+" : ""}{change.toFixed(1)} since first</p>}
           </div>
-          <div className="mt-4 flex h-28 items-end gap-1.5" role="img" aria-label={`Average rating for the last ${recent.length} rated sessions`}>
+          <div className="mt-4 flex h-28 items-end gap-1.5 lg:h-48" role="img" aria-label={`Average rating for the last ${recent.length} rated sessions`}>
             {recent.map((p, i) => <div key={p.sessionId} className="flex h-full flex-1 flex-col justify-end" title={`${p.title}: ${p.overall.toFixed(1)}`}>
               <div className="w-full rounded-t-lg" style={{ height: `${(p.overall / 5) * 100}%`, background: i === recent.length - 1 ? OPTIC : "rgba(213,240,90,0.35)" }} />
             </div>)}
@@ -90,7 +90,7 @@ export default function ProgressPage({ sb }: { sb: SupabaseClient }) {
           </Card>
           <p className="text-xs" style={{ color: WHITE_SUB }}>Self ratings, not measurements. Video sessions add measured court positions in each session's Video tab.</p>
         </section>
-      </>}
+      </div>}
     </div>
   );
 }

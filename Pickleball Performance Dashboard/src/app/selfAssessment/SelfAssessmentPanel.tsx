@@ -154,7 +154,7 @@ export function SelfAssessmentPanel({ sb, session }: { sb: SupabaseClient; sessi
         {step === 0 && <p className="mt-3 text-sm" style={{ color: WHITE_DIM }}>Think about this session only. 3 means "okay for my level". Skip anything that didn't come up.</p>}
       </div>
 
-      {group !== "Wrap-up" ? skills.map((skill) => <SkillRater key={skill} skill={skill} value={draft.ratings[skill]} onChange={(v) => rate(skill, v)} />) : <>
+      {group !== "Wrap-up" ? <div className="grid gap-4 lg:grid-cols-2">{skills.map((skill) => <SkillRater key={skill} skill={skill} value={draft.ratings[skill]} onChange={(v) => rate(skill, v)} />)}</div> : <div className="space-y-4 lg:max-w-xl">
         <Stepper label="Games played" value={draft.games_played} max={50}
           onChange={(v) => setDraft((d) => ({ ...d, games_played: v, games_won: v == null ? null : Math.min(d.games_won ?? 0, v) }))} />
         {draft.games_played != null && <Stepper label="Games won" value={draft.games_won} max={draft.games_played}
@@ -173,10 +173,10 @@ export function SelfAssessmentPanel({ sb, session }: { sb: SupabaseClient; sessi
             onChange={(e) => setDraft((d) => ({ ...d, biggest_struggle: e.target.value }))}
             placeholder="e.g. my dinks kept popping up, I got stuck mid-court" className="w-full rounded-2xl px-4 py-3 text-base" style={fieldStyle} />
         </div>
-      </>}
+      </div>}
 
       {error && <Notice tone="error">{error}</Notice>}
-      <div className="flex gap-2">
+      <div className="flex gap-2 lg:max-w-xl">
         {step > 0 && <button type="button" onClick={() => setStep(step - 1)} aria-label="Previous step"
           className="flex min-h-[48px] w-14 items-center justify-center rounded-2xl" style={{ border: `1px solid ${BORDER}`, background: WHITE }}><ArrowLeft size={18} /></button>}
         {last

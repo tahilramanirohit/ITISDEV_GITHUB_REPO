@@ -49,7 +49,7 @@ const TABS = [
 function BottomTabs() {
   const { pathname } = useLocation();
   return (
-    <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 border-t"
+    <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 border-t lg:hidden"
       style={{ background: "rgba(255,255,255,0.96)", backdropFilter: "blur(12px)", borderColor: BORDER,
         paddingBottom: "env(safe-area-inset-bottom)" }}>
       <ul className="mx-auto grid max-w-xl grid-cols-5">
@@ -75,28 +75,66 @@ function BottomTabs() {
   );
 }
 
+/** Desktop navigation: a fixed left sidebar replaces the bottom tabs on large screens. */
+function SideNav({ account }: { account?: ReactNode }) {
+  const { pathname } = useLocation();
+  const items = TABS.filter((t) => !("primary" in t));
+  return (
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r px-4 py-6 lg:flex" style={{ background: WHITE, borderColor: BORDER }}>
+      <a href="#/" aria-label="PicklePro home" className="px-2"><PickleProLogo size="sm" tone="light" /></a>
+      <a href="#/new" className="mt-6 flex min-h-[48px] items-center justify-center gap-2 rounded-2xl text-sm font-bold"
+        style={{ background: OPTIC, color: OPTIC_INK }}><Plus size={18} strokeWidth={2.6} /> Log a session</a>
+      <nav aria-label="Sidebar" className="mt-6">
+        <ul className="space-y-1">
+          {items.map((tab) => {
+            const active = tab.match(pathname);
+            const Icon = tab.icon;
+            return (
+              <li key={tab.href}>
+                <a href={tab.href} aria-current={active ? "page" : undefined}
+                  className="flex min-h-[44px] items-center gap-3 rounded-xl px-3 text-sm font-semibold transition-colors hover:bg-[#f2f3f0]"
+                  style={active ? { background: INK, color: WHITE } : { color: INK }}>
+                  <Icon size={19} strokeWidth={active ? 2.5 : 2} />{tab.label}
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+      <div className="mt-auto space-y-3 px-2">
+        {account}
+        <p className="text-xs leading-relaxed" style={{ color: WHITE_SUB }}>PicklePro research prototype. Video findings have not yet been validated on real footage.</p>
+      </div>
+    </aside>
+  );
+}
+
 /**
- * Mobile-first frame. `tabs` shows the app's bottom navigation (signed-in
- * screens); `wide` lets research tools use more of a desktop screen.
+ * Mobile-first frame. `tabs` shows the app's navigation (signed-in screens):
+ * bottom tabs on phones, a sidebar and wider content on desktop. `wide` lets
+ * research tools use more of a desktop screen.
  */
 export function AppShell({ children, right, nav, tabs = false, wide = false }: {
   children: ReactNode; right?: ReactNode; nav?: ReactNode; tabs?: boolean; wide?: boolean;
 }) {
-  const width = wide ? "max-w-6xl" : "max-w-xl";
+  const width = wide ? "max-w-6xl" : tabs ? "max-w-xl lg:max-w-6xl" : "max-w-xl lg:max-w-3xl";
   return (
     <div style={{ background: PAGE_BG, minHeight: "100vh", color: INK, fontFamily: BODY_FONT }}>
-      <header className="sticky top-0 z-20 border-b" style={{ background: "rgba(255,255,255,0.94)", backdropFilter: "blur(12px)", borderColor: BORDER,
-        paddingTop: "env(safe-area-inset-top)" }}>
-        <div className={`${width} mx-auto flex min-h-[56px] items-center justify-between gap-3 px-4`}>
-          <a href="#/" aria-label="PicklePro home"><PickleProLogo size="sm" tone="light" /></a>
-          <div className="flex min-w-0 items-center gap-2">{right}</div>
-        </div>
-        {nav && <nav className={`${width} mx-auto flex flex-wrap gap-x-4 gap-y-1 px-4 pb-2 text-sm font-semibold`}>{nav}</nav>}
-      </header>
-      <main className={`${width} mx-auto px-4 pt-5 ${tabs ? "pb-28" : "pb-10"}`}>{children}</main>
-      {!tabs && <footer className="px-4 pb-6 text-center text-xs" style={{ color: WHITE_SUB }}>
-        PicklePro research prototype. Video findings depend on visibility and have not yet been validated on real footage.
-      </footer>}
+      {tabs && <SideNav account={right} />}
+      <div className={tabs ? "lg:pl-64" : undefined}>
+        <header className={`sticky top-0 z-20 border-b ${tabs ? "lg:hidden" : ""}`} style={{ background: "rgba(255,255,255,0.94)", backdropFilter: "blur(12px)", borderColor: BORDER,
+          paddingTop: "env(safe-area-inset-top)" }}>
+          <div className={`${width} mx-auto flex min-h-[56px] items-center justify-between gap-3 px-4`}>
+            <a href="#/" aria-label="PicklePro home"><PickleProLogo size="sm" tone="light" /></a>
+            <div className="flex min-w-0 items-center gap-2">{right}</div>
+          </div>
+          {nav && <nav className={`${width} mx-auto flex flex-wrap gap-x-4 gap-y-1 px-4 pb-2 text-sm font-semibold`}>{nav}</nav>}
+        </header>
+        <main className={`${width} mx-auto px-4 pt-5 ${tabs ? "pb-28 lg:px-8 lg:pb-12 lg:pt-8" : "pb-10"}`}>{children}</main>
+        {!tabs && <footer className="px-4 pb-6 text-center text-xs" style={{ color: WHITE_SUB }}>
+          PicklePro research prototype. Video findings depend on visibility and have not yet been validated on real footage.
+        </footer>}
+      </div>
       {tabs && <BottomTabs />}
     </div>
   );

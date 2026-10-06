@@ -106,11 +106,12 @@ describe("dev mode entry", () => {
     const cfg = getConfig({ DEV: false, VITE_ENABLE_GUEST_MODE: "true" });
     render(<App cfg={cfg} sb={sb as unknown as SupabaseClient} />);
     fireEvent.click(await screen.findByRole("button", { name: /Try with my own video/ }));
-    expect(await screen.findByText("Private guest")).toBeTruthy();
+    // Shown in both the phone top bar and the desktop sidebar.
+    expect((await screen.findAllByText("Private guest")).length).toBeGreaterThan(0);
     expect(sb.auth.signInAnonymously).toHaveBeenCalledOnce();
     expect(sb.rpc).not.toHaveBeenCalled();
     // Sign-out lives on the Profile tab of the mobile layout.
-    fireEvent.click(screen.getByRole("link", { name: "Profile" }));
+    fireEvent.click(within(screen.getByRole("navigation", { name: "Main" })).getByRole("link", { name: "Profile" }));
     expect(await screen.findByRole("button", { name: "Leave guest session" })).toBeTruthy();
   });
 
@@ -134,7 +135,8 @@ describe("dev mode entry", () => {
     const previewConfig = getConfig({ DEV: false, PROD: true, VITE_ENABLE_DEV_MODE: "true" });
     render(<App cfg={previewConfig} sb={sb as unknown as SupabaseClient} />);
     fireEvent.click(await screen.findByRole("button", { name: /Try PicklePro with sample sessions/ }));
-    expect(await screen.findByText("Dev mode (mock data)")).toBeTruthy();
+    // Shown in both the phone top bar and the desktop sidebar.
+    expect((await screen.findAllByText("Dev mode (mock data)")).length).toBeGreaterThan(0);
     expect(sb.auth.signInAnonymously).toHaveBeenCalledOnce();
   });
 
@@ -142,12 +144,13 @@ describe("dev mode entry", () => {
     const sb = fakeSupabase();
     render(<App cfg={devConfig} sb={sb as unknown as SupabaseClient} />);
     fireEvent.click(await screen.findByRole("button", { name: /Try PicklePro with sample sessions/ }));
-    expect(await screen.findByText("Dev mode (mock data)")).toBeTruthy();
+    // Shown in both the phone top bar and the desktop sidebar.
+    expect((await screen.findAllByText("Dev mode (mock data)")).length).toBeGreaterThan(0);
     expect(sb.auth.signInAnonymously).toHaveBeenCalledOnce();
     const [fn, args] = sb.rpc.mock.calls[0] as unknown as [string, { p_sessions: unknown[] }];
     expect(fn).toBe("seed_dev_mock_data");
     expect(args.p_sessions.length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole("link", { name: "Profile" }));
+    fireEvent.click(within(screen.getByRole("navigation", { name: "Main" })).getByRole("link", { name: "Profile" }));
     expect(await screen.findByRole("button", { name: "Exit dev mode" })).toBeTruthy();
   });
 
@@ -170,7 +173,10 @@ describe("mobile app layout", () => {
     for (const name of ["Home", "Sessions", "Log", "Progress", "Profile"]) {
       expect(within(nav).getByRole("link", { name })).toBeTruthy();
     }
-    fireEvent.click(screen.getByRole("link", { name: "Log" }));
+    fireEvent.click(within(nav).getByRole("link", { name: "Log" }));
+    // Desktop sidebar offers the same destinations.
+    const sidebar = screen.getByRole("navigation", { name: "Sidebar" });
+    for (const name of ["Home", "Sessions", "Progress", "Profile"]) expect(within(sidebar).getByRole("link", { name })).toBeTruthy();
     expect(await screen.findByRole("button", { name: /Rate my own game/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /Analyze a video/ })).toBeTruthy();
   });
