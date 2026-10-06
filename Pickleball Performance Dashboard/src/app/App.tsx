@@ -8,13 +8,16 @@ import { AuthScreen, PasswordRecoveryScreen } from "./auth/AuthScreen";
 import { useAuth } from "./auth/useAuth";
 import { AppShell } from "./shell/AppShell";
 import { Card, Notice, WidgetHeader } from "./shell/primitives";
-import { LAVENDER, ORANGE, WHITE, WHITE_DIM, WHITE_SUB } from "./theme";
+import { GREEN, INK, ORANGE, WHITE_DIM, WHITE_SUB } from "./theme";
 
 // Loaded only when their routes are visited, so sample data and dev tools are
 // not part of the main application bundle.
 const DesignPreview = lazy(() => import("./design-preview/DesignPreview"));
 const LocalPrototype = lazy(() => import("./local/LocalPrototype"));
+const HomePage = lazy(() => import("./home/HomePage"));
 const SessionsPage = lazy(() => import("./sessions/SessionsPage"));
+const NewSessionPage = lazy(() => import("./sessions/NewSessionPage"));
+const ProgressPage = lazy(() => import("./progress/ProgressPage"));
 const SessionDetail = lazy(() => import("./sessions/SessionDetail"));
 const ProfilePage = lazy(() => import("./profile/ProfilePage"));
 const LabelPage = lazy(() => import("./labelling/LabelPage"));
@@ -24,9 +27,9 @@ const Loading = () => <p className="p-8 text-sm" style={{ color: WHITE_SUB }}>Lo
 function DevLinks({ cfg }: { cfg: AppConfig }) {
   return (
     <>
-      <a href="#/label" style={{ color: LAVENDER }}>Label shots</a>
-      {cfg.localPrototypeEnabled && <a href="#/local-prototype" style={{ color: LAVENDER }}>Local prototype</a>}
-      {cfg.designPreviewEnabled && <a href="#/design-preview" style={{ color: LAVENDER }}>Design preview (sample data)</a>}
+      <a href="#/label" style={{ color: GREEN }}>Label shots</a>
+      {cfg.localPrototypeEnabled && <a href="#/local-prototype" style={{ color: GREEN }}>Local prototype</a>}
+      {cfg.designPreviewEnabled && <a href="#/design-preview" style={{ color: GREEN }}>Design preview (sample data)</a>}
     </>
   );
 }
@@ -130,25 +133,22 @@ function SignedInApp({ sb, cfg }: { sb: SupabaseClient; cfg: AppConfig }) {
   if (devBusy) return <p className="p-8 text-sm" style={{ color: WHITE_SUB }}>Creating mock data…</p>;
   const user = auth.session.user;
   const isGuest = !!user.is_anonymous && cfg.guestModeEnabled && !cfg.devModeEnabled;
+  const account = user.is_anonymous ? (isGuest ? "Private guest" : "Dev mode (mock data)") : user.email ?? "Signed in";
+  const signOutLabel = user.is_anonymous ? (isGuest ? "Leave guest session" : "Exit dev mode") : "Sign out";
   return (
-    <AppShell
-      nav={<><a href="#/" style={{ color: WHITE }}>My sessions</a><a href="#/profile" style={{ color: WHITE }}>Profile</a><DevLinks cfg={cfg} /></>}
-      right={
-        <div className="flex items-center gap-3 text-sm">
-          <span style={{ color: WHITE }}>
-            {user.is_anonymous ? (isGuest ? "Private guest" : "Dev mode (mock data)") : user.email}
-          </span>
-          <button type="button" onClick={() => void sb.auth.signOut()} className="px-3 py-1.5 rounded-lg"
-            title={user.is_anonymous ? "You may lose access to this guest's sessions after leaving or clearing browser data." : undefined}
-            style={{ color: WHITE, border: "1px solid #64718e" }}>{user.is_anonymous ? (isGuest ? "Leave guest session" : "Exit dev mode") : "Sign out"}</button>
-        </div>
-      }
-    >
+    <AppShell tabs
+      right={<span className="truncate rounded-full px-3 py-1.5 text-xs font-semibold" style={{ background: "#eef0ec", color: INK, maxWidth: "12rem" }}>{account}</span>}>
       <Suspense fallback={<Loading />}>
         <Routes>
-          <Route path="/" element={<SessionsPage sb={sb} />} />
+          <Route path="/" element={<HomePage sb={sb} userId={user.id} />} />
+          <Route path="/sessions" element={<SessionsPage sb={sb} />} />
+          <Route path="/new" element={<NewSessionPage sb={sb} trialNoWorker={cfg.trialNoWorker} />} />
           <Route path="/sessions/:sessionId" element={<SessionDetail sb={sb} userId={user.id} />} />
-          <Route path="/profile" element={<ProfilePage sb={sb} userId={user.id} />} />
+          <Route path="/progress" element={<ProgressPage sb={sb} />} />
+          <Route path="/profile" element={<ProfilePage sb={sb} userId={user.id} account={account}
+            signOut={{ label: signOutLabel, onClick: () => void sb.auth.signOut(),
+              warning: user.is_anonymous ? "You may lose access to this guest's sessions after leaving or clearing browser data." : undefined }}
+            devLinks={<DevLinks cfg={cfg} />} />} />
           <Route path="*" element={<Notice tone="warn">Page not found.</Notice>} />
         </Routes>
       </Suspense>
@@ -162,12 +162,12 @@ export default function App({ cfg = defaultConfig, sb = defaultSupabase }: { cfg
       <Suspense fallback={<Loading />}>
         <Routes>
           {/* Works without an account: videos and labels stay on this computer. */}
-          <Route path="/label" element={<AppShell nav={<><a href="#/" style={{ color: WHITE }}>Home</a><DevLinks cfg={cfg} /></>}><LabelPage /></AppShell>} />
+          <Route path="/label" element={<AppShell wide nav={<><a href="#/" style={{ color: GREEN }}>Home</a><DevLinks cfg={cfg} /></>}><LabelPage /></AppShell>} />
           <Route path="/design-preview" element={cfg.designPreviewEnabled ? <DesignPreview /> : <NotAvailable />} />
           <Route
             path="/local-prototype"
             element={cfg.localPrototypeEnabled
-              ? <AppShell nav={<><a href="#/" style={{ color: WHITE }}>Home</a><DevLinks cfg={cfg} /></>}><LocalPrototype /></AppShell>
+              ? <AppShell wide nav={<><a href="#/" style={{ color: GREEN }}>Home</a><DevLinks cfg={cfg} /></>}><LocalPrototype /></AppShell>
               : <NotAvailable />}
           />
           <Route path="/*" element={sb ? <SignedInApp sb={sb} cfg={cfg} /> : <SetupRequired cfg={cfg} />} />

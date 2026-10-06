@@ -45,6 +45,10 @@ done
 "${PSQL[@]}" -f "$HERE/local/06_legacy_run_assertions.sql" 2>&1 >/dev/null | sed -e 's/^psql:[^ ]* NOTICE:  /  /'
 "${PSQL[@]}" -f "$HERE/local/10_access_and_jobs.sql" 2>&1 >/dev/null | sed -e 's/^psql:[^ ]* NOTICE:  /  /'
 "${PSQL[@]}" -f "$HERE/local/20_dev_mock_data.sql" 2>&1 >/dev/null | sed -e 's/^psql:[^ ]* NOTICE:  /  /'
+"${PSQL[@]}" -f "$HERE/local/30_self_assessment.sql" 2>&1 >/dev/null | sed -e 's/^psql:[^ ]* NOTICE:  /  /'
+# The self-assessment migration is documented as safe to paste again into an existing project.
+"${PSQL[@]}" -c "set client_min_messages = warning" -f "$MIGRATIONS/20261006090000_self_assessment.sql" >/dev/null
+echo "  PASS self-assessment migration can be applied twice"
 
 # Concurrency: 20 simultaneous finalize calls (double clicks, two tabs) → one job.
 "${PSQL[@]}" <<'SQL'

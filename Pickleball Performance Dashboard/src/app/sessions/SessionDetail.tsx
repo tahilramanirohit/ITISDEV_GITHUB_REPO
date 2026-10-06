@@ -14,17 +14,19 @@ import { startResumableUpload, type UploadHandle } from "../../lib/upload/tusUpl
 import { formatBytes, validateVideoFile } from "../../lib/upload/validate";
 import { hasUploadConsent, recordUploadConsent } from "../../lib/api/capture";
 import { BLUE_SKY, BORDER, DISPLAY_FONT, LAVENDER, NAVY, NEON, NEON_D, ORANGE, WHITE_DIM, WHITE_SUB } from "../theme";
-import { Card, Notice } from "../shell/primitives";
+import { Card, Notice, SegmentedTabs } from "../shell/primitives";
+import { SelfAssessmentPanel } from "../selfAssessment/SelfAssessmentPanel";
 import { AnalysisParamsForm, ProgressBar, type AnalysisParams } from "../analysis/AnalysisStatus";
 import { CourtCorrection } from "../analysis/CourtCorrection";
 import { analysisJobParams, updatedJobParams, type CourtConfirmation } from "../../lib/analysis/courtReview";
 import { ResultView } from "../analysis/ResultView";
 import type { PreviousSession } from "../analysis/CoachingPanel";
 import { GoalFields } from "./GoalFields";
-import { JourneySteps } from "./JourneySteps";
 import { CapturePanel } from "./CapturePanel";
 
 const POLL_MS = 3000;
+
+type DetailTab = "plan" | "video" | "journal";
 
 export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; userId: string }) {
   const { sessionId = "" } = useParams();
@@ -46,6 +48,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
   const [goalDraft, setGoalDraft] = useState<GoalValues | null>(null);
   const [consentConfirmed, setConsentConfirmed] = useState(false);
   const [consentChecked, setConsentChecked] = useState(false);
+  const [tab, setTab] = useState<DetailTab | null>(null);
   const uploadRef = useRef<UploadHandle | null>(null);
   const inFlight = useRef(false); // guards against double clicks before React re-renders
 
@@ -181,6 +184,8 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
     return <Notice tone="error">Session not found. It may have been deleted, or it belongs to another account.</Notice>;
   }
   const { session, video, job } = bundle;
+  const selfMode = (session.review_mode ?? "video") === "self";
+  const activeTab: DetailTab = tab ?? (selfMode && !video ? "plan" : "video");
   const loggingOnly = session.play_format === "wall_practice" || session.play_format === "ball_machine";
   const canChangeVideo = !loggingOnly && (state === "not_uploaded" || state === "upload_incomplete");
   const finished = state === "completed" || state === "insufficient_data" || state === "failed";
@@ -195,47 +200,39 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
 
   return (
     <div className="space-y-4">
-      <a href="#/" className="inline-flex items-center gap-1 text-sm" style={{ color: BLUE_SKY }}><ArrowLeft size={12} /> All sessions</a>
+      <a href="#/sessions" className="inline-flex items-center gap-1 text-sm font-semibold" style={{ color: BLUE_SKY }}><ArrowLeft size={16} /> Sessions</a>
 
-      <section className="p-5 sm:p-8" style={{ background: NAVY, color: "white" }}>
-        <p className="text-sm font-bold uppercase tracking-widest" style={{ color: LAVENDER }}>Your video review</p>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="mt-2">
-            <h1 className="break-words font-bold uppercase leading-none" style={{ fontFamily: DISPLAY_FONT, fontSize: "clamp(2.6rem, 5vw, 4.8rem)" }}>{session.title}</h1>
-            <p className="text-sm mt-2" style={{ color: "#d4d9e5" }}>
-              {session.session_date} · {CONTEXT_LABELS[session.session_context]} · {FORMAT_LABELS[session.play_format]} · {session.performance_scope === "individual" ? "Individual analysis" : "Pair analysis"}
+      <section className="rounded-3xl p-5" style={{ background: NAVY, color: "white" }}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: LAVENDER }}>
+              {new Date(`${session.session_date}T12:00:00`).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })} · {CONTEXT_LABELS[session.session_context]} · {FORMAT_LABELS[session.play_format]}
             </p>
-            {session.notes && <p className="text-sm mt-2" style={{ color: "#d4d9e5" }}>{session.notes}</p>}
-            {session.improvement_goals?.length > 0 && (
-              <div className="mt-5">
-                <p className="text-sm font-bold uppercase tracking-wider" style={{ color: LAVENDER }}>Your focus</p>
-                <ul className="mt-1 flex flex-wrap gap-2">
-                  {session.improvement_goals.map((goal: ImprovementGoal) => (
-                    <li key={goal} className="text-sm px-2 py-1" style={{ border: "1px solid #64718e", color: "#e8ecf6" }}>
-                      {GOAL_LABELS[goal]} · self rating {session[`${goal}_rating`] ?? "not set"}{session[`${goal}_rating`] ? "/5" : ""}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            <button type="button" className="text-sm mt-2 underline" style={{ color: LAVENDER }}
-              onClick={() => setGoalDraft({
-                improvement_goals: session.improvement_goals ?? [],
-                positioning_rating: session.positioning_rating ?? null,
-                shot_outcomes_rating: session.shot_outcomes_rating ?? null,
-                shot_technique_rating: session.shot_technique_rating ?? null,
-            })}>Edit improvement goals</button>
+            <h1 className="mt-1 break-words text-2xl font-extrabold leading-tight" style={{ fontFamily: DISPLAY_FONT }}>{session.title}</h1>
           </div>
-          <div className="flex items-center gap-3 mt-2">
-            {state && <span className="text-sm font-bold uppercase tracking-wider" style={{ color: state === "failed" || state === "insufficient_data" ? "#ffc19f" : LAVENDER }}>{STATE_LABELS[state]}</span>}
-            <button type="button" title="Delete session" disabled={busy || state === "uploading" || state === "processing"}
-              onClick={() => { if (window.confirm("Delete this session, its video and results?")) void run(async () => { await deleteSession(sb, bundle); navigate("/"); }); }}
-              className="p-2 disabled:opacity-30" style={{ color: "white", border: "1px solid #64718e" }}>
-              <Trash2 size={14} />
-            </button>
-          </div>
+          <button type="button" title="Delete session" aria-label="Delete session" disabled={busy || state === "uploading" || state === "processing"}
+            onClick={() => { if (window.confirm("Delete this session, its ratings, video and results?")) void run(async () => { await deleteSession(sb, bundle); navigate("/sessions"); }); }}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full disabled:opacity-30" style={{ color: "white", border: "1px solid #3a3f48" }}>
+            <Trash2 size={16} />
+          </button>
         </div>
-        <div className="mt-6"><JourneySteps current={hasFeedback ? 3 : 2} tone="dark" /></div>
+        {session.notes && <p className="text-sm mt-2" style={{ color: "#c9cdd4" }}>{session.notes}</p>}
+        {session.improvement_goals?.length > 0 && (
+          <ul className="mt-4 flex flex-wrap gap-2" aria-label="Your focus">
+            {session.improvement_goals.map((goal: ImprovementGoal) => (
+              <li key={goal} className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: "rgba(255,255,255,0.1)", color: "#eef0f3" }}>
+                {GOAL_LABELS[goal]}{session[`${goal}_rating`] ? ` · ${session[`${goal}_rating`]}/5` : ""}
+              </li>
+            ))}
+          </ul>
+        )}
+        <button type="button" className="text-sm mt-3 font-semibold underline" style={{ color: LAVENDER }}
+          onClick={() => setGoalDraft({
+            improvement_goals: session.improvement_goals ?? [],
+            positioning_rating: session.positioning_rating ?? null,
+            shot_outcomes_rating: session.shot_outcomes_rating ?? null,
+            shot_technique_rating: session.shot_technique_rating ?? null,
+        })}>Edit focus</button>
       </section>
 
       {goalDraft && (
@@ -254,9 +251,20 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
         </Card>
       )}
 
-      <Card accent={BLUE_SKY}>
-        <p className="text-sm font-bold uppercase tracking-widest" style={{ color: BLUE_SKY }}>{hasFeedback ? "Step 3 of 3" : "Step 2 of 3"}</p>
-        <h2 className="text-xl font-bold text-[#101827] mt-1">{stepTitle}</h2>
+      <SegmentedTabs label="Session views" value={activeTab} onChange={setTab} tabs={[
+        { value: "plan", label: "Rate & plan" },
+        { value: "video", label: "Video", badge: selfMode ? "optional" : undefined },
+        { value: "journal", label: "Journal" },
+      ]} />
+
+      {activeTab === "plan" && <SelfAssessmentPanel sb={sb} session={session} />}
+      {activeTab === "journal" && <CapturePanel key={session.id} sb={sb} session={session} onSessionUpdated={() => void load()} />}
+
+      {activeTab === "video" && <>
+      {selfMode && !video && <Notice tone="info">Video analysis is optional. Your practice plan comes from your ratings in <strong>Rate &amp; plan</strong>. Add a clip here if you also want court positions measured.</Notice>}
+      <Card>
+        <p className="text-xs font-bold uppercase tracking-wider" style={{ color: BLUE_SKY }}>Video analysis{state ? ` · ${STATE_LABELS[state]}` : ""}</p>
+        <h2 className="text-xl font-bold text-[#0e1116] mt-1" style={{ fontFamily: DISPLAY_FONT }}>{stepTitle}</h2>
         <p className="text-sm mt-2 mb-4" style={{ color: WHITE_DIM }}>{loggingOnly
           ? "Wall and ball-machine sessions record your check-in, recovery and reflection without computer-vision analysis."
           : state ? stateDescription(state, job) : ""}</p>
@@ -418,8 +426,6 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
         {error && <div className="mt-3"><Notice tone="error">{error}</Notice></div>}
       </Card>
 
-      <CapturePanel key={session.id} sb={sb} session={session} onSessionUpdated={() => void load()} />
-
       {runHistory.length > 0 && <Card>
         <h2 className="text-lg font-bold text-[#101827]">Analysis history</h2>
         <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Each reanalysis is saved as a separate run. The active report changes only after a new run completes.</p>
@@ -440,6 +446,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
       {parsed && !parsed.ok && (
         <Notice tone="error">The stored result could not be read ({parsed.error}). It is not shown to avoid presenting it incorrectly.</Notice>
       )}
+      </>}
     </div>
   );
 }

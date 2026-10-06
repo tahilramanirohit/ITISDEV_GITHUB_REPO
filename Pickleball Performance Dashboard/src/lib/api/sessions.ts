@@ -7,6 +7,7 @@ import type {
   ImprovementGoal,
   PerformanceScope,
   PlayFormat,
+  ReviewMode,
   SessionContext,
   SessionRow,
   SelfRating,
@@ -108,6 +109,7 @@ export type NewSession = {
   session_context: SessionContext;
   play_format: PlayFormat;
   performance_scope: PerformanceScope;
+  review_mode: ReviewMode;
   notes: string | null;
   improvement_goals: ImprovementGoal[];
   positioning_rating: SelfRating | null;

@@ -11,6 +11,7 @@ export type PlayFormat = (typeof PLAY_FORMATS)[number];
 export type PerformanceScope = (typeof PERFORMANCE_SCOPES)[number];
 export type ImprovementGoal = (typeof IMPROVEMENT_GOALS)[number];
 export type SelfRating = 1 | 2 | 3 | 4 | 5;
+export type ReviewMode = "self" | "video";
 
 export const GOAL_LABELS: Record<ImprovementGoal, string> = {
   positioning: "Court positioning",
@@ -44,6 +45,8 @@ export type SessionRow = {
   session_context: SessionContext;
   play_format: PlayFormat;
   performance_scope: PerformanceScope;
+  /** Missing before the self-assessment migration is applied; treat as "video". */
+  review_mode?: ReviewMode;
   notes: string | null;
   improvement_goals: ImprovementGoal[];
   positioning_rating: SelfRating | null;

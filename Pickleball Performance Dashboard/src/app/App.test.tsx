@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import App from "./App";
 import { getConfig } from "../lib/config";
@@ -94,7 +94,9 @@ describe("dev mode entry", () => {
     expect(await screen.findByText("Private guest")).toBeTruthy();
     expect(sb.auth.signInAnonymously).toHaveBeenCalledOnce();
     expect(sb.rpc).not.toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: "Leave guest session" })).toBeTruthy();
+    // Sign-out lives on the Profile tab of the mobile layout.
+    fireEvent.click(screen.getByRole("link", { name: "Profile" }));
+    expect(await screen.findByRole("button", { name: "Leave guest session" })).toBeTruthy();
   });
 
   it("is hidden in production builds by default", async () => {
@@ -130,7 +132,8 @@ describe("dev mode entry", () => {
     const [fn, args] = sb.rpc.mock.calls[0] as unknown as [string, { p_sessions: unknown[] }];
     expect(fn).toBe("seed_dev_mock_data");
     expect(args.p_sessions.length).toBeGreaterThan(0);
-    expect(screen.getByRole("button", { name: "Exit dev mode" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("link", { name: "Profile" }));
+    expect(await screen.findByRole("button", { name: "Exit dev mode" })).toBeTruthy();
   });
 
   it("explains how to fix a missing database function and stays signed out", async () => {
@@ -139,5 +142,21 @@ describe("dev mode entry", () => {
     fireEvent.click(await screen.findByRole("button", { name: /Try PicklePro with sample sessions/ }));
     expect(await screen.findByText(/Apply the database migrations/)).toBeTruthy();
     await waitFor(() => expect(sb.auth.signOut).toHaveBeenCalled());
+  });
+});
+
+describe("mobile app layout", () => {
+  it("shows bottom tabs and offers rating without video when logging a session", async () => {
+    const sb = fakeSupabase();
+    const cfg = getConfig({ DEV: false, VITE_ENABLE_GUEST_MODE: "true" });
+    render(<App cfg={cfg} sb={sb as unknown as SupabaseClient} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Try with my own video/ }));
+    const nav = await screen.findByRole("navigation", { name: "Main" });
+    for (const name of ["Home", "Sessions", "Log", "Progress", "Profile"]) {
+      expect(within(nav).getByRole("link", { name })).toBeTruthy();
+    }
+    fireEvent.click(screen.getByRole("link", { name: "Log" }));
+    expect(await screen.findByRole("button", { name: /Rate my own game/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Analyze a video/ })).toBeTruthy();
   });
 });
