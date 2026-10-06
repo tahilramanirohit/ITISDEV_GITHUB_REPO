@@ -23,7 +23,7 @@ export function ScoreRing({ value, size = 88 }: { value: number; size?: number }
 function RatingDots({ value }: { value: number }) {
   return (
     <span className="inline-flex gap-1" aria-label={`${value} of 5`}>
-      {[1, 2, 3, 4, 5].map((n) => <span key={n} className="h-1.5 w-4 rounded-full" style={{ background: n <= value ? GREEN : "#dfe2dc" }} />)}
+      {[1, 2, 3, 4, 5].map((n) => <span key={n} className="h-1.5 w-4 rounded-full" style={{ background: n <= value ? GREEN : "#e2e5ea" }} />)}
     </span>
   );
 }
@@ -64,12 +64,12 @@ export function SelfReportView({ report, progress, previousLabel, onEdit }: {
   }
   return (
     <div className="space-y-5">
-      <section className="flex items-center gap-4 rounded-3xl p-5" style={{ background: NAVY, color: WHITE }}>
+      <section className="flex items-center gap-4 rounded-2xl p-5" style={{ background: NAVY, color: WHITE }}>
         <span className="shrink-0"><ScoreRing value={report.overall} /></span>
         <div className="min-w-0">
           <p className="text-xs font-bold uppercase tracking-wider" style={{ color: OPTIC }}>Your practice plan</p>
           <p className="text-xl font-extrabold leading-tight" style={{ fontFamily: DISPLAY_FONT }}>{report.level}</p>
-          <p className="mt-1 text-sm" style={{ color: "#c9cdd4" }}>{report.introduction}</p>
+          <p className="mt-1 text-sm" style={{ color: "#dfe3ff" }}>{report.introduction}</p>
         </div>
       </section>
 

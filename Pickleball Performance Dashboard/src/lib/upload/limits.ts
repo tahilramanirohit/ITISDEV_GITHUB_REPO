@@ -9,6 +9,9 @@ export type UploadLimits = {
   max_total_bytes: number;
   max_uploads_per_day: number;
 };
+/** Capture minimums the analyzer needs (checked in the browser; the worker re-checks the file). */
+export const MIN_SHORT_SIDE_PX = 720;
+export type VideoMeta = { duration: number | null; width: number | null; height: number | null };
 export const DEFAULT_UPLOAD_LIMITS: UploadLimits = {
   max_file_bytes: 50_000_000, min_duration_s: 10, max_duration_s: 300, max_total_bytes: 1_000_000_000, max_uploads_per_day: 5,
 };
@@ -42,7 +45,12 @@ export function formatDuration(seconds: number): string {
 }
 
 /** Why this file cannot be uploaded under the limits, or null when it can. */
-export function uploadBlocker(file: { size: number }, durationS: number | null, limits: UploadLimits, usage: UploadUsage | null): string | null {
+export function uploadBlocker(file: { size: number }, durationS: number | null, limits: UploadLimits, usage: UploadUsage | null,
+  size?: { width: number | null; height: number | null }): string | null {
+  if (size?.width && size?.height) {
+    if (size.height > size.width) return "This video was filmed upright. Film in landscape (phone sideways) so the whole court fits.";
+    if (Math.min(size.width, size.height) < MIN_SHORT_SIDE_PX) return `This video is ${Math.min(size.width, size.height)}p. Use 720p or higher so players and lines are clear.`;
+  }
   if (file.size > limits.max_file_bytes) return `This video is ${formatBytes(file.size)}. The limit is ${formatBytes(limits.max_file_bytes)} per video.`;
   if (durationS != null && durationS < limits.min_duration_s) return `This clip is ${formatDuration(durationS)}. Use at least ${formatDuration(limits.min_duration_s)} so a rally is visible.`;
   if (durationS != null && durationS > limits.max_duration_s) return `This clip is ${formatDuration(durationS)}. Trim it to ${formatDuration(limits.max_duration_s)} or less before uploading.`;
@@ -62,17 +70,21 @@ export function limitErrorText(message: string): string | null {
   return null;
 }
 
-/** Reads a local video's length from its metadata; null when the browser cannot tell. */
-export function probeVideoDuration(file: Blob, timeoutMs = 8000): Promise<number | null> {
+/** Reads a local video's length and frame size from its metadata; nulls when the browser cannot tell. */
+export function probeVideo(file: Blob, timeoutMs = 8000): Promise<VideoMeta> {
+  const unknown: VideoMeta = { duration: null, width: null, height: null };
   return new Promise((resolve) => {
-    if (typeof document === "undefined" || typeof URL.createObjectURL !== "function") return resolve(null);
+    if (typeof document === "undefined" || typeof URL.createObjectURL !== "function") return resolve(unknown);
     const video = document.createElement("video");
     const url = URL.createObjectURL(file);
-    const done = (value: number | null) => { window.clearTimeout(timer); URL.revokeObjectURL(url); video.removeAttribute("src"); resolve(value); };
-    const timer = window.setTimeout(() => done(null), timeoutMs);
+    const done = (value: VideoMeta) => { window.clearTimeout(timer); URL.revokeObjectURL(url); video.removeAttribute("src"); resolve(value); };
+    const timer = window.setTimeout(() => done(unknown), timeoutMs);
     video.preload = "metadata";
-    video.onloadedmetadata = () => done(Number.isFinite(video.duration) && video.duration > 0 ? video.duration : null);
-    video.onerror = () => done(null);
+    video.onloadedmetadata = () => done({
+      duration: Number.isFinite(video.duration) && video.duration > 0 ? video.duration : null,
+      width: video.videoWidth || null, height: video.videoHeight || null,
+    });
+    video.onerror = () => done(unknown);
     video.src = url;
   });
 }

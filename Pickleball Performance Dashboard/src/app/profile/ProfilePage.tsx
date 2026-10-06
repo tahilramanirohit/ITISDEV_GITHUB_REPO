@@ -1,13 +1,11 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { LogOut } from "lucide-react";
-import { getProfile, saveProfile, saveSessionDefaults, type ProfileInput, type SessionDefaults } from "../../lib/api/profile";
+import { ChevronRight, LogOut, Settings } from "lucide-react";
+import { getProfile, saveProfile, type ProfileInput } from "../../lib/api/profile";
+import { useSessionsData, weekStreak } from "../sessions/sessionUi";
 import { playerCode } from "../../lib/api/players";
-import { friendlyDbError } from "../../lib/api/selfAssessment";
-import { FORMAT_LABELS, KIND_LABELS, SOLO_FORMATS, type PlayFormat, type SessionKind } from "../../lib/api/types";
-import { Card, Chip, Notice, PrimaryButton, ScreenTitle, SectionTitle, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
-import { LargeTextToggle } from "../shell/AppShell";
-import { DISPLAY_FONT, INK, OPTIC, ROSE, WHITE_DIM, WHITE_SUB } from "../theme";
+import { Card, Chip, Notice, PrimaryButton, SectionTitle, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
+import { BLUE, BORDER, HERO, INK, OPTIC, ROSE, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
 
 const empty: ProfileInput = {
   display_name: "", dominant_hand: null, years_playing: null, usual_format: null,
@@ -17,28 +15,16 @@ const empty: ProfileInput = {
 const HANDS = [["right", "Right"], ["left", "Left"], ["ambidextrous", "Both"]] as const;
 const FORMATS = [["singles", "Singles"], ["doubles", "Doubles"], ["both", "Both"]] as const;
 
-export default function ProfilePage({ sb, userId, account, signOut, devLinks }: {
+export default function ProfilePage({ sb, userId, account, signOut }: {
   sb: SupabaseClient; userId: string; account?: string;
-  signOut?: { label: string; onClick: () => void; warning?: string }; devLinks?: ReactNode;
+  signOut?: { label: string; onClick: () => void; warning?: string };
 }) {
+  const { items, assessments } = useSessionsData(sb);
   const [form, setForm] = useState<ProfileInput>(empty);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
-  const [defaults, setDefaults] = useState<SessionDefaults>({ default_review_mode: null, default_session_kind: null, default_play_format: null });
-  const [savingDefaults, setSavingDefaults] = useState(false);
-  const [defaultsMessage, setDefaultsMessage] = useState("");
-
-  async function submitDefaults() {
-    setSavingDefaults(true); setDefaultsMessage("");
-    try {
-      await saveSessionDefaults(sb, userId, defaults);
-      setDefaultsMessage("Saved. New sessions start with these settings.");
-    } catch (e) {
-      setDefaultsMessage(friendlyDbError(e instanceof Error ? e.message : String((e as { message?: string })?.message ?? e)));
-    } finally { setSavingDefaults(false); }
-  }
 
   useEffect(() => {
     let active = true;
@@ -47,9 +33,6 @@ export default function ProfilePage({ sb, userId, account, signOut, devLinks }: 
         display_name: profile.display_name ?? "", dominant_hand: profile.dominant_hand ?? null,
         years_playing: profile.years_playing ?? null, usual_format: profile.usual_format ?? null,
         self_level: profile.self_level ?? null, is_adult_confirmed: !!profile.is_adult_confirmed,
-      }); if (active && profile) setDefaults({
-        default_review_mode: profile.default_review_mode ?? null, default_session_kind: profile.default_session_kind ?? null,
-        default_play_format: profile.default_play_format ?? null,
       }); })
       .catch((e) => { if (active) setError(e instanceof Error ? e.message : String(e)); })
       .finally(() => { if (active) setLoading(false); });
@@ -71,20 +54,34 @@ export default function ProfilePage({ sb, userId, account, signOut, devLinks }: 
     } finally { setSaving(false); }
   }
 
-  const initials = (form.display_name || account || "P").trim().slice(0, 1).toUpperCase();
+  const letter = (form.display_name || account || "P").trim().slice(0, 1).toUpperCase();
+  const sessions = items ?? [];
+  const rated = sessions.filter((i) => assessments.some((x) => x.session_id === i.session.id)).length;
+  const streak = weekStreak(sessions.map((i) => i.session.session_date));
   if (loading) return <p className="text-sm" style={{ color: WHITE_SUB }}>Loading profile…</p>;
   return <div className="space-y-6">
-    <ScreenTitle title="Profile" />
-    <div className="flex items-center gap-4">
-      <span className="flex h-16 w-16 items-center justify-center rounded-full text-2xl font-extrabold" style={{ background: OPTIC, color: INK, fontFamily: DISPLAY_FONT }}>{initials}</span>
-      <div className="min-w-0">
-        <p className="truncate text-lg font-bold" style={{ color: INK }}>{form.display_name || "Player"}</p>
-        {account && <p className="truncate text-sm" style={{ color: WHITE_DIM }}>{account}</p>}
-        <p className="mt-1 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold" style={{ background: "#e6e8e3", color: INK }} title="Your player ID">
+    {/* Profile header in the style of a sports app: banner, avatar, name, ID and a stats row. */}
+    <section className="overflow-hidden rounded-2xl" style={{ background: WHITE, border: `1px solid ${BORDER}` }} aria-label="Your profile">
+      <div className="h-20 md:h-24" style={{ background: `linear-gradient(120deg, ${HERO}, ${BLUE})` }} />
+      <div className="px-4 pb-4">
+        <div className="-mt-10 flex items-end justify-between gap-3">
+          <span className="flex h-20 w-20 items-center justify-center rounded-full text-3xl font-extrabold" style={{ background: OPTIC, color: INK, border: `4px solid ${WHITE}` }}>{letter}</span>
+          <a href="#/settings" className="mb-1 inline-flex min-h-[40px] items-center gap-1.5 rounded-full px-4 text-sm font-bold" style={{ border: `1px solid ${BORDER}`, color: INK }}>
+            <Settings size={16} aria-hidden="true" /> Settings
+          </a>
+        </div>
+        <h1 className="mt-2 text-2xl font-extrabold tracking-tight" style={{ color: INK }}>{form.display_name || "Player"}</h1>
+        <p className="text-sm" style={{ color: WHITE_DIM }}>{[form.self_level, form.usual_format && `${form.usual_format[0].toUpperCase()}${form.usual_format.slice(1)}`].filter(Boolean).join(" · ") || account}</p>
+        <p className="mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold" style={{ background: "#eceef2", color: INK }} title="Your player ID">
           Player ID <span className="font-mono">{playerCode(userId)}</span>
         </p>
+        <div className="mt-4 grid grid-cols-3 gap-3 border-t pt-3" style={{ borderColor: BORDER }}>
+          {[["Sessions", sessions.length], ["Rated", rated], ["Week streak", streak]].map(([label, value]) => (
+            <div key={label as string}><p className="text-[11px]" style={{ color: WHITE_SUB }}>{label}</p><p className="text-xl font-extrabold" style={{ color: INK }}>{value}</p></div>
+          ))}
+        </div>
       </div>
-    </div>
+    </section>
 
     <div className="space-y-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)] lg:items-start lg:gap-6 lg:space-y-0">
     <Card>
@@ -127,63 +124,19 @@ export default function ProfilePage({ sb, userId, account, signOut, devLinks }: 
     </Card>
 
     <div className="space-y-6">
-    <a href="#/welcome" className="flex items-center justify-between rounded-3xl p-4 text-sm font-bold" style={{ background: OPTIC, color: INK }}>
-      Update my game and starting skills <span aria-hidden="true">→</span>
-    </a>
-
-    <Card>
-      <SectionTitle>Default settings</SectionTitle>
-      <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Used to fill in new sessions. You can still change them each time.</p>
-      <div className="mt-4 space-y-4">
-        <div>
-          <p className={labelClass} style={labelStyle}>How to review</p>
-          <div className="flex flex-wrap gap-2">
-            {([["self", "Rate my game"], ["video", "Video analysis"]] as const).map(([v, l]) =>
-              <Chip key={v} selected={defaults.default_review_mode === v} onClick={() => setDefaults({ ...defaults, default_review_mode: defaults.default_review_mode === v ? null : v })}>{l}</Chip>)}
-          </div>
-        </div>
-        <div>
-          <p className={labelClass} style={labelStyle}>Kind of session</p>
-          <div className="flex flex-wrap gap-2">
-            {(["solo", "match", "tournament"] as SessionKind[]).map((k) =>
-              <Chip key={k} selected={defaults.default_session_kind === k} onClick={() => setDefaults({ ...defaults, default_session_kind: defaults.default_session_kind === k ? null : k,
-                default_play_format: k === "solo" ? (SOLO_FORMATS.includes(defaults.default_play_format as PlayFormat) ? defaults.default_play_format : null)
-                  : defaults.default_play_format === "singles" || defaults.default_play_format === "doubles" ? defaults.default_play_format : null })}>{KIND_LABELS[k]}</Chip>)}
-          </div>
-        </div>
-        <div>
-          <p className={labelClass} style={labelStyle}>Format</p>
-          <div className="flex flex-wrap gap-2">
-            {(defaults.default_session_kind === "solo" ? SOLO_FORMATS : ["singles", "doubles"] as PlayFormat[]).map((f) =>
-              <Chip key={f} selected={defaults.default_play_format === f} onClick={() => setDefaults({ ...defaults, default_play_format: defaults.default_play_format === f ? null : f })}>{FORMAT_LABELS[f]}</Chip>)}
-          </div>
-        </div>
-        {defaultsMessage && <Notice tone={defaultsMessage.startsWith("Saved") ? "info" : "error"}>{defaultsMessage}</Notice>}
-        <PrimaryButton type="button" tone="light" className="w-full" disabled={savingDefaults} onClick={() => void submitDefaults()}>
-          {savingDefaults ? "Saving…" : "Save default settings"}
-        </PrimaryButton>
-      </div>
-    </Card>
-
-    <Card>
-      <SectionTitle>Display</SectionTitle>
-      <div className="mt-3"><LargeTextToggle /></div>
-    </Card>
-
-    <Card>
-      <SectionTitle>Your data</SectionTitle>
-      <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>What PicklePro stores, who can see it, how long it is kept and how to delete it.</p>
-      <a href="#/privacy" className="mt-3 inline-flex min-h-[44px] items-center text-sm font-bold underline" style={{ color: "#11804f" }}>Read about your data and privacy</a>
-    </Card>
-
-    {devLinks && <Card>
-      <SectionTitle>Research tools</SectionTitle>
-      <div className="mt-2 flex flex-col gap-2 text-sm font-semibold">{devLinks}</div>
-    </Card>}
+    <section className="overflow-hidden rounded-2xl" style={{ background: WHITE, border: `1px solid ${BORDER}` }} aria-label="Profile links">
+      {[["#/settings", "Settings", "Default settings, display, research tools"], ["#/welcome", "My game and starting skills", "Level, goals and usual skill ratings"],
+        ["#/progress", "Self-rated progress", "How your ratings change over time"], ["#/privacy", "Your data and privacy", "What is stored and how to delete it"]].map(([href, title, detail]) => (
+        <a key={href} href={href} className="flex min-h-[56px] items-center justify-between gap-3 border-b px-4 py-3 last:border-b-0" style={{ borderColor: BORDER }}>
+          <span className="min-w-0"><span className="block text-sm font-semibold" style={{ color: INK }}>{title}</span><span className="block text-xs" style={{ color: WHITE_SUB }}>{detail}</span></span>
+          <ChevronRight size={18} style={{ color: WHITE_SUB }} aria-hidden="true" />
+        </a>
+      ))}
+    </section>
 
     {signOut && <div>
       <button type="button" onClick={signOut.onClick} title={signOut.warning}
-        className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl text-sm font-bold" style={{ border: `1px solid ${ROSE}40`, color: ROSE }}>
+        className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-sm font-bold" style={{ border: `1px solid ${ROSE}40`, color: ROSE }}>
         <LogOut size={16} /> {signOut.label}
       </button>
       {signOut.warning && <p className="mt-2 text-center text-xs" style={{ color: WHITE_SUB }}>{signOut.warning}</p>}

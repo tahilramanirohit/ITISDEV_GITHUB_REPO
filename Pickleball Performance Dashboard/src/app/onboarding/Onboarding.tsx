@@ -10,7 +10,7 @@ import { GOAL_LABELS, IMPROVEMENT_GOALS, type ImprovementGoal } from "../../lib/
 import { SELF_SKILLS, SKILL_GROUPS, SKILL_INFO, type SkillRating } from "../../lib/coaching/selfAssessment";
 import { BORDER, DISPLAY_FONT, GREEN, INK, NAVY, OPTIC, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Chip, Notice, PrimaryButton, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
-import { SkillRater } from "../selfAssessment/SelfAssessmentPanel";
+import { SkillRater } from "../selfAssessment/SkillRater";
 
 export const EXPERIENCE = [
   { years: 0, label: "Brand new" }, { years: 0.5, label: "Under a year" }, { years: 1.5, label: "1–2 years" },
@@ -93,11 +93,11 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
   return (
     <div className="space-y-5">
       {step === 0 ? (
-        <section className="relative overflow-hidden rounded-3xl p-5" style={{ background: NAVY, color: WHITE }}>
+        <section className="relative overflow-hidden rounded-2xl p-5" style={{ background: NAVY, color: WHITE }}>
           <div aria-hidden="true" className="absolute -right-10 -top-10 h-36 w-36 rounded-full" style={{ background: OPTIC, opacity: 0.2 }} />
           <p className="text-xs font-bold uppercase tracking-wider" style={{ color: OPTIC }}>Welcome to PicklePro</p>
           <h1 className="mt-1 text-2xl font-extrabold leading-tight" style={{ fontFamily: DISPLAY_FONT }}>Let's get to know your game</h1>
-          <p className="mt-2 text-sm" style={{ color: "#c9cdd4" }}>Five quick steps, about two minutes. Your answers stay private and shape your first practice plan. <a href="#/privacy" className="font-semibold underline" style={{ color: OPTIC }}>How we handle your data</a></p>
+          <p className="mt-2 text-sm" style={{ color: "#dfe3ff" }}>Five quick steps, about two minutes. Your answers stay private and shape your first practice plan. <a href="#/privacy" className="font-semibold underline" style={{ color: OPTIC }}>How we handle your data</a></p>
         </section>
       ) : (
         <button type="button" onClick={() => { setError(""); setStep(step - 1); }} className="inline-flex items-center gap-1 text-sm font-semibold" style={{ color: GREEN }}>
@@ -111,7 +111,7 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
           {onCancel && <button type="button" onClick={onCancel} className="normal-case underline" style={{ color: WHITE_SUB }}>Cancel</button>}
         </div>
         <div className="mt-2 grid gap-1.5" style={{ gridTemplateColumns: `repeat(${STEPS.length}, minmax(0, 1fr))` }} aria-hidden="true">
-          {STEPS.map((s, i) => <span key={s} className="h-1.5 rounded-full" style={{ background: i <= step ? INK : "#dcdfd8" }} />)}
+          {STEPS.map((s, i) => <span key={s} className="h-1.5 rounded-full" style={{ background: i <= step ? INK : "#e2e5ea" }} />)}
         </div>
       </div>
 
@@ -159,7 +159,7 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
             className="flex w-full items-center gap-3 rounded-2xl p-4 text-left"
             style={{ background: WHITE, border: `${selected ? 2 : 1}px solid ${selected ? INK : BORDER}` }}>
             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg" aria-hidden="true"
-              style={{ background: selected ? INK : WHITE, border: `1.5px solid ${selected ? INK : "#c5c8c1"}`, color: WHITE }}>{selected && <Check size={15} strokeWidth={3} />}</span>
+              style={{ background: selected ? INK : WHITE, border: `1.5px solid ${selected ? INK : "#c7ccd4"}`, color: WHITE }}>{selected && <Check size={15} strokeWidth={3} />}</span>
             <span><strong className="block text-sm" style={{ color: INK }}>{GOAL_LABELS[goal]}</strong>
               <span className="block text-xs" style={{ color: WHITE_DIM }}>{GOAL_HINTS[goal]}</span></span>
           </button>;

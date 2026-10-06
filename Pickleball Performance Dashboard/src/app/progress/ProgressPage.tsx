@@ -66,24 +66,24 @@ export default function ProgressPage({ sb }: { sb: SupabaseClient }) {
         <Card>
           <p className="text-base font-bold" style={{ color: INK }}>Nothing to chart yet</p>
           <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Rate at least 3 skills for a session and it shows up here. Two or more rated sessions show trends.</p>
-          <a href="#/new?mode=self" className="mt-4 inline-flex min-h-[44px] items-center rounded-2xl px-5 text-sm font-bold" style={{ background: INK, color: WHITE }}>Log and rate a new session</a>
+          <a href="#/new?mode=self" className="mt-4 inline-flex min-h-[44px] items-center rounded-full px-5 text-sm font-bold" style={{ background: INK, color: WHITE }}>Log and rate a new session</a>
         </Card>
       ) : <div className="space-y-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
-        <section className="rounded-3xl p-5" style={{ background: NAVY, color: WHITE }}>
+        <section className="rounded-2xl p-5" style={{ background: NAVY, color: WHITE }}>
           <div className="flex items-end justify-between gap-3">
             <div>
               <p className="text-xs font-bold uppercase tracking-wider" style={{ color: OPTIC }}>Average self rating</p>
-              <p className="text-4xl font-extrabold" style={{ fontFamily: DISPLAY_FONT }}>{last!.overall.toFixed(1)}<span className="text-lg" style={{ color: "#9aa1ab" }}>/5</span></p>
+              <p className="text-4xl font-extrabold" style={{ fontFamily: DISPLAY_FONT }}>{last!.overall.toFixed(1)}<span className="text-lg" style={{ color: "#c7cdff" }}>/5</span></p>
             </div>
-            {change != null && <p className="text-sm font-bold" style={{ color: change > 0 ? OPTIC : change < 0 ? "#ffb08a" : "#c9cdd4" }}>
+            {change != null && <p className="text-sm font-bold" style={{ color: change > 0 ? OPTIC : change < 0 ? "#ffb08a" : "#dfe3ff" }}>
               {change > 0 ? "+" : ""}{change.toFixed(1)} since first</p>}
           </div>
           <div className="mt-4 flex h-28 items-end gap-1.5 lg:h-48" role="img" aria-label={`Average rating for the last ${recent.length} rated sessions`}>
             {recent.map((p, i) => <div key={p.sessionId} className="flex h-full flex-1 flex-col justify-end" title={`${p.title}: ${p.overall.toFixed(1)}`}>
-              <div className="w-full rounded-t-lg" style={{ height: `${(p.overall / 5) * 100}%`, background: i === recent.length - 1 ? OPTIC : "rgba(213,240,90,0.35)" }} />
+              <div className="w-full rounded-t-lg" style={{ height: `${(p.overall / 5) * 100}%`, background: i === recent.length - 1 ? OPTIC : "rgba(254,188,23,0.45)" }} />
             </div>)}
           </div>
-          <p className="mt-2 text-xs" style={{ color: "#9aa1ab" }}>{recent.length} most recent rated session{recent.length === 1 ? "" : "s"}</p>
+          <p className="mt-2 text-xs" style={{ color: "#c7cdff" }}>{recent.length} most recent rated session{recent.length === 1 ? "" : "s"}</p>
         </section>
 
         <section className="space-y-3">

@@ -27,7 +27,7 @@ function ModeCard({ selected, onSelect, icon, title, detail, tag }: {
 }) {
   return (
     <button type="button" aria-pressed={selected} onClick={onSelect}
-      className="flex w-full items-start gap-3 rounded-3xl p-4 text-left transition-transform active:scale-[0.99]"
+      className="flex w-full items-start gap-3 rounded-2xl p-4 text-left transition-transform active:scale-[0.99]"
       style={{ background: WHITE, boxShadow: CARD_GLOW, border: `2px solid ${selected ? INK : BORDER}` }}>
       <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl" style={{ background: selected ? INK : GREEN_BG, color: selected ? WHITE : GREEN }}>{icon}</span>
       <span className="min-w-0 flex-1">
@@ -144,7 +144,7 @@ export default function NewSessionPage({ sb, userId, trialNoWorker = false }: { 
           <p className={labelClass} style={labelStyle}>What kind of session?</p>
           <div className="grid grid-cols-3 gap-2" role="group" aria-label="Session kind">
             {(["solo", "match", "tournament"] as SessionKind[]).map((k) => <button key={k} type="button" aria-pressed={kind === k} onClick={() => setKind(k)}
-              className="min-h-[52px] rounded-2xl px-2 text-sm font-bold" style={kind === k ? { background: INK, color: WHITE } : { background: WHITE, color: INK, border: `1px solid ${BORDER}` }}>
+              className="min-h-[52px] rounded-full px-2 text-sm font-bold" style={kind === k ? { background: INK, color: WHITE } : { background: WHITE, color: INK, border: `1px solid ${BORDER}` }}>
               {KIND_LABELS[k]}</button>)}
           </div>
           <p className="text-xs" style={{ color: WHITE_SUB }}>
@@ -171,7 +171,7 @@ export default function NewSessionPage({ sb, userId, trialNoWorker = false }: { 
           {kind === "solo" && form.review_mode === "video" && form.play_format !== "drill_other" &&
             <p className="text-xs" style={{ color: WHITE_SUB }}>Wall and ball-machine sessions are rated only; video analysis needs a court view.</p>}
         </section>
-        {kind === "tournament" && <section className="space-y-3 rounded-3xl p-4" style={{ background: WHITE, border: `1px solid ${BORDER}` }}>
+        {kind === "tournament" && <section className="space-y-3 rounded-2xl p-4" style={{ background: WHITE, border: `1px solid ${BORDER}` }}>
           <p className="text-sm font-bold" style={{ color: INK }}>Tournament match</p>
           <div>
             <label className={labelClass} style={labelStyle} htmlFor="tournament-name">Tournament</label>

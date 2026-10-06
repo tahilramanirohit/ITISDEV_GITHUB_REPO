@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getProfile, needsOnboarding, type PlayerProfile } from "../../lib/api/profile";
 import { WHITE_SUB } from "../theme";
 import { AppShell } from "../shell/AppShell";
-import { Onboarding } from "./Onboarding";
+// Loaded only for players who still need it, so returning players never download it.
+const Onboarding = lazy(() => import("./Onboarding").then((m) => ({ default: m.Onboarding })));
 
 const Loading = () => <p className="p-8 text-sm" style={{ color: WHITE_SUB }}>Loading…</p>;
 
@@ -22,7 +23,7 @@ export function OnboardingGate({ sb, userId, skip, children }: { sb: SupabaseCli
   if (skip || failed) return <>{children}</>;
   if (profile === undefined) return <Loading />;
   if (needsOnboarding(profile)) {
-    return <AppShell><Onboarding sb={sb} userId={userId} initial={profile} onDone={load} /></AppShell>;
+    return <AppShell><Suspense fallback={<Loading />}><Onboarding sb={sb} userId={userId} initial={profile} onDone={load} /></Suspense></AppShell>;
   }
   return <>{children}</>;
 }
@@ -33,5 +34,5 @@ export function OnboardingAgain({ sb, userId }: { sb: SupabaseClient; userId: st
   const [profile, setProfile] = useState<PlayerProfile | null | undefined>(undefined);
   useEffect(() => { getProfile(sb, userId).then(setProfile).catch(() => setProfile(null)); }, [sb, userId]);
   if (profile === undefined) return <Loading />;
-  return <Onboarding sb={sb} userId={userId} initial={profile} onDone={() => navigate("/")} onCancel={() => navigate("/profile")} />;
+  return <Suspense fallback={<Loading />}><Onboarding sb={sb} userId={userId} initial={profile} onDone={() => navigate("/")} onCancel={() => navigate("/profile")} /></Suspense>;
 }

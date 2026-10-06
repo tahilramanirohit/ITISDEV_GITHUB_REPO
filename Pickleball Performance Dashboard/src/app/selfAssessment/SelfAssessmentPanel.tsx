@@ -7,12 +7,15 @@ import {
 import { listSessions } from "../../lib/api/sessions";
 import { sessionKind, type SessionRow } from "../../lib/api/types";
 import {
-  buildSelfReport, compareSelfRatings, skillInfo, MIN_RATED_SKILLS, ratedSkills, SELF_SKILLS, SKILL_GROUPS, SKILL_INFO,
+  buildSelfReport, compareSelfRatings, MIN_RATED_SKILLS, ratedSkills, SELF_SKILLS, SKILL_GROUPS, SKILL_INFO,
   type ErrorLevel, type SelfRatings, type SelfSkill, type SkillRating,
 } from "../../lib/coaching/selfAssessment";
-import { BORDER, GREEN, INK, OPTIC, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
-import { Card, Chip, Notice, PrimaryButton, fieldStyle, labelClass, labelStyle, rovingIndex } from "../shell/primitives";
+import { BORDER, GREEN, INK, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
+import { Chip, Notice, PrimaryButton, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
 import { SelfReportView } from "./SelfReportView";
+import { SkillRater } from "./SkillRater";
+
+export { SkillRater };
 
 type Draft = {
   ratings: SelfRatings;
@@ -24,43 +27,6 @@ type Draft = {
 
 const emptyDraft: Draft = { ratings: {}, games_played: null, games_won: null, unforced_errors: null, biggest_struggle: "" };
 const STEPS = [...SKILL_GROUPS, "Wrap-up"] as const;
-
-export function SkillRater({ skill, value, onChange, question, playFormat }: {
-  skill: SelfSkill; value: SkillRating | undefined; onChange: (v: SkillRating | undefined) => void; question?: string; playFormat?: string;
-}) {
-  const info = skillInfo(skill, playFormat);
-  return (
-    <Card className="!p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <h3 className="text-base font-bold" style={{ color: INK }}>{info.label}</h3>
-          <p className="text-sm" style={{ color: WHITE_DIM }}>{question ?? info.question}</p>
-        </div>
-        {value && <button type="button" onClick={() => onChange(undefined)} className="shrink-0 text-xs font-semibold underline" style={{ color: WHITE_SUB }}>Clear</button>}
-      </div>
-      {/* W3C radio group pattern: one tab stop; arrow keys move and select. */}
-      <div className="mt-3 grid grid-cols-5 gap-1.5" role="radiogroup" aria-label={`${info.label} rating`}>
-        {([1, 2, 3, 4, 5] as SkillRating[]).map((n) => {
-          const selected = value === n;
-          return <button key={n} type="button" role="radio" aria-checked={selected} aria-label={`${info.label} ${n} of 5: ${info.anchors[n - 1]}`}
-            id={`rate-${skill}-${n}`} tabIndex={selected || (!value && n === 1) ? 0 : -1}
-            onKeyDown={(e) => {
-              const next = rovingIndex(e.key, (value ?? 1) - 1, 5);
-              if (next === null) return;
-              e.preventDefault();
-              onChange((next + 1) as SkillRating);
-              document.getElementById(`rate-${skill}-${next + 1}`)?.focus();
-            }}
-            onClick={() => onChange(n)} className="min-h-[48px] rounded-2xl text-lg font-extrabold transition-colors"
-            style={selected ? { background: INK, color: OPTIC } : { background: "#f1f2ee", color: INK, border: `1px solid ${BORDER}` }}>{n}</button>;
-        })}
-      </div>
-      <p className="mt-2 min-h-[1.25rem] text-sm font-semibold" style={{ color: value ? GREEN : WHITE_SUB }}>
-        {value ? info.anchors[value - 1] : "Tap a number, or leave it if it didn't come up."}
-      </p>
-    </Card>
-  );
-}
 
 function Stepper({ label, value, onChange, max }: { label: string; value: number | null; onChange: (v: number | null) => void; max: number }) {
   return (
@@ -159,7 +125,7 @@ export function SelfAssessmentPanel({ sb, session }: { sb: SupabaseClient; sessi
           <span>Rate your game · {group}</span><span style={{ color: WHITE_SUB }}>{ratedCount} of {SELF_SKILLS.length} rated</span>
         </div>
         <div className="mt-2 grid grid-cols-4 gap-1.5" aria-hidden="true">
-          {STEPS.map((s, i) => <span key={s} className="h-1.5 rounded-full" style={{ background: i <= step ? INK : "#dcdfd8" }} />)}
+          {STEPS.map((s, i) => <span key={s} className="h-1.5 rounded-full" style={{ background: i <= step ? INK : "#e2e5ea" }} />)}
         </div>
         {step === 0 && <p className="mt-3 text-sm" style={{ color: WHITE_DIM }}>Think about this session only. 3 means "okay for my level". Skip anything that didn't come up.</p>}
       </div>

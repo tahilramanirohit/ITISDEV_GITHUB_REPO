@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { HashRouter, Route, Routes } from "react-router";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { config as defaultConfig, type AppConfig } from "../lib/config";
@@ -21,6 +21,7 @@ const NewSessionPage = lazy(() => import("./sessions/NewSessionPage"));
 const ProgressPage = lazy(() => import("./progress/ProgressPage"));
 const SessionDetail = lazy(() => import("./sessions/SessionDetail"));
 const ProfilePage = lazy(() => import("./profile/ProfilePage"));
+const SettingsPage = lazy(() => import("./settings/SettingsPage"));
 const LabelPage = lazy(() => import("./labelling/LabelPage"));
 const PrivacyPage = lazy(() => import("./privacy/PrivacyPage"));
 
@@ -85,8 +86,21 @@ function NotAvailable() {
   );
 }
 
+const prefetchSignedIn = () => {
+  void import("./home/HomePage"); void import("./sessions/SessionsPage"); void import("./sessions/NewSessionPage");
+  void import("./sessions/SessionDetail"); void import("./progress/ProgressPage"); void import("./profile/ProfilePage");
+};
+
 function SignedInApp({ sb, cfg }: { sb: SupabaseClient; cfg: AppConfig }) {
   const auth = useAuth(sb);
+  const signedIn = auth.status === "signed_in";
+  useEffect(() => {
+    if (!signedIn) return;
+    // After the first screen settles, fetch the other main screens so tab switches are instant.
+    const idle = (window as Window & { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback;
+    const id = idle ? idle(prefetchSignedIn) : window.setTimeout(prefetchSignedIn, 1500);
+    return () => { if (!idle) window.clearTimeout(id); };
+  }, [signedIn]);
   const [devBusy, setDevBusy] = useState(false);
   const [devError, setDevError] = useState("");
   const [guestBusy, setGuestBusy] = useState(false);
@@ -140,18 +154,18 @@ function SignedInApp({ sb, cfg }: { sb: SupabaseClient; cfg: AppConfig }) {
   return (
     <OnboardingGate sb={sb} userId={user.id} skip={!!user.is_anonymous && !isGuest}>
     <AppShell tabs
-      right={<span className="truncate rounded-full px-3 py-1.5 text-xs font-semibold" style={{ background: "#eef0ec", color: INK, maxWidth: "12rem" }}>{account}</span>}>
+      right={<span className="truncate rounded-full px-3 py-1.5 text-xs font-semibold" style={{ background: "#eef0f4", color: INK, maxWidth: "12rem" }}>{account}</span>}>
       <Suspense fallback={<Loading />}>
         <Routes>
           <Route path="/" element={<HomePage sb={sb} userId={user.id} />} />
-          <Route path="/sessions" element={<SessionsPage sb={sb} />} />
+          <Route path="/sessions" element={<SessionsPage sb={sb} userId={user.id} />} />
           <Route path="/new" element={<NewSessionPage sb={sb} userId={user.id} trialNoWorker={cfg.trialNoWorker} />} />
           <Route path="/sessions/:sessionId" element={<SessionDetail sb={sb} userId={user.id} />} />
           <Route path="/progress" element={<ProgressPage sb={sb} />} />
+          <Route path="/settings" element={<SettingsPage sb={sb} userId={user.id} account={account} devLinks={<DevLinks cfg={cfg} />} />} />
           <Route path="/profile" element={<ProfilePage sb={sb} userId={user.id} account={account}
             signOut={{ label: signOutLabel, onClick: () => void sb.auth.signOut(),
-              warning: user.is_anonymous ? "You may lose access to this guest's sessions after leaving or clearing browser data." : undefined }}
-            devLinks={<DevLinks cfg={cfg} />} />} />
+              warning: user.is_anonymous ? "You may lose access to this guest's sessions after leaving or clearing browser data." : undefined }} />} />
           <Route path="/welcome" element={<OnboardingAgain sb={sb} userId={user.id} />} />
           <Route path="*" element={<Notice tone="warn">Page not found.</Notice>} />
         </Routes>

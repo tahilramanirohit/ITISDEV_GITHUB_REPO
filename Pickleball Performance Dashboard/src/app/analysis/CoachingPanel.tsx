@@ -125,9 +125,9 @@ export function CoachingPanel({ result, previous, onRateSession }: {
       </div>
       <p className="text-sm text-[#101827]">{devMock ? "Example only: these findings do not describe your play." : report.introduction}</p>
       {!report.available && !devMock && onRateSession && (
-        <div className="mt-3 rounded-2xl p-3" style={{ background: "#e6f4ec" }}>
+        <div className="mt-3 rounded-2xl p-3" style={{ background: "#eef0ff" }}>
           <p className="text-sm font-semibold text-[#101827]">Rate this session to get a plan from your own assessment.</p>
-          <button type="button" onClick={onRateSession} className="mt-2 inline-flex min-h-[44px] items-center rounded-xl px-4 text-sm font-bold" style={{ background: "#0e1116", color: "#ffffff" }}>
+          <button type="button" onClick={onRateSession} className="mt-2 inline-flex min-h-[44px] items-center rounded-full px-4 text-sm font-bold" style={{ background: "#16181d", color: "#ffffff" }}>
             Rate this session
           </button>
         </div>

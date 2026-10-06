@@ -44,7 +44,7 @@ const SECTIONS: { title: string; items: string[] }[] = [
 /** Plain-language data-use explanation, reachable before sign-up and from Profile. */
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen" style={{ background: "#f2f3f0", color: INK, fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-h-screen" style={{ background: "#f4f5f7", color: INK, fontFamily: "'Inter', sans-serif" }}>
       <main className="mx-auto max-w-2xl space-y-6 px-4 py-6 md:px-6 md:py-10">
         <div className="flex items-center justify-between gap-3">
           <a href="#/" aria-label="PicklePro home"><PickleProLogo size="sm" tone="light" /></a>
@@ -55,14 +55,14 @@ export default function PrivacyPage() {
           <p className="mt-2 text-sm" style={{ color: WHITE_DIM }}>What PicklePro keeps, who can see it, and how to remove it.</p>
         </div>
         {SECTIONS.map((section) => (
-          <section key={section.title} className="rounded-3xl p-5" style={{ background: WHITE, border: `1px solid ${BORDER}` }} aria-labelledby={`privacy-${section.title}`}>
+          <section key={section.title} className="rounded-2xl p-5" style={{ background: WHITE, border: `1px solid ${BORDER}` }} aria-labelledby={`privacy-${section.title}`}>
             <h2 id={`privacy-${section.title}`} className="text-lg font-bold" style={{ fontFamily: DISPLAY_FONT }}>{section.title}</h2>
             <ul className="mt-2 list-disc space-y-2 pl-5 text-sm leading-relaxed" style={{ color: INK }}>
               {section.items.map((item) => <li key={item}>{item}</li>)}
             </ul>
           </section>
         ))}
-        <section className="rounded-3xl p-5" style={{ background: "#e6f4ec" }} aria-labelledby="privacy-contact">
+        <section className="rounded-2xl p-5" style={{ background: "#eef0ff" }} aria-labelledby="privacy-contact">
           <h2 id="privacy-contact" className="text-lg font-bold" style={{ fontFamily: DISPLAY_FONT }}>Questions or deletion requests</h2>
           <p className="mt-2 text-sm" style={{ color: INK }}>
             {config.contactEmail

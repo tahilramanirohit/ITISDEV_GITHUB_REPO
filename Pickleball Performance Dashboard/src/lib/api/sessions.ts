@@ -194,3 +194,11 @@ export async function signedVideoUrl(sb: SupabaseClient, path: string): Promise<
   if (error) throw new Error(error.message);
   return data.signedUrl;
 }
+
+export type SessionDetailsInput = Pick<SessionRow, "title" | "session_date"> &
+  Partial<Pick<SessionRow, "tournament_name" | "tournament_round" | "match_result" | "match_score">>;
+
+/** Edit a saved session's name, date and, for tournaments, round and result. */
+export async function updateSessionDetails(sb: SupabaseClient, sessionId: string, input: SessionDetailsInput): Promise<SessionRow> {
+  return check<SessionRow>(await sb.from("sessions").update(input).eq("id", sessionId).select("*").single());
+}

@@ -5,35 +5,57 @@ import { getProfile, type PlayerProfile } from "../../lib/api/profile";
 import { buildSelfReport } from "../../lib/coaching/selfAssessment";
 import { BORDER, CARD_GLOW, DISPLAY_FONT, GREEN, GREEN_BG, INK, NAVY, OPTIC, OPTIC_INK, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Notice, SectionTitle } from "../shell/primitives";
-import { EmptySessions, SessionCard, useSessionsData } from "../sessions/sessionUi";
+import { EmptySessions, SessionCard, useSessionsData, weekStreak } from "../sessions/sessionUi";
 
 function greeting(now = new Date()) {
   const h = now.getHours();
   return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
 }
 
-/** Consecutive weeks, ending this week or last, with at least one session. */
-export function weekStreak(dates: string[], today = new Date()): number {
-  const weekIndex = (d: Date) => Math.floor((d.getTime() / 86400000 + 3) / 7); // weeks start on Monday
-  const weeks = new Set(dates.map((iso) => weekIndex(new Date(`${iso}T12:00:00Z`))));
-  let current = weekIndex(today);
-  if (!weeks.has(current)) current -= 1;
-  let streak = 0;
-  while (weeks.has(current)) { streak += 1; current -= 1; }
-  return streak;
-}
 
-function Stat({ value, label }: { value: string; label: string }) {
+/** Strava-style weekly summary: one bar per day this week, plus streak and totals. */
+function WeekCard({ dates, streak, total, month }: { dates: string[]; streak: number; total: number; month: number }) {
+  const today = new Date();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday); d.setDate(monday.getDate() + i);
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    return { label: d.toLocaleDateString(undefined, { weekday: "narrow" }), count: dates.filter((x) => x === iso).length, isToday: d.toDateString() === today.toDateString() };
+  });
+  const week = days.reduce((n, d) => n + d.count, 0);
+  const max = Math.max(1, ...days.map((d) => d.count));
   return (
-    <div className="rounded-2xl p-3" style={{ background: WHITE, border: `1px solid ${BORDER}` }}>
-      <p className="text-2xl font-extrabold leading-none" style={{ color: INK, fontFamily: DISPLAY_FONT }}>{value}</p>
-      <p className="mt-1 text-xs font-semibold" style={{ color: WHITE_SUB }}>{label}</p>
-    </div>
+    <section className="rounded-2xl p-4" style={{ background: WHITE, border: `1px solid ${BORDER}` }} aria-labelledby="week-title">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 id="week-title" className="text-sm font-bold" style={{ color: INK }}>This week</h2>
+          <p className="text-3xl font-extrabold tracking-tight" style={{ color: INK }}>{week} <span className="text-base font-semibold" style={{ color: WHITE_SUB }}>session{week === 1 ? "" : "s"}</span></p>
+        </div>
+        <span className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-bold" style={{ background: streak ? OPTIC : "#eceef2", color: streak ? OPTIC_INK : WHITE_SUB }}>
+          <Flame size={16} aria-hidden="true" /> {streak} week streak
+        </span>
+      </div>
+      <div className="mt-4 grid grid-cols-7 gap-2" role="img" aria-label={`Sessions per day this week: ${days.map((d) => `${d.label} ${d.count}`).join(", ")}`}>
+        {days.map((d, i) => (
+          <div key={i} className="flex flex-col items-center gap-1.5">
+            <div className="flex h-16 w-full items-end justify-center rounded-lg" style={{ background: "#f4f5f7" }}>
+              {d.count > 0 && <div className="w-full rounded-lg" style={{ height: `${Math.max(28, (d.count / max) * 100)}%`, background: GREEN }} />}
+            </div>
+            <span className="text-[11px] font-semibold" style={{ color: d.isToday ? GREEN : WHITE_SUB }}>{d.label}</span>
+          </div>
+        ))}
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-3 border-t pt-3 text-sm" style={{ borderColor: BORDER }}>
+        <p><span className="block text-[11px]" style={{ color: WHITE_SUB }}>This month</span><b className="text-lg">{month}</b></p>
+        <p><span className="block text-[11px]" style={{ color: WHITE_SUB }}>All time</span><b className="text-lg">{total}</b></p>
+      </div>
+    </section>
   );
 }
 
 export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: string }) {
-  const { items, assessments, error } = useSessionsData(sb);
+  const { items, assessments, players, error } = useSessionsData(sb);
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   useEffect(() => {
     let active = true;
@@ -73,28 +95,22 @@ export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: s
 
       <div className="space-y-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] 2xl:grid-cols-[minmax(0,1fr)_minmax(0,480px)] lg:items-start lg:gap-8 lg:space-y-0">
       <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-3xl p-5" style={{ background: NAVY, color: WHITE }}>
+      <section className="relative overflow-hidden rounded-2xl p-5" style={{ background: NAVY, color: WHITE }}>
         <div aria-hidden="true" className="absolute -right-10 -top-10 h-40 w-40 rounded-full" style={{ background: OPTIC, opacity: 0.18 }} />
         <p className="text-xs font-bold uppercase tracking-wider" style={{ color: OPTIC }}>After your game</p>
         <p className="mt-1 text-xl font-extrabold leading-snug" style={{ fontFamily: DISPLAY_FONT }}>Log it and get a practice plan in two minutes.</p>
         <div className="mt-4 grid grid-cols-2 gap-2">
-          <a href="#/new?mode=self" className="flex min-h-[52px] items-center justify-center gap-2 rounded-2xl text-sm font-bold" style={{ background: OPTIC, color: OPTIC_INK }}>
+          <a href="#/new?mode=self" className="flex min-h-[52px] items-center justify-center gap-2 rounded-full text-sm font-bold" style={{ background: OPTIC, color: OPTIC_INK }}>
             <ClipboardCheck size={18} /> Rate my game
           </a>
-          <a href="#/new?mode=video" className="flex min-h-[52px] items-center justify-center gap-2 rounded-2xl text-sm font-bold" style={{ background: "rgba(255,255,255,0.1)", color: WHITE }}>
+          <a href="#/new?mode=video" className="flex min-h-[52px] items-center justify-center gap-2 rounded-full text-sm font-bold" style={{ background: "rgba(255,255,255,0.1)", color: WHITE }}>
             <Camera size={18} /> Analyze video
           </a>
         </div>
       </section>
 
-      {items && items.length > 0 && <div className="grid grid-cols-3 gap-2">
-        <Stat value={String(sessions.length)} label="Sessions" />
-        <Stat value={String(sessions.filter((i) => i.session.session_date.startsWith(thisMonth)).length)} label="This month" />
-        <div className="rounded-2xl p-3" style={{ background: streak ? OPTIC : WHITE, border: `1px solid ${streak ? OPTIC : BORDER}` }}>
-          <p className="flex items-center gap-1 text-2xl font-extrabold leading-none" style={{ color: INK, fontFamily: DISPLAY_FONT }}><Flame size={20} />{streak}</p>
-          <p className="mt-1 text-xs font-semibold" style={{ color: streak ? OPTIC_INK : WHITE_SUB }}>Week streak</p>
-        </div>
-      </div>}
+      {items && items.length > 0 && <WeekCard dates={sessions.map((i) => i.session.session_date)} streak={streak}
+        total={sessions.length} month={sessions.filter((i) => i.session.session_date.startsWith(thisMonth)).length} />}
 
       {latestPlan && latestPlan.report.focus.length > 0 && <section className="space-y-3">
         <SectionTitle action={<a href={latestPlan.href} className="inline-flex items-center gap-1 text-sm font-semibold" style={{ color: GREEN }}>
@@ -106,7 +122,7 @@ export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: s
           <p className="-mt-1 text-xs" style={{ color: WHITE_SUB }}>These skills have the same rating. They are ordered by your goals and what you said gave you trouble, then by skill order.</p>}
         <div className="grid gap-3 lg:grid-cols-3">
           {latestPlan.report.focus.map((f, i) => (
-            <a key={f.skill} href={latestPlan.href} className="rounded-3xl p-4"
+            <a key={f.skill} href={latestPlan.href} className="rounded-2xl p-4"
               style={{ background: i === 0 ? OPTIC : WHITE, border: `1px solid ${i === 0 ? OPTIC : BORDER}`, boxShadow: CARD_GLOW }}>
               <p className="text-xs font-bold uppercase tracking-wider" style={{ color: i === 0 ? OPTIC_INK : GREEN }}>Focus {i + 1} · {f.rating}/5</p>
               <p className="mt-1 text-base font-bold" style={{ color: INK }}>{f.label}</p>
@@ -121,14 +137,14 @@ export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: s
       {error && <Notice tone="error">{error}</Notice>}
       <section className="space-y-3">
         <SectionTitle action={sessions.length > 3 ? <a href="#/sessions" className="inline-flex items-center gap-1 text-sm font-semibold" style={{ color: GREEN }}>See all <ArrowRight size={14} /></a> : undefined}>
-          Recent sessions
+          Recent activity
         </SectionTitle>
         {items === null ? <p className="text-sm" style={{ color: WHITE_SUB }}>Loading your sessions…</p>
           : items.length === 0 ? <EmptySessions />
-          : <ul className="space-y-3">{items.slice(0, 3).map((item) => <li key={item.session.id}><SessionCard item={item} assessment={byId.get(item.session.id)} /></li>)}</ul>}
+          : <ul className="space-y-3">{items.slice(0, 3).map((item) => <li key={item.session.id}><SessionCard item={item} assessment={byId.get(item.session.id)} players={players.get(item.session.id)} you={name || "You"} /></li>)}</ul>}
       </section>
 
-      <section className="rounded-3xl p-4" style={{ background: GREEN_BG }}>
+      <section className="rounded-2xl p-4" style={{ background: GREEN_BG }}>
         <p className="flex items-center gap-2 text-sm font-bold" style={{ color: GREEN }}><Camera size={16} /> Have a recording?</p>
         <p className="mt-1 text-sm" style={{ color: INK }}>Video analysis is an optional extra. It maps where you stood on court using computer vision, alongside your own ratings.</p>
       </section>

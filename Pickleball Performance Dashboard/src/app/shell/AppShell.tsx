@@ -29,8 +29,8 @@ export function LargeTextToggle({ tone = "light" }: { tone?: "light" | "dark" })
   return (
     <button type="button" aria-pressed={large} onClick={() => setLarge((v) => !v)}
       className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold min-h-[40px]"
-      style={{ color: dark ? WHITE : INK, border: `1px solid ${large ? GREEN : dark ? "#3a3f48" : BORDER}`,
-        background: large ? (dark ? "#23332a" : "#e6f4ec") : "transparent" }}>
+      style={{ color: dark ? WHITE : INK, border: `1px solid ${large ? GREEN : dark ? "rgba(255,255,255,0.3)" : BORDER}`,
+        background: large ? (dark ? "#23332a" : "#eef0ff") : "transparent" }}>
       <span aria-hidden="true" style={{ fontSize: "0.8em" }}>A</span><span aria-hidden="true" style={{ fontSize: "1.2em" }}>A</span>
       {large ? "Normal text" : "Larger text"}
     </button>
@@ -60,7 +60,7 @@ function BottomTabs() {
             <li key={tab.href}>
               <a href={tab.href} aria-current={active ? "page" : undefined}
                 className="flex min-h-[60px] flex-col items-center justify-center gap-0.5 text-[11px] font-semibold"
-                style={{ color: active ? INK : WHITE_SUB }}>
+                style={{ color: active ? GREEN : WHITE_SUB }}>
                 {"primary" in tab
                   ? <span className="-mt-5 flex h-12 w-12 items-center justify-center rounded-2xl shadow-lg"
                       style={{ background: OPTIC, color: OPTIC_INK, border: `3px solid ${WHITE}` }}><Icon size={24} strokeWidth={2.6} /></span>
@@ -82,7 +82,7 @@ function SideNav({ account }: { account?: ReactNode }) {
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r px-4 py-6 lg:flex" style={{ background: WHITE, borderColor: BORDER }}>
       <a href="#/" aria-label="PicklePro home" className="px-2"><PickleProLogo size="sm" tone="light" /></a>
-      <a href="#/new" className="mt-6 flex min-h-[48px] items-center justify-center gap-2 rounded-2xl text-sm font-bold"
+      <a href="#/new" className="mt-6 flex min-h-[48px] items-center justify-center gap-2 rounded-full text-sm font-bold"
         style={{ background: OPTIC, color: OPTIC_INK }}><Plus size={20} strokeWidth={2.6} />Log a session</a>
       <nav aria-label="Sidebar" className="mt-6">
         <ul className="space-y-1">
@@ -92,8 +92,8 @@ function SideNav({ account }: { account?: ReactNode }) {
             return (
               <li key={tab.href}>
                 <a href={tab.href} aria-current={active ? "page" : undefined}
-                  className="flex min-h-[44px] items-center gap-3 rounded-xl px-3 text-sm font-semibold transition-colors hover:bg-[#f2f3f0]"
-                  style={active ? { background: INK, color: WHITE } : { color: INK }}>
+                  className="flex min-h-[44px] items-center gap-3 rounded-xl px-3 text-sm font-semibold transition-colors hover:bg-[#f4f5f7]"
+                  style={active ? { background: GREEN, color: WHITE } : { color: INK }}>
                   <Icon size={19} strokeWidth={active ? 2.5 : 2} />{tab.label}
                 </a>
               </li>

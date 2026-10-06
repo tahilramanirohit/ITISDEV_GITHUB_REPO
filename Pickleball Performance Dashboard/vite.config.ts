@@ -31,6 +31,21 @@ export default defineConfig({
     },
   },
 
+  build: {
+    rollupOptions: {
+      output: {
+        // Libraries change far less often than app code. Separate files keep
+        // them cached across deploys (assets are served as immutable).
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined
+          if (id.includes('@supabase') || id.includes('iceberg-js')) return 'vendor-supabase'
+          if (/node_modules\/(react|react-dom|react-router|scheduler)\//.test(id)) return 'vendor-react'
+          return undefined
+        },
+      },
+    },
+  },
+
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
 })

@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { ArrowDown, ArrowLeft, RefreshCw, Trash2, Upload } from "lucide-react";
 import {
   deleteSession, finalizeUpload, findPreviousCoachableResult, getSessionBundle, listAnalysisRuns, registerVideo, removeVideo, requestReanalysis, setRawVideoKeep, signedVideoUrl,
-  updateSessionGoals, type SessionBundle,
+  updateSessionDetails, updateSessionGoals, type SessionBundle,
 } from "../../lib/api/sessions";
 import { CONTEXT_LABELS, FORMAT_LABELS, GOAL_LABELS, KIND_LABELS, sessionKind, type AnalysisRunSummary, type GoalValues, type ImprovementGoal } from "../../lib/api/types";
 import { ContractError, parseAnalysisResult } from "../../lib/analysis/contract";
@@ -13,13 +13,14 @@ import { config } from "../../lib/config";
 import { startResumableUpload, type UploadHandle } from "../../lib/upload/tusUpload";
 import { formatBytes, validateVideoFile } from "../../lib/upload/validate";
 import {
-  DEFAULT_UPLOAD_LIMITS, formatDuration, getUploadLimits, getUploadUsage, limitErrorText, probeVideoDuration, uploadBlocker,
+  DEFAULT_UPLOAD_LIMITS, formatDuration, getUploadLimits, getUploadUsage, limitErrorText, probeVideo, uploadBlocker,
   type UploadLimits, type UploadUsage,
 } from "../../lib/upload/limits";
-import { listOtherPlayers, shortId, type OtherPlayer } from "../../lib/api/players";
+import { listOtherPlayers, saveOtherPlayers, shortId, type OtherPlayer } from "../../lib/api/players";
+import { AvatarStack } from "./sessionUi";
 import { hasUploadConsent, recordUploadConsent } from "../../lib/api/capture";
 import { BLUE_SKY, BORDER, DISPLAY_FONT, LAVENDER, NAVY, NEON, NEON_D, ORANGE, WHITE_DIM, WHITE_SUB } from "../theme";
-import { Card, Notice, SegmentedTabs, tabPanelProps } from "../shell/primitives";
+import { Card, Chip, Notice, SegmentedTabs, fieldStyle, tabPanelProps } from "../shell/primitives";
 import { SelfAssessmentPanel } from "../selfAssessment/SelfAssessmentPanel";
 import { AnalysisParamsForm, ProgressBar, type AnalysisParams } from "../analysis/AnalysisStatus";
 import { CourtCorrection } from "../analysis/CourtCorrection";
@@ -53,6 +54,10 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
   const [previous, setPrevious] = useState<PreviousSession | null>(null);
   const [runHistory, setRunHistory] = useState<AnalysisRunSummary[]>([]);
   const [goalDraft, setGoalDraft] = useState<GoalValues | null>(null);
+  const [detailsDraft, setDetailsDraft] = useState<{
+    title: string; session_date: string; tournament_name: string; tournament_round: string;
+    match_result: "win" | "loss" | null; match_score: string; partner: string; opponents: string[];
+  } | null>(null);
   const [consentConfirmed, setConsentConfirmed] = useState(false);
   const [consentChecked, setConsentChecked] = useState(false);
   const [tab, setTab] = useState<DetailTab | null>(requestedTab === "plan" || requestedTab === "video" || requestedTab === "journal" ? requestedTab : null);
@@ -215,17 +220,17 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
           {loadError ? `This session could not be loaded: ${loadError}` : "This session is taking longer than usual to load. Check your connection."}
         </Notice>
         <div className="flex gap-2">
-          <button type="button" onClick={retry} className="inline-flex min-h-[44px] items-center gap-2 rounded-xl px-4 text-sm font-bold" style={{ background: "#0e1116", color: "#ffffff" }}><RefreshCw size={14} /> Try again</button>
+          <button type="button" onClick={retry} className="inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 text-sm font-bold" style={{ background: "#16181d", color: "#ffffff" }}><RefreshCw size={14} /> Try again</button>
           <a href="#/sessions" className="inline-flex min-h-[44px] items-center rounded-xl px-4 text-sm font-semibold" style={{ border: `1px solid ${BORDER}` }}>Back to sessions</a>
         </div>
       </div>;
     }
     return <div className="space-y-4" role="status" aria-live="polite" aria-label="Loading session">
       <span className="sr-only">Loading session…</span>
-      <div className="h-5 w-24 animate-pulse rounded-full" style={{ background: "#e3e5df" }} />
-      <div className="h-36 animate-pulse rounded-3xl" style={{ background: "#d9dcd5" }} />
-      <div className="h-12 animate-pulse rounded-2xl" style={{ background: "#e3e5df" }} />
-      <div className="h-64 animate-pulse rounded-3xl" style={{ background: "#e9ebe6" }} />
+      <div className="h-5 w-24 animate-pulse rounded-full" style={{ background: "#e5e7eb" }} />
+      <div className="h-36 animate-pulse rounded-2xl" style={{ background: "#e2e5ea" }} />
+      <div className="h-12 animate-pulse rounded-2xl" style={{ background: "#e5e7eb" }} />
+      <div className="h-64 animate-pulse rounded-2xl" style={{ background: "#eceef2" }} />
     </div>;
   }
   if (bundle === null) {
@@ -250,7 +255,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
     <div className="space-y-4">
       <a href="#/sessions" className="inline-flex items-center gap-1 text-sm font-semibold" style={{ color: BLUE_SKY }}><ArrowLeft size={16} /> Sessions</a>
 
-      <section className="rounded-3xl p-5" style={{ background: NAVY, color: "white" }}>
+      <section className="rounded-2xl p-5" style={{ background: NAVY, color: "white" }}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-wider" style={{ color: LAVENDER }}>
@@ -260,24 +265,27 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
           </div>
           <button type="button" title="Delete session" aria-label="Delete session" disabled={busy || state === "uploading" || state === "processing"}
             onClick={() => { if (window.confirm("Delete this session, its ratings, video and results?")) void run(async () => { await deleteSession(sb, bundle); navigate("/sessions"); }); }}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full disabled:opacity-30" style={{ color: "white", border: "1px solid #3a3f48" }}>
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full disabled:opacity-30" style={{ color: "white", border: "1px solid rgba(255,255,255,0.3)" }}>
             <Trash2 size={16} />
           </button>
         </div>
         {(session.tournament_name || session.tournament_round || session.match_result || session.match_score) && (
-          <p className="mt-2 text-sm font-semibold" style={{ color: "#eef0f3" }}>
+          <p className="mt-2 text-sm font-semibold" style={{ color: "#ffffff" }}>
             {[session.tournament_name, session.tournament_round, session.match_result === "win" ? "Won" : session.match_result === "loss" ? "Lost" : null, session.match_score].filter(Boolean).join(" · ")}
           </p>
         )}
-        {players.length > 0 && <p className="mt-1 text-sm" style={{ color: "#c9cdd4" }}>
-          {players.some((p) => p.role === "partner") && <>With {players.filter((p) => p.role === "partner").map((p) => p.display_name).join(", ")}{" · "}</>}
-          {players.some((p) => p.role === "opponent") && <>vs {players.filter((p) => p.role === "opponent").map((p) => p.display_name).join(" & ")}</>}
-        </p>}
-        {session.notes && <p className="text-sm mt-2" style={{ color: "#c9cdd4" }}>{session.notes}</p>}
+        {players.length > 0 && <div className="mt-3 flex flex-wrap items-center gap-2 text-sm" style={{ color: "#dfe3ff" }}>
+          <AvatarStack names={players.map((p) => p.display_name)} size={30} />
+          <span>
+            {players.some((p) => p.role === "partner") && <>With {players.filter((p) => p.role === "partner").map((p) => p.display_name).join(", ")}{" · "}</>}
+            {players.some((p) => p.role === "opponent") && <>vs {players.filter((p) => p.role === "opponent").map((p) => p.display_name).join(" & ")}</>}
+          </span>
+        </div>}
+        {session.notes && <p className="text-sm mt-2" style={{ color: "#dfe3ff" }}>{session.notes}</p>}
         {session.improvement_goals?.length > 0 && (
           <ul className="mt-4 flex flex-wrap gap-2" aria-label="Your focus">
             {session.improvement_goals.map((goal: ImprovementGoal) => (
-              <li key={goal} className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: "rgba(255,255,255,0.1)", color: "#eef0f3" }}>
+              <li key={goal} className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: "rgba(255,255,255,0.1)", color: "#ffffff" }}>
                 {GOAL_LABELS[goal]}{session[`${goal}_rating`] ? ` · ${session[`${goal}_rating`]}/5` : ""}
               </li>
             ))}
@@ -290,10 +298,79 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
             shot_outcomes_rating: session.shot_outcomes_rating ?? null,
             shot_technique_rating: session.shot_technique_rating ?? null,
         })}>Edit focus</button>
-        <p className="mt-3 text-[11px]" style={{ color: "#8d939c" }}>
+        <button type="button" className="ml-4 text-sm mt-3 font-semibold underline" style={{ color: LAVENDER }}
+          onClick={() => setDetailsDraft({
+            title: session.title, session_date: session.session_date,
+            tournament_name: session.tournament_name ?? "", tournament_round: session.tournament_round ?? "",
+            match_result: session.match_result ?? null, match_score: session.match_score ?? "",
+            partner: players.find((p) => p.role === "partner")?.display_name ?? "",
+            opponents: [0, 1].map((i) => players.filter((p) => p.role === "opponent")[i]?.display_name ?? ""),
+          })}>Edit details &amp; players</button>
+        <p className="mt-3 text-[11px]" style={{ color: "#c7cdff" }}>
           {KIND_LABELS[sessionKind(session)]} · Session ID <span className="font-mono" title={session.id}>{shortId(session.id)}</span> · created {new Date(session.created_at).toLocaleString()}
         </p>
       </section>
+
+      {detailsDraft && (
+        <Card accent={BLUE_SKY}>
+          <h2 className="text-lg font-extrabold">Edit details &amp; players</h2>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-1 text-sm font-semibold">Name
+              <input maxLength={120} value={detailsDraft.title} onChange={(e) => setDetailsDraft({ ...detailsDraft, title: e.target.value })} className="rounded-2xl px-4 py-3 text-base font-normal" style={fieldStyle} />
+            </label>
+            <label className="grid gap-1 text-sm font-semibold">Date
+              <input type="date" value={detailsDraft.session_date} onChange={(e) => setDetailsDraft({ ...detailsDraft, session_date: e.target.value })} className="rounded-2xl px-4 py-3 text-base font-normal" style={fieldStyle} />
+            </label>
+            {sessionKind(session) === "tournament" && <>
+              <label className="grid gap-1 text-sm font-semibold">Tournament
+                <input maxLength={120} value={detailsDraft.tournament_name} onChange={(e) => setDetailsDraft({ ...detailsDraft, tournament_name: e.target.value })} className="rounded-2xl px-4 py-3 text-base font-normal" style={fieldStyle} />
+              </label>
+              <label className="grid gap-1 text-sm font-semibold">Round
+                <input maxLength={60} value={detailsDraft.tournament_round} onChange={(e) => setDetailsDraft({ ...detailsDraft, tournament_round: e.target.value })} placeholder="e.g. Semifinal" className="rounded-2xl px-4 py-3 text-base font-normal" style={fieldStyle} />
+              </label>
+              <div className="grid gap-1 text-sm font-semibold">Result
+                <div className="flex gap-2">{(["win", "loss"] as const).map((r) => <Chip key={r} selected={detailsDraft.match_result === r}
+                  onClick={() => setDetailsDraft({ ...detailsDraft, match_result: detailsDraft.match_result === r ? null : r })}>{r === "win" ? "Won" : "Lost"}</Chip>)}</div>
+              </div>
+              <label className="grid gap-1 text-sm font-semibold">Score
+                <input maxLength={40} value={detailsDraft.match_score} onChange={(e) => setDetailsDraft({ ...detailsDraft, match_score: e.target.value })} placeholder="11-7, 9-11, 11-5" className="rounded-2xl px-4 py-3 text-base font-normal" style={fieldStyle} />
+              </label>
+            </>}
+            {sessionKind(session) !== "solo" && <>
+              {session.play_format === "doubles" && <label className="grid gap-1 text-sm font-semibold">Partner
+                <input maxLength={80} value={detailsDraft.partner} onChange={(e) => setDetailsDraft({ ...detailsDraft, partner: e.target.value })} className="rounded-2xl px-4 py-3 text-base font-normal" style={fieldStyle} />
+              </label>}
+              {detailsDraft.opponents.slice(0, session.play_format === "doubles" ? 2 : 1).map((name, i) => <label key={i} className="grid gap-1 text-sm font-semibold">{session.play_format === "doubles" ? `Opponent ${i + 1}` : "Opponent"}
+                <input maxLength={80} value={name} onChange={(e) => setDetailsDraft({ ...detailsDraft, opponents: detailsDraft.opponents.map((v, j) => j === i ? e.target.value : v) })} className="rounded-2xl px-4 py-3 text-base font-normal" style={fieldStyle} />
+              </label>)}
+            </>}
+          </div>
+          <div className="mt-4 flex gap-2">
+            <button type="button" disabled={busy || !detailsDraft.title.trim()}
+              onClick={() => void run(async () => {
+                const d = detailsDraft;
+                await updateSessionDetails(sb, session.id, {
+                  title: d.title.trim(), session_date: d.session_date,
+                  ...(sessionKind(session) === "tournament" ? {
+                    tournament_name: d.tournament_name.trim() || null, tournament_round: d.tournament_round.trim() || null,
+                    match_result: d.match_result, match_score: d.match_score.trim() || null,
+                  } : {}),
+                });
+                if (sessionKind(session) !== "solo") {
+                  const next: OtherPlayer[] = [
+                    ...(session.play_format === "doubles" ? [{ role: "partner" as const, display_name: d.partner }] : []),
+                    ...d.opponents.slice(0, session.play_format === "doubles" ? 2 : 1).map((n) => ({ role: "opponent" as const, display_name: n })),
+                  ];
+                  await saveOtherPlayers(sb, session.id, next);
+                  setPlayers(next.filter((p) => p.display_name.trim()));
+                }
+                setDetailsDraft(null);
+              })}
+              className="inline-flex min-h-[44px] items-center rounded-full px-6 text-sm font-bold disabled:opacity-40" style={{ background: BLUE_SKY, color: "#ffffff" }}>Save details</button>
+            <button type="button" onClick={() => setDetailsDraft(null)} className="text-sm px-3 py-2" style={{ color: WHITE_DIM }}>Cancel</button>
+          </div>
+        </Card>
+      )}
 
       {goalDraft && (
         <Card accent={BLUE_SKY}>
@@ -324,7 +401,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
       {selfMode && !video && <Notice tone="info">Video analysis is optional. Your practice plan comes from your ratings in <strong>Rate &amp; plan</strong>. Add a clip here if you also want court positions measured.</Notice>}
       <Card>
         <p className="text-xs font-bold uppercase tracking-wider" style={{ color: BLUE_SKY }}>Video analysis{state ? ` · ${STATE_LABELS[state]}` : ""}</p>
-        <h2 className="text-xl font-bold text-[#0e1116] mt-1" style={{ fontFamily: DISPLAY_FONT }}>{stepTitle}</h2>
+        <h2 className="text-xl font-bold text-[#16181d] mt-1" style={{ fontFamily: DISPLAY_FONT }}>{stepTitle}</h2>
         <p className="text-sm mt-2 mb-4" style={{ color: WHITE_DIM }}>{loggingOnly
           ? "Wall and ball-machine sessions record your check-in, recovery and reflection without computer-vision analysis."
           : state ? stateDescription(state, job) : ""}</p>
@@ -336,8 +413,8 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
         {video && (
           <details className="mb-3">
             <summary className="cursor-pointer text-sm font-semibold" style={{ color: BLUE_SKY }}>Research details: upload record, IDs and times</summary>
-          <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 rounded-2xl p-3 text-sm sm:grid-cols-3" style={{ background: "#f6f7f3", border: `1px solid ${BORDER}` }} aria-label="Upload record">
-            <div className="col-span-2 sm:col-span-3"><dt className="sr-only">File</dt><dd className="truncate font-semibold" style={{ color: "#0e1116" }}>{video.original_filename}</dd></div>
+          <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 rounded-2xl p-3 text-sm sm:grid-cols-3" style={{ background: "#f6f7f9", border: `1px solid ${BORDER}` }} aria-label="Upload record">
+            <div className="col-span-2 sm:col-span-3"><dt className="sr-only">File</dt><dd className="truncate font-semibold" style={{ color: "#16181d" }}>{video.original_filename}</dd></div>
             <div><dt className="text-xs" style={{ color: WHITE_SUB }}>Upload ID</dt><dd className="font-mono" title={video.id}>{shortId(video.id)}</dd></div>
             <div><dt className="text-xs" style={{ color: WHITE_SUB }}>Size{video.duration_s ? " · length" : ""}</dt><dd>{formatBytes(video.byte_size)}{video.duration_s ? ` · ${formatDuration(video.duration_s)}` : ""}</dd></div>
             <div><dt className="text-xs" style={{ color: WHITE_SUB }}>Registered</dt><dd>{new Date(video.created_at).toLocaleString()}</dd></div>
@@ -425,10 +502,10 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
                   if (!check.ok) { setError(check.error); return; }
                   setError("");
                   // Resuming the same file skips the new-upload limits; it is already registered.
-                  void probeVideoDuration(f).then((duration) => {
-                    const blocker = state === "upload_incomplete" ? null : uploadBlocker(f, duration, limits, usage);
+                  void probeVideo(f).then((meta) => {
+                    const blocker = state === "upload_incomplete" ? null : uploadBlocker(f, meta.duration, limits, usage, meta);
                     if (blocker) { setError(blocker); return; }
-                    setPendingDuration(duration); setPendingFile(f); setConfirmedCourt(null);
+                    setPendingDuration(meta.duration); setPendingFile(f); setConfirmedCourt(null);
                   });
                 }} />
             </label>
@@ -437,11 +514,12 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
                 setConfirmedCourt(court); setPendingFile(null);
                 void onFileSelected(pendingFile, court);
               }} onCancel={() => setPendingFile(null)} />}
-            <div className="rounded-2xl p-3 text-sm" style={{ background: "#f6f7f3", border: `1px solid ${BORDER}` }} data-testid="upload-limits">
-              <p className="font-semibold" style={{ color: "#0e1116" }}>Upload limits</p>
+            <div className="rounded-2xl p-3 text-sm" style={{ background: "#f6f7f9", border: `1px solid ${BORDER}` }} data-testid="upload-limits">
+              <p className="font-semibold" style={{ color: "#16181d" }}>Upload limits</p>
               <ul className="mt-1 grid gap-x-4 gap-y-0.5 sm:grid-cols-2" style={{ color: WHITE_DIM }}>
                 <li>Up to {formatBytes(Math.min(config.maxUploadBytes, limits.max_file_bytes))} per video</li>
                 <li>{formatDuration(limits.min_duration_s)} to {formatDuration(limits.max_duration_s)} long</li>
+                <li>Landscape, 720p or higher</li>
                 <li>{usage ? `${usage.uploadsToday} of ${limits.max_uploads_per_day}` : `Up to ${limits.max_uploads_per_day}`} uploads today</li>
                 <li>{usage ? `${usage.storedBytes ? formatBytes(usage.storedBytes) : "0 MB"} of ${formatBytes(limits.max_total_bytes)}` : formatBytes(limits.max_total_bytes)} storage used</li>
               </ul>

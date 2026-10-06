@@ -27,3 +27,21 @@ export function playerCode(userId: string): string {
 
 /** First 8 characters of an internal id, enough to quote in a support message. */
 export const shortId = (id: string) => id.slice(0, 8).toUpperCase();
+
+/** Named partners and opponents for all of the player's sessions, grouped by session. */
+export async function listAllOtherPlayers(sb: SupabaseClient): Promise<Map<string, OtherPlayer[]>> {
+  const { data, error } = await sb.from("session_participants").select("session_id,role,display_name").in("role", ["partner", "opponent"]);
+  if (error) throw new Error(error.message);
+  const map = new Map<string, OtherPlayer[]>();
+  for (const row of (Array.isArray(data) ? data : []) as (OtherPlayer & { session_id: string })[]) {
+    if (!row.display_name) continue;
+    map.set(row.session_id, [...(map.get(row.session_id) ?? []), { role: row.role, display_name: row.display_name }]);
+  }
+  return map;
+}
+
+/** Up to two initials for an avatar, e.g. "Ana M." → "AM". */
+export function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return (parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : (parts[0] ?? "?").slice(0, 2)).toUpperCase();
+}

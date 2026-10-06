@@ -1,1 +1,2 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&family=Barlow+Condensed:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+/* One family keeps the first paint fast. The sample design preview loads its own display face. */
+/* Inter is linked from index.html (with preconnect) so it starts loading before the CSS bundle. */

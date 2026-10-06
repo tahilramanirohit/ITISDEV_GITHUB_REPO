@@ -14,6 +14,13 @@ describe("upload limits", () => {
     expect(uploadBlocker({ size: 1 }, 60, lim, { storedBytes: 0, uploadsToday: 5 })).toContain("today's 5 uploads");
     expect(uploadBlocker({ size: 20_000_000 }, 60, lim, { storedBytes: 990_000_000, uploadsToday: 0 })).toContain("1.0 GB video storage");
   });
+  it("asks for landscape video at 720p or higher", () => {
+    expect(uploadBlocker({ size: 1 }, 60, lim, null, { width: 1080, height: 1920 })).toContain("landscape");
+    expect(uploadBlocker({ size: 1 }, 60, lim, null, { width: 854, height: 480 })).toContain("480p");
+    expect(uploadBlocker({ size: 1 }, 60, lim, null, { width: 1280, height: 720 })).toBeNull();
+    expect(uploadBlocker({ size: 1 }, 60, lim, null, { width: null, height: null })).toBeNull();
+  });
+
   it("formats durations and database errors", () => {
     expect(formatDuration(75)).toBe("1 min 15 s");
     expect(formatDuration(300)).toBe("5 min");
