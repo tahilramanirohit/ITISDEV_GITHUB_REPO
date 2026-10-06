@@ -41,3 +41,18 @@ delete from public.sessions where id = '5f000000-0000-4000-8000-00000000000f';
 reset role;
 select tests.expect_count($$ select 1 from public.self_assessments where session_id = '5f000000-0000-4000-8000-00000000000f' $$,
   0, 'deleting the session removes its assessment');
+
+-- Onboarding answers on the private profile.
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'f1111111-1111-4111-8111-111111111111', false);
+insert into public.profiles (id, display_name, play_frequency, play_reasons, main_goals, baseline_ratings, onboarding_completed_at)
+values ('f1111111-1111-4111-8111-111111111111', 'Player F', 'weekly', array['fun', 'compete'], array['positioning'],
+  '{"serve": 3, "dinking": 2}', now());
+select tests.expect_count($$ select 1 from public.profiles where onboarding_completed_at is not null $$, 1, 'player saves onboarding answers');
+select tests.expect_error($$ update public.profiles set play_frequency = 'hourly' $$, 'unknown play frequency is rejected');
+select tests.expect_error($$ update public.profiles set play_reasons = array['fame'] $$, 'unknown reason is rejected');
+select tests.expect_error($$ update public.profiles set main_goals = array['luck'] $$, 'unknown goal is rejected');
+select tests.expect_error($$ update public.profiles set baseline_ratings = '{"serve": 9}' $$, 'invalid baseline rating is rejected');
+select set_config('request.jwt.claim.sub', 'f2222222-2222-4222-8222-222222222222', false);
+select tests.expect_count($$ select 1 from public.profiles where id = 'f1111111-1111-4111-8111-111111111111' $$, 0, 'other player cannot read onboarding answers');
+reset role;

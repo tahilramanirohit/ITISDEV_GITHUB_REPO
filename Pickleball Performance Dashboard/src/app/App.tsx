@@ -7,6 +7,7 @@ import { devModeErrorText, guestErrorText } from "./auth/anonymousErrors";
 import { AuthScreen, PasswordRecoveryScreen } from "./auth/AuthScreen";
 import { useAuth } from "./auth/useAuth";
 import { AppShell } from "./shell/AppShell";
+import { OnboardingAgain, OnboardingGate } from "./onboarding/OnboardingGate";
 import { Card, Notice, WidgetHeader } from "./shell/primitives";
 import { GREEN, INK, ORANGE, WHITE_DIM, WHITE_SUB } from "./theme";
 
@@ -136,23 +137,26 @@ function SignedInApp({ sb, cfg }: { sb: SupabaseClient; cfg: AppConfig }) {
   const account = user.is_anonymous ? (isGuest ? "Private guest" : "Dev mode (mock data)") : user.email ?? "Signed in";
   const signOutLabel = user.is_anonymous ? (isGuest ? "Leave guest session" : "Exit dev mode") : "Sign out";
   return (
+    <OnboardingGate sb={sb} userId={user.id} skip={!!user.is_anonymous && !isGuest}>
     <AppShell tabs
       right={<span className="truncate rounded-full px-3 py-1.5 text-xs font-semibold" style={{ background: "#eef0ec", color: INK, maxWidth: "12rem" }}>{account}</span>}>
       <Suspense fallback={<Loading />}>
         <Routes>
           <Route path="/" element={<HomePage sb={sb} userId={user.id} />} />
           <Route path="/sessions" element={<SessionsPage sb={sb} />} />
-          <Route path="/new" element={<NewSessionPage sb={sb} trialNoWorker={cfg.trialNoWorker} />} />
+          <Route path="/new" element={<NewSessionPage sb={sb} userId={user.id} trialNoWorker={cfg.trialNoWorker} />} />
           <Route path="/sessions/:sessionId" element={<SessionDetail sb={sb} userId={user.id} />} />
           <Route path="/progress" element={<ProgressPage sb={sb} />} />
           <Route path="/profile" element={<ProfilePage sb={sb} userId={user.id} account={account}
             signOut={{ label: signOutLabel, onClick: () => void sb.auth.signOut(),
               warning: user.is_anonymous ? "You may lose access to this guest's sessions after leaving or clearing browser data." : undefined }}
             devLinks={<DevLinks cfg={cfg} />} />} />
+          <Route path="/welcome" element={<OnboardingAgain sb={sb} userId={user.id} />} />
           <Route path="*" element={<Notice tone="warn">Page not found.</Notice>} />
         </Routes>
       </Suspense>
     </AppShell>
+    </OnboardingGate>
   );
 }
 

@@ -1,6 +1,6 @@
 # PicklePro thesis prototype
 
-> **`pickleproapp` branch:** a mobile-first app layout with bottom tabs (Home, Sessions, Log, Progress, Profile), visually inspired by the Reclub sports app. Every session can now be reviewed **without a video**: the player rates ten skills and gets focus areas, drills, a week of practice and progress over time. Computer-vision video analysis stays available as an optional tab on any session. Needs the migration `supabase/migrations/20261006090000_self_assessment.sql`. See [mobile app and self-assessment](docs/MOBILE_SELF_ASSESSMENT.md).
+> **`pickleproapp` branch:** a mobile-first app layout with bottom tabs (Home, Sessions, Log, Progress, Profile), visually inspired by the Reclub sports app. New players answer a short "getting to know you" onboarding at account creation. Every session can now be reviewed **without a video**: the player rates ten skills and gets focus areas, drills, a week of practice and progress over time. Computer-vision video analysis stays available as an optional tab on any session. Needs the migrations `20261006090000_self_assessment.sql` and `20261006100000_player_onboarding.sql`. See [mobile app and self-assessment](docs/MOBILE_SELF_ASSESSMENT.md).
 
 
 

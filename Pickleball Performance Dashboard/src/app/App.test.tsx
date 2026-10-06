@@ -60,13 +60,26 @@ describe("application entry point", () => {
 });
 
 // Minimal stand-in for the Supabase client: signed out until signInAnonymously().
-function fakeSupabase({ rpcError = null as { message: string } | null } = {}) {
+// `profile` is what the profiles table holds; writes to it are kept in `upserts`.
+function fakeSupabase({ rpcError = null as { message: string } | null, profile = null as Record<string, unknown> | null } = {}) {
   let listener: ((event: string, session: unknown) => void) | null = null;
-  const empty = { data: [], error: null };
-  const query: any = new Proxy({}, {
-    get: (_t, prop) => prop === "then" ? (resolve: (v: unknown) => void) => resolve(empty) : () => query,
-  });
+  const upserts: Record<string, unknown>[] = [];
+  const makeQuery = (table: string): any => {
+    const result = () => table === "profiles" ? { data: profile, error: null } : { data: [], error: null };
+    const query: any = new Proxy({}, {
+      get: (_t, prop) => prop === "then" ? (resolve: (v: unknown) => void) => resolve(result())
+        : prop === "upsert" ? (row: Record<string, unknown>) => {
+          upserts.push(row);
+          if (table === "profiles") profile = { ...(profile ?? {}), ...row };
+          return query;
+        }
+        : prop === "maybeSingle" || prop === "single" ? async () => result()
+        : () => query,
+    });
+    return query;
+  };
   const sb = {
+    upserts,
     auth: {
       getSession: vi.fn(async () => ({ data: { session: null } })),
       onAuthStateChange: vi.fn((cb: typeof listener) => {
@@ -80,14 +93,16 @@ function fakeSupabase({ rpcError = null as { message: string } | null } = {}) {
       signOut: vi.fn(async () => { listener?.("SIGNED_OUT", null); return { error: null }; }),
     },
     rpc: vi.fn(async () => ({ data: 4, error: rpcError })),
-    from: vi.fn(() => query),
+    from: vi.fn((table: string) => makeQuery(table)),
   };
   return sb;
 }
 
+const onboarded = { id: "guest", display_name: "Sam", onboarding_completed_at: "2026-10-06T00:00:00Z", baseline_ratings: {} };
+
 describe("dev mode entry", () => {
   it("lets a public trial visitor enter a private guest session without seeding mock data", async () => {
-    const sb = fakeSupabase();
+    const sb = fakeSupabase({ profile: onboarded });
     const cfg = getConfig({ DEV: false, VITE_ENABLE_GUEST_MODE: "true" });
     render(<App cfg={cfg} sb={sb as unknown as SupabaseClient} />);
     fireEvent.click(await screen.findByRole("button", { name: /Try with my own video/ }));
@@ -147,7 +162,7 @@ describe("dev mode entry", () => {
 
 describe("mobile app layout", () => {
   it("shows bottom tabs and offers rating without video when logging a session", async () => {
-    const sb = fakeSupabase();
+    const sb = fakeSupabase({ profile: onboarded });
     const cfg = getConfig({ DEV: false, VITE_ENABLE_GUEST_MODE: "true" });
     render(<App cfg={cfg} sb={sb as unknown as SupabaseClient} />);
     fireEvent.click(await screen.findByRole("button", { name: /Try with my own video/ }));
@@ -158,5 +173,47 @@ describe("mobile app layout", () => {
     fireEvent.click(screen.getByRole("link", { name: "Log" }));
     expect(await screen.findByRole("button", { name: /Rate my own game/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /Analyze a video/ })).toBeTruthy();
+  });
+});
+
+describe("getting to know the player", () => {
+  it("asks a new player about their game once, then opens the app", async () => {
+    const sb = fakeSupabase();
+    const cfg = getConfig({ DEV: false, VITE_ENABLE_GUEST_MODE: "true" });
+    render(<App cfg={cfg} sb={sb as unknown as SupabaseClient} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Try with my own video/ }));
+    expect(await screen.findByText("Let's get to know your game")).toBeTruthy();
+    expect(screen.queryByRole("navigation", { name: "Main" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByText("Tell us what to call you.")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("What should we call you?"), { target: { value: "Sam" } });
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    fireEvent.click(await screen.findByRole("button", { name: "1–2 years" }));
+    fireEvent.click(screen.getByRole("button", { name: "About once a week" }));
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Intermediate (3.0–3.5)" }));
+    fireEvent.click(screen.getByRole("button", { name: "Winning more games" }));
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Court positioning/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    fireEvent.click(await screen.findByRole("radio", { name: /^Dinking 2 of 5/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Finish and see my plan" }));
+
+    expect(await screen.findByRole("navigation", { name: "Main" })).toBeTruthy();
+    expect(sb.upserts[0]).toMatchObject({
+      id: "guest", display_name: "Sam", is_adult_confirmed: true, years_playing: 1.5, play_frequency: "weekly",
+      self_level: "Intermediate (3.0–3.5)", play_reasons: ["compete"], main_goals: ["positioning"], baseline_ratings: { dinking: 2 },
+    });
+    expect(sb.upserts[0].onboarding_completed_at).toBeTruthy();
+  });
+
+  it("is skipped in dev mode with sample sessions", async () => {
+    const sb = fakeSupabase();
+    render(<App cfg={devConfig} sb={sb as unknown as SupabaseClient} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Try PicklePro with sample sessions/ }));
+    expect(await screen.findByRole("navigation", { name: "Main" })).toBeTruthy();
+    expect(screen.queryByText("Let's get to know your game")).toBeNull();
   });
 });

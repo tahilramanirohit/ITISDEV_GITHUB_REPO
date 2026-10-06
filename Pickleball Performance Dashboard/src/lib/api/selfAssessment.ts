@@ -54,7 +54,9 @@ export function previousAssessment(
 
 /** Explains a missing database migration instead of showing a raw PostgREST error. */
 export function friendlyDbError(message: string): string {
-  return /review_mode|self_assessments/.test(message)
-    ? "The database is missing the self-assessment update. Apply supabase/migrations/20261006090000_self_assessment.sql, then try again."
-    : message;
+  if (/review_mode|self_assessments/.test(message))
+    return "The database is missing the self-assessment update. Apply supabase/migrations/20261006090000_self_assessment.sql, then try again.";
+  if (/play_frequency|play_reasons|main_goals|baseline_ratings|onboarding_completed_at/.test(message))
+    return "The database is missing the onboarding update. Apply supabase/migrations/20261006100000_player_onboarding.sql, then try again.";
+  return message;
 }

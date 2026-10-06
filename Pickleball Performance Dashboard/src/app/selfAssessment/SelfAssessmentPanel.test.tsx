@@ -33,7 +33,6 @@ function fakeSupabase() {
 describe("SelfAssessmentPanel", () => {
   it("rates skills without a video and shows a practice plan", async () => {
     const { sb, upserts } = fakeSupabase();
-    window.scrollTo = vi.fn();
     render(<SelfAssessmentPanel sb={sb} session={session} />);
     fireEvent.click(await screen.findByRole("radio", { name: /^Serve 4 of 5/ }));
     fireEvent.click(screen.getByRole("radio", { name: /^Dinking 2 of 5/ }));

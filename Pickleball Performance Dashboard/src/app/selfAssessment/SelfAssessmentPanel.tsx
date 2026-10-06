@@ -25,14 +25,16 @@ type Draft = {
 const emptyDraft: Draft = { ratings: {}, games_played: null, games_won: null, unforced_errors: null, biggest_struggle: "" };
 const STEPS = [...SKILL_GROUPS, "Wrap-up"] as const;
 
-function SkillRater({ skill, value, onChange }: { skill: SelfSkill; value: SkillRating | undefined; onChange: (v: SkillRating | undefined) => void }) {
+export function SkillRater({ skill, value, onChange, question }: {
+  skill: SelfSkill; value: SkillRating | undefined; onChange: (v: SkillRating | undefined) => void; question?: string;
+}) {
   const info = SKILL_INFO[skill];
   return (
     <Card className="!p-4">
       <div className="flex items-start justify-between gap-2">
         <div>
           <h3 className="text-base font-bold" style={{ color: INK }}>{info.label}</h3>
-          <p className="text-sm" style={{ color: WHITE_DIM }}>{info.question}</p>
+          <p className="text-sm" style={{ color: WHITE_DIM }}>{question ?? info.question}</p>
         </div>
         {value && <button type="button" onClick={() => onChange(undefined)} className="shrink-0 text-xs font-semibold underline" style={{ color: WHITE_SUB }}>Clear</button>}
       </div>

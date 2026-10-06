@@ -103,6 +103,10 @@ export default function ProfilePage({ sb, userId, account, signOut, devLinks }: 
       </form>
     </Card>
 
+    <a href="#/welcome" className="flex items-center justify-between rounded-3xl p-4 text-sm font-bold" style={{ background: OPTIC, color: INK }}>
+      Update my game and starting skills <span aria-hidden="true">→</span>
+    </a>
+
     <Card>
       <SectionTitle>Display</SectionTitle>
       <div className="mt-3"><LargeTextToggle /></div>

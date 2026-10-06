@@ -1,9 +1,10 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ArrowLeft, Camera, Check, ClipboardCheck } from "lucide-react";
 import { createSession, type NewSession } from "../../lib/api/sessions";
 import { friendlyDbError } from "../../lib/api/selfAssessment";
+import { getProfile } from "../../lib/api/profile";
 import {
   CONTEXT_LABELS, FORMAT_LABELS, PLAY_FORMATS, SESSION_CONTEXTS, type ReviewMode,
 } from "../../lib/api/types";
@@ -38,7 +39,7 @@ function ModeCard({ selected, onSelect, icon, title, detail, tag }: {
   );
 }
 
-export default function NewSessionPage({ sb, trialNoWorker = false }: { sb: SupabaseClient; trialNoWorker?: boolean }) {
+export default function NewSessionPage({ sb, userId, trialNoWorker = false }: { sb: SupabaseClient; userId?: string; trialNoWorker?: boolean }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const preset = params.get("mode");
@@ -51,6 +52,20 @@ export default function NewSessionPage({ sb, trialNoWorker = false }: { sb: Supa
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const set = <K extends keyof NewSession>(k: K, v: NewSession[K]) => setForm((f) => ({ ...f, [k]: v }));
+  // Start from what the player told us when they joined; they can still change it.
+  useEffect(() => {
+    if (!userId) return;
+    let active = true;
+    getProfile(sb, userId).then((p) => {
+      if (!active || !p) return;
+      setForm((f) => ({
+        ...f,
+        improvement_goals: f.improvement_goals.length ? f.improvement_goals : p.main_goals ?? [],
+        play_format: p.usual_format === "singles" ? "singles" : p.usual_format === "doubles" ? "doubles" : f.play_format,
+      }));
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [sb, userId]);
   const chooseMode = (mode: ReviewMode) => set("review_mode", mode);
 
   async function submit() {

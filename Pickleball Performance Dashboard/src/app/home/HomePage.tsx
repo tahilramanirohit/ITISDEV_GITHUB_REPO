@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ArrowRight, Camera, ClipboardCheck, Dumbbell, Flame } from "lucide-react";
-import { getProfile } from "../../lib/api/profile";
+import { getProfile, type PlayerProfile } from "../../lib/api/profile";
 import { buildSelfReport, SKILL_INFO } from "../../lib/coaching/selfAssessment";
 import { BORDER, CARD_GLOW, DISPLAY_FONT, GREEN, GREEN_BG, INK, NAVY, OPTIC, OPTIC_INK, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Notice, SectionTitle } from "../shell/primitives";
@@ -34,12 +34,13 @@ function Stat({ value, label }: { value: string; label: string }) {
 
 export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: string }) {
   const { items, assessments, error } = useSessionsData(sb);
-  const [name, setName] = useState("");
+  const [profile, setProfile] = useState<PlayerProfile | null>(null);
   useEffect(() => {
     let active = true;
-    getProfile(sb, userId).then((p) => { if (active && p?.display_name) setName(p.display_name.split(" ")[0]); }).catch(() => {});
+    getProfile(sb, userId).then((p) => { if (active) setProfile(p); }).catch(() => {});
     return () => { active = false; };
   }, [sb, userId]);
+  const name = profile?.display_name?.split(" ")[0] ?? "";
 
   const byId = useMemo(() => new Map(assessments.map((a) => [a.session_id, a])), [assessments]);
   // Latest session that has a usable self-assessment plan.
@@ -49,10 +50,15 @@ export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: s
       if (!a) continue;
       const report = buildSelfReport({ ratings: a.ratings, goals: item.session.improvement_goals ?? [],
         biggestStruggle: a.biggest_struggle, unforcedErrors: a.unforced_errors });
-      if (report.available) return { item, report };
+      if (report.available) return { href: `#/sessions/${item.session.id}`, starting: false, report };
+    }
+    // Before any rated session, plan from the onboarding answers.
+    if (profile?.baseline_ratings) {
+      const report = buildSelfReport({ ratings: profile.baseline_ratings, goals: profile.main_goals ?? [] });
+      if (report.available) return { href: "#/new?mode=self", starting: true, report };
     }
     return null;
-  }, [items, byId]);
+  }, [items, byId, profile]);
 
   const sessions = items ?? [];
   const thisMonth = new Date().toISOString().slice(0, 7);
@@ -89,12 +95,14 @@ export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: s
       </div>}
 
       {latestPlan && latestPlan.report.focus.length > 0 && <section className="space-y-3">
-        <SectionTitle action={<a href={`#/sessions/${latestPlan.item.session.id}`} className="inline-flex items-center gap-1 text-sm font-semibold" style={{ color: GREEN }}>Full plan <ArrowRight size={14} /></a>}>
-          Your focus
+        <SectionTitle action={<a href={latestPlan.href} className="inline-flex items-center gap-1 text-sm font-semibold" style={{ color: GREEN }}>
+          {latestPlan.starting ? "Rate a session" : "Full plan"} <ArrowRight size={14} /></a>}>
+          {latestPlan.starting ? "Your starting focus" : "Your focus"}
         </SectionTitle>
+        {latestPlan.starting && <p className="-mt-1 text-sm" style={{ color: WHITE_DIM }}>From your starting answers. Rate a session after you play to update it.</p>}
         <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
           {latestPlan.report.focus.map((f, i) => (
-            <a key={f.skill} href={`#/sessions/${latestPlan.item.session.id}`} className="w-64 shrink-0 snap-start rounded-3xl p-4"
+            <a key={f.skill} href={latestPlan.href} className="w-64 shrink-0 snap-start rounded-3xl p-4"
               style={{ background: i === 0 ? OPTIC : WHITE, border: `1px solid ${i === 0 ? OPTIC : BORDER}`, boxShadow: CARD_GLOW }}>
               <p className="text-xs font-bold uppercase tracking-wider" style={{ color: i === 0 ? OPTIC_INK : GREEN }}>Focus {i + 1} · {f.rating}/5</p>
               <p className="mt-1 text-base font-bold" style={{ color: INK }}>{SKILL_INFO[f.skill].label}</p>
