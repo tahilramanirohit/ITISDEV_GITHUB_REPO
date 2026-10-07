@@ -46,7 +46,9 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
   const [paramsError, setParamsError] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   // "auto" = upload without court points; the analyzer finds the court itself.
-  const [confirmedCourt, setConfirmedCourt] = useState<CourtConfirmation | "auto" | null>(null);
+  const [confirmedCourt, setConfirmedCourt] = useState<CourtConfirmation | "auto" | null>("auto");
+  // Off by default: the analyzer finds the court itself. On = review and mark court points before upload.
+  const [markCourtMyself, setMarkCourtMyself] = useState(false);
   const [reanalysisFile, setReanalysisFile] = useState<File | null>(null);
   const [reanalysisCourt, setReanalysisCourt] = useState<CourtConfirmation | null>(null);
   const [useAutomaticCourt, setUseAutomaticCourt] = useState(false);
@@ -535,7 +537,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
             </label>}
             <label className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold cursor-pointer"
               style={{ background: params ? NEON : `${NEON}50`, color: NEON_D }}>
-              <Upload size={14} /> {state === "upload_incomplete" ? "Resume upload (select the same file)" : "Choose video & review court"}
+              <Upload size={14} /> {state === "upload_incomplete" ? "Resume upload (select the same file)" : markCourtMyself ? "Choose video & review court" : "Choose video & upload"}
               <input type="file" accept="video/mp4,video/quicktime,video/webm,video/x-msvideo" className="hidden"
                 disabled={!params || !!localUpload}
                 onChange={(e) => {
@@ -548,7 +550,11 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
                   void probeVideo(f).then((meta) => {
                     const blocker = state === "upload_incomplete" ? null : uploadBlocker(f, meta.duration, limits, usage, meta);
                     if (blocker) { setError(blocker); return; }
-                    setPendingDuration(meta.duration); setPendingFile(f); setConfirmedCourt(null);
+                    setPendingDuration(meta.duration);
+                    if (markCourtMyself) { setPendingFile(f); setConfirmedCourt(null); return; }
+                    // Default: upload straight away and let the analyzer map the court.
+                    setConfirmedCourt("auto");
+                    void onFileSelected(f, null);
                   });
                 }} />
             </label>
@@ -572,8 +578,13 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
               </ul>
               <p className="mt-2 text-xs" style={{ color: WHITE_SUB }}>MP4, MOV, WEBM or AVI, 720p and 30 fps or higher. Trim to a rally clip on your device first. Your upload is private, and raw video is removed 30 days after analysis unless you keep it.</p>
             </div>
+            <p className="text-sm" style={{ color: WHITE_DIM }}>The analyzer finds the court lines by itself. If it gets them wrong, you can correct them later with "Re-run analysis".</p>
             <details className="rounded-xl p-3" style={{ border: `1px solid ${BORDER}` }}>
               <summary className="text-sm font-semibold cursor-pointer" style={{ color: BLUE_SKY }}>Advanced analysis options</summary>
+              <label className="mt-3 flex items-start gap-2 text-sm" style={{ color: WHITE_DIM }}>
+                <input type="checkbox" className="mt-0.5 h-5 w-5" checked={markCourtMyself} onChange={(e) => setMarkCourtMyself(e.target.checked)} />
+                <span>Mark the court points myself before uploading (for unusual camera angles)</span>
+              </label>
               <div className="mt-3"><AnalysisParamsForm playFormat={session.play_format} onChange={(p, err) => { setParams(p); setParamsError(err); }} /></div>
             </details>
             {state === "upload_incomplete" && video && (
