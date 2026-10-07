@@ -110,7 +110,7 @@ export function SelfAssessmentPanel({ sb, session }: { sb: SupabaseClient; sessi
 
   if (!editing && saved && report) {
     return <SelfReportView report={report} previousLabel={previous?.label}
-      progress={previous ? compareSelfRatings(saved.ratings, previous.ratings) : null}
+      progress={previous ? compareSelfRatings(saved.ratings, previous.ratings, session.play_format) : null}
       onEdit={() => { setEditing(true); setStep(0); }} />;
   }
 

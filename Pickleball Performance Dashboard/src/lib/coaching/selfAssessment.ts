@@ -238,7 +238,7 @@ export function buildSelfReport(input: SelfAssessmentInput): SelfReport {
   const info = (skill: SelfSkill) => skillInfo(skill, input.playFormat);
   const scored = rated.map((skill) => {
     const i = info(skill);
-    const reasons: string[] = [`You rated it ${rating(skill)}/5`];
+    const reasons: string[] = [`you rated it ${rating(skill)}/5`];
     let score = 6 - rating(skill);
     if (input.goals.includes(i.goal)) { score += 1; reasons.push("it matches a focus you chose"); }
     if (mentioned.has(skill)) { score += 1.5; reasons.push("you mentioned it as a struggle"); }
@@ -302,13 +302,13 @@ function buildPlan(focus: SelfFocusItem[]): SelfReport["plan"] {
 }
 
 /** Skill-by-skill change between two self-assessments, for skills rated in both. */
-export function compareSelfRatings(current: SelfRatings, previous: SelfRatings): SelfProgressRow[] {
+export function compareSelfRatings(current: SelfRatings, previous: SelfRatings, playFormat?: string | null): SelfProgressRow[] {
   return SELF_SKILLS.flatMap((skill) => {
     const after = current[skill];
     const before = previous[skill];
     if (after == null || before == null) return [];
     const change = after > before ? "better" : after < before ? "worse" : "same";
-    return [{ skill, label: SKILL_INFO[skill].label, before, after, change }];
+    return [{ skill, label: skillInfo(skill, playFormat).label, before, after, change }];
   });
 }
 
