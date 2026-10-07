@@ -57,6 +57,15 @@ describe("ResultView", () => {
     expect(screen.getByText(/Shot success and in\/out calls are outside this analysis scope/)).toBeTruthy();
   });
 
+  it("offers a spoken video review when the video gives no practice plan", () => {
+    const result = structuredClone(testFixture);
+    result.data_origin = "measured";
+    render(<ResultView result={parseAnalysisResult(result)} videoUrl={null} />);
+    expect(screen.getByText("Practice plan from this video: not available.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^Play video review/ })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /^Hear full plan/ })).toBeNull();
+  });
+
   it("offers optional audio coaching that reveals words only after they are spoken", () => {
     const result = structuredClone(testFixture);
     result.data_origin = "measured";

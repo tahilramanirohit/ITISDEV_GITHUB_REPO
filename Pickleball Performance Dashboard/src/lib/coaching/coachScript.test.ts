@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CoachingReport } from "../analysis/coaching";
-import { formatSeconds, scriptSeconds, selfCoachScript, spoken, videoCoachScript, type CoachScript } from "./coachScript";
+import { formatSeconds, scriptSeconds, selfCoachScript, spoken, videoCoachScript, videoReviewScript, type CoachScript } from "./coachScript";
 import { estimatedCharPos, flattenScript, splitWords, wordAt } from "./coachSpeech";
 import { buildSelfReport, compareSelfRatings } from "./selfAssessment";
 
@@ -55,6 +55,18 @@ describe("video coaching script", () => {
     expect(script.sections.flatMap((s) => s.lines).filter((l) => l.source === "video").map((l) => l.text)).toEqual([
       "Kitchen line. You reached the line often.", "You stayed mid-court after returns."]);
     expect(allText(script)).toContain("estimates from one camera angle");
+  });
+});
+
+describe("spoken video review", () => {
+  it("says what the video showed and points to self-rating for a plan", () => {
+    const text = allText(videoReviewScript({ sessionTitle: "Sunday singles",
+      seen: { foundYou: 0.82, playersFound: true, courtFound: true, ballFollowed: false, hitsNamed: 3 } }));
+    expect(text).toContain("PicklePro found you in 82 percent of the video.");
+    expect(text).toContain("It didn't see the ball.");
+    expect(text).toContain("Shot names are experimental");
+    expect(text).toContain("can't give practice advice yet");
+    expect(text).toContain("rate this session");
   });
 });
 

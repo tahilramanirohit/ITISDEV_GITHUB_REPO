@@ -305,8 +305,8 @@ export function CoachPlayer({ script, isShort, onFull, onClose }: {
  * Opt-in buttons for the audio coach. The written plan on the page is unchanged; nothing plays until tapped.
  * `tone` matches the surface the buttons sit on.
  */
-export function CoachLauncher({ shortScript, fullScript, tone = "yellow", compact = false }: {
-  shortScript: CoachScript; fullScript?: CoachScript; tone?: "yellow" | "light"; compact?: boolean;
+export function CoachLauncher({ shortScript, fullScript, tone = "yellow", compact = false, label }: {
+  shortScript: CoachScript; fullScript?: CoachScript; tone?: "yellow" | "light"; compact?: boolean; label?: string;
 }) {
   const [open, setOpen] = useState<"short" | "full" | null>(null);
   const opener = useRef<HTMLButtonElement>(null);
@@ -322,7 +322,7 @@ export function CoachLauncher({ shortScript, fullScript, tone = "yellow", compac
         className={`inline-flex items-center gap-2 rounded-full font-extrabold ${compact ? "min-h-[40px] px-4 text-xs" : "min-h-[48px] px-5 text-sm"}`}
         style={{ background: DEEP, color: tone === "yellow" ? YELLOW : "#ffffff" }}>
         <Play size={compact ? 14 : 16} fill="currentColor" aria-hidden="true" />
-        {compact ? "Hear this week's plan" : "Play coaching"} · {shortLen}
+        {label ?? (compact ? "Hear this week's plan" : "Play coaching")} · {shortLen}
       </button>
       {hasFull && !compact && <button type="button" onClick={() => start("full")} className="min-h-[48px] rounded-full px-4 text-sm font-bold"
         style={{ border: `2px solid ${tone === "yellow" ? "rgba(43,33,0,0.35)" : "rgba(11,42,26,0.25)"}`, color: tone === "yellow" ? YELLOW_INK : DEEP }}>

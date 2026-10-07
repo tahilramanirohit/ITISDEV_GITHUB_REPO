@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, CheckCircle2, CircleDashed, FlaskConical, Info } from "lucide-react";
 import {
   METRIC_KEYS, METRIC_LABELS, VALIDATION_LABELS, publicShotResult,
@@ -6,6 +6,8 @@ import {
 } from "../../lib/analysis/contract";
 import { GOAL_LABELS, type SessionRow } from "../../lib/api/types";
 import { buildCoachingReport } from "../../lib/analysis/coaching";
+import { videoCoachScript, videoReviewScript } from "../../lib/coaching/coachScript";
+import { CoachLauncher } from "../coach/CoachPlayer";
 import { BLUE_SKY, BORDER, INK, NEON, ORANGE, ORANGE_L, ROSE, VIOLET, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Card, Notice, Pill, WidgetHeader } from "../shell/primitives";
 import { CourtDwellHeatmap } from "./CourtDwellHeatmap";
@@ -101,7 +103,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
   const heat = result.metrics.court_heatmap;
   const zones = result.metrics.zone_occupancy;
   const sel = result.player_selection;
-  const coaching = buildCoachingReport(result);
+  const coaching = useMemo(() => buildCoachingReport(result), [result]);
   const [selectingPlayer, setSelectingPlayer] = useState(false);
   const [jump, setJump] = useState<JumpRequest>(null);
   const shotMetric = result.metrics.shot_classification;
@@ -123,6 +125,21 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
   const devMock = isDevMock(result);
   const heatValidated = devMock || heat.validation === "evaluated_on_real_footage";
   const zonesValidated = devMock || zones.validation === "evaluated_on_real_footage";
+  // Optional audio: the coaching plan when the video supports one, otherwise a spoken review of what was found.
+  const audio = useMemo(() => {
+    if (result.data_origin !== "measured" || devMock) return null;
+    if (coaching.available) {
+      return { short: videoCoachScript({ report: coaching, sessionTitle: session?.title, length: "short" }),
+        full: videoCoachScript({ report: coaching, sessionTitle: session?.title, length: "full" }) };
+    }
+    return { short: videoReviewScript({ sessionTitle: session?.title, seen: {
+      foundYou: sel && sel.tracked_fraction > 0 ? sel.tracked_fraction : null,
+      playersFound: c.frames_with_detections > 0,
+      courtFound: !!result.calibration,
+      ballFollowed: result.provenance.ball_detector ? (c.frames_with_ball_detections ?? 0) > 0 : null,
+      hitsNamed: shotsShown ? shotCount.shots.length : 0,
+    } }) };
+  }, [result, devMock, coaching, session?.title, sel, c, shotsShown, shotCount.shots.length]);
   const warnings = devMock ? result.warnings.filter((warning) => !warning.startsWith("DEV MOCK DATA")) : result.warnings;
 
   return (
@@ -148,6 +165,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
             {devMock ? "SAMPLE" : result.status === "ok" ? "RESULT" : "INSUFFICIENT DATA"}
           </Pill>
         </div>
+        {audio && <div className="mb-3"><CoachLauncher shortScript={audio.short} fullScript={audio.full} tone="light" label={coaching.available ? undefined : "Play video review"} /></div>}
         <p className="text-base text-[#101827]">{devMock ? "This sample shows the kind of practice plan PicklePro can display. It is not feedback about your play." : visibleMessage}</p>
         {warnings.length > 0 && (
           <details className="mt-3">
@@ -242,7 +260,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
       ) : null}
 
       {(!session?.improvement_goals?.length || session.improvement_goals.includes("positioning")) &&
-        <CoachingPanel result={result} previous={previous} onRateSession={onRateSession} sessionTitle={session?.title} />}
+        <CoachingPanel result={result} previous={previous} onRateSession={onRateSession} />}
 
       {result.data_origin === "measured" && !devMock && hasPlayers && (
         <PlayerPicker result={shotDisplayResult} myPlayerId={myPlayerId} onPick={setMyPlayerId} showShotCounts={allowShotDisplay}

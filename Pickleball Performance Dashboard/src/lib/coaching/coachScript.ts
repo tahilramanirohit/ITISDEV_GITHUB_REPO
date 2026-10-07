@@ -18,6 +18,7 @@ export function spoken(text: string): string {
     .replace(/-plus-/g, " plus ")
     .replace(/(\d+) cm\b/g, "$1 centimetres")
     .replace(/(\d+) m\b/g, "$1 metre")
+    .replace(/(\d)%/g, "$1 percent")
     .replace(/(\d)\/5\b/g, (_, n: string) => ` ${outOfFive(Number(n))}`)
     .replace(/\s+/g, " ")
     .trim();
@@ -108,6 +109,39 @@ export function videoCoachScript({ report, sessionTitle, length }: {
     ],
   });
   return { sections };
+}
+
+/** What the analyzer could see, for any finished video, including the usual case where it gives no practice advice. */
+export type VideoSeen = {
+  /** Share of the video the player was found in, 0-1, when one player was followed. */
+  foundYou: number | null;
+  playersFound: boolean;
+  courtFound: boolean;
+  /** null when the analyzer has no ball model. */
+  ballFollowed: boolean | null;
+  /** Experimental shot names shown on the page. */
+  hitsNamed: number;
+};
+
+export function videoReviewScript({ seen, sessionTitle }: { seen: VideoSeen; sessionTitle?: string | null }): CoachScript {
+  const lines: CoachLine[] = [
+    line(seen.foundYou != null ? `PicklePro found you in ${Math.round(seen.foundYou * 100)}% of the video.`
+      : seen.playersFound ? "PicklePro found players in the video." : "PicklePro couldn't find any players in this video.", "video"),
+    line(seen.courtFound ? "It found the court lines." : "It couldn't find the court lines, so try filming the whole court next time.", "video"),
+  ];
+  if (seen.ballFollowed != null) lines.push(line(seen.ballFollowed ? "It followed the ball." : "It didn't see the ball.", "video"));
+  if (seen.hitsNamed > 0) {
+    lines.push(line(`It named ${seen.hitsNamed} hit${seen.hitsNamed === 1 ? "" : "s"}.`, "video"));
+    lines.push(line("Shot names are experimental, so check them with the watch buttons."));
+  }
+  return { sections: [
+    { title: "Intro", lines: [line(`Here's your video review for ${sessionTitle?.trim() || "this session"}. It covers what PicklePro could see.`)] },
+    { title: "What the video showed", lines },
+    { title: "Your practice plan", lines: [
+      line("This video can't give practice advice yet, because court position tips are still being checked against labelled videos."),
+      line("For a plan you can listen to, rate this session in the rate and plan tab."),
+    ] },
+  ] };
 }
 
 /** Rough spoken length at normal speed, for the button label. */

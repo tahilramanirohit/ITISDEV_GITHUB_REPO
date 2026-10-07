@@ -2,8 +2,6 @@ import { useMemo } from "react";
 import { ArrowDownRight, ArrowUpRight, CheckCircle2, Minus, Target } from "lucide-react";
 import type { AnalysisResultV1 } from "../../lib/analysis/contract";
 import { buildCoachingReport, compareProgress, type CoachingItem, type ProgressRow } from "../../lib/analysis/coaching";
-import { videoCoachScript } from "../../lib/coaching/coachScript";
-import { CoachLauncher } from "../coach/CoachPlayer";
 import { BLUE_SKY, BORDER, NEON, ORANGE_L, WHITE_DIM } from "../theme";
 import { Card, WidgetHeader } from "../shell/primitives";
 
@@ -75,26 +73,20 @@ function ProgressTable({ rows, label }: { rows: ProgressRow[]; label: string }) 
   );
 }
 
-export function CoachingPanel({ result, previous, onRateSession, sessionTitle }: {
-  result: AnalysisResultV1; previous?: PreviousSession | null; sessionTitle?: string | null;
+export function CoachingPanel({ result, previous, onRateSession }: {
+  result: AnalysisResultV1; previous?: PreviousSession | null;
   /** Offered when the video cannot support advice: plan from the player's own ratings instead. */
   onRateSession?: () => void;
 }) {
   const report = useMemo(() => buildCoachingReport(result), [result]);
   const devMock = result.provenance.pipeline_version === "dev-mock";
   const progress = useMemo(() => previous ? compareProgress(result, previous.result) : null, [result, previous]);
-  // Audio coaching is optional: the written plan below stays the same, and nothing plays until tapped.
-  const coach = useMemo(() => report.available && !devMock ? {
-    short: videoCoachScript({ report, sessionTitle, length: "short" }),
-    full: videoCoachScript({ report, sessionTitle, length: "full" }),
-  } : null, [report, devMock, sessionTitle]);
 
   return (
     <Card accent={report.available ? NEON : undefined}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <WidgetHeader title="What to practice next" subtitle={devMock ? "Example practice plan using sample data."
           : report.available ? "Practice plan based on court positioning observed in your video." : "No video-based practice plan yet."} />
-        {coach && <CoachLauncher shortScript={coach.short} fullScript={coach.full} tone="light" />}
       </div>
       <p className="text-sm text-[#101827]">{devMock ? "Example only: these findings do not describe your play." : report.introduction}</p>
       {!report.available && !devMock && onRateSession && (
