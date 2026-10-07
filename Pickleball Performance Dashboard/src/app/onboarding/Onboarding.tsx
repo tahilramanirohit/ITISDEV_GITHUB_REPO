@@ -69,7 +69,6 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
   function next() {
     setError("");
     if (step === 0 && !form.display_name.trim()) return setError("Tell us what to call you.");
-    if (step === 0 && !form.is_adult_confirmed) return setError("PicklePro is for players aged 18 and over.");
     if (step === 3 && !form.main_goals.length) return setError("Pick at least one thing to work on.");
     setStep(step + 1);
     window.scrollTo({ top: 0 });
@@ -121,10 +120,6 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
           <input id="onboard-name" autoComplete="given-name" maxLength={80} value={form.display_name}
             onChange={(e) => set("display_name", e.target.value)} className="w-full rounded-2xl px-4 py-3 text-base" style={fieldStyle} />
         </div>
-        <label className="flex items-start gap-3 rounded-2xl p-4 text-sm" style={{ background: WHITE, border: `1px solid ${BORDER}` }}>
-          <input type="checkbox" className="mt-0.5 h-5 w-5" checked={form.is_adult_confirmed} onChange={(e) => set("is_adult_confirmed", e.target.checked)} />
-          <span>I am at least 18 years old. This does not make my profile visible to others.</span>
-        </label>
       </div>}
 
       {step === 1 && <div className="space-y-5">

@@ -6,6 +6,7 @@ import { getProfile, saveProfile, supportsProfileExtras, type PlayerProfile, typ
 import { PhotoError, removeProfilePhoto, uploadProfilePhoto } from "../../lib/api/profilePhoto";
 import { Card, Chip, Notice, PageHero, PrimaryButton, SectionTitle, Sheet, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
 import { BORDER, DEEP, INK, ROSE, WHITE, WHITE_DIM, WHITE_SUB, YELLOW, YELLOW_INK } from "../theme";
+import { announceProfileUpdate } from "./NavAvatar";
 import { ProfileAvatar } from "./ProfileAvatar";
 
 const BIO_MAX = 160;
@@ -60,6 +61,7 @@ export default function EditProfilePage({ sb, userId }: { sb: SupabaseClient; us
     setPreview(URL.createObjectURL(file));
     try {
       setPhotoPath(await uploadProfilePhoto(sb, userId, file, photoPath));
+      announceProfileUpdate();
     } catch (e) {
       setPreview(null);
       setPhotoError(e instanceof PhotoError ? e.message : "The photo could not be uploaded. Check your connection and try again.");
@@ -77,6 +79,7 @@ export default function EditProfilePage({ sb, userId }: { sb: SupabaseClient; us
       await removeProfilePhoto(sb, userId, photoPath);
       setPhotoPath(null);
       setPreview(null);
+      announceProfileUpdate();
     } catch (e) {
       setPhotoError(e instanceof PhotoError ? e.message : "The photo could not be removed. Try again.");
     } finally { setPhotoBusy(""); }
@@ -90,6 +93,7 @@ export default function EditProfilePage({ sb, userId }: { sb: SupabaseClient; us
       const base: ProfileInput = { display_name: form.display_name.trim(), dominant_hand: form.dominant_hand, years_playing: form.years_playing,
         usual_format: form.usual_format, self_level: clean(form.self_level), is_adult_confirmed: form.is_adult_confirmed };
       await saveProfile(sb, userId, extras ? { ...base, bio: clean(form.bio), home_court: clean(form.home_court), paddle: clean(form.paddle) } : base);
+      announceProfileUpdate();
       navigate("/profile");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -176,10 +180,6 @@ export default function EditProfilePage({ sb, userId }: { sb: SupabaseClient; us
                   placeholder="e.g. 3.0" className="w-full min-w-0 rounded-2xl px-4 py-3 text-base font-normal" style={fieldStyle} />
               </label>
             </div>
-            <label className="flex items-start gap-2 text-sm">
-              <input type="checkbox" className="mt-0.5 h-5 w-5" checked={form.is_adult_confirmed} onChange={(e) => setForm({ ...form, is_adult_confirmed: e.target.checked })} />
-              <span>I confirm I am at least 18 years old. This does not make my profile visible to others.</span>
-            </label>
             <div className="flex flex-wrap gap-2">
               <PrimaryButton type="submit" className="flex-1" disabled={saving || !form.display_name.trim()}>{saving ? "Saving…" : "Save profile"}</PrimaryButton>
               <a href="#/profile" className="inline-flex min-h-[48px] items-center rounded-full px-6 text-sm font-bold" style={{ border: `1px solid ${BORDER}`, color: INK }}>Cancel</a>

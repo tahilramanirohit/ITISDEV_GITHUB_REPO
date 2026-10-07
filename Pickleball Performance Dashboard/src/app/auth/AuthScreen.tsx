@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { ArrowRight, Camera, ClipboardCheck, Dumbbell, FlaskConical, TrendingUp } from "lucide-react";
 import mascotUrl from "../../assets/picklepro-mascot.webp";
 import { BORDER, CARD_GLOW, DISPLAY_FONT, GREEN, INK, NAVY, NEON, NEON_D, OPTIC, OPTIC_INK, ORANGE, PAGE_BG, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
-import { Notice, PickleProLogo, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
+import { Notice, PasswordInput, PickleProLogo, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
 import { LargeTextToggle } from "../shell/AppShell";
 
 type Mode = "sign_in" | "sign_up" | "reset";
@@ -155,9 +155,9 @@ export function AuthScreen({ sb, devMode, guestMode, samplePreviewEnabled = fals
               </div>
               {mode !== "reset" && <div>
                 <label className={labelClass} style={labelStyle} htmlFor="password">Password</label>
-                <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                <PasswordInput id="password" value={password} onChange={(e) => setPassword(e.target.value)}
                   autoComplete={mode === "sign_in" ? "current-password" : "new-password"}
-                  className="w-full rounded-2xl px-4 py-3 text-base outline-none" style={fieldStyle} />
+                  className="rounded-2xl px-4 py-3 text-base outline-none" />
               </div>}
               {error && <Notice tone="error">{error}</Notice>}
               {info && <Notice>{info}</Notice>}
@@ -255,8 +255,8 @@ export function PasswordRecoveryScreen({ sb }: { sb: SupabaseClient }) {
     <h1 className="mt-6 text-2xl font-extrabold" style={{ fontFamily: DISPLAY_FONT }}>Choose a new password</h1>
     <form onSubmit={submit} className="mt-6 space-y-4">
       <label className="block text-sm font-semibold" htmlFor="new-password">New password</label>
-      <input id="new-password" type="password" autoComplete="new-password" value={password}
-        onChange={(e) => setPassword(e.target.value)} className="w-full rounded-xl px-4 py-3" style={fieldStyle} />
+      <PasswordInput id="new-password" autoComplete="new-password" value={password}
+        onChange={(e) => setPassword(e.target.value)} className="rounded-xl px-4 py-3" />
       {error && <Notice tone="error">{error}</Notice>}
       <button type="submit" disabled={busy} className="w-full rounded-2xl px-4 py-3 font-semibold disabled:opacity-50"
         style={{ background: NEON, color: NEON_D }}>{busy ? "Saving…" : "Save password"}</button>

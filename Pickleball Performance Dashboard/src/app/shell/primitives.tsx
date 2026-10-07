@@ -1,4 +1,5 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import logoUrl from "../../assets/picklepro-logo.webp";
 import logo2xUrl from "../../assets/picklepro-logo@2x.webp";
 import {
@@ -284,3 +285,18 @@ export const fieldStyle = {
 export const labelClass = "block text-sm font-semibold mb-1.5";
 export const labelStyle = { color: WHITE_DIM } as const;
 export const subtleText = { color: WHITE_SUB } as const;
+
+/** Password field with a show/hide button, so people can check what they typed on a phone keyboard. */
+export function PasswordInput({ className = "", style, ...rest }: Omit<InputHTMLAttributes<HTMLInputElement>, "type">) {
+  const [shown, setShown] = useState(false);
+  return (
+    <div className="relative">
+      <input {...rest} type={shown ? "text" : "password"} autoCapitalize="none" autoCorrect="off" spellCheck={false}
+        className={`w-full pr-14 ${className}`} style={{ ...fieldStyle, ...style }} />
+      <button type="button" onClick={() => setShown((v) => !v)} aria-label={shown ? "Hide password" : "Show password"} aria-pressed={shown}
+        className="absolute inset-y-0 right-1 my-auto flex h-11 w-11 items-center justify-center rounded-full" style={{ color: WHITE_SUB }}>
+        {shown ? <EyeOff size={20} aria-hidden="true" /> : <Eye size={20} aria-hidden="true" />}
+      </button>
+    </div>
+  );
+}

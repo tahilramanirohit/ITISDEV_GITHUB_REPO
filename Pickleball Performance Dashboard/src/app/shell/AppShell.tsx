@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useLocation } from "react-router";
 import { BarChart3, CalendarDays, Home, Plus, UserRound } from "lucide-react";
-import { BODY_FONT, BORDER, DEEP, GREEN, INK, OPTIC, OPTIC_INK, PAGE_BG, WHITE, WHITE_SUB } from "../theme";
+import { BODY_FONT, BORDER, DEEP, GREEN, GREEN_BG, INK, OPTIC, OPTIC_INK, PAGE_BG, WHITE, WHITE_SUB } from "../theme";
 import { PickleProLogo } from "./primitives";
 
 const TEXT_SIZE_KEY = "picklepro.largeText";
@@ -42,30 +42,35 @@ const TABS = [
   { href: "#/sessions", label: "Sessions", icon: CalendarDays, match: (p: string) => p.startsWith("/sessions") },
   { href: "#/new", label: "Log", icon: Plus, match: (p: string) => p === "/new", primary: true },
   { href: "#/progress", label: "Progress", icon: BarChart3, match: (p: string) => p === "/progress" },
-  { href: "#/profile", label: "Profile", icon: UserRound, match: (p: string) => p === "/profile" },
+  { href: "#/profile", label: "Profile", icon: UserRound, match: (p: string) => p.startsWith("/profile") },
 ] as const;
 
-/** Thumb-reachable tab bar, fixed to the bottom of the screen like a native app. */
-function BottomTabs() {
+/**
+ * Floating tab bar like Facebook and Instagram: icons only in a rounded capsule, the current
+ * screen in a soft bubble, and the player's own photo as the Profile button.
+ */
+function BottomTabs({ avatar }: { avatar?: ReactNode }) {
   const { pathname } = useLocation();
   return (
-    <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 border-t lg:hidden"
-      style={{ background: "rgba(255,255,255,0.96)", backdropFilter: "blur(12px)", borderColor: BORDER,
-        paddingBottom: "env(safe-area-inset-bottom)" }}>
-      <ul className="mx-auto grid max-w-xl grid-cols-5 md:max-w-3xl">
+    <nav aria-label="Main" className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-3 lg:hidden"
+      style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 10px)" }}>
+      <ul className="pointer-events-auto mx-auto flex max-w-md items-center justify-between rounded-full px-1.5 py-1.5 md:max-w-lg"
+        style={{ background: "rgba(255,255,255,0.86)", backdropFilter: "blur(18px) saturate(1.6)", WebkitBackdropFilter: "blur(18px) saturate(1.6)",
+          border: "1px solid rgba(229,231,235,0.9)", boxShadow: "0 10px 30px rgba(11,42,26,0.16)" }}>
         {TABS.map((tab) => {
           const active = tab.match(pathname);
           const Icon = tab.icon;
+          const isProfile = tab.href === "#/profile";
           return (
-            <li key={tab.href}>
-              <a href={tab.href} aria-current={active ? "page" : undefined}
-                className="flex min-h-[60px] flex-col items-center justify-center gap-0.5 text-[11px] font-semibold"
-                style={{ color: active ? DEEP : WHITE_SUB }}>
+            <li key={tab.href} className="flex-1">
+              <a href={tab.href} aria-label={tab.label} title={tab.label} aria-current={active ? "page" : undefined}
+                className="mx-auto flex h-12 max-w-[72px] items-center justify-center rounded-full transition-colors"
+                style={{ background: active ? GREEN_BG : "transparent", color: active ? DEEP : INK }}>
                 {"primary" in tab
-                  ? <span className="-mt-6 flex h-12 w-12 items-center justify-center rounded-2xl shadow-lg"
-                      style={{ background: OPTIC, color: OPTIC_INK, border: `3px solid ${WHITE}` }}><Icon size={24} strokeWidth={2.6} /></span>
-                  : <Icon size={22} strokeWidth={active ? 2.5 : 2} />}
-                <span>{tab.label}</span>
+                  ? <span className="flex h-9 w-9 items-center justify-center rounded-full" style={{ background: OPTIC, color: OPTIC_INK }}><Icon size={22} strokeWidth={2.6} /></span>
+                  : isProfile && avatar
+                    ? <span className="rounded-full" style={{ boxShadow: active ? `0 0 0 2px ${DEEP}` : "0 0 0 1px rgba(22,24,29,0.15)" }}>{avatar}</span>
+                    : <Icon size={25} strokeWidth={active ? 2.5 : 1.9} fill={active && tab.href === "#/" ? "currentColor" : "none"} />}
               </a>
             </li>
           );
@@ -114,8 +119,9 @@ function SideNav({ account }: { account?: ReactNode }) {
  * bottom tabs on phones, a sidebar and wider content on desktop. `wide` lets
  * research tools use more of a desktop screen.
  */
-export function AppShell({ children, right, nav, tabs = false, wide = false }: {
+export function AppShell({ children, right, nav, tabs = false, wide = false, avatar }: {
   children: ReactNode; right?: ReactNode; nav?: ReactNode; tabs?: boolean; wide?: boolean;
+  /** The player's photo for the Profile button in the phone tab bar. */ avatar?: ReactNode;
 }) {
   // Phones: one column. Tablets: the same layout, wider and with larger type.
   // Desktop: the signed-in app uses the whole screen beside the sidebar.
@@ -142,7 +148,7 @@ export function AppShell({ children, right, nav, tabs = false, wide = false }: {
           PicklePro research prototype. Video findings depend on visibility and have not yet been validated on real footage.
         </footer>}
       </div>
-      {tabs && <BottomTabs />}
+      {tabs && <BottomTabs avatar={avatar} />}
     </div>
   );
 }

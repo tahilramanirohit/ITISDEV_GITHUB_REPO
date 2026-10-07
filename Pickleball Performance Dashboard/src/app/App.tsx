@@ -7,6 +7,7 @@ import { devModeErrorText, guestErrorText } from "./auth/anonymousErrors";
 import { AuthScreen, PasswordRecoveryScreen } from "./auth/AuthScreen";
 import { useAuth } from "./auth/useAuth";
 import { AppShell } from "./shell/AppShell";
+import { NavAvatar } from "./profile/NavAvatar";
 import { OnboardingAgain, OnboardingGate } from "./onboarding/OnboardingGate";
 import { Card, Notice, WidgetHeader } from "./shell/primitives";
 import { GREEN, ORANGE, WHITE_DIM, WHITE_SUB } from "./theme";
@@ -154,7 +155,7 @@ function SignedInApp({ sb, cfg }: { sb: SupabaseClient; cfg: AppConfig }) {
   const signOutLabel = user.is_anonymous ? (isGuest ? "Leave guest session" : "Exit dev mode") : "Sign out";
   return (
     <OnboardingGate sb={sb} userId={user.id} skip={!!user.is_anonymous && !isGuest}>
-    <AppShell tabs
+    <AppShell tabs avatar={<NavAvatar sb={sb} userId={user.id} />}
       right={<span className="truncate rounded-full px-3 py-1.5 text-xs font-semibold" style={{ background: "rgba(127,140,150,0.18)", color: "inherit", maxWidth: "12rem" }}>{account}</span>}>
       <Suspense fallback={<Loading />}>
         <Routes>

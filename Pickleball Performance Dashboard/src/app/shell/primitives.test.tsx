@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
-import { SegmentedTabs, tabPanelProps } from "./primitives";
+import { PasswordInput, SegmentedTabs, tabPanelProps } from "./primitives";
 import { STATE_LABELS, stateDescription } from "../../lib/analysis/state";
 
 afterEach(cleanup);
@@ -40,5 +40,17 @@ describe("video status wording", () => {
     expect(STATE_LABELS.completed).toBe("Video review ready");
     expect(stateDescription("completed", null)).not.toMatch(/what to practice next/i);
     expect(stateDescription("not_uploaded", null)).toContain("fixed camera");
+  });
+});
+
+describe("password field", () => {
+  it("shows and hides the password", () => {
+    render(<label>Password<PasswordInput defaultValue="secret12" /></label>);
+    const input = screen.getByLabelText("Password") as HTMLInputElement;
+    expect(input.type).toBe("password");
+    fireEvent.click(screen.getByRole("button", { name: "Show password" }));
+    expect(input.type).toBe("text");
+    fireEvent.click(screen.getByRole("button", { name: "Hide password" }));
+    expect(input.type).toBe("password");
   });
 });

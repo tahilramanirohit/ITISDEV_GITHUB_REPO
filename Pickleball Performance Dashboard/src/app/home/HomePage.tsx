@@ -5,6 +5,7 @@ import { getProfile, type PlayerProfile } from "../../lib/api/profile";
 import { selfCoachScript } from "../../lib/coaching/coachScript";
 import { buildSelfReport } from "../../lib/coaching/selfAssessment";
 import { CoachLauncher } from "../coach/CoachPlayer";
+import { InstallTip } from "../shell/InstallTip";
 import { BORDER, CARD_GLOW, DEEP, GREEN, INK, PICKLE, WHITE, WHITE_DIM, WHITE_SUB, YELLOW, YELLOW_INK } from "../theme";
 import { Notice, PageHero, RingTile, SectionTitle, Sheet } from "../shell/primitives";
 import { EmptySessions, SessionCard, useSessionsData, weekStreak } from "../sessions/sessionUi";
@@ -84,6 +85,7 @@ export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: s
       <Sheet>
         <div className="space-y-5 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:items-start lg:gap-8 lg:space-y-0">
           <div className="space-y-5">
+            <InstallTip />
             <div className="grid grid-cols-2 gap-3">
               <RingTile label="Self rating" value={latestPlan?.report.overall != null && !latestPlan.starting ? latestPlan.report.overall.toFixed(1) : "–"}
                 fraction={latestPlan?.report.overall != null && !latestPlan.starting ? (latestPlan.report.overall - 1) / 4 : 0} />
