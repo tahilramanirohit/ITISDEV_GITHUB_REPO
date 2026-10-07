@@ -16,9 +16,22 @@ const SEGMENTS: [CourtLandmark, CourtLandmark][] = [
   ["far_left_kitchen", "far_left_baseline"], ["far_right_kitchen", "far_right_baseline"],
 ];
 
-export function CourtCorrection({ file, onConfirm, onCancel }: {
+/**
+ * The court preview service runs on the analysis computer at a localhost
+ * address. A phone (or any https page) cannot reach it, so automatic
+ * detection then happens on the analyzer after upload instead.
+ */
+export function previewServiceReachable(pageProtocol = typeof location === "undefined" ? "http:" : location.protocol, backend = config.cvBackendUrl): boolean {
+  const localBackend = /^http:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(backend);
+  return !(localBackend && pageProtocol === "https:");
+}
+
+export function CourtCorrection({ file, onConfirm, onCancel, onAutomatic }: {
   file: File; onConfirm: (value: CourtConfirmation) => void; onCancel: () => void;
+  /** Upload without points; the analyzer finds the court itself. */
+  onAutomatic?: () => void;
 }) {
+  const previewAvailable = previewServiceReachable();
   const video = useRef<HTMLVideoElement>(null);
   const [url, setUrl] = useState("");
   const [still, setStill] = useState<Still | null>(null);
@@ -47,7 +60,8 @@ export function CourtCorrection({ file, onConfirm, onCancel }: {
     if (!blob) return setError("Could not capture this frame. Try a browser-playable MP4 or MOV.");
     setStill({ url: canvas.toDataURL("image/jpeg", 0.88), blob, width: canvas.width, height: canvas.height, time: v.currentTime });
     setDraft({ image_width: canvas.width, image_height: canvas.height, points: [] });
-    setError(""); setNote("Place at least four named painted-court points, or ask the local analyzer to propose them.");
+    setError(""); setNote(previewAvailable ? "Place at least four named painted-court points, or ask the local analyzer to propose them."
+      : "Place at least four named painted-court points, or use automatic court finding above.");
   }
 
   async function detect() {
@@ -99,6 +113,7 @@ export function CourtCorrection({ file, onConfirm, onCancel }: {
     form.append("frame", still.blob, "court.jpg");
     form.append("calibration", JSON.stringify(draft));
     try {
+      if (!previewAvailable) throw new TypeError("preview service not reachable from this device");
       const response = await fetch(`${config.cvBackendUrl}/court/validate`, { method: "POST", body: form });
       if (!response.ok) {
         const data = await response.json();
@@ -113,9 +128,16 @@ export function CourtCorrection({ file, onConfirm, onCancel }: {
   }
 
   const issue = draft ? validateCourtDraft(draft) : "Choose a frame first.";
+  const handle = Math.max(9, (still?.width ?? 0) / 45);
   const point = (name: CourtLandmark) => draft?.points.find((p) => p.landmark === name)?.pixel;
   return <section aria-label="Review court mapping" className="space-y-3 rounded-xl p-4" style={{ border: `1px solid ${BORDER}` }}>
     <h3 className="text-lg font-bold">Confirm the court before analysis</h3>
+    {onAutomatic && <div className="rounded-2xl p-3" style={{ background: "#e3f6ea" }}>
+      <p className="text-sm font-bold" style={{ color: "#0b2a1a" }}>Find the court automatically{previewAvailable ? "" : " (recommended on phones)"}</p>
+      <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>The analyzer finds the court lines itself after upload. Mark points below only if it gets the court wrong.</p>
+      <button type="button" onClick={onAutomatic} className="mt-2 inline-flex min-h-[44px] items-center rounded-full px-5 text-sm font-bold"
+        style={{ background: "#febc17", color: "#2b2100" }}>Upload and find the court automatically</button>
+    </div>}
     <p className="text-sm" style={{ color: WHITE_DIM }}>Use a steady, fixed-camera view with visible painted lines. The correction applies only until the camera moves or cuts. Yellow points are a proposal, not proof that the court was found correctly.</p>
     <video ref={video} src={url} controls preload="metadata" playsInline onLoadedData={() => {
       const v = video.current;
@@ -125,10 +147,10 @@ export function CourtCorrection({ file, onConfirm, onCancel }: {
       className="w-full max-h-80 rounded-lg bg-black" aria-label="Video for choosing a court frame" />
     <div className="flex flex-wrap gap-2">
       <button type="button" onClick={() => void useFrame()} className="rounded-lg px-3 py-2 text-sm font-semibold" style={{ border: `1px solid ${BORDER}` }}>Use current frame</button>
-      <button type="button" onClick={() => void detect()} disabled={!still || busy}
+      {previewAvailable && <button type="button" onClick={() => void detect()} disabled={!still || busy}
         className="rounded-lg px-3 py-2 text-sm font-semibold disabled:opacity-50" style={{ border: `1px solid ${BORDER}` }}>
         {busy ? "Checking…" : "Detect court on this frame"}
-      </button>
+      </button>}
     </div>
     {still && draft && <>
       <div className="relative max-w-3xl" style={{ aspectRatio: `${still.width}/${still.height}` }}>
@@ -144,12 +166,14 @@ export function CourtCorrection({ file, onConfirm, onCancel }: {
           {SEGMENTS.map(([a, b]) => {
             const p = point(a), q = point(b);
             return p && q ? <line key={`${a}:${b}`} x1={p[0]} y1={p[1]} x2={q[0]} y2={q[1]}
-              stroke="#facc15" strokeWidth="3" strokeDasharray="8 4" pointerEvents="none" /> : null;
+              stroke="#facc15" strokeWidth={handle / 3} strokeDasharray={`${handle} ${handle / 2}`} pointerEvents="none" /> : null;
           })}
+          {/* Sized to the frame so handles stay finger-sized when the frame is shown on a phone. */}
           {draft.points.map((p) => <g key={p.landmark} data-landmark={p.landmark}>
-            <circle data-landmark={p.landmark} cx={p.pixel[0]} cy={p.pixel[1]} r="9" fill="#facc15" stroke="#111827" strokeWidth="2" />
-            <text data-landmark={p.landmark} x={p.pixel[0] + 12} y={p.pixel[1] - 10} fill="#facc15"
-              stroke="#111827" strokeWidth="2" paintOrder="stroke" fontSize="16">{p.landmark.replaceAll("_", " ")}</text>
+            <circle data-landmark={p.landmark} cx={p.pixel[0]} cy={p.pixel[1]} r={handle * 2.2} fill="transparent" />
+            <circle data-landmark={p.landmark} cx={p.pixel[0]} cy={p.pixel[1]} r={handle} fill="#facc15" stroke="#111827" strokeWidth={handle / 4} />
+            <text data-landmark={p.landmark} x={p.pixel[0] + handle * 1.3} y={p.pixel[1] - handle} fill="#facc15"
+              stroke="#111827" strokeWidth={handle / 4} paintOrder="stroke" fontSize={handle * 1.6}>{p.landmark.replaceAll("_", " ")}</text>
           </g>)}
         </svg>
       </div>

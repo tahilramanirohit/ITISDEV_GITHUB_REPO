@@ -14,8 +14,9 @@ export type CourtConfirmation = {
   calibration_frame_s: number;
 };
 
-export function analysisJobParams(options: object, court: CourtConfirmation): Record<string, unknown> {
-  return { ...options, ...court };
+/** `court` null means "let the analyzer find the court" (its court model maps the lines). */
+export function analysisJobParams(options: object, court: CourtConfirmation | null): Record<string, unknown> {
+  return court ? { ...options, ...court } : { ...options };
 }
 
 export function updatedJobParams(saved: Record<string, unknown>, options: object,

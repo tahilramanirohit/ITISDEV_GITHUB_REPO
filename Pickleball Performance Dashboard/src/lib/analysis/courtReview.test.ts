@@ -34,3 +34,9 @@ describe("court correction", () => {
     expect(updatedJobParams(saved, {}, null, true)).not.toHaveProperty("frame_mode");
   });
 });
+
+describe("automatic court finding", () => {
+  it("sends no court points so the analyzer maps the court itself", () => {
+    expect(analysisJobParams({ frame_mode: "near_players" }, null)).toEqual({ frame_mode: "near_players" });
+  });
+});

@@ -45,7 +45,8 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
   const [params, setParams] = useState<AnalysisParams | null>({});
   const [paramsError, setParamsError] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [confirmedCourt, setConfirmedCourt] = useState<CourtConfirmation | null>(null);
+  // "auto" = upload without court points; the analyzer finds the court itself.
+  const [confirmedCourt, setConfirmedCourt] = useState<CourtConfirmation | "auto" | null>(null);
   const [reanalysisFile, setReanalysisFile] = useState<File | null>(null);
   const [reanalysisCourt, setReanalysisCourt] = useState<CourtConfirmation | null>(null);
   const [useAutomaticCourt, setUseAutomaticCourt] = useState(false);
@@ -156,7 +157,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sessionKey tracks the fields used
   }, [sb, sessionKey, hasResult]);
 
-  async function onFileSelected(file: File, court: CourtConfirmation) {
+  async function onFileSelected(file: File, court: CourtConfirmation | null) {
     if (!bundle || inFlight.current || !config.supabase || !params) return;
     setError("");
     if (!consentConfirmed && !consentChecked) return setError("Confirm recording consent before uploading.");
@@ -168,6 +169,12 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
     }
     inFlight.current = true;
     setLocalUpload({ phase: "uploading", progress: 0 });
+    // Keep a phone's screen on while uploading: a locked screen pauses the transfer.
+    let wakeLock: { release: () => Promise<void> } | null = null;
+    try {
+      wakeLock = await (navigator as Navigator & { wakeLock?: { request: (t: "screen") => Promise<{ release: () => Promise<void> }> } })
+        .wakeLock?.request("screen") ?? null;
+    } catch { wakeLock = null; }
     try {
       if (!consentConfirmed) {
         await recordUploadConsent(sb, userId);
@@ -188,6 +195,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
       const message = e instanceof Error ? e.message : String((e as { message?: string })?.message ?? e);
       setError(limitErrorText(message) ?? `Upload failed: ${message}. Select the same file again to resume.`);
     } finally {
+      void wakeLock?.release().catch(() => {});
       uploadRef.current = null;
       inFlight.current = false;
       setLocalUpload(null);
@@ -485,8 +493,8 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
               <p className="text-sm" style={{ color: WHITE_SUB }}>{p.text}</p>
               {p.stale && (
                 <Notice tone="warn">
-                  No update from the analyzer for a few minutes. Check that the worker window (start_worker.bat) is still open;
-                  if it was closed, start it again and the analysis will be retried.
+                  No update from the analyzer for a few minutes. Check that the analysis computer is awake and its worker is still running
+                  (start_mac_worker.sh on a Mac, start_worker.bat on Windows). If it was stopped, start it again and the analysis will be retried.
                 </Notice>
               )}
             </div>
@@ -516,6 +524,8 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
                 <li>Keep the full court visible in landscape at 720p or higher and at least 30 fps.</li>
                 <li>Use good light and avoid players crossing out of the frame.</li>
                 <li>Ask every visible player for recording and upload consent before filming.</li>
+                <li>On a phone, record at 720p or 1080p and 30 fps (iPhone: Settings → Camera → Record Video). Videos over 50 MB won't upload, so trim to a rally or two first. On iPhone, Settings → Camera → Formats → Most Compatible avoids playback problems.</li>
+                <li>Keep this page open and the screen on until the upload reaches 100%. If it stops, choose the same video again to resume.</li>
               </ul>
             </details>
             {!consentConfirmed && <label className="flex items-start gap-2 text-sm" style={{ color: WHITE_DIM }}>
@@ -546,6 +556,10 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
               onConfirm={(court) => {
                 setConfirmedCourt(court); setPendingFile(null);
                 void onFileSelected(pendingFile, court);
+              }}
+              onAutomatic={() => {
+                setConfirmedCourt("auto"); setPendingFile(null);
+                void onFileSelected(pendingFile, null);
               }} onCancel={() => setPendingFile(null)} />}
             <div className="rounded-2xl p-3 text-sm" style={{ background: "#f6f7f9", border: `1px solid ${BORDER}` }} data-testid="upload-limits">
               <p className="font-semibold" style={{ color: "#16181d" }}>Upload limits</p>
@@ -564,7 +578,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
             </details>
             {state === "upload_incomplete" && video && (
               <div className="flex flex-wrap gap-2">
-                <button type="button" disabled={busy || !confirmedCourt} onClick={() => void run(() => finalizeUpload(sb, video.id, analysisJobParams(params ?? {}, confirmedCourt!)))}
+                <button type="button" disabled={busy || !confirmedCourt} onClick={() => void run(() => finalizeUpload(sb, video.id, analysisJobParams(params ?? {}, confirmedCourt === "auto" ? null : confirmedCourt)))}
                   className="rounded-xl px-3 py-1.5 text-sm font-semibold disabled:opacity-40" style={{ color: BLUE_SKY, border: `1px solid ${BLUE_SKY}60` }}>
                   Check if the upload finished{!confirmedCourt ? " (review the court first)" : ""}
                 </button>
