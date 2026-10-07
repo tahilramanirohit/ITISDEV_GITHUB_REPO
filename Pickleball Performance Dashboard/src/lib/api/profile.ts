@@ -25,12 +25,23 @@ export type PlayerProfile = {
   default_review_mode?: ReviewMode | null;
   default_session_kind?: SessionKind | null;
   default_play_format?: PlayFormat | null;
+  // Edit-profile extras; missing until the profile-photo migration.
+  avatar_path?: string | null;
+  bio?: string | null;
+  home_court?: string | null;
+  paddle?: string | null;
 };
 
 export type SessionDefaults = Required<Pick<PlayerProfile, "default_review_mode" | "default_session_kind" | "default_play_format">>;
 
 export type ProfileInput = Pick<PlayerProfile,
-  "display_name" | "dominant_hand" | "years_playing" | "usual_format" | "self_level" | "is_adult_confirmed">;
+  "display_name" | "dominant_hand" | "years_playing" | "usual_format" | "self_level" | "is_adult_confirmed"> &
+  Partial<Pick<PlayerProfile, "bio" | "home_court" | "paddle">>;
+
+/** True once the database has the edit-profile columns (photo, bio, home court, paddle). */
+export function supportsProfileExtras(profile: PlayerProfile | null): boolean {
+  return !!profile && "avatar_path" in profile;
+}
 export type OnboardingInput = ProfileInput &
   Required<Pick<PlayerProfile, "play_frequency" | "play_reasons" | "main_goals" | "baseline_ratings">>;
 

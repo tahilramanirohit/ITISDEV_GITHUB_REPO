@@ -21,6 +21,7 @@ const NewSessionPage = lazy(() => import("./sessions/NewSessionPage"));
 const ProgressPage = lazy(() => import("./progress/ProgressPage"));
 const SessionDetail = lazy(() => import("./sessions/SessionDetail"));
 const ProfilePage = lazy(() => import("./profile/ProfilePage"));
+const EditProfilePage = lazy(() => import("./profile/EditProfilePage"));
 const SettingsPage = lazy(() => import("./settings/SettingsPage"));
 const LabelPage = lazy(() => import("./labelling/LabelPage"));
 const PrivacyPage = lazy(() => import("./privacy/PrivacyPage"));
@@ -166,6 +167,7 @@ function SignedInApp({ sb, cfg }: { sb: SupabaseClient; cfg: AppConfig }) {
           <Route path="/profile" element={<ProfilePage sb={sb} userId={user.id} account={account}
             signOut={{ label: signOutLabel, onClick: () => void sb.auth.signOut(),
               warning: user.is_anonymous ? "You may lose access to this guest's sessions after leaving or clearing browser data." : undefined }} />} />
+          <Route path="/profile/edit" element={<EditProfilePage sb={sb} userId={user.id} />} />
           <Route path="/welcome" element={<OnboardingAgain sb={sb} userId={user.id} />} />
           <Route path="*" element={<Notice tone="warn">Page not found.</Notice>} />
         </Routes>

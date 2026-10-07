@@ -47,15 +47,18 @@ done
 "${PSQL[@]}" -f "$HERE/local/20_dev_mock_data.sql" 2>&1 >/dev/null | sed -e 's/^psql:[^ ]* NOTICE:  /  /'
 "${PSQL[@]}" -f "$HERE/local/30_self_assessment.sql" 2>&1 >/dev/null | sed -e 's/^psql:[^ ]* NOTICE:  /  /'
 "${PSQL[@]}" -f "$HERE/local/40_adviser_notes.sql" 2>&1 >/dev/null | sed -e 's/^psql:[^ ]* NOTICE:  /  /'
+"${PSQL[@]}" -f "$HERE/local/50_profile_photos.sql" 2>&1 >/dev/null | sed -e 's/^psql:[^ ]* NOTICE:  /  /'
 # The self-assessment migration is documented as safe to paste again into an existing project.
 "${PSQL[@]}" -c "set client_min_messages = warning" -f "$MIGRATIONS/20261006090000_self_assessment.sql" >/dev/null
 "${PSQL[@]}" -c "set client_min_messages = warning" -f "$MIGRATIONS/20261006100000_player_onboarding.sql" >/dev/null
 "${PSQL[@]}" -c "set client_min_messages = warning" -f "$MIGRATIONS/20261006110000_adviser_notes.sql" >/dev/null
+"${PSQL[@]}" -c "set client_min_messages = warning" -f "$MIGRATIONS/20261007090000_profile_photos.sql" >/dev/null
 echo "  PASS self-assessment and onboarding migrations can be applied twice"
 # The copy-paste script for the hosted SQL editor must also run cleanly on top.
 "${PSQL[@]}" -c "set client_min_messages = warning" -f "$HERE/../scripts/pickleproapp_upgrade.sql" >/dev/null
 "${PSQL[@]}" -c "set client_min_messages = warning" -f "$HERE/../scripts/pickleproapp_upgrade_2.sql" >/dev/null
-echo "  PASS pickleproapp_upgrade.sql and _2.sql run on an up-to-date database"
+"${PSQL[@]}" -c "set client_min_messages = warning" -f "$HERE/../scripts/pickleproapp_upgrade_3.sql" >/dev/null
+echo "  PASS pickleproapp_upgrade.sql, _2.sql and _3.sql run on an up-to-date database"
 
 # Concurrency: 20 simultaneous finalize calls (double clicks, two tabs) → one job.
 "${PSQL[@]}" <<'SQL'
