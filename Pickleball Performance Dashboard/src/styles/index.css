@@ -17,3 +17,20 @@
 @media (prefers-reduced-motion: reduce) {
   .pickle-hello { animation: none; }
 }
+
+/* Audio coach: words pop in as they are spoken; the pickle sways and the sound bars move while it talks. */
+@keyframes coach-pop { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@keyframes coach-sway { 25% { rotate: -2.5deg; } 75% { rotate: 2.5deg; } }
+@keyframes coach-wave { 50% { height: 14px; } }
+.coach-word { display: inline-block; animation: coach-pop 0.22s ease-out; }
+.coach-speaking .coach-pickle { animation: coach-sway 2.4s ease-in-out infinite; }
+.coach-wave i { width: 3px; height: 4px; border-radius: 2px; background: currentColor; }
+.coach-speaking .coach-wave i { animation: coach-wave 0.9s ease-in-out infinite; }
+.coach-wave i:nth-child(2) { animation-delay: 0.15s; }
+.coach-wave i:nth-child(3) { animation-delay: 0.3s; }
+.coach-wave i:nth-child(4) { animation-delay: 0.45s; }
+.coach-lyrics { scrollbar-width: none; -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 28px, #000 88%, transparent 100%); mask-image: linear-gradient(to bottom, transparent 0, #000 28px, #000 88%, transparent 100%); }
+.coach-lyrics::-webkit-scrollbar { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .coach-word, .coach-speaking .coach-pickle, .coach-speaking .coach-wave i { animation: none; }
+}

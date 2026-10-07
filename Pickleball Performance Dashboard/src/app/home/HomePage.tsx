@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ArrowRight, Camera, Dumbbell, Trophy } from "lucide-react";
 import { getProfile, type PlayerProfile } from "../../lib/api/profile";
+import { selfCoachScript } from "../../lib/coaching/coachScript";
 import { buildSelfReport } from "../../lib/coaching/selfAssessment";
+import { CoachLauncher } from "../coach/CoachPlayer";
 import { BORDER, CARD_GLOW, DEEP, GREEN, INK, PICKLE, WHITE, WHITE_DIM, WHITE_SUB, YELLOW, YELLOW_INK } from "../theme";
 import { Notice, PageHero, RingTile, SectionTitle, Sheet } from "../shell/primitives";
 import { EmptySessions, SessionCard, useSessionsData, weekStreak } from "../sessions/sessionUi";
@@ -56,12 +58,12 @@ export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: s
       if (!a) continue;
       const report = buildSelfReport({ ratings: a.ratings, goals: item.session.improvement_goals ?? [], playFormat: item.session.play_format,
         biggestStruggle: a.biggest_struggle, unforcedErrors: a.unforced_errors });
-      if (report.available) return { href: `#/sessions/${item.session.id}`, starting: false, report };
+      if (report.available) return { href: `#/sessions/${item.session.id}`, starting: false, report, title: item.session.title, playFormat: item.session.play_format };
     }
     // Before any rated session, plan from the onboarding answers.
     if (profile?.baseline_ratings) {
       const report = buildSelfReport({ ratings: profile.baseline_ratings, goals: profile.main_goals ?? [] });
-      if (report.available) return { href: "#/new?mode=self", starting: true, report };
+      if (report.available) return { href: "#/new?mode=self", starting: true, report, title: "your first sessions", playFormat: null };
     }
     return null;
   }, [items, byId, profile]);
@@ -72,6 +74,8 @@ export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: s
   const monday = new Date(); monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
   const thisWeek = dates.filter((d) => d >= isoDay(monday)).length;
   const focus = latestPlan?.report.focus[0];
+  const coachScript = useMemo(() => latestPlan && latestPlan.report.focus.length
+    ? selfCoachScript({ report: latestPlan.report, sessionTitle: latestPlan.title, playFormat: latestPlan.playFormat, length: "short" }) : null, [latestPlan]);
 
   return (
     <div>
@@ -92,6 +96,7 @@ export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: s
               <span className="min-w-0"><b className="block text-sm">Weekly challenge</b><span className="block truncate text-xs">{focus.drill.name} · 3 times this week</span></span>
               <span className="rounded-full px-4 py-2 text-xs font-extrabold" style={{ background: DEEP, color: WHITE }}>START</span>
             </a>}
+            {coachScript && <CoachLauncher shortScript={coachScript} tone="light" compact />}
 
             <WeekStrip dates={dates} />
             <p className="-mt-2 text-center text-xs font-semibold" style={{ color: WHITE_SUB }}>{streak} week streak · {sessions.length} sessions logged</p>

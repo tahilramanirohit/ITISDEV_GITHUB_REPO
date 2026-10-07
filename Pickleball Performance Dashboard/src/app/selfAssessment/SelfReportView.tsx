@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronDown, Dumbbell, Target, TrendingDown, TrendingUp, Minus, Sparkles } from "lucide-react";
 import type { SelfProgressRow, SelfReport } from "../../lib/coaching/selfAssessment";
 import { BORDER, DISPLAY_FONT, GREEN, GREEN_BG, INK, OPTIC, ORANGE, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Card, RingTile, SectionTitle } from "../shell/primitives";
 import mascotUrl from "../../assets/picklepro-logo@2x.webp";
+import { selfCoachScript } from "../../lib/coaching/coachScript";
+import { CoachLauncher } from "../coach/CoachPlayer";
 
 /** Circular 1-5 score, drawn as an SVG ring. */
 export function ScoreRing({ value, size = 88 }: { value: number; size?: number }) {
@@ -56,9 +58,14 @@ function FocusCard({ index, item }: { index: number; item: SelfReport["focus"][n
   );
 }
 
-export function SelfReportView({ report, progress, previousLabel, onEdit }: {
+export function SelfReportView({ report, progress, previousLabel, onEdit, sessionTitle, playFormat }: {
   report: SelfReport; progress: SelfProgressRow[] | null; previousLabel?: string; onEdit: () => void;
+  sessionTitle?: string | null; playFormat?: string | null;
 }) {
+  const coach = useMemo(() => report.available ? {
+    short: selfCoachScript({ report, progress, sessionTitle, playFormat, length: "short" }),
+    full: selfCoachScript({ report, progress, sessionTitle, playFormat, length: "full" }),
+  } : null, [report, progress, sessionTitle, playFormat]);
   if (!report.available || report.overall == null) {
     return <Card><p className="text-sm" style={{ color: WHITE_DIM }}>{report.introduction}</p>
       <button type="button" onClick={onEdit} className="mt-3 text-sm font-bold underline" style={{ color: GREEN }}>Continue rating</button></Card>;
@@ -71,6 +78,7 @@ export function SelfReportView({ report, progress, previousLabel, onEdit }: {
           <p className="text-[11px] font-extrabold uppercase tracking-wider">This week's drill</p>
           <p className="mt-1 text-xl font-black leading-tight">{report.focus[0].drill.name}</p>
           <p className="mt-1 text-sm">For your {report.focus[0].label.toLowerCase()} · 15 minutes, 3 times this week</p>
+          {coach && <div className="relative mt-3"><CoachLauncher shortScript={coach.short} fullScript={coach.full} /></div>}
         </section>
       )}
       <div className="grid grid-cols-2 gap-3">

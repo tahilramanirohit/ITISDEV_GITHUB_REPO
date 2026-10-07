@@ -242,7 +242,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
       ) : null}
 
       {(!session?.improvement_goals?.length || session.improvement_goals.includes("positioning")) &&
-        <CoachingPanel result={result} previous={previous} onRateSession={onRateSession} />}
+        <CoachingPanel result={result} previous={previous} onRateSession={onRateSession} sessionTitle={session?.title} />}
 
       {result.data_origin === "measured" && !devMock && hasPlayers && (
         <PlayerPicker result={shotDisplayResult} myPlayerId={myPlayerId} onPick={setMyPlayerId} showShotCounts={allowShotDisplay}

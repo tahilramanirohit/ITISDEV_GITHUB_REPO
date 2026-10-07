@@ -80,6 +80,9 @@ export function SelfAssessmentPanel({ sb, session }: { sb: SupabaseClient; sessi
     unforcedErrors: saved.unforced_errors, gamesPlayed: saved.games_played, gamesWon: saved.games_won, playFormat: session.play_format,
   }) : null, [saved, session.improvement_goals, session.play_format]);
 
+  const progress = useMemo(() => saved && previous ? compareSelfRatings(saved.ratings, previous.ratings, session.play_format) : null,
+    [saved, previous, session.play_format]);
+
   const rate = (skill: SelfSkill, v: SkillRating | undefined) =>
     setDraft((d) => { const ratings = { ...d.ratings }; if (v) ratings[skill] = v; else delete ratings[skill]; return { ...d, ratings }; });
   const ratedCount = ratedSkills(draft.ratings).length;
@@ -109,8 +112,8 @@ export function SelfAssessmentPanel({ sb, session }: { sb: SupabaseClient; sessi
   if (saved === undefined) return <p className="text-sm" style={{ color: WHITE_SUB }}>Loading…</p>;
 
   if (!editing && saved && report) {
-    return <SelfReportView report={report} previousLabel={previous?.label}
-      progress={previous ? compareSelfRatings(saved.ratings, previous.ratings, session.play_format) : null}
+    return <SelfReportView report={report} previousLabel={previous?.label} sessionTitle={session.title} playFormat={session.play_format}
+      progress={progress}
       onEdit={() => { setEditing(true); setStep(0); }} />;
   }
 

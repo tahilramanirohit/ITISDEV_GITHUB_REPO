@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import testFixture from "../../../contracts/fixtures/analysis_result.test_fixture.v1.json";
 import insufficient from "../../../contracts/fixtures/analysis_result.insufficient.v1.json";
 import { parseAnalysisResult } from "../../lib/analysis/contract";
@@ -57,7 +57,7 @@ describe("ResultView", () => {
     expect(screen.getByText(/Shot success and in\/out calls are outside this analysis scope/)).toBeTruthy();
   });
 
-  it("plays and stops the same evidence-based advice shown on screen", () => {
+  it("offers optional audio coaching that reveals words only after they are spoken", () => {
     const result = structuredClone(testFixture);
     result.data_origin = "measured";
     result.provenance.detector = { name: "ultralytics-yolov8-person", confidence_is_model_score: true };
@@ -69,30 +69,36 @@ describe("ResultView", () => {
       text: string;
       lang = "";
       rate = 1;
+      voice: unknown = null;
       onend: (() => void) | null = null;
-      onerror: (() => void) | null = null;
       constructor(text: string) { this.text = text; }
     }
     const originalSpeech = Object.getOwnPropertyDescriptor(window, "speechSynthesis");
     const originalUtterance = Object.getOwnPropertyDescriptor(window, "SpeechSynthesisUtterance");
-    Object.defineProperty(window, "speechSynthesis", { configurable: true, value: { speak, cancel } });
+    Object.defineProperty(window, "speechSynthesis", { configurable: true, value: { speak, cancel, getVoices: () => [] } });
     Object.defineProperty(window, "SpeechSynthesisUtterance", { configurable: true, value: Utterance });
     try {
       render(<ResultView result={parseAnalysisResult(result)} videoUrl={null} />);
-      expect(screen.getByText(/focus areas? for your next practice/)).toBeTruthy();
+      // The written plan is always there; audio is an extra.
       expect(screen.getByText("Focus for your next session")).toBeTruthy();
       expect(screen.getAllByText(/^Drill:/).length).toBeGreaterThan(0);
-      fireEvent.click(screen.getByRole("button", { name: "Play audio coaching" }));
-      expect(speak).toHaveBeenCalledOnce();
-      const utterance = speak.mock.calls[0][0] as Utterance;
-      expect(utterance.text).toContain("Focus 1:");
-      expect(utterance.text).toContain("Next session:");
-      expect(utterance.text).toContain("Position estimates have not been validated");
-      expect(screen.getByText(/Record and analyze another session/)).toBeTruthy();
-      fireEvent.click(screen.getByRole("button", { name: "Stop audio coaching" }));
+      expect(speak).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole("button", { name: /^Play coaching/ }));
+      const dialog = screen.getByRole("dialog", { name: "Audio coaching" });
+      const first = speak.mock.calls.map((c) => c[0] as Utterance).find((u) => u.text);
+      expect(first?.text).toMatch(/^Here's your video coaching/);
+      expect(dialog.textContent).not.toContain("video coaching");
+      act(() => first?.onend?.());
+      expect(dialog.textContent).toContain("Here's your video coaching for this session.");
+      fireEvent.click(screen.getByRole("button", { name: "Full text" }));
+      expect(dialog.textContent).toContain("estimates from one camera angle");
+      fireEvent.click(screen.getByRole("button", { name: "Close coaching" }));
+      expect(screen.queryByRole("dialog")).toBeNull();
       expect(cancel).toHaveBeenCalled();
+      expect(screen.getByText(/Record and analyze another session/)).toBeTruthy();
     } finally {
       cleanup();
+      localStorage.removeItem("picklepro.coach.fullText");
       if (originalSpeech) Object.defineProperty(window, "speechSynthesis", originalSpeech);
       else Reflect.deleteProperty(window, "speechSynthesis");
       if (originalUtterance) Object.defineProperty(window, "SpeechSynthesisUtterance", originalUtterance);
