@@ -57,7 +57,7 @@ export default function SessionsPage({ sb, userId }: { sb: SupabaseClient; userI
                 {list.length} match{list.length === 1 ? "" : "es"} · {list.filter((i) => i.session.match_result === "win").length} won
               </span>
             </div>}
-            <ul className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+            <ul className="grid grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-2 2xl:grid-cols-3">
               {list.map((item) => <li key={item.session.id}><SessionCard item={item} assessment={byId.get(item.session.id)} players={players.get(item.session.id)} you={you} /></li>)}
             </ul>
           </section>

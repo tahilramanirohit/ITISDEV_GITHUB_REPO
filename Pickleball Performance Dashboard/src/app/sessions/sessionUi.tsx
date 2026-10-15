@@ -122,7 +122,7 @@ export function SessionCard({ item, assessment, players = [], you = "You" }: {
       </div>
       <h3 className="mt-3 truncate type-body-strong" style={{ color: INK }}>{session.title}</h3>
       {session.tournament_name && session.tournament_name !== session.title && <p className="truncate text-xs" style={{ color: WHITE_DIM }}>{session.tournament_name}</p>}
-      {stats.length > 0 && <div className="mt-3 grid grid-cols-3 gap-3 border-t pt-3" style={{ borderColor: BORDER }}>
+      {stats.length > 0 && <div className="mt-3 grid grid-cols-[repeat(3,minmax(0,1fr))] gap-3 border-t pt-3" style={{ borderColor: BORDER }}>
         {stats.slice(0, 3).map((s) => <Stat key={s.label} label={s.label} value={s.value} caption={s.caption} />)}
       </div>}
       <div className="mt-3 flex items-center justify-between gap-3">
