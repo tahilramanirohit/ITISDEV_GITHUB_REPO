@@ -1,7 +1,7 @@
 import { ArrowLeft } from "lucide-react";
 import { config } from "../../lib/config";
 import { DEFAULT_UPLOAD_LIMITS } from "../../lib/upload/limits";
-import { BODY_FONT, BORDER, DISPLAY_FONT, GREEN, INK, PAGE_BG, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
+import { BODY_FONT, BORDER, GREEN, INK, PAGE_BG, PAPER, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
 import { PickleProLogo } from "../shell/primitives";
 import { BRAND_NAME } from "../brand";
 
@@ -49,25 +49,25 @@ export default function PrivacyPage() {
       <main className="mx-auto max-w-2xl space-y-6 px-4 py-6 md:px-6 md:py-10">
         <div className="flex items-center justify-between gap-3">
           <a href="#/" aria-label={`${BRAND_NAME} home`}><PickleProLogo size="sm" tone="light" /></a>
-          <a href="#/" className="inline-flex min-h-[44px] items-center gap-1 text-sm font-semibold" style={{ color: GREEN }}><ArrowLeft size={16} /> Back</a>
+          <a href="#/" className="-ml-1 inline-flex min-h-[44px] items-center gap-1 px-1 text-sm font-bold" style={{ color: GREEN }}><ArrowLeft size={18} aria-hidden="true" /> Back</a>
         </div>
         <div>
-          <h1 className="text-[1.75rem] font-extrabold leading-tight md:text-4xl" style={{ fontFamily: DISPLAY_FONT }}>Your data and privacy</h1>
+          <h1 className="type-display-lg">Your data and privacy</h1>
           <p className="mt-2 text-sm" style={{ color: WHITE_DIM }}>What PicklePro keeps, who can see it, and how to remove it.</p>
         </div>
         {SECTIONS.map((section) => (
-          <section key={section.title} className="rounded-2xl p-5" style={{ background: WHITE, border: `1px solid ${BORDER}` }} aria-labelledby={`privacy-${section.title}`}>
-            <h2 id={`privacy-${section.title}`} className="text-lg font-bold" style={{ fontFamily: DISPLAY_FONT }}>{section.title}</h2>
+          <section key={section.title} className="rounded-[var(--radius-lg)] p-4 sm:p-6" style={{ background: WHITE, border: `1px solid ${BORDER}` }} aria-labelledby={`privacy-${section.title}`}>
+            <h2 id={`privacy-${section.title}`} className="type-heading">{section.title}</h2>
             <ul className="mt-2 list-disc space-y-2 pl-5 text-sm leading-relaxed" style={{ color: INK }}>
               {section.items.map((item) => <li key={item}>{item}</li>)}
             </ul>
           </section>
         ))}
-        <section className="rounded-2xl p-5" style={{ background: "#e3f6ea" }} aria-labelledby="privacy-contact">
-          <h2 id="privacy-contact" className="text-lg font-bold" style={{ fontFamily: DISPLAY_FONT }}>Questions or deletion requests</h2>
+        <section className="rounded-[var(--radius-lg)] p-4 sm:p-6" style={{ background: PAPER }} aria-labelledby="privacy-contact">
+          <h2 id="privacy-contact" className="type-heading">Questions or deletion requests</h2>
           <p className="mt-2 text-sm" style={{ color: INK }}>
             {config.contactEmail
-              ? <>Email <a className="font-semibold underline" href={`mailto:${config.contactEmail}`} style={{ color: GREEN }}>{config.contactEmail}</a>. Include your Player ID from Profile.</>
+              ? <>Email <a className="font-bold underline" href={`mailto:${config.contactEmail}`} style={{ color: GREEN }}>{config.contactEmail}</a>. Include your Player ID from Profile.</>
               : "Contact the PicklePro project team. Include your Player ID from Profile."}
           </p>
         </section>

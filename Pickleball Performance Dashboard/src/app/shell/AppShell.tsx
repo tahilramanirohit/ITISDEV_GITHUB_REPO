@@ -148,7 +148,7 @@ export function AppShell({ children, right, nav, tabs = false, wide = false, ava
             <a href="#/" aria-label={`${BRAND_NAME} home`} className="flex min-h-[44px] items-center"><PickleProLogo size="sm" tone="light" /></a>
             <div className="flex min-w-0 items-center gap-2">{right}</div>
           </div>
-          {nav && <nav className={`${width} mx-auto flex flex-wrap gap-x-4 gap-y-1 px-4 pb-2 text-sm font-semibold`}>{nav}</nav>}
+          {nav && <nav className={`${width} mx-auto flex flex-wrap gap-x-4 gap-y-1 px-4 pb-2 text-sm font-bold`}>{nav}</nav>}
         </header>
         <main id="main-content" tabIndex={-1} className={`${width} mx-auto px-4 pt-5 outline-none ${tabs ? "pb-28 md:px-6 md:pt-6 lg:px-10 lg:pt-8 desktop:pb-12" : "pb-10 md:px-6"}`}>{children}</main>
         {!tabs && <footer className="px-4 pb-6 text-center text-xs" style={{ color: WHITE_SUB }}>

@@ -225,7 +225,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
     const retry = () => { setLoadError(""); setSlow(false); void load(); };
     if (loadError || slow) {
       return <div className="space-y-4">
-        <a href="#/sessions" className="inline-flex items-center gap-1 text-sm font-semibold" style={{ color: BLUE_SKY }}><ArrowLeft size={16} /> Sessions</a>
+        <a href="#/sessions" className="inline-flex items-center gap-1 text-sm font-bold" style={{ color: BLUE_SKY }}><ArrowLeft size={16} /> Sessions</a>
         <Notice tone={loadError ? "error" : "warn"}>
           {loadError ? `This session could not be loaded: ${loadError}` : "This session is taking longer than usual to load. Check your connection."}
         </Notice>
@@ -344,16 +344,16 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
         {(session.tournament_name || session.match_result || session.match_score) && <Card>
           <p className="type-label" style={{ color: WHITE_SUB }}>Result</p>
           <p className="mt-1 type-stat" style={{ color: INK }}>{session.match_result === "win" ? "Won" : session.match_result === "loss" ? "Lost" : "Not set"}
-            {session.match_score && <span className="ml-2 text-base font-semibold" style={{ color: WHITE_DIM }}>{session.match_score}</span>}</p>
+            {session.match_score && <span className="ml-2 text-base font-bold" style={{ color: WHITE_DIM }}>{session.match_score}</span>}</p>
           {session.tournament_name && <p className="text-sm" style={{ color: WHITE_DIM }}>{session.tournament_name}{session.tournament_round ? ` · ${session.tournament_round}` : ""}</p>}
         </Card>}
         <Card>
           <p className="type-label" style={{ color: WHITE_SUB }}>Players</p>
           {sessionKind(session) === "solo" ? <p className="mt-2 text-sm" style={{ color: WHITE_DIM }}>Solo practice: just you.</p> : (
-            <ul className="mt-3 grid grid-cols-4 gap-2 text-center text-xs font-semibold">
+            <ul className="mt-3 grid grid-cols-4 gap-2 text-center text-xs font-bold">
               {[{ name: "You", role: "You" }, ...players.map((p) => ({ name: p.display_name, role: p.role === "partner" ? "Partner" : "Opponent" }))].map((p, i) => (
                 <li key={`${p.name}-${i}`} className="min-w-0">
-                  <span className="mx-auto mb-1 grid h-12 w-12 place-items-center rounded-full text-sm font-black"
+                  <span className="mx-auto mb-1 grid h-12 w-12 place-items-center rounded-full text-sm font-bold"
                     style={{ background: PAPER, color: INK }}>{p.name === "You" ? "ME" : initials(p.name)}</span>
                   <span className="block truncate" style={{ color: "var(--ink)" }}>{p.name}</span>
                   <span className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-xs font-bold"
@@ -374,34 +374,34 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
         </Card>
       {detailsDraft && (
           <Card accent={BLUE_SKY}>
-            <h2 className="text-lg font-extrabold">Edit details &amp; players</h2>
+            <h2 className="text-lg font-bold">Edit details &amp; players</h2>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <label className="grid gap-1 text-sm font-semibold">Name
+              <label className="grid gap-1 text-sm font-bold">Name
                 <input maxLength={120} value={detailsDraft.title} onChange={(e) => setDetailsDraft({ ...detailsDraft, title: e.target.value })} className="px-4 py-3 text-base font-normal" style={fieldStyle} />
               </label>
-              <label className="grid gap-1 text-sm font-semibold">Date
+              <label className="grid gap-1 text-sm font-bold">Date
                 <input type="date" value={detailsDraft.session_date} onChange={(e) => setDetailsDraft({ ...detailsDraft, session_date: e.target.value })} className="px-4 py-3 text-base font-normal" style={fieldStyle} />
               </label>
               {sessionKind(session) === "tournament" && <>
-                <label className="grid gap-1 text-sm font-semibold">Tournament
+                <label className="grid gap-1 text-sm font-bold">Tournament
                   <input maxLength={120} value={detailsDraft.tournament_name} onChange={(e) => setDetailsDraft({ ...detailsDraft, tournament_name: e.target.value })} className="px-4 py-3 text-base font-normal" style={fieldStyle} />
                 </label>
-                <label className="grid gap-1 text-sm font-semibold">Round
+                <label className="grid gap-1 text-sm font-bold">Round
                   <input maxLength={60} value={detailsDraft.tournament_round} onChange={(e) => setDetailsDraft({ ...detailsDraft, tournament_round: e.target.value })} placeholder="e.g. Semifinal" className="px-4 py-3 text-base font-normal" style={fieldStyle} />
                 </label>
-                <div className="grid gap-1 text-sm font-semibold">Result
+                <div className="grid gap-1 text-sm font-bold">Result
                   <div className="flex gap-2">{(["win", "loss"] as const).map((r) => <Chip key={r} selected={detailsDraft.match_result === r}
                     onClick={() => setDetailsDraft({ ...detailsDraft, match_result: detailsDraft.match_result === r ? null : r })}>{r === "win" ? "Won" : "Lost"}</Chip>)}</div>
                 </div>
-                <label className="grid gap-1 text-sm font-semibold">Score
+                <label className="grid gap-1 text-sm font-bold">Score
                   <input maxLength={40} value={detailsDraft.match_score} onChange={(e) => setDetailsDraft({ ...detailsDraft, match_score: e.target.value })} placeholder="11-7, 9-11, 11-5" className="px-4 py-3 text-base font-normal" style={fieldStyle} />
                 </label>
               </>}
               {sessionKind(session) !== "solo" && <>
-                {session.play_format === "doubles" && <label className="grid gap-1 text-sm font-semibold">Partner
+                {session.play_format === "doubles" && <label className="grid gap-1 text-sm font-bold">Partner
                   <input maxLength={80} value={detailsDraft.partner} onChange={(e) => setDetailsDraft({ ...detailsDraft, partner: e.target.value })} className="px-4 py-3 text-base font-normal" style={fieldStyle} />
                 </label>}
-                {detailsDraft.opponents.slice(0, session.play_format === "doubles" ? 2 : 1).map((name, i) => <label key={i} className="grid gap-1 text-sm font-semibold">{session.play_format === "doubles" ? `Opponent ${i + 1}` : "Opponent"}
+                {detailsDraft.opponents.slice(0, session.play_format === "doubles" ? 2 : 1).map((name, i) => <label key={i} className="grid gap-1 text-sm font-bold">{session.play_format === "doubles" ? `Opponent ${i + 1}` : "Opponent"}
                   <input maxLength={80} value={name} onChange={(e) => setDetailsDraft({ ...detailsDraft, opponents: detailsDraft.opponents.map((v, j) => j === i ? e.target.value : v) })} className="px-4 py-3 text-base font-normal" style={fieldStyle} />
                 </label>)}
               </>}
@@ -452,7 +452,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
           <details className="mb-3">
             <summary className="flex min-h-[44px] cursor-pointer items-center text-sm font-bold" style={{ color: BLUE_SKY }}>Research details: upload record, IDs and times</summary>
           <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 rounded-[var(--radius-lg)] p-3 text-sm sm:grid-cols-3" style={{ background: PAPER, border: `1px solid ${BORDER}` }} aria-label="Upload record">
-            <div className="col-span-2 sm:col-span-3"><dt className="sr-only">File</dt><dd className="truncate font-semibold" style={{ color: "var(--ink)" }}>{video.original_filename}</dd></div>
+            <div className="col-span-2 sm:col-span-3"><dt className="sr-only">File</dt><dd className="truncate font-bold" style={{ color: "var(--ink)" }}>{video.original_filename}</dd></div>
             <div><dt className="text-xs" style={{ color: WHITE_SUB }}>Upload ID</dt><dd className="font-mono" title={video.id}>{shortId(video.id)}</dd></div>
             <div><dt className="text-xs" style={{ color: WHITE_SUB }}>Size{video.duration_s ? " · length" : ""}</dt><dd>{formatBytes(video.byte_size)}{video.duration_s ? ` · ${formatDuration(video.duration_s)}` : ""}</dd></div>
             <div><dt className="text-xs" style={{ color: WHITE_SUB }}>Registered</dt><dd>{new Date(video.created_at).toLocaleString()}</dd></div>
@@ -563,7 +563,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
                 void onFileSelected(pendingFile, null);
               }} onCancel={() => setPendingFile(null)} />}
             <div className="rounded-[var(--radius-lg)] p-3 text-sm" style={{ background: PAPER, border: `1px solid ${BORDER}` }} data-testid="upload-limits">
-              <p className="font-semibold" style={{ color: "var(--ink)" }}>Upload limits</p>
+              <p className="font-bold" style={{ color: "var(--ink)" }}>Upload limits</p>
               <ul className="mt-1 grid gap-x-4 gap-y-0.5 sm:grid-cols-2" style={{ color: WHITE_DIM }}>
                 <li>Up to {formatBytes(Math.min(config.maxUploadBytes, limits.max_file_bytes))} per video</li>
                 <li>{formatDuration(limits.min_duration_s)} to {formatDuration(limits.max_duration_s)} long</li>
@@ -650,7 +650,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
         <Notice tone="error">The stored result could not be read ({parsed.error}). It is not shown to avoid presenting it incorrectly.</Notice>
       )}
       {runHistory.length > 0 && <details className="rounded-[var(--radius-lg)] p-4" style={{ border: `1px solid ${BORDER}` }}>
-        <summary className="cursor-pointer text-base font-semibold" style={{ color: BLUE_SKY }}>Research details: analysis history ({runHistory.length} run{runHistory.length === 1 ? "" : "s"})</summary>
+        <summary className="cursor-pointer text-base font-bold" style={{ color: BLUE_SKY }}>Research details: analysis history ({runHistory.length} run{runHistory.length === 1 ? "" : "s"})</summary>
         <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Each reanalysis is saved as a separate run. The active report changes only after a new run completes.</p>
         <ul className="mt-3 space-y-2 text-sm">
           {runHistory.map((run) => <li key={run.id} className="flex flex-wrap justify-between gap-2 border-b py-2" style={{ borderColor: BORDER }}>

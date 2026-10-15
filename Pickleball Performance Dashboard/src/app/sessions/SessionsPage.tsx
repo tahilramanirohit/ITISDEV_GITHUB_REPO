@@ -4,7 +4,7 @@ import { Plus, Trophy } from "lucide-react";
 import { getProfile } from "../../lib/api/profile";
 import { sessionKind } from "../../lib/api/types";
 import { Chip, Notice, PageHero, Sheet } from "../shell/primitives";
-import { INK, WHITE_SUB, YELLOW, YELLOW_INK } from "../theme";
+import { GREEN, INK, NEON, NEON_D, PAPER, WHITE_SUB } from "../theme";
 import { EmptySessions, reviewMode, SessionCard, useSessionsData } from "./sessionUi";
 
 type Filter = "all" | "self" | "video" | "tournament" | "solo";
@@ -34,7 +34,7 @@ export default function SessionsPage({ sb, userId }: { sb: SupabaseClient; userI
   return (
     <div>
       <PageHero eyebrow="Your games" title="Sessions" subtitle={items ? `${items.length} logged` : undefined}
-        action={<a href="#/new" aria-label="Log a session" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl" style={{ background: YELLOW, color: YELLOW_INK }}><Plus size={22} /></a>} />
+        action={<a href="#/new" aria-label="Log a session" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)]" style={{ background: NEON, color: NEON_D }}><Plus size={22} aria-hidden="true" /></a>} />
       <Sheet>
       <div className="space-y-5">
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 lg:mx-0 lg:flex-wrap lg:px-0" role="group" aria-label="Filter sessions">
@@ -51,8 +51,8 @@ export default function SessionsPage({ sb, userId }: { sb: SupabaseClient; userI
         : groups.map(([title, list]) => (
           <section key={title || "all"} className="space-y-3" aria-label={title || undefined}>
             {title && <div className="flex flex-wrap items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full" style={{ background: YELLOW, color: YELLOW_INK }}><Trophy size={16} aria-hidden="true" /></span>
-              <h2 className="text-base font-extrabold" style={{ color: INK }}>{title}</h2>
+              <span className="flex h-8 w-8 items-center justify-center rounded-full" style={{ background: PAPER, color: GREEN }}><Trophy size={16} aria-hidden="true" /></span>
+              <h2 className="type-body-strong" style={{ color: INK }}>{title}</h2>
               <span className="text-xs" style={{ color: WHITE_SUB }}>
                 {list.length} match{list.length === 1 ? "" : "es"} · {list.filter((i) => i.session.match_result === "win").length} won
               </span>
