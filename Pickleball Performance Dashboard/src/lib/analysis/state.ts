@@ -1,3 +1,4 @@
+import { BRAND_NAME } from "../../app/brand";
 import type { AnalysisJobRow, AnalysisResultRow, ProgressStage, VideoAssetRow } from "../api/types";
 
 export type AnalysisUiState =
@@ -103,11 +104,11 @@ export function stateDescription(state: AnalysisUiState, job: AnalysisJobRow | n
         ? `Trying again (attempt ${job.attempts + 1} of ${job.max_attempts}). Last time: ${failureHelp(job.error_code).title.toLowerCase()}.`
         : "Your video is waiting for analysis. During development, keep the analyzer running on your computer.";
     case "processing":
-      return "PicklePro is analyzing the video now. This page updates by itself; you can leave it open or come back later.";
+      return `${BRAND_NAME} is analyzing the video now. This page updates by itself; you can leave it open or come back later.`;
     case "completed":
       return "Your video review is ready. See what the video shows below. Practice advice from video appears only when its measures support it.";
     case "insufficient_data":
-      return "PicklePro checked the video, but could not reliably measure every skill. See what it could and could not assess below.";
+      return `${BRAND_NAME} checked the video, but could not reliably measure every skill. See what it could and could not assess below.`;
     case "failed":
       return failureHelp(job?.error_code).action;
   }
@@ -134,11 +135,11 @@ export const FAILURE_HELP: Record<string, { title: string; action: string }> = {
   },
   detector_unavailable: {
     title: "The analyzer is not set up correctly",
-    action: "This is not a problem with your video. Ask the person running PicklePro to run \u201cpython -m picklepro.worker --check\u201d.",
+    action: `This is not a problem with your video. Ask the person running ${BRAND_NAME} to run \u201cpython -m picklepro.worker --check\u201d.`,
   },
-  download_failed: { title: "The video could not be downloaded for checking", action: "PicklePro will try again by itself." },
-  pipeline_error: { title: "Something went wrong while checking the video", action: "PicklePro will try again by itself." },
-  worker_interrupted: { title: "The analyzer was stopped part-way", action: "PicklePro will try again by itself." },
+  download_failed: { title: "The video could not be downloaded for checking", action: `${BRAND_NAME} will try again by itself.` },
+  pipeline_error: { title: "Something went wrong while checking the video", action: `${BRAND_NAME} will try again by itself.` },
+  worker_interrupted: { title: "The analyzer was stopped part-way", action: `${BRAND_NAME} will try again by itself.` },
 };
 
 export function failureHelp(code: string | null | undefined): { title: string; action: string } {

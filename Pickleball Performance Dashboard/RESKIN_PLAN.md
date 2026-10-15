@@ -212,6 +212,7 @@ Where "Hasa" now appears:
 - The shots panel line
 - The log-a-video card
 - The audio coach video lines (3)
+- The video status lines in `src/lib/analysis/state.ts` (6; the `python -m picklepro.worker` command is unchanged)
 
 **Meta and manifest description**
 
@@ -301,7 +302,6 @@ Each skill row now shows a signed change.
 | page title {name} / {email} | "Profile" (the name stays in the card) |
 
 ### Skipped, and why
-- **`src/lib/analysis/state.ts` status lines** still say "PicklePro", for example "PicklePro is analyzing the video now". They need approval to edit `src/lib`.
 - **Research, privacy and consent wording** keeps "PicklePro" (Q8).
 - **Dev and research screens** (design preview, local prototype, shot labelling) get tokens and fonts only (Q5).
 - **Mockup items that would change behaviour:**
