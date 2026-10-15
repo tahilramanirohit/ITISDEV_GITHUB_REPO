@@ -177,3 +177,137 @@ Dev/research-only routes (behind config flags): `#/label` `labelling/LabelPage.t
 6. **Lint:** there's no linter configured. Should I report it as not available, or do you want one added later? Adding one would be a dependency change, so it's out of scope for now.
 7. **SVG metadata:** should the copies in `public/brand/` be byte-identical to `docs/brand/hasa/logos` (C2PA metadata included), or path-only? The default is byte-identical copies.
 8. **Research identity text:** the privacy page and footers say "PicklePro research prototype · DLSU CAPIT-01" and "PicklePro project team". If the study was approved under that name, I'd change these to "Hasa (PicklePro) research prototype" or leave them as they are. Which do you prefer? The privacy page is close to legal/consent text, so I'll leave it untouched unless you say otherwise.
+
+---
+
+## 9. Outcome (after implementation)
+
+Direction changes during the work, from the user:
+- **Cleaner UI/UX, not only a recolour.** Screens were rebuilt per the brand book mockups, using the ui-ux-pro-max rules: one primary action per screen, numbers first, progressive disclosure, empty states with an action, and labelled nav.
+- **The coach is named Piko** (`MASCOT_NAME` in `src/app/brand.ts`).
+- **The full-face app icon is Piko's one mark at every size.** It replaces the full-body coach, appears in the header logo (icon + wordmark), the talking coach and the favicons. The brand book suggested the simplified face at 48px and below; the user chose the full face everywhere.
+
+Checks:
+- **Build, type-check and tests:** `npm run typecheck`, `npm test` (138/138) and `npm run build` pass.
+- **Lint:** none is configured.
+- **Layout:** no horizontal scroll at 360, 390, 768 or 1280px.
+
+### Copy changes (old → new)
+
+**Brand name**
+
+| Old | New |
+| --- | --- |
+| PicklePro | Hasa (`BRAND_NAME`) |
+
+Where "Hasa" now appears:
+- `<title>`, the apple title and the manifest name
+- "Welcome to …" on the welcome screen and in onboarding
+- The welcome intro
+- "What … does" (aria-label)
+- "Try … with sample sessions"
+- "Use … full screen" (×2)
+- "… home" (aria-labels)
+- The video review lines (4)
+- The shots panel line
+- The log-a-video card
+- The audio coach video lines (3)
+
+**Meta and manifest description**
+
+| Old | New |
+| --- | --- |
+| "Rate your pickleball game or analyze a video, then get …" | "Know what to practice next. Rate your pickleball game or analyze a video, then get …" |
+
+**Welcome**
+
+| Old | New |
+| --- | --- |
+| "Hi, I'm Pickle!" / "Tell me how your game went and I'll show you what to practice next." | "Hi, I'm Piko, your Hasa coach" |
+| "Your pickleball coach, in your pocket." | "Know what to practice next." |
+| "PicklePro turns a quick look back at your game into a clear plan: …" | "Rate your last game in about 2 minutes. I'll turn it into focus areas and drills. Your sessions stay private to you." (the trial text is unchanged) |
+| "Create my account" | "Get started" |
+| "Get started" eyebrow | (removed) |
+| Four feature cards and the example-plan card | (removed) |
+| "Ten quick skill ratings, or add a video for court analysis." | "10 quick skill ratings, or add a video." |
+| Step numbers "01–03" | "1–3" |
+
+Trial steps were also shortened:
+
+| Old | New |
+| --- | --- |
+| "Try the interactive dashboard with clearly labelled example data." | "Try the dashboard with clearly labelled example data." |
+| "Try planning a session and recording a private check-in." | "Plan a session and record a private check-in." |
+| "Upload and analysis will open when an online worker is available." | "Upload opens when an online worker is available." |
+
+**Onboarding**
+
+| Old | New |
+| --- | --- |
+| "Five quick steps, about two minutes." | "5 quick steps, about 2 minutes." |
+| "How does each skill usually go for you? 3 means …" | "Rate each skill from 1 to 5. 3 means …" |
+
+**Home**
+
+| Old | New |
+| --- | --- |
+| "Hi {name}" / "Today's a good day for {focus}." | today's date / "Good morning \| afternoon \| evening, {name}" |
+| "Weekly challenge · {drill} · 3 times this week · START" | "Your focus this week" · {focus} · "{drill} · 3 times this week · from your last session" · "Start practice" |
+| "Hear this week's plan" | "Hear Piko" |
+| "{n} week streak · {n} sessions logged" | a "Week streak" stat and "{n} sessions logged" |
+| "Played today? / Log today's game" | "Log today's game / Rate how it felt in about 2 minutes" |
+| "Have a recording? Video analysis is optional. It maps where you stood on court, alongside your own ratings." | "Analyze a match video / Optional · where you stood on court" |
+| "Your focus" list with "Full plan" | (removed; the focus list is on the plan) |
+| "Recent activity" | "Recent sessions" |
+
+When there is no focus yet, the card shows "Piko says" / "Ready to play?" / "Log a session and rate how it felt. You'll get focus areas and drills."
+
+**Install tip**
+
+| Old | New |
+| --- | --- |
+| "… Open it from your home screen, like Facebook or Instagram." | (sentence removed) |
+
+**Audio coach**
+
+| Old | New |
+| --- | --- |
+| "Your coach" | "Piko, your coach" |
+| "From your video" | "Piko, from your video" |
+| "From your ratings" | "Piko, from your ratings" |
+
+**Rating**
+
+| Old | New |
+| --- | --- |
+| "{n} of 10 rated" | "{n} of 10" |
+| "Think about this session only. 3 means …" | "Rate each skill from 1 to 5, for this session only. 3 means …" |
+| "{anchor}" | "{n} of 5 · {anchor}" |
+
+Each skill's end labels are now shown under 1 and 5.
+
+**Progress**
+
+| Old | New |
+| --- | --- |
+| "{n} sessions logged · {n} rated" | "{n} most recent rated sessions · {n} logged in all" |
+
+Each skill row now shows a signed change.
+
+**Profile**
+
+| Old | New |
+| --- | --- |
+| page title {name} / {email} | "Profile" (the name stays in the card) |
+
+### Skipped, and why
+- **`src/lib/analysis/state.ts` status lines** still say "PicklePro", for example "PicklePro is analyzing the video now". They need approval to edit `src/lib`.
+- **Research, privacy and consent wording** keeps "PicklePro" (Q8).
+- **Dev and research screens** (design preview, local prototype, shot labelling) get tokens and fonts only (Q5).
+- **Mockup items that would change behaviour:**
+  - The Home/Log/Plan/Progress tab bar was not adopted; the 5 existing tabs stay.
+  - "Add to my plan" on video results was not added.
+  - No new progress chart beyond the existing bars.
+- **Data colours stay unchanged:** the video overlay, court zones, heatmap and court-correction handles keep their colours, because they match their legends.
+- **The app stays light-only.** Dark tokens are defined but unused.
+- **`var()` in SVG presentation attributes** was verified in Chrome only; Safari is not checked yet.
