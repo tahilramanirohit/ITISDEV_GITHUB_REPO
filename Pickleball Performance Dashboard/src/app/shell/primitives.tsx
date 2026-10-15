@@ -1,6 +1,6 @@
 import { useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
 import { Check, CircleAlert, Eye, EyeOff, Info, TriangleAlert } from "lucide-react";
-import { AppIcon, Wordmark } from "./Wordmark";
+import { AppIcon, Logo } from "./Wordmark";
 import {
   BORDER, DEEP, GREEN, GREEN_BG, INK, NEON, NEON_D, ORANGE, PAPER, PICKLE, ROSE, SHADOW_LIFT, VIOLET, WHITE, WHITE_DIM, WHITE_SUB, YELLOW, YELLOW_INK,
 } from "../theme";
@@ -256,9 +256,9 @@ export function PickleProMark({ size = 40 }: { size?: number }) {
   return <AppIcon size={size} />;
 }
 
-/** The Hasa wordmark. `tone="dark"` sits on forest or ink, `tone="light"` on paper. */
+/** The Hasa logo: Piko's icon and the wordmark. `tone="dark"` sits on forest or ink, `tone="light"` on paper. */
 export function PickleProLogo({ size = "md", tone = "dark" }: { size?: "sm" | "md" | "lg"; tone?: "dark" | "light" }) {
-  return <Wordmark size={size === "lg" ? 40 : size === "sm" ? 26 : 32} tone={tone} />;
+  return <Logo size={size === "lg" ? 40 : size === "sm" ? 26 : 32} tone={tone} />;
 }
 
 /** Inputs: raised surface, one line border, the small radius, 48px tall. */

@@ -20,8 +20,17 @@ export function Wordmark({ size = 28, tone = "light" }: { size?: number; tone?: 
   );
 }
 
-/** The app icon (simplified face), for small spots such as the tablet rail. */
+/** Piko's full-face app icon, the logo mark at every size. */
 export function AppIcon({ size = 40 }: { size?: number }) {
-  const src = size > 48 ? "/brand/hasa-app-icon.svg" : "/brand/hasa-app-icon-small.svg";
-  return <img src={src} alt="" aria-hidden="true" width={size} height={size} className="block shrink-0" />;
+  return <img src="/brand/hasa-app-icon.svg" alt="" aria-hidden="true" width={size} height={size} className="block shrink-0" />;
+}
+
+/** The logo: Piko's icon beside the wordmark. Used in the header, sidebar and welcome. */
+export function Logo({ size = 26, tone = "light" }: { size?: number; tone?: "light" | "dark" }) {
+  return (
+    <span className="inline-flex items-center gap-2">
+      <AppIcon size={Math.round(size * 1.25)} />
+      <Wordmark size={size} tone={tone} />
+    </span>
+  );
 }

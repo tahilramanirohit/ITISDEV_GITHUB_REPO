@@ -76,7 +76,7 @@ export function AuthScreen({ sb, devMode, guestMode, samplePreviewEnabled = fals
         </div>
 
         <div className="mt-8 flex flex-col items-center text-center lg:mt-16 lg:items-start lg:text-left">
-          <Coach size={200} title={`${MASCOT_NAME}, the ${BRAND_NAME} coach, a pickle holding a paddle`} className="pickle-hello md:h-auto md:w-[240px]" />
+          <Coach size={128} title={`${MASCOT_NAME}, the ${BRAND_NAME} coach`} className="md:h-[160px] md:w-[160px]" />
           <p className="mt-4 type-label" style={{ color: GREEN }}>Hi, I'm {MASCOT_NAME}, your {BRAND_NAME} coach</p>
           <h1 id="intro-title" className="mt-2 max-w-[16ch] type-display-xl" style={{ textWrap: "balance" }}>{BRAND_TAGLINE}</h1>
           <p className="mt-3 max-w-md type-body" style={{ color: WHITE_DIM }}>
