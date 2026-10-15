@@ -48,6 +48,12 @@ export const CARD_GLOW = "none";                    // cards use a border, never
 export const SHADOW_LIFT = "var(--shadow-lift)";    // floating layers only: sheets, menus, toasts, tab bar
 export const DOT_BG = "none";
 
+// Text and tints on the forest brand surface (one brand card per screen, the coach player).
+export const ON_BRAND = "#FAF6EA";
+export const ON_BRAND_MUTED = "#B4C2B8";
+export const ON_BRAND_PICKLE = "#8CC63F";
+export const ON_BRAND_TINT = "rgba(250,246,234,0.1)";
+
 export const DISPLAY_FONT = "var(--font-display)";
 export const BODY_FONT = "var(--font-body)";
 

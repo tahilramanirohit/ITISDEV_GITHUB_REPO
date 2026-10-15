@@ -6,3 +6,5 @@
 export const BRAND_NAME = "Hasa";
 export const BRAND_TAGLINE = "Know what to practice next.";
 export const BRAND_DESCRIPTOR = "Pickleball coaching";
+/** The coach mascot's in-app name. Never printed as part of the logo. */
+export const MASCOT_NAME = "Piko";

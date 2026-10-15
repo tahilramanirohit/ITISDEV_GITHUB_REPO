@@ -1,13 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ArrowRight, Camera, Dumbbell, Trophy } from "lucide-react";
+import { ArrowRight, Camera, Check, ChevronRight, Plus } from "lucide-react";
 import { getProfile, type PlayerProfile } from "../../lib/api/profile";
 import { selfCoachScript } from "../../lib/coaching/coachScript";
 import { buildSelfReport } from "../../lib/coaching/selfAssessment";
 import { CoachLauncher } from "../coach/CoachPlayer";
 import { InstallTip } from "../shell/InstallTip";
-import { BORDER, CARD_GLOW, DEEP, GREEN, INK, PICKLE, WHITE, WHITE_DIM, WHITE_SUB, YELLOW, YELLOW_INK } from "../theme";
-import { Notice, PageHero, RingTile, SectionTitle, Sheet } from "../shell/primitives";
+import { BORDER, GREEN, HERO, INK, ON_BRAND, ON_BRAND_MUTED, ON_BRAND_PICKLE, PAPER, PICKLE, WHITE, WHITE_DIM, WHITE_SUB, YELLOW, YELLOW_INK } from "../theme";
+import { MASCOT_NAME } from "../brand";
+import { Coach } from "../shell/Coach";
+import { Notice, PageHero, SectionTitle, Sheet } from "../shell/primitives";
 import { EmptySessions, SessionCard, useSessionsData, weekStreak } from "../sessions/sessionUi";
 
 const WEEKLY_TARGET = 3;
@@ -16,7 +18,7 @@ function isoDay(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-/** Mon–Sun strip: a ring on days with a session, today filled in. */
+/** Mon–Sun strip: a dot under days with a session, today outlined. */
 function WeekStrip({ dates }: { dates: string[] }) {
   const today = new Date();
   const monday = new Date(today);
@@ -28,17 +30,34 @@ function WeekStrip({ dates }: { dates: string[] }) {
   return (
     <ol className="grid grid-cols-7 text-center" aria-label={`This week: played on ${days.filter((d) => d.played).length} days`}>
       {days.map((d, i) => (
-        <li key={i} className="text-[11px] font-semibold" style={{ color: WHITE_SUB }}>
+        <li key={i} className="text-xs" style={{ color: WHITE_SUB }}>
           {d.label}
           <span className="mx-auto mt-1 grid h-8 w-8 place-items-center rounded-full text-xs font-bold"
             aria-label={`${d.day}${d.played ? ", played" : ""}${d.today ? ", today" : ""}`}
-            style={d.today ? { background: DEEP, color: YELLOW } : { background: WHITE, color: INK, border: d.played ? `2px solid ${PICKLE}` : `1px solid ${BORDER}` }}>
-            {d.day}
+            style={d.played ? { background: PICKLE, color: WHITE } : { background: d.today ? WHITE : PAPER, color: INK, border: d.today ? `2px solid ${INK}` : "none" }}>
+            {d.played ? <Check size={14} strokeWidth={3} aria-hidden="true" /> : d.day}
           </span>
         </li>
       ))}
     </ol>
   );
+}
+
+/** One quiet row: icon, title, a short line, chevron. */
+function Row({ href, icon, title, detail }: { href: string; icon: ReactNode; title: string; detail: string }) {
+  return (
+    <a href={href} className="flex min-h-[64px] items-center gap-3 rounded-[var(--radius-lg)] px-4 py-3" style={{ background: WHITE, border: `1px solid ${BORDER}` }}>
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[var(--radius-md)]" style={{ background: PAPER, color: GREEN }}>{icon}</span>
+      <span className="min-w-0 flex-1"><span className="block type-body-strong" style={{ color: INK }}>{title}</span>
+        <span className="block type-small" style={{ color: WHITE_DIM }}>{detail}</span></span>
+      <ChevronRight size={20} aria-hidden="true" style={{ color: WHITE_DIM }} />
+    </a>
+  );
+}
+
+function greeting(now = new Date()) {
+  const h = now.getHours();
+  return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
 }
 
 export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: string }) {
@@ -78,70 +97,64 @@ export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: s
   const coachScript = useMemo(() => latestPlan && latestPlan.report.focus.length
     ? selfCoachScript({ report: latestPlan.report, sessionTitle: latestPlan.title, playFormat: latestPlan.playFormat, length: "short" }) : null, [latestPlan]);
 
+  const today = new Date().toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+  const selfRating = latestPlan?.report.overall != null && !latestPlan.starting ? latestPlan.report.overall.toFixed(1) : "–";
+
   return (
     <div>
-      <PageHero mascot eyebrow={name ? `Hi ${name}` : "Welcome back"}
-        title={focus ? <>Today's a good day for <span style={{ color: YELLOW }}>{focus.label.toLowerCase()}.</span></> : <>Ready to <span style={{ color: YELLOW }}>play?</span></>} />
+      <PageHero eyebrow={today} title={name ? `${greeting()}, ${name}` : greeting()} />
       <Sheet>
-        <div className="space-y-5 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:items-start lg:gap-8 lg:space-y-0">
-          <div className="space-y-5">
-            <InstallTip />
-            <div className="grid grid-cols-2 gap-3">
-              <RingTile label="Self rating" value={latestPlan?.report.overall != null && !latestPlan.starting ? latestPlan.report.overall.toFixed(1) : "–"}
-                fraction={latestPlan?.report.overall != null && !latestPlan.starting ? (latestPlan.report.overall - 1) / 4 : 0} />
-              <RingTile label="This week" value={`${thisWeek}/${WEEKLY_TARGET}`} fraction={thisWeek / WEEKLY_TARGET} color={YELLOW} />
-            </div>
-
-            {focus && <a href={latestPlan!.href} className="grid grid-cols-[2.5rem_1fr_auto] items-center gap-3 rounded-full py-1.5 pl-1.5 pr-1.5"
-              style={{ background: YELLOW, color: YELLOW_INK }}>
-              <span className="grid h-10 w-10 place-items-center rounded-full" style={{ background: DEEP, color: YELLOW }}><Trophy size={18} aria-hidden="true" /></span>
-              <span className="min-w-0"><b className="block text-sm">Weekly challenge</b><span className="block truncate text-xs">{focus.drill.name} · 3 times this week</span></span>
-              <span className="rounded-full px-4 py-2 text-xs font-extrabold" style={{ background: DEEP, color: WHITE }}>START</span>
-            </a>}
-            {coachScript && <CoachLauncher shortScript={coachScript} tone="light" compact />}
-
-            <WeekStrip dates={dates} />
-            <p className="-mt-2 text-center text-xs font-semibold" style={{ color: WHITE_SUB }}>{streak} week streak · {sessions.length} sessions logged</p>
-
-            <a href="#/new" className="flex items-center gap-3 rounded-full py-1.5 pl-5 pr-1.5 text-sm font-bold" style={{ background: DEEP, color: WHITE, boxShadow: "0 8px 18px rgba(11,42,26,0.25)" }}>
-              Played today?
-              <span className="ml-auto rounded-full px-4 py-2.5 text-xs font-extrabold" style={{ background: YELLOW, color: YELLOW_INK }}>Log today's game</span>
-            </a>
-
-            {latestPlan && latestPlan.report.focus.length > 0 && <section className="space-y-3">
-              <SectionTitle action={<a href={latestPlan.href} className="inline-flex items-center gap-1 text-sm font-semibold" style={{ color: GREEN }}>
-                {latestPlan.starting ? "Rate a session" : "Full plan"} <ArrowRight size={14} /></a>}>
-                {latestPlan.starting ? "Your starting focus" : "Your focus"}
-              </SectionTitle>
-              {latestPlan.starting && <p className="-mt-1 text-sm" style={{ color: WHITE_DIM }}>From your setup answers, not updated by video analysis. Rate a session after you play to update it.</p>}
-              {latestPlan.report.focus.length > 1 && latestPlan.report.focus.every((f) => f.rating === latestPlan.report.focus[0].rating) &&
-                <p className="-mt-1 text-xs" style={{ color: WHITE_SUB }}>These skills have the same rating. They are ordered by your goals and what you said gave you trouble, then by skill order.</p>}
-              <div className="grid gap-3 lg:grid-cols-3">
-                {latestPlan.report.focus.map((f, i) => (
-                  <a key={f.skill} href={latestPlan.href} className="rounded-2xl p-4"
-                    style={{ background: i === 0 ? YELLOW : WHITE, border: `1px solid ${i === 0 ? YELLOW : BORDER}`, boxShadow: CARD_GLOW }}>
-                    <p className="text-xs font-bold uppercase tracking-wider" style={{ color: i === 0 ? YELLOW_INK : GREEN }}>Focus {i + 1} · {f.rating}/5</p>
-                    <p className="mt-1 text-base font-extrabold" style={{ color: INK }}>{f.label}</p>
-                    <p className="mt-2 flex items-center gap-1.5 text-sm" style={{ color: i === 0 ? YELLOW_INK : WHITE_DIM }}><Dumbbell size={14} /> {f.drill.name}</p>
-                  </a>
-                ))}
+        <div className="space-y-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:items-start lg:gap-8 lg:space-y-0">
+          <div className="space-y-6">
+            {/* The one brand card: what to practice now, with Piko. */}
+            <section aria-labelledby="focus-title" className="rounded-[var(--radius-lg)] p-5 sm:p-6" style={{ background: HERO, color: ON_BRAND }}>
+              <div className="flex items-start gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="type-label" style={{ color: ON_BRAND_PICKLE }}>{latestPlan?.starting ? "Your starting focus" : focus ? "Your focus this week" : `${MASCOT_NAME} says`}</p>
+                <h2 id="focus-title" className="mt-2 type-display-lg">{focus ? focus.label : "Ready to play?"}</h2>
+                <p className="mt-2 type-small" style={{ color: ON_BRAND_MUTED }}>
+                  {focus
+                    ? `${focus.drill.name} · 3 times this week · from ${latestPlan!.starting ? "your setup answers" : "your last session"}`
+                    : "Log a session and rate how it felt. You'll get focus areas and drills."}
+                </p>
               </div>
-            </section>}
+              <Coach size={96} disc className="shrink-0" />
+              </div>
+              <div className="mt-5 flex flex-wrap items-center gap-2">
+                <a href={focus ? latestPlan!.href : "#/new"} className="inline-flex min-h-[48px] items-center gap-2 rounded-[var(--radius-md)] px-5 type-body-strong" style={{ background: YELLOW, color: YELLOW_INK }}>
+                  {focus ? "Start practice" : "Log a session"} <ArrowRight size={18} aria-hidden="true" />
+                </a>
+                {coachScript && <CoachLauncher shortScript={coachScript} tone="brand" compact label={`Hear ${MASCOT_NAME}`} />}
+              </div>
+            </section>
+
+            {/* Numbers first: three stats, then the week. */}
+            <section aria-label="Your numbers" className="rounded-[var(--radius-lg)] p-4 sm:p-6" style={{ background: WHITE, border: `1px solid ${BORDER}` }}>
+              <dl className="grid grid-cols-3 gap-2">
+                <div><dt className="type-label" style={{ color: WHITE_SUB }}>This week</dt><dd className="mt-1 type-stat" style={{ color: INK }}>{thisWeek}<span className="text-xl" style={{ color: WHITE_SUB }}>/{WEEKLY_TARGET}</span></dd></div>
+                <div><dt className="type-label" style={{ color: WHITE_SUB }}>Week streak</dt><dd className="mt-1 type-stat" style={{ color: INK }}>{streak}</dd></div>
+                <div><dt className="type-label" style={{ color: WHITE_SUB }}>Self rating</dt><dd className="mt-1 type-stat" style={{ color: INK }}>{selfRating}</dd></div>
+              </dl>
+              <div className="mt-4 border-t pt-4" style={{ borderColor: BORDER }}><WeekStrip dates={dates} /></div>
+              <p className="mt-3 text-center type-small" style={{ color: WHITE_SUB }}>{sessions.length} sessions logged</p>
+            </section>
+
+            <div className="space-y-3">
+              <Row href="#/new" icon={<Plus size={20} aria-hidden="true" />} title="Log today's game" detail="Rate how it felt in about 2 minutes" />
+              <Row href="#/new?mode=video" icon={<Camera size={20} aria-hidden="true" />} title="Analyze a match video" detail="Optional · where you stood on court" />
+            </div>
+            <InstallTip />
           </div>
 
-          <div className="space-y-5">
+          <div className="space-y-4">
             {error && <Notice tone="error">{error}</Notice>}
             <section className="space-y-3">
-              <SectionTitle action={sessions.length > 3 ? <a href="#/sessions" className="inline-flex items-center gap-1 text-sm font-semibold" style={{ color: GREEN }}>See all <ArrowRight size={14} /></a> : undefined}>
-                Recent activity
+              <SectionTitle action={sessions.length > 2 ? <a href="#/sessions" className="inline-flex min-h-[44px] items-center gap-1 text-sm font-bold" style={{ color: GREEN }}>See all <ArrowRight size={14} aria-hidden="true" /></a> : undefined}>
+                Recent sessions
               </SectionTitle>
-              {items === null ? <p className="text-sm" style={{ color: WHITE_SUB }}>Loading your sessions…</p>
+              {items === null ? <p className="type-small" style={{ color: WHITE_SUB }}>Loading your sessions…</p>
                 : items.length === 0 ? <EmptySessions />
-                : <ul className="space-y-3">{items.slice(0, 3).map((item) => <li key={item.session.id}><SessionCard item={item} assessment={byId.get(item.session.id)} players={players.get(item.session.id)} you={name || "You"} /></li>)}</ul>}
-            </section>
-            <section className="rounded-2xl p-4" style={{ background: "#e3f6ea" }}>
-              <p className="flex items-center gap-2 text-sm font-bold" style={{ color: GREEN }}><Camera size={16} /> Have a recording?</p>
-              <p className="mt-1 text-sm" style={{ color: INK }}>Video analysis is optional. It maps where you stood on court, alongside your own ratings.</p>
+                : <ul className="space-y-3">{items.slice(0, 2).map((item) => <li key={item.session.id}><SessionCard item={item} assessment={byId.get(item.session.id)} players={players.get(item.session.id)} you={name || "You"} /></li>)}</ul>}
             </section>
           </div>
         </div>
