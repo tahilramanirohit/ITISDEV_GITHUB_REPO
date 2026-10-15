@@ -10,7 +10,7 @@ import { AppShell } from "./shell/AppShell";
 import { NavAvatar } from "./profile/NavAvatar";
 import { OnboardingAgain, OnboardingGate } from "./onboarding/OnboardingGate";
 import { Card, Notice, WidgetHeader } from "./shell/primitives";
-import { GREEN, ORANGE, WHITE_DIM, WHITE_SUB } from "./theme";
+import { GREEN, ORANGE, PAPER, WHITE_DIM, WHITE_SUB } from "./theme";
 
 // Loaded only when their routes are visited, so sample data and dev tools are
 // not part of the main application bundle.
@@ -61,7 +61,7 @@ function SetupRequired({ cfg }: { cfg: AppConfig }) {
           </li>
           <li>
             Fill in both lines with values from the Supabase dashboard, <em>Project Settings → API</em>:
-            <pre className="mt-1 rounded-lg p-2 text-xs overflow-x-auto" style={{ background: "#f3f4f6" }}>
+            <pre className="mt-1 rounded-lg p-2 text-xs overflow-x-auto" style={{ background: PAPER }}>
 {`VITE_SUPABASE_URL=https://<project-ref>.supabase.co
 VITE_SUPABASE_ANON_KEY=<the "anon" public key>`}
             </pre>
@@ -156,7 +156,7 @@ function SignedInApp({ sb, cfg }: { sb: SupabaseClient; cfg: AppConfig }) {
   return (
     <OnboardingGate sb={sb} userId={user.id} skip={!!user.is_anonymous && !isGuest}>
     <AppShell tabs avatar={<NavAvatar sb={sb} userId={user.id} />}
-      right={<span className="truncate rounded-full px-3 py-1.5 text-xs font-semibold" style={{ background: "rgba(127,140,150,0.18)", color: "inherit", maxWidth: "12rem" }}>{account}</span>}>
+      right={<span className="truncate rounded-full px-3 py-1.5 text-xs font-bold" style={{ background: PAPER, color: WHITE_DIM, maxWidth: "12rem" }}>{account}</span>}>
       <Suspense fallback={<Loading />}>
         <Routes>
           <Route path="/" element={<HomePage sb={sb} userId={user.id} />} />

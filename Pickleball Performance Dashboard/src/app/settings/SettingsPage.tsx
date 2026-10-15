@@ -11,7 +11,7 @@ import { BORDER, INK, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
 function LinkRow({ href, title, detail }: { href: string; title: string; detail: string }) {
   return (
     <a href={href} className="flex min-h-[56px] items-center justify-between gap-3 border-b px-4 py-3 last:border-b-0" style={{ borderColor: BORDER }}>
-      <span className="min-w-0"><span className="block text-sm font-semibold" style={{ color: INK }}>{title}</span>
+      <span className="min-w-0"><span className="block type-body-strong" style={{ color: INK }}>{title}</span>
         <span className="block text-xs" style={{ color: WHITE_SUB }}>{detail}</span></span>
       <ChevronRight size={18} style={{ color: WHITE_SUB }} aria-hidden="true" />
     </a>
@@ -90,13 +90,13 @@ export default function SettingsPage({ sb, userId, account, devLinks }: {
       <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Make all text larger on this device.</p>
       <div className="mt-3"><LargeTextToggle /></div>
     </Card>
-    <section className="overflow-hidden rounded-2xl" style={{ background: WHITE, border: `1px solid ${BORDER}` }} aria-label="More settings">
+    <section className="overflow-hidden rounded-[var(--radius-lg)]" style={{ background: WHITE, border: `1px solid ${BORDER}` }} aria-label="More settings">
       <LinkRow href="#/welcome" title="My game and starting skills" detail="Level, goals and your usual skill ratings" />
       <LinkRow href="#/privacy" title="Your data and privacy" detail="What is stored, who can see it, how to delete it" />
     </section>
     {devLinks && <Card>
       <SectionTitle>Research tools</SectionTitle>
-      <div className="mt-2 flex flex-col gap-2 text-sm font-semibold">{devLinks}</div>
+      <div className="mt-2 flex flex-col gap-2 text-sm font-bold">{devLinks}</div>
     </Card>}
     <p className="text-xs" style={{ color: WHITE_SUB }}>PicklePro research prototype · DLSU CAPIT-01</p>
     </div>

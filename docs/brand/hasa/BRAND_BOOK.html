@@ -1,0 +1,873 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hasa Brand Book</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=DM+Sans:opsz,wght@9..40,400;9..40,700&display=swap">
+<style>
+/* Layout: a single reading column (max 1080px) for rules, opening into a wide wrap-grid of 360px phone frames for the screen gallery. */
+:root{
+  --paper:#FAF6EA; --surface-raised:#FFFFFF; --surface-sunken:#F1ECDC; --line:#E2DAC2;
+  --ink:#0B2A1A; --ink-muted:#3E5446; --forest:#0F3D24; --brand-surface:#0F3D24;
+  --on-brand:#FAF6EA; --on-brand-muted:#CFE3C8;
+  --pickle:#8CC63F; --pickle-ink:#2E6B2F; --ball:#F5C518;
+  --action-bg:#0F3D24; --action-ink:#FAF6EA; --focus:#1F7A3A; --danger:#B42318; --warning:#8A5300;
+  --wordmark:#0F3D24;
+  --font-display:"Bricolage Grotesque", "Arial Black", system-ui, sans-serif;
+  --font-body:"DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-6:24px; --space-8:32px; --space-12:48px;
+  --radius-sm:8px; --radius-md:14px; --radius-lg:22px; --radius-pill:999px;
+  --shadow-lift:0 1px 2px rgba(11,42,26,.06), 0 8px 24px rgba(11,42,26,.08);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0B2A1A; --surface-raised:#123522; --surface-sunken:#082114; --line:#24493A;
+    --ink:#F1EEE3; --ink-muted:#B4C2B8; --brand-surface:#1F5C38;
+    --pickle-ink:#A6D86A; --action-bg:#8CC63F; --action-ink:#0B2A1A; --focus:#F5C518;
+    --danger:#FF8A7A; --warning:#F5C518; --wordmark:#FAF6EA; --shadow-lift:none; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0B2A1A; --surface-raised:#123522; --surface-sunken:#082114; --line:#24493A;
+  --ink:#F1EEE3; --ink-muted:#B4C2B8; --brand-surface:#1F5C38;
+  --pickle-ink:#A6D86A; --action-bg:#8CC63F; --action-ink:#0B2A1A; --focus:#F5C518;
+  --danger:#FF8A7A; --warning:#F5C518; --wordmark:#FAF6EA; --shadow-lift:none; color-scheme:dark;
+}
+/* a scope that always shows the dark theme (used for the dark screen preview) */
+.theme-dark{
+  --paper:#0B2A1A; --surface-raised:#123522; --surface-sunken:#082114; --line:#24493A;
+  --ink:#F1EEE3; --ink-muted:#B4C2B8; --brand-surface:#1F5C38;
+  --pickle-ink:#A6D86A; --action-bg:#8CC63F; --action-ink:#0B2A1A; --focus:#F5C518;
+  --danger:#FF8A7A; --warning:#F5C518; --wordmark:#FAF6EA; --shadow-lift:none;
+}
+.theme-light{
+  --paper:#FAF6EA; --surface-raised:#FFFFFF; --surface-sunken:#F1ECDC; --line:#E2DAC2;
+  --ink:#0B2A1A; --ink-muted:#3E5446; --brand-surface:#0F3D24;
+  --pickle-ink:#2E6B2F; --action-bg:#0F3D24; --action-ink:#FAF6EA; --focus:#1F7A3A;
+  --danger:#B42318; --warning:#8A5300; --wordmark:#0F3D24;
+  --shadow-lift:0 1px 2px rgba(11,42,26,.06), 0 8px 24px rgba(11,42,26,.08);
+}
+
+*{box-sizing:border-box}
+body{background:var(--paper); color:var(--ink); font-family:var(--font-body); font-size:16px; line-height:1.5; -webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px; margin:0 auto; padding-left:max(16px, env(safe-area-inset-left,0px)); padding-right:max(16px, env(safe-area-inset-right,0px))}
+h1,h2,h3{margin:0; text-wrap:balance}
+p{margin:0}
+a{color:var(--pickle-ink)}
+:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+
+/* doc chrome */
+.top{border-bottom:1px solid var(--line); background:var(--paper); position:sticky; top:env(safe-area-inset-top,0px); z-index:5}
+.top .wrap{display:flex; align-items:center; gap:var(--space-6); min-height:60px}
+.toc{display:flex; gap:var(--space-4); overflow-x:auto; font-size:14px; font-weight:700; scrollbar-width:none; min-width:0}
+.toc a{color:var(--ink-muted); text-decoration:none; white-space:nowrap; padding:var(--space-2) 0}
+.toc a:hover{color:var(--ink)}
+.label{font-size:12px; line-height:16px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-muted)}
+.section{padding-block:var(--space-12); border-bottom:1px solid var(--line)}
+.section > .wrap{display:flex; flex-direction:column; gap:var(--space-8)}
+.sec-head{display:flex; flex-direction:column; gap:var(--space-2); max-width:680px}
+.sec-head h2{font-family:var(--font-display); font-weight:800; font-size:clamp(28px, 4vw, 36px); line-height:1.1; letter-spacing:-.015em}
+.sec-head p{color:var(--ink-muted); max-width:62ch}
+.prose{display:flex; flex-direction:column; gap:var(--space-3); max-width:65ch}
+.grid-2{display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap:var(--space-6)}
+.grid-3{display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap:var(--space-6)}
+.panel{background:var(--surface-raised); border:1px solid var(--line); border-radius:var(--radius-lg); padding:var(--space-6); display:flex; flex-direction:column; gap:var(--space-3); min-width:0}
+.panel h3{font-size:20px; line-height:28px}
+.muted{color:var(--ink-muted)}
+.small{font-size:14px; line-height:20px}
+ul.rules{margin:0; padding-left:1.2em; display:flex; flex-direction:column; gap:var(--space-2)}
+.status{display:inline-flex; align-items:center; gap:var(--space-2); font-size:14px; font-weight:700; padding:var(--space-2) var(--space-3); border-radius:var(--radius-pill); background:var(--surface-sunken); color:var(--ink)}
+.status i{width:8px; height:8px; border-radius:50%; background:var(--ball); display:inline-block}
+
+/* wordmark */
+.wm{display:inline-flex; align-items:baseline; font-family:var(--font-display); font-weight:800; line-height:1; color:var(--wordmark); letter-spacing:0}
+.wm svg{width:.4896em; height:.72em; fill:currentColor; flex:none}
+.wm .a1{margin-left:.005em} .wm .s{margin-left:-.03em} .wm .a2{margin-left:-.005em}
+
+/* hero */
+.hero{padding-block:var(--space-12) var(--space-8)}
+.hero .wrap{display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:var(--space-8); align-items:center}
+.hero .wm{font-size:clamp(88px, 15vw, 168px)}
+.hero .tag{font-size:clamp(22px, 3vw, 28px); line-height:1.25; font-weight:700; margin-top:var(--space-4)}
+.hero .desc{margin-top:var(--space-2); letter-spacing:.32em; font-size:13px; font-weight:700; color:var(--ink-muted)}
+.hero .meta{display:flex; flex-wrap:wrap; gap:var(--space-2); margin-top:var(--space-6)}
+.hero-art{display:flex; justify-content:center}
+.hero-art svg{width:100%; max-width:340px; height:auto}
+.coach-disc{background:#F1ECDC; border-radius:var(--radius-lg); display:flex; align-items:center; justify-content:center; padding:var(--space-4)}
+
+/* tables */
+.tbl{overflow-x:auto; border:1px solid var(--line); border-radius:var(--radius-lg); background:var(--surface-raised)}
+table{border-collapse:collapse; width:100%; font-size:15px; min-width:560px}
+th,td{text-align:left; padding:var(--space-3) var(--space-4); border-bottom:1px solid var(--line); vertical-align:top}
+tr:last-child td{border-bottom:0}
+th{font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-muted)}
+td.do{color:var(--ink)} td.dont{color:var(--ink-muted)}
+.tag-do,.tag-dont{font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase}
+.tag-do{color:var(--pickle-ink)} .tag-dont{color:var(--danger)}
+
+/* logo plates */
+.plate{border-radius:var(--radius-lg); padding:var(--space-8) var(--space-6); display:flex; align-items:center; justify-content:center; min-height:180px; border:1px solid var(--line)}
+.plate.light{background:#FAF6EA; --wordmark:#0F3D24}
+.plate.forest{background:#0F3D24; border-color:#0F3D24; --wordmark:#FAF6EA}
+.plate.ink{background:#0B2A1A; border-color:#0B2A1A; --wordmark:#FAF6EA}
+.plate .wm{font-size:clamp(56px, 8vw, 88px)}
+.spec{display:flex; flex-direction:column; gap:var(--space-2); font-size:14px}
+.spec div{display:flex; justify-content:space-between; gap:var(--space-4); border-bottom:1px dashed var(--line); padding-bottom:var(--space-2)}
+.spec code{font-size:13px}
+code{font-family:ui-monospace, "SF Mono", Menlo, Consolas, monospace; background:var(--surface-sunken); padding:1px 6px; border-radius:6px; font-size:.9em}
+.lockup{display:flex; align-items:center; gap:var(--space-3)}
+.misuse{display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap:var(--space-4)}
+.misuse figure{margin:0; display:flex; flex-direction:column; gap:var(--space-2)}
+.misuse .box{height:110px; border-radius:var(--radius-md); border:1px solid var(--line); background:var(--surface-raised); display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative}
+.misuse figcaption{font-size:14px; color:var(--ink-muted)}
+.misuse figcaption b{color:var(--danger); font-weight:700}
+
+/* icons */
+.icon-row{display:flex; flex-wrap:wrap; gap:var(--space-6); align-items:flex-end}
+.icon-row figure{margin:0; display:flex; flex-direction:column; align-items:center; gap:var(--space-2)}
+.icon-row figcaption{font-size:13px; color:var(--ink-muted)}
+.appicon{display:block; overflow:hidden; background:#0F3D24}
+
+/* swatches */
+.swatches{display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap:var(--space-4)}
+.sw{border:1px solid var(--line); border-radius:var(--radius-lg); overflow:hidden; background:var(--surface-raised); display:flex; flex-direction:column}
+.sw .chip{height:84px; border-bottom:1px solid var(--line)}
+.sw .info{padding:var(--space-3) var(--space-4) var(--space-4); display:flex; flex-direction:column; gap:var(--space-1)}
+.sw b{font-size:15px}
+.sw .hex{font-size:13px; color:var(--ink-muted)}
+.sw p{font-size:14px; line-height:20px; color:var(--ink-muted)}
+.ratio{display:flex; height:40px; border-radius:var(--radius-md); overflow:hidden; border:1px solid var(--line)}
+.ratio span{display:flex; align-items:center; padding:0 var(--space-3); font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden}
+
+/* type specimens */
+.type-row{display:grid; grid-template-columns:200px minmax(0,1fr); gap:var(--space-6); padding-block:var(--space-4); border-bottom:1px solid var(--line); align-items:baseline}
+.type-row:last-child{border-bottom:0}
+.type-row .k{display:flex; flex-direction:column; gap:2px}
+.type-row .k b{font-size:15px}
+.type-row .k span{font-size:13px; color:var(--ink-muted)}
+.t-display-xl{font-family:var(--font-display); font-weight:800; font-size:48px; line-height:52px; letter-spacing:-.02em}
+.t-display-lg{font-family:var(--font-display); font-weight:800; font-size:32px; line-height:38px; letter-spacing:-.015em}
+.t-stat{font-family:var(--font-display); font-weight:800; font-size:40px; line-height:44px; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+.t-heading{font-size:20px; line-height:28px; font-weight:700}
+.t-body{font-size:16px; line-height:24px}
+.t-strong{font-size:16px; line-height:24px; font-weight:700}
+.t-small{font-size:14px; line-height:20px}
+.t-label{font-size:12px; line-height:16px; font-weight:700; letter-spacing:.12em; text-transform:uppercase}
+
+/* ===== UI components (shared by the component section and the screens) ===== */
+.btn{font:inherit; font-size:16px; font-weight:700; line-height:24px; min-height:48px; padding:0 var(--space-6); border-radius:var(--radius-md); border:1px solid transparent; display:inline-flex; align-items:center; justify-content:center; gap:var(--space-2); cursor:pointer; text-decoration:none}
+.btn svg{width:20px; height:20px}
+.btn-primary{background:var(--action-bg); color:var(--action-ink)}
+.btn-secondary{background:var(--surface-raised); color:var(--ink); border-color:var(--line)}
+.btn-text{background:transparent; color:var(--pickle-ink); padding:0 var(--space-3)}
+.btn-danger{background:var(--surface-raised); color:var(--danger); border-color:var(--line)}
+.btn-block{width:100%}
+.chips{display:flex; flex-wrap:wrap; gap:var(--space-2)}
+.ch{font:inherit; font-size:12px; font-weight:700; letter-spacing:.12em; line-height:16px; text-transform:uppercase; height:32px; padding:0 var(--space-3); border-radius:var(--radius-pill); border:0; display:inline-flex; align-items:center; gap:var(--space-2); background:var(--surface-sunken); color:var(--ink); cursor:pointer}
+.ch[aria-pressed="true"]{background:var(--action-bg); color:var(--action-ink)}
+.ch .dot{width:8px; height:8px; border-radius:50%; background:var(--ball)}
+.ch svg{width:14px; height:14px}
+.field{display:flex; flex-direction:column; gap:var(--space-2)}
+.field label{font-size:14px; font-weight:700}
+.field input,.field select{font:inherit; height:48px; padding:0 var(--space-4); border-radius:var(--radius-sm); border:1px solid var(--line); background:var(--surface-raised); color:var(--ink)}
+.field .help{font-size:14px; color:var(--ink-muted)}
+.card{background:var(--surface-raised); border:1px solid var(--line); border-radius:var(--radius-lg); padding:var(--space-4); display:flex; flex-direction:column; gap:var(--space-2); min-width:0}
+.card .t{font-size:18px; line-height:24px; font-weight:700}
+.card.brand{background:var(--brand-surface); border-color:var(--brand-surface); color:var(--on-brand)}
+.card.brand .label{color:var(--on-brand-muted)}
+.card.brand .btn-primary{background:var(--ball); color:#0B2A1A}
+.meter{display:flex; flex-direction:column; gap:var(--space-2)}
+.meter .row{display:flex; justify-content:space-between; align-items:baseline; gap:var(--space-3)}
+.meter .name{font-weight:700}
+.meter .score{display:flex; gap:var(--space-2); align-items:baseline}
+.meter .score b{font-size:18px}
+.meter .up{color:var(--pickle-ink); font-size:14px; font-weight:700}
+.meter .flat{color:var(--ink-muted); font-size:14px}
+.track{height:8px; border-radius:var(--radius-pill); background:var(--surface-sunken); overflow:hidden}
+.track i{display:block; height:100%; border-radius:var(--radius-pill); background:var(--pickle-ink)}
+.seg{display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:6px}
+.seg button{font:inherit; font-weight:700; height:44px; border-radius:var(--radius-sm); border:1px solid var(--line); background:var(--surface-raised); color:var(--ink); cursor:pointer; font-variant-numeric:tabular-nums}
+.seg button[aria-pressed="true"]{background:var(--action-bg); border-color:var(--action-bg); color:var(--action-ink)}
+.seg-ends{display:flex; justify-content:space-between; font-size:12px; color:var(--ink-muted)}
+
+/* phones */
+.screens{display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap:var(--space-8) var(--space-6)}
+.screen{display:flex; flex-direction:column; gap:var(--space-4); min-width:0}
+.phone{width:100%; max-width:360px; margin:0 auto; border-radius:40px; border:10px solid #0B2A1A; background:var(--paper); color:var(--ink); overflow:hidden; display:flex; flex-direction:column; height:740px; position:relative}
+.theme-dark .phone, .phone.theme-dark{border-color:#2A4A38}
+.p-head{height:56px; padding:0 var(--space-4); display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); flex:none}
+.p-head .wm{font-size:28px}
+.p-head .title{font-size:17px; font-weight:700}
+.iconbtn{width:44px; height:44px; border-radius:var(--radius-pill); border:0; background:transparent; color:var(--ink); display:grid; place-items:center; cursor:pointer}
+.iconbtn svg{width:22px; height:22px}
+.p-body{flex:1; overflow:hidden; padding:var(--space-4); display:flex; flex-direction:column; gap:var(--space-4)}
+.p-title{font-family:var(--font-display); font-weight:800; font-size:26px; line-height:32px; letter-spacing:-.015em}
+.p-foot{flex:none; padding:var(--space-3) var(--space-4) var(--space-4); border-top:1px solid var(--line); background:var(--paper)}
+.tabbar{flex:none; display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); border-top:1px solid var(--line); background:var(--paper); padding:6px 4px 10px}
+.tabbar a{display:flex; flex-direction:column; align-items:center; gap:2px; font-size:11px; font-weight:700; color:var(--ink-muted); text-decoration:none; padding:6px 0; min-height:44px}
+.tabbar a svg{width:22px; height:22px}
+.tabbar a[aria-current="page"]{color:var(--pickle-ink)}
+.stats{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:var(--space-2)}
+.stat{background:var(--surface-raised); border:1px solid var(--line); border-radius:var(--radius-md); padding:var(--space-3); display:flex; flex-direction:column; gap:2px}
+.stat b{font-family:var(--font-display); font-weight:800; font-size:26px; line-height:30px; font-variant-numeric:tabular-nums}
+.stat span{font-size:12px; color:var(--ink-muted)}
+.list{display:flex; flex-direction:column; border:1px solid var(--line); border-radius:var(--radius-lg); background:var(--surface-raised); overflow:hidden}
+.li{display:flex; align-items:center; gap:var(--space-3); padding:var(--space-3) var(--space-4); border-bottom:1px solid var(--line); min-height:64px}
+.li:last-child{border-bottom:0}
+.li .n{width:28px; height:28px; border-radius:50%; background:var(--surface-sunken); display:grid; place-items:center; font-size:13px; font-weight:700; flex:none}
+.li .body{flex:1; min-width:0; display:flex; flex-direction:column}
+.li .body b{font-size:15px}
+.li .body span{font-size:13px; color:var(--ink-muted)}
+.li svg.chev{width:18px; height:18px; color:var(--ink-muted); flex:none}
+.progressbar{display:flex; flex-direction:column; gap:var(--space-2)}
+.dropzone{border:2px dashed var(--line); border-radius:var(--radius-lg); padding:var(--space-6) var(--space-4); display:flex; flex-direction:column; align-items:center; text-align:center; gap:var(--space-2); background:var(--surface-raised)}
+.dropzone svg{width:32px; height:32px; color:var(--pickle-ink)}
+.example-tag{position:absolute; top:14px; right:14px; font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; background:var(--surface-sunken); color:var(--ink-muted); padding:2px 8px; border-radius:var(--radius-pill); z-index:2}
+.notes{display:flex; flex-direction:column; gap:var(--space-2); max-width:360px; margin:0 auto; width:100%}
+.notes h3{font-size:18px; line-height:24px}
+.notes ul{margin:0; padding-left:1.1em; display:flex; flex-direction:column; gap:var(--space-1); font-size:14px; line-height:20px; color:var(--ink-muted)}
+.court text{font-family:var(--font-body); font-size:10px; fill:var(--ink-muted)}
+
+/* do/dont compare */
+.compare{display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap:var(--space-6)}
+.compare figure{margin:0; display:flex; flex-direction:column; gap:var(--space-3)}
+.compare .stage{background:var(--surface-sunken); border-radius:var(--radius-lg); padding:var(--space-6); min-height:250px; display:flex; flex-direction:column; justify-content:center}
+.bad-card{border-radius:16px; padding:14px; background:linear-gradient(135deg,#1f6d3b,#3fa34d); color:#fff; box-shadow:0 10px 30px rgba(0,0,0,.25); display:flex; flex-direction:column; gap:10px}
+.bad-card .inner{background:rgba(255,255,255,.18); border-radius:12px; padding:10px; box-shadow:0 4px 12px rgba(0,0,0,.2)}
+.bad-card .b1,.bad-card .b2{border-radius:10px; padding:8px 10px; font-weight:700; text-align:center; font-size:14px}
+.bad-card .b1{background:#F5C518; color:#0B2A1A} .bad-card .b2{background:#fff; color:#1f6d3b}
+
+footer{padding-block:var(--space-12)}
+footer .wrap{display:flex; flex-wrap:wrap; gap:var(--space-6); justify-content:space-between; align-items:center}
+
+@media (max-width: 760px){
+  .hero .wrap{grid-template-columns:1fr}
+  .hero-art{order:-1}
+  .hero-art svg{max-width:220px}
+  .type-row{grid-template-columns:1fr; gap:var(--space-2)}
+  .t-display-xl{font-size:36px; line-height:40px}
+  .top .wm{display:none}
+}
+@media (prefers-reduced-motion: reduce){ *{scroll-behavior:auto!important} }
+html{scroll-behavior:smooth}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="hh" viewBox="0 0 102 150"><path d="M0 16 L34 4 L34 62 C42 52 54 46 68 46 C90 46 102 60 102 84 L102 150 L68 150 L68 92 C68 81 62 76 54 76 C44 76 34 83 34 95 L34 150 L0 150 Z"/></symbol>
+    <!-- the one character geometry: body, stem, edge bumps, sweatband, face -->
+    <symbol id="pk" viewBox="0 0 120 220">
+      <rect x="54" y="2" width="12" height="22" rx="6" transform="rotate(10 60 14)" style="fill:var(--stem,#2E6B2F)"/>
+      <path d="M60 16 C82 16 94 30 94 60 L94 168 C94 196 80 210 60 210 C40 210 26 196 26 168 L26 60 C26 30 38 16 60 16 Z" style="fill:var(--body,#8CC63F)"/>
+      <g style="fill:var(--body,#8CC63F)"><circle cx="27" cy="96" r="5"/><circle cx="27" cy="132" r="5"/><circle cx="27" cy="170" r="5"/><circle cx="93" cy="84" r="5"/><circle cx="93" cy="120" r="5"/><circle cx="93" cy="158" r="5"/></g>
+      <rect x="24" y="44" width="72" height="18" rx="6" style="fill:var(--band,#FAF6EA)"/>
+      <g style="fill:none;stroke:var(--face,#0B2A1A);stroke-linecap:round"><path d="M39 73 Q45 68 52 71" stroke-width="4"/><path d="M68 71 Q75 68 81 73" stroke-width="4"/><path d="M49 106 Q60 116 71 106" stroke-width="4.5"/></g>
+      <g style="fill:var(--face,#0B2A1A)"><ellipse cx="46" cy="88" rx="6.5" ry="8.5"/><ellipse cx="73" cy="88" rx="6.5" ry="8.5"/></g>
+      <g style="fill:var(--band,#FAF6EA)"><circle cx="48.5" cy="84.5" r="2.3"/><circle cx="75.5" cy="84.5" r="2.3"/></g>
+    </symbol>
+    <symbol id="pks" viewBox="0 0 120 220">
+      <rect x="53" y="1" width="14" height="23" rx="7" transform="rotate(10 60 14)" style="fill:var(--stem,#2E6B2F)"/>
+      <path d="M60 16 C82 16 94 30 94 60 L94 168 C94 196 80 210 60 210 C40 210 26 196 26 168 L26 60 C26 30 38 16 60 16 Z" style="fill:var(--body,#8CC63F)"/>
+      <g style="fill:var(--body,#8CC63F)"><circle cx="27" cy="96" r="5"/><circle cx="27" cy="132" r="5"/><circle cx="93" cy="84" r="5"/><circle cx="93" cy="120" r="5"/></g>
+      <rect x="24" y="42" width="72" height="22" rx="7" style="fill:var(--band,#FAF6EA)"/>
+      <g style="fill:var(--face,#0B2A1A)"><ellipse cx="46" cy="90" rx="8.5" ry="10.5"/><ellipse cx="74" cy="90" rx="8.5" ry="10.5"/></g>
+      <path d="M47 112 Q60 124 73 112" style="fill:none;stroke:var(--face,#0B2A1A);stroke-width:7;stroke-linecap:round"/>
+    </symbol>
+    <symbol id="coach" viewBox="0 0 360 330">
+      <g fill="none" stroke="#0B2A1A" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M152 150 L134 184 L156 200" stroke-width="13"/>
+        <path d="M162 228 L138 264 L148 298" stroke-width="15"/>
+        <path d="M198 228 L222 264 L212 298" stroke-width="15"/>
+      </g>
+      <circle cx="158" cy="200" r="9" fill="#0B2A1A"/>
+      <rect x="122" y="292" width="44" height="16" rx="8" fill="#0B2A1A"/>
+      <rect x="194" y="292" width="44" height="16" rx="8" fill="#0B2A1A"/>
+      <use href="#pk" x="120" y="26" width="120" height="220"/>
+      <g transform="translate(226 184) rotate(12)"><rect x="-6" y="-36" width="12" height="42" rx="6" fill="#0B2A1A"/><rect x="-28" y="-104" width="56" height="72" rx="22" fill="#0F3D24"/></g>
+      <path d="M208 150 L238 172 L228 184" fill="none" stroke="#0B2A1A" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="226" cy="184" r="10" fill="#0B2A1A"/>
+      <g fill="none" stroke="#8CC63F" stroke-width="4" stroke-linecap="round"><path d="M322 40 Q334 34 346 38"/><path d="M324 56 Q334 53 344 57"/></g>
+      <circle cx="306" cy="50" r="13" fill="#F5C518"/>
+      <g fill="#0F3D24"><circle cx="301" cy="46" r="2.4"/><circle cx="311" cy="47" r="2.4"/><circle cx="305" cy="56" r="2.4"/></g>
+    </symbol>
+    <!-- outline icons, 2px stroke -->
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></g></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></g></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z" fill="currentColor"/></symbol>
+    <symbol id="i-video" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3z"/></g></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 20h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></g></symbol>
+  </defs>
+</svg>
+
+<header class="top">
+  <div class="wrap">
+    <span class="wm" style="font-size:26px" role="img" aria-label="Hasa"><svg aria-hidden="true"><use href="#hh"/></svg><span class="a1" aria-hidden="true">a</span><span class="s" aria-hidden="true">s</span><span class="a2" aria-hidden="true">a</span></span>
+    <nav class="toc" aria-label="Sections">
+      <a href="#story">Story</a><a href="#voice">Voice</a><a href="#logo">Logo</a><a href="#coach">Coach</a><a href="#icon">App icon</a><a href="#colour">Colour</a><a href="#type">Type</a><a href="#components">Components</a><a href="#screens">Screens</a><a href="#cleaner">Cleaner app</a><a href="#handoff">Handoff</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <span class="label">Brand book · identity 01c</span>
+        <h1 style="margin-top:var(--space-4)"><span class="wm" role="img" aria-label="hasa"><svg aria-hidden="true"><use href="#hh"/></svg><span class="a1" aria-hidden="true">a</span><span class="s" aria-hidden="true">s</span><span class="a2" aria-hidden="true">a</span></span></h1>
+        <p class="tag">Know what to practice next.</p>
+        <p class="desc">PICKLEBALL COACHING</p>
+        <div class="meta">
+          <span class="status"><i></i>Name not yet trademark-cleared</span>
+          <span class="status">Replaces PicklePro (user-facing only)</span>
+        </div>
+      </div>
+      <div class="hero-art"><div class="coach-disc"><svg viewBox="0 0 360 330" role="img" aria-label="The Hasa coach, a pickle in a sweatband in a ready stance with a paddle"><use href="#coach"/></svg></div></div>
+    </div>
+  </section>
+
+  <section class="section" id="story">
+    <div class="wrap">
+      <div class="sec-head"><span class="label">1 · Name and story</span><h2>Every session sharpens your game</h2></div>
+      <div class="grid-2">
+        <div class="prose">
+          <p><b>Hasa</b> is Tagalog for sharpening or training; <b>hasâ</b> means honed, highly skilled. The app's job is to take a player's last session and tell them what to sharpen next: focus areas, drills and a practice plan, with progress tracked over time and optional video court-position analysis.</p>
+          <p>The brand is a good club coach: credible to adult players, encouraging without being cute. The pickle coach brings the warmth; the name, type and layout carry the credibility.</p>
+        </div>
+        <div class="panel">
+          <h3>Writing the name</h3>
+          <ul class="rules">
+            <li><b>hasa</b> in lowercase in the logo only.</li>
+            <li><b>Hasa</b> in sentences: "Log your session in Hasa."</li>
+            <li>Descriptor when needed: "Hasa, pickleball coaching".</li>
+            <li>Never "HASA", "Hasa App" or "Hasa Pickleball".</li>
+            <li>Tagline, used as written: <b>Know what to practice next.</b></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="voice">
+    <div class="wrap">
+      <div class="sec-head"><span class="label">2 · Voice</span><h2>Specific, encouraging, brief</h2><p>Hasa names the next action, not the player's flaws. Sentence case everywhere, digits for numbers, no emoji in the interface, at most one exclamation mark per screen.</p></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Moment</th><th><span class="tag-do">Write</span></th><th><span class="tag-dont">Not</span></th></tr></thead>
+          <tbody>
+            <tr><td>Focus area</td><td class="do">Work on your third-shot drop this week.</td><td class="dont">Your third shot is weak.</td></tr>
+            <tr><td>Streak</td><td class="do">Nice, 3 sessions in a row.</td><td class="dont">Amazing!!! You're crushing it 🔥</td></tr>
+            <tr><td>Instruction</td><td class="do">Rate each skill from 1 to 5.</td><td class="dont">Please kindly provide your self-assessment ratings.</td></tr>
+            <tr><td>Error</td><td class="do">We couldn't read the court lines. Try a video filmed from behind the baseline.</td><td class="dont">Error: analysis failed.</td></tr>
+            <tr><td>Button</td><td class="do">Log session</td><td class="dont">SUBMIT / Click here</td></tr>
+            <tr><td>Empty state</td><td class="do">No sessions yet. Log your first one to get a practice plan.</td><td class="dont">Nothing to see here!</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="logo">
+    <div class="wrap">
+      <div class="sec-head"><span class="label">3 · Logo</span><h2>The wordmark leads</h2><p>A custom <b>h</b>, cut at a shallow angle like a sharpened edge, followed by <b>asa</b> in Bricolage Grotesque ExtraBold. The wordmark works on its own; the coach is never required beside it.</p></div>
+      <div class="grid-3">
+        <div class="plate light"><span class="wm" role="img" aria-label="hasa on paper"><svg aria-hidden="true"><use href="#hh"/></svg><span class="a1" aria-hidden="true">a</span><span class="s" aria-hidden="true">s</span><span class="a2" aria-hidden="true">a</span></span></div>
+        <div class="plate forest"><span class="wm" role="img" aria-label="hasa on forest"><svg aria-hidden="true"><use href="#hh"/></svg><span class="a1" aria-hidden="true">a</span><span class="s" aria-hidden="true">s</span><span class="a2" aria-hidden="true">a</span></span></div>
+        <div class="plate ink"><span class="wm" role="img" aria-label="hasa on ink"><svg aria-hidden="true"><use href="#hh"/></svg><span class="a1" aria-hidden="true">a</span><span class="s" aria-hidden="true">s</span><span class="a2" aria-hidden="true">a</span></span></div>
+      </div>
+      <div class="grid-2">
+        <div class="panel">
+          <h3>Construction</h3>
+          <div class="spec">
+            <div><span>Letters a, s, a</span><span>Bricolage Grotesque 800, tracking 0</span></div>
+            <div><span>Custom h height</span><span class="num">0.72 × font size</span></div>
+            <div><span>h → a</span><code>+0.005em</code></div>
+            <div><span>a → s</span><code>−0.03em</code></div>
+            <div><span>s → a</span><code>−0.005em</code></div>
+            <div><span>Clear space</span><span>height of the "a" on every side</span></div>
+            <div><span>Minimum size</span><span class="num">20 px tall</span></div>
+          </div>
+          <p class="small muted">In code, build it as the h SVG plus live text with this spacing (a <code>Wordmark</code> component), never as plain text "hasa".</p>
+        </div>
+        <div class="panel">
+          <h3>Lockups</h3>
+          <div class="lockup" style="--wordmark:var(--wordmark)">
+            <span class="wm" style="font-size:44px" role="img" aria-label="Wordmark alone"><svg aria-hidden="true"><use href="#hh"/></svg><span class="a1" aria-hidden="true">a</span><span class="s" aria-hidden="true">s</span><span class="a2" aria-hidden="true">a</span></span>
+            <span class="small muted">Default: app header, web</span>
+          </div>
+          <div class="lockup">
+            <svg width="38" height="48" viewBox="0 0 120 150" aria-hidden="true" style="flex:none"><use href="#pk"/></svg>
+            <span class="wm" style="font-size:44px" role="img" aria-label="Mark and wordmark"><svg aria-hidden="true"><use href="#hh"/></svg><span class="a1" aria-hidden="true">a</span><span class="s" aria-hidden="true">s</span><span class="a2" aria-hidden="true">a</span></span>
+            <span class="small muted">Splash, social, print</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:var(--space-1)">
+            <span class="wm" style="font-size:44px" role="img" aria-label="Wordmark with tagline"><svg aria-hidden="true"><use href="#hh"/></svg><span class="a1" aria-hidden="true">a</span><span class="s" aria-hidden="true">s</span><span class="a2" aria-hidden="true">a</span></span>
+            <span class="t-strong">Know what to practice next.</span>
+            <span class="t-label muted">Pickleball coaching</span>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Don't</h3>
+        <div class="misuse">
+          <figure><div class="box"><span style="font:800 44px var(--font-body); color:var(--ink)">hasa</span></div><figcaption><b>Plain text.</b> Always use the custom h.</figcaption></figure>
+          <figure><div class="box"><span class="wm" style="font-size:44px; --wordmark:#8CC63F" aria-hidden="true"><svg><use href="#hh"/></svg><span class="a1">a</span><span class="s">s</span><span class="a2">a</span></span></div><figcaption><b>Pickle or ball colour.</b> Forest, ink or paper only.</figcaption></figure>
+          <figure><div class="box"><span class="wm" style="font-size:44px; transform:scaleX(1.5)" aria-hidden="true"><svg><use href="#hh"/></svg><span class="a1">a</span><span class="s">s</span><span class="a2">a</span></span></div><figcaption><b>Stretched.</b> Scale proportionally.</figcaption></figure>
+          <figure><div class="box"><span class="wm" style="font-size:44px; letter-spacing:.2em" aria-hidden="true"><svg><use href="#hh"/></svg><span class="a1">a</span><span class="s">s</span><span class="a2">a</span></span></div><figcaption><b>Re-spaced.</b> Keep the set spacing.</figcaption></figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="coach">
+    <div class="wrap">
+      <div class="sec-head"><span class="label">4 · The coach</span><h2>A pickle that plays</h2><p>One character geometry is shared by the mascot, the app icon and every lockup. Flat fills only: no outlines, gradients, shading or ground shadow.</p></div>
+      <div class="grid-2">
+        <div class="panel coach-disc" style="align-items:center; justify-content:center; flex-direction:column; color:#3E5446; border-color:#E2DAC2">
+          <svg viewBox="0 0 360 330" width="320" style="max-width:100%; height:auto" role="img" aria-label="Master pose: ready stance with paddle up and forward"><use href="#coach"/></svg>
+          <span class="small" style="color:#3E5446">Master pose: ready stance</span>
+        </div>
+        <div class="panel">
+          <h3>Anatomy</h3>
+          <ul class="rules">
+            <li>Straight cylindrical body; stem nub leaning slightly right.</li>
+            <li>Bumps on the silhouette edge only, never dark spots inside the body.</li>
+            <li>Paper-coloured sweatband; oval eyes with highlights, short brows, closed smile.</li>
+            <li>Limbs in ink: arms 13, legs 15 at master size. Knees bent, feet level, paddle up and forward.</li>
+          </ul>
+          <h3 style="margin-top:var(--space-3)">Where it appears</h3>
+          <ul class="rules">
+            <li><b>Yes:</b> onboarding, empty states, milestones, the drill of the week.</li>
+            <li><b>No:</b> inside data views, next to errors, in the header, or on every screen. One coach per screen at most.</li>
+            <li>On dark backgrounds, set the full coach on a paper disc (#F1ECDC) so the ink limbs and paddle stay visible. The head-only mark needs no disc.</li>
+            <li>An in-app name ("Piko") is optional and undecided. Never print a name with the logo.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="icon">
+    <div class="wrap">
+      <div class="sec-head"><span class="label">5 · App icon</span><h2>The face, at every size</h2><p>Forest square, corner radius 22.5% of the side, head filling 76% of the width with clear padding above the stem. Use the full face at 96 px and up and the simplified face (no brows or highlights, bigger eyes, thicker smile and band) at 48 px and below. Shown at actual size.</p></div>
+      <div class="panel">
+        <span class="label">Full face</span>
+        <div class="icon-row">
+          <figure><svg class="appicon" width="180" height="180" viewBox="0 0 100 100" style="border-radius:40px" role="img" aria-label="App icon, 180 px"><rect width="100" height="100" fill="#0F3D24"/><use href="#pk" x="12" y="8" width="76" height="139"/></svg><figcaption>180 · App Store, touch icon</figcaption></figure>
+          <figure><svg class="appicon" width="96" height="96" viewBox="0 0 100 100" style="border-radius:21px" role="img" aria-label="App icon, 96 px"><rect width="100" height="100" fill="#0F3D24"/><use href="#pk" x="12" y="8" width="76" height="139"/></svg><figcaption>96</figcaption></figure>
+        </div>
+        <span class="label" style="margin-top:var(--space-3)">Simplified face</span>
+        <div class="icon-row">
+          <figure><svg class="appicon" width="48" height="48" viewBox="0 0 100 100" style="border-radius:11px" role="img" aria-label="Small icon, 48 px"><rect width="100" height="100" fill="#0F3D24"/><use href="#pks" x="12" y="8" width="76" height="139"/></svg><figcaption>48</figcaption></figure>
+          <figure><svg class="appicon" width="32" height="32" viewBox="0 0 100 100" style="border-radius:7px" role="img" aria-label="Small icon, 32 px"><rect width="100" height="100" fill="#0F3D24"/><use href="#pks" x="12" y="8" width="76" height="139"/></svg><figcaption>32 · favicon</figcaption></figure>
+          <figure><svg class="appicon" width="29" height="29" viewBox="0 0 100 100" style="border-radius:7px" role="img" aria-label="Small icon, 29 px"><rect width="100" height="100" fill="#0F3D24"/><use href="#pks" x="12" y="8" width="76" height="139"/></svg><figcaption>29</figcaption></figure>
+          <figure><svg width="48" height="48" viewBox="0 0 100 100" style="border-radius:11px; background:#FAF6EA; box-shadow:inset 0 0 0 1.5px #0B2A1A; --body:#0B2A1A; --stem:#0B2A1A; --band:#FAF6EA; --face:#FAF6EA" role="img" aria-label="One-colour icon"><use href="#pks" x="12" y="8" width="76" height="139"/></svg><figcaption>One colour</figcaption></figure>
+          <figure><svg width="48" height="48" viewBox="0 0 100 100" style="border-radius:11px; background:#0B2A1A; --body:#FAF6EA; --stem:#FAF6EA; --band:#0B2A1A; --face:#0B2A1A" role="img" aria-label="Reversed icon"><use href="#pks" x="12" y="8" width="76" height="139"/></svg><figcaption>Reversed</figcaption></figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="colour">
+    <div class="wrap">
+      <div class="sec-head"><span class="label">6 · Colour</span><h2>Paper and ink carry the interface</h2><p>Forest is the brand; pickle and ball are seasoning. Values below follow your current theme; dark-theme values are in <code>tokens.css</code>.</p></div>
+      <div class="ratio" aria-label="Colour ratio guide">
+        <span style="flex:70; background:var(--paper); color:var(--ink)">Paper and surfaces 70%</span>
+        <span style="flex:20; background:var(--ink); color:var(--paper)">Ink 20%</span>
+        <span style="flex:8; background:#0F3D24; color:#FAF6EA">8%</span>
+        <span style="flex:2; background:#F5C518"></span>
+      </div>
+      <div class="swatches">
+        <div class="sw"><div class="chip" style="background:var(--paper)"></div><div class="info"><b>paper</b><span class="hex num">#FAF6EA / #0B2A1A</span><p>Page background.</p></div></div>
+        <div class="sw"><div class="chip" style="background:var(--surface-raised)"></div><div class="info"><b>surface-raised</b><span class="hex num">#FFFFFF / #123522</span><p>Cards, inputs, sheets.</p></div></div>
+        <div class="sw"><div class="chip" style="background:var(--surface-sunken)"></div><div class="info"><b>surface-sunken</b><span class="hex num">#F1ECDC / #082114</span><p>Wells, meter tracks, chips.</p></div></div>
+        <div class="sw"><div class="chip" style="background:var(--line)"></div><div class="info"><b>line</b><span class="hex num">#E2DAC2 / #24493A</span><p>1 px borders and dividers. Lines, not shadows.</p></div></div>
+        <div class="sw"><div class="chip" style="background:var(--ink)"></div><div class="info"><b>ink</b><span class="hex num">#0B2A1A / #F1EEE3</span><p>Primary text and icons.</p></div></div>
+        <div class="sw"><div class="chip" style="background:var(--ink-muted)"></div><div class="info"><b>ink-muted</b><span class="hex num">#3E5446 / #B4C2B8</span><p>Secondary text. 4.5:1 on paper.</p></div></div>
+        <div class="sw"><div class="chip" style="background:#0F3D24"></div><div class="info"><b>forest</b><span class="hex num">#0F3D24</span><p>Brand green: icon ground, wordmark, primary button (light).</p></div></div>
+        <div class="sw"><div class="chip" style="background:#8CC63F"></div><div class="info"><b>pickle</b><span class="hex num">#8CC63F</span><p>Mascot and decoration. Never text on paper.</p></div></div>
+        <div class="sw"><div class="chip" style="background:var(--pickle-ink)"></div><div class="info"><b>pickle-ink</b><span class="hex num">#2E6B2F / #A6D86A</span><p>Green that passes as text: links, gains, selected tabs.</p></div></div>
+        <div class="sw"><div class="chip" style="background:#F5C518"></div><div class="info"><b>ball</b><span class="hex num">#F5C518</span><p>Accent only: the ball, focus dots, one highlight button on a brand card.</p></div></div>
+        <div class="sw"><div class="chip" style="background:var(--danger)"></div><div class="info"><b>danger</b><span class="hex num">#B42318 / #FF8A7A</span><p>Errors and destructive actions only.</p></div></div>
+        <div class="sw"><div class="chip" style="background:var(--warning)"></div><div class="info"><b>warning</b><span class="hex num">#8A5300 / #F5C518</span><p>Cautions, such as a low-confidence analysis.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="type">
+    <div class="wrap">
+      <div class="sec-head"><span class="label">7 · Type</span><h2>Bricolage for moments, DM Sans for the rest</h2><p>Bricolage Grotesque 800 is reserved for the wordmark, screen titles and big numbers. DM Sans 400 and 700 does everything else. Use only these styles.</p></div>
+      <div class="panel" style="gap:0">
+        <div class="type-row"><div class="k"><b>display-xl</b><span class="num">48/52 · 800</span></div><div class="t-display-xl">Know what to practice next.</div></div>
+        <div class="type-row"><div class="k"><b>display-lg</b><span class="num">32/38 · 800</span></div><div class="t-display-lg">Your practice plan</div></div>
+        <div class="type-row"><div class="k"><b>stat</b><span class="num">40/44 · 800</span></div><div class="t-stat">3.4 <span class="t-small muted" style="font-family:var(--font-body); font-weight:400; letter-spacing:0">average skill</span></div></div>
+        <div class="type-row"><div class="k"><b>heading</b><span class="num">20/28 · 700</span></div><div class="t-heading">Third-shot drop</div></div>
+        <div class="type-row"><div class="k"><b>body</b><span class="num">16/24 · 400</span></div><div class="t-body">Hit 20 drops from the baseline and land 12 in the kitchen.</div></div>
+        <div class="type-row"><div class="k"><b>body-strong</b><span class="num">16/24 · 700</span></div><div class="t-strong">Session saved</div></div>
+        <div class="type-row"><div class="k"><b>small</b><span class="num">14/20 · 400</span></div><div class="t-small muted">Logged 2 days ago · 45 min</div></div>
+        <div class="type-row"><div class="k"><b>label</b><span class="num">12/16 · 700 · +0.12em</span></div><div class="t-label">Focus area</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="components">
+    <div class="wrap">
+      <div class="sec-head"><span class="label">8 · Components</span><h2>The parts every screen is built from</h2><p>Cards use a 1 px line and a 22 px radius, never a shadow. Shadows are for floating layers only: sheets, menus, toasts.</p></div>
+      <div class="grid-2">
+        <div class="panel">
+          <h3>Buttons</h3>
+          <div style="display:flex; flex-wrap:wrap; gap:var(--space-3)">
+            <button class="btn btn-primary" type="button"><svg aria-hidden="true"><use href="#i-plus"/></svg>Log session</button>
+            <button class="btn btn-secondary" type="button">Upload video</button>
+            <button class="btn btn-text" type="button">Skip for now</button>
+            <button class="btn btn-danger" type="button">Delete session</button>
+          </div>
+          <p class="small muted">One primary button per screen. Min height 48 px, 14 px radius, sentence-case verb first.</p>
+        </div>
+        <div class="panel">
+          <h3>Chips</h3>
+          <div class="chips">
+            <button class="ch" type="button" aria-pressed="false"><span class="dot" aria-hidden="true"></span>Third-shot drop</button>
+            <button class="ch" type="button" aria-pressed="true"><svg aria-hidden="true"><use href="#i-check"/></svg>Dinking</button>
+            <button class="ch" type="button" aria-pressed="false">Serve</button>
+            <button class="ch" type="button" aria-pressed="false">Footwork</button>
+          </div>
+          <p class="small muted">A ball dot marks this week's focus. Selected chips get a check, so state never relies on colour.</p>
+        </div>
+        <div class="panel">
+          <h3>Rating input</h3>
+          <div class="field">
+            <label id="lbl-rate">Dinking</label>
+            <div class="seg" role="group" aria-labelledby="lbl-rate" data-seg>
+              <button type="button" aria-pressed="false">1</button><button type="button" aria-pressed="false">2</button><button type="button" aria-pressed="false">3</button><button type="button" aria-pressed="true">4</button><button type="button" aria-pressed="false">5</button>
+            </div>
+            <div class="seg-ends"><span>Still learning</span><span>Consistent</span></div>
+          </div>
+          <p class="small muted">Five 44 px number buttons, not stars. Labels at both ends say what the scale means.</p>
+        </div>
+        <div class="panel">
+          <h3>Skill meter</h3>
+          <div class="meter">
+            <div class="row"><span class="name">Dinking</span><span class="score"><span class="up num">+0.5</span><b class="num">4.0</b></span></div>
+            <div class="track" role="meter" aria-label="Dinking" aria-valuenow="4" aria-valuemin="1" aria-valuemax="5"><i style="width:75%"></i></div>
+          </div>
+          <div class="meter">
+            <div class="row"><span class="name">Third-shot drop</span><span class="score"><span class="flat num">0.0</span><b class="num">2.5</b></span></div>
+            <div class="track" role="meter" aria-label="Third-shot drop" aria-valuenow="2.5" aria-valuemin="1" aria-valuemax="5"><i style="width:37.5%"></i></div>
+          </div>
+          <p class="small muted">Low skills are never red: they're not errors. Changes always carry a sign.</p>
+        </div>
+        <div class="panel">
+          <h3>Input</h3>
+          <div class="field"><label for="f-dur">Session length</label><input id="f-dur" value="45 min"><span class="help">Include warm-up.</span></div>
+        </div>
+        <div class="panel">
+          <h3>Cards</h3>
+          <div class="card"><span class="label">Focus area</span><span class="t">Third-shot drop</span><span class="small muted">3 drills · 35 min</span></div>
+          <div class="card brand"><span class="label">Drill of the week</span><span class="t">Drop-and-move ladder</span><span class="small" style="color:var(--on-brand-muted)">One brand card per screen, at most.</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="screens">
+    <div class="wrap">
+      <div class="sec-head"><span class="label">9 · Screens</span><h2>How the app should look</h2><p>Reference mockups for the re-skin, at phone width (360 px). They restyle the app's existing flows; they don't add features or change steps. Figures are sample data.</p></div>
+      <div class="screens">
+
+        <!-- 1 Onboarding -->
+        <div class="screen">
+          <div class="phone" aria-label="Onboarding screen mockup">
+            <div class="p-body" style="justify-content:center; align-items:center; text-align:center; gap:var(--space-6); padding:var(--space-8) var(--space-6)">
+              <span class="wm" style="font-size:40px" role="img" aria-label="hasa"><svg aria-hidden="true"><use href="#hh"/></svg><span class="a1" aria-hidden="true">a</span><span class="s" aria-hidden="true">s</span><span class="a2" aria-hidden="true">a</span></span>
+              <div class="coach-disc" style="border-radius:50%; width:220px; height:220px; padding:var(--space-6)"><svg viewBox="0 0 360 330" width="100%" aria-hidden="true"><use href="#coach"/></svg></div>
+              <div style="display:flex; flex-direction:column; gap:var(--space-2)">
+                <h3 class="p-title">Know what to practice next</h3>
+                <p class="muted">Rate your last session in 2 minutes. We'll turn it into a practice plan.</p>
+              </div>
+            </div>
+            <div class="p-foot" style="border-top:0; display:flex; flex-direction:column; gap:var(--space-2)">
+              <a class="btn btn-primary btn-block" href="#screens">Get started</a>
+              <a class="btn btn-text btn-block" href="#screens">I already have an account</a>
+            </div>
+          </div>
+          <div class="notes"><h3>Onboarding</h3><ul><li>The coach's one big moment. Wordmark on top, never both large.</li><li>One sentence of promise, one primary action.</li></ul></div>
+        </div>
+
+        <!-- 2 Home -->
+        <div class="screen">
+          <div class="phone" aria-label="Home screen mockup">
+            <span class="example-tag">Sample data</span>
+            <div class="p-head">
+              <span class="wm" role="img" aria-label="hasa"><svg aria-hidden="true"><use href="#hh"/></svg><span class="a1" aria-hidden="true">a</span><span class="s" aria-hidden="true">s</span><span class="a2" aria-hidden="true">a</span></span>
+              <button class="iconbtn" type="button" aria-label="Profile"><svg aria-hidden="true"><use href="#i-user"/></svg></button>
+            </div>
+            <div class="p-body">
+              <div><span class="label">Thursday, Oct 15</span><h3 class="p-title">Good evening, DK</h3></div>
+              <div class="card brand" style="padding:var(--space-6) var(--space-4); gap:var(--space-3)">
+                <span class="label">Your focus this week</span>
+                <span class="t" style="font-size:22px; line-height:28px">Third-shot drop</span>
+                <span class="small" style="color:var(--on-brand-muted)">3 drills · 35 min · from your last session</span>
+                <a class="btn btn-primary btn-block" href="#screens"><svg aria-hidden="true"><use href="#i-play"/></svg>Start practice</a>
+              </div>
+              <div class="stats">
+                <div class="stat"><b>3</b><span>sessions</span></div>
+                <div class="stat"><b>5</b><span>day streak</span></div>
+                <div class="stat"><b>3.4</b><span>avg skill</span></div>
+              </div>
+              <div class="list">
+                <div class="li"><span class="n">↗</span><div class="body"><b>Dinking up 0.5</b><span>Since Oct 8</span></div><svg class="chev" aria-hidden="true"><use href="#i-chev"/></svg></div>
+                <div class="li"><span class="n" aria-hidden="true"><svg width="16" height="16"><use href="#i-video"/></svg></span><div class="body"><b>Analyse a match video</b><span>Optional · court positions</span></div><svg class="chev" aria-hidden="true"><use href="#i-chev"/></svg></div>
+              </div>
+            </div>
+            <nav class="tabbar" aria-label="Main">
+              <a href="#screens" aria-current="page"><svg aria-hidden="true"><use href="#i-home"/></svg>Home</a>
+              <a href="#screens"><svg aria-hidden="true"><use href="#i-plus"/></svg>Log</a>
+              <a href="#screens"><svg aria-hidden="true"><use href="#i-target"/></svg>Plan</a>
+              <a href="#screens"><svg aria-hidden="true"><use href="#i-chart"/></svg>Progress</a>
+            </nav>
+          </div>
+          <div class="notes"><h3>Home</h3><ul><li>Leads with the answer: what to practice now, in the one brand card.</li><li>The yellow button is allowed only on the brand card; everywhere else primary is forest.</li><li>Three numbers, then two rows. Nothing else competes.</li></ul></div>
+        </div>
+
+        <!-- 3 Rate skills -->
+        <div class="screen">
+          <div class="phone" aria-label="Rate your session screen mockup">
+            <div class="p-head">
+              <button class="iconbtn" type="button" aria-label="Back"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
+              <span class="title">Log session</span>
+              <span style="width:44px"></span>
+            </div>
+            <div class="p-body">
+              <div class="progressbar">
+                <div style="display:flex; justify-content:space-between"><span class="label">Rate your skills</span><span class="small muted num">4 of 10</span></div>
+                <div class="track"><i style="width:40%"></i></div>
+              </div>
+              <div class="field"><label id="r1">Serve</label><div class="seg" role="group" aria-labelledby="r1" data-seg><button type="button" aria-pressed="false">1</button><button type="button" aria-pressed="false">2</button><button type="button" aria-pressed="false">3</button><button type="button" aria-pressed="true">4</button><button type="button" aria-pressed="false">5</button></div></div>
+              <div class="field"><label id="r2">Return of serve</label><div class="seg" role="group" aria-labelledby="r2" data-seg><button type="button" aria-pressed="false">1</button><button type="button" aria-pressed="false">2</button><button type="button" aria-pressed="true">3</button><button type="button" aria-pressed="false">4</button><button type="button" aria-pressed="false">5</button></div></div>
+              <div class="field"><label id="r3">Third-shot drop</label><div class="seg" role="group" aria-labelledby="r3" data-seg><button type="button" aria-pressed="false">1</button><button type="button" aria-pressed="true">2</button><button type="button" aria-pressed="false">3</button><button type="button" aria-pressed="false">4</button><button type="button" aria-pressed="false">5</button></div></div>
+              <div class="field"><label id="r4">Dinking</label><div class="seg" role="group" aria-labelledby="r4" data-seg><button type="button" aria-pressed="false">1</button><button type="button" aria-pressed="false">2</button><button type="button" aria-pressed="false">3</button><button type="button" aria-pressed="false">4</button><button type="button" aria-pressed="false">5</button></div><div class="seg-ends"><span>Still learning</span><span>Consistent</span></div></div>
+            </div>
+            <div class="p-foot"><button class="btn btn-primary btn-block" type="button">Next</button></div>
+          </div>
+          <div class="notes"><h3>Rate your session</h3><ul><li>Same skills, same 1–5 scale and same steps as today, restyled.</li><li>Progress shown as "4 of 10" plus a bar. The primary action sits in a fixed footer.</li></ul></div>
+        </div>
+
+        <!-- 4 Plan -->
+        <div class="screen">
+          <div class="phone" aria-label="Practice plan screen mockup">
+            <span class="example-tag">Sample data</span>
+            <div class="p-head"><span class="title">Plan</span><span style="width:44px"></span></div>
+            <div class="p-body">
+              <div><span class="label">Focus areas</span><h3 class="p-title">Your practice plan</h3></div>
+              <div class="chips">
+                <span class="ch"><span class="dot" aria-hidden="true"></span>Third-shot drop</span>
+                <span class="ch"><span class="dot" aria-hidden="true"></span>Kitchen footwork</span>
+                <span class="ch">Resets</span>
+              </div>
+              <div class="list">
+                <div class="li"><span class="n num">1</span><div class="body"><b>Drop-and-move ladder</b><span>15 min · partner or wall</span></div><svg class="chev" aria-hidden="true"><use href="#i-chev"/></svg></div>
+                <div class="li"><span class="n num">2</span><div class="body"><b>Kitchen-line split step</b><span>10 min · solo</span></div><svg class="chev" aria-hidden="true"><use href="#i-chev"/></svg></div>
+                <div class="li"><span class="n num">3</span><div class="body"><b>Reset from mid-court</b><span>10 min · partner</span></div><svg class="chev" aria-hidden="true"><use href="#i-chev"/></svg></div>
+              </div>
+              <div class="card" style="flex-direction:row; align-items:center; gap:var(--space-3)">
+                <svg width="20" height="20" aria-hidden="true" style="color:var(--ink-muted); flex:none"><use href="#i-clock"/></svg>
+                <span class="small"><b>35 min total.</b> <span class="muted">Do it in one session or split it over two.</span></span>
+              </div>
+            </div>
+            <div class="p-foot"><button class="btn btn-primary btn-block" type="button">Start drill 1</button></div>
+            <nav class="tabbar" aria-label="Main">
+              <a href="#screens"><svg aria-hidden="true"><use href="#i-home"/></svg>Home</a>
+              <a href="#screens"><svg aria-hidden="true"><use href="#i-plus"/></svg>Log</a>
+              <a href="#screens" aria-current="page"><svg aria-hidden="true"><use href="#i-target"/></svg>Plan</a>
+              <a href="#screens"><svg aria-hidden="true"><use href="#i-chart"/></svg>Progress</a>
+            </nav>
+          </div>
+          <div class="notes"><h3>Focus areas and drills</h3><ul><li>Drills are a numbered list because the order is the plan.</li><li>One row per drill: name, time, who you need. Detail lives one tap in.</li></ul></div>
+        </div>
+
+        <!-- 5 Progress -->
+        <div class="screen">
+          <div class="phone" aria-label="Progress screen mockup">
+            <span class="example-tag">Sample data</span>
+            <div class="p-head"><span class="title">Progress</span><span style="width:44px"></span></div>
+            <div class="p-body">
+              <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:var(--space-3)">
+                <div><span class="label">Average skill</span><div class="t-stat">3.4</div></div>
+                <span class="small num" style="color:var(--pickle-ink); font-weight:700">+0.5 since Sep 1</span>
+              </div>
+              <svg viewBox="0 0 300 96" width="100%" role="img" aria-label="Average skill rose from 2.9 on Sep 1 to 3.4 on Oct 13 over 6 sessions">
+                <g stroke="var(--line)" stroke-width="1"><line x1="28" y1="16" x2="296" y2="16"/><line x1="28" y1="46" x2="296" y2="46"/><line x1="28" y1="76" x2="296" y2="76"/></g>
+                <g font-size="10" fill="var(--ink-muted)" font-family="DM Sans, sans-serif"><text x="0" y="19">3.5</text><text x="0" y="49">3.0</text><text x="0" y="79">2.5</text><text x="28" y="94">Sep 1</text><text x="262" y="94">Oct 13</text></g>
+                <path d="M34 52 L86 46 L138 40 L190 46 L242 28 L290 22 L290 76 L34 76 Z" fill="var(--pickle)" opacity=".18"/>
+                <path d="M34 52 L86 46 L138 40 L190 46 L242 28 L290 22" fill="none" stroke="var(--pickle-ink)" stroke-width="2.5" stroke-linejoin="round"/>
+                <circle cx="290" cy="22" r="4.5" fill="var(--pickle-ink)"/>
+              </svg>
+              <div style="display:flex; flex-direction:column; gap:var(--space-4)">
+                <div class="meter"><div class="row"><span class="name">Dinking</span><span class="score"><span class="up num">+0.5</span><b class="num">4.0</b></span></div><div class="track"><i style="width:75%"></i></div></div>
+                <div class="meter"><div class="row"><span class="name">Serve</span><span class="score"><span class="up num">+1.0</span><b class="num">3.5</b></span></div><div class="track"><i style="width:62.5%"></i></div></div>
+                <div class="meter"><div class="row"><span class="name">Third-shot drop</span><span class="score"><span class="flat num">0.0</span><b class="num">2.5</b></span></div><div class="track"><i style="width:37.5%"></i></div></div>
+              </div>
+            </div>
+            <nav class="tabbar" aria-label="Main">
+              <a href="#screens"><svg aria-hidden="true"><use href="#i-home"/></svg>Home</a>
+              <a href="#screens"><svg aria-hidden="true"><use href="#i-plus"/></svg>Log</a>
+              <a href="#screens"><svg aria-hidden="true"><use href="#i-target"/></svg>Plan</a>
+              <a href="#screens" aria-current="page"><svg aria-hidden="true"><use href="#i-chart"/></svg>Progress</a>
+            </nav>
+          </div>
+          <div class="notes"><h3>Progress</h3><ul><li>The number first, then the trend, then the breakdown.</li><li>One line chart: faint grid, soft area fill, emphasised latest point.</li></ul></div>
+        </div>
+
+        <!-- 6 Video -->
+        <div class="screen">
+          <div class="phone" aria-label="Video analysis screen mockup">
+            <span class="example-tag">Sample data</span>
+            <div class="p-head">
+              <button class="iconbtn" type="button" aria-label="Back"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
+              <span class="title">Video analysis</span>
+              <span style="width:44px"></span>
+            </div>
+            <div class="p-body">
+              <div class="dropzone">
+                <svg aria-hidden="true"><use href="#i-upload"/></svg>
+                <b>Upload a match video</b>
+                <span class="small muted">Film from behind the baseline with all four court lines in view.</span>
+                <button class="btn btn-secondary" type="button" style="margin-top:var(--space-2)">Choose video</button>
+              </div>
+              <div class="card" style="gap:var(--space-3)">
+                <span class="label">Last analysis · Oct 12</span>
+                <svg class="court" viewBox="0 0 280 150" width="100%" role="img" aria-label="Half-court position map: most dink positions sit just behind the kitchen line">
+                  <rect x="20" y="10" width="240" height="130" rx="2" fill="var(--surface-sunken)" stroke="var(--ink-muted)" stroke-width="1.5"/>
+                  <line x1="20" y1="10" x2="260" y2="10" stroke="var(--ink)" stroke-width="3"/>
+                  <line x1="20" y1="51" x2="260" y2="51" stroke="var(--ink-muted)" stroke-width="1.5"/>
+                  <line x1="140" y1="51" x2="140" y2="140" stroke="var(--ink-muted)" stroke-width="1.5"/>
+                  <text x="24" y="44">Kitchen</text>
+                  <g fill="var(--pickle-ink)" opacity=".85"><circle cx="70" cy="62" r="5"/><circle cx="92" cy="66" r="5"/><circle cx="110" cy="60" r="5"/><circle cx="84" cy="72" r="5"/><circle cx="182" cy="64" r="5"/><circle cx="200" cy="70" r="5"/><circle cx="166" cy="74" r="5"/><circle cx="96" cy="58" r="5"/><circle cx="214" cy="62" r="5"/></g>
+                  <g fill="var(--warning)"><circle cx="120" cy="104" r="5"/><circle cx="196" cy="112" r="5"/></g>
+                </svg>
+                <p class="small"><b>You stood behind the kitchen line on 6 of 9 dinks.</b> <span class="muted">Step up after your drop.</span></p>
+              </div>
+            </div>
+            <div class="p-foot"><button class="btn btn-primary btn-block" type="button">Add to my plan</button></div>
+          </div>
+          <div class="notes"><h3>Video analysis (optional)</h3><ul><li>Upload first, with one plain filming tip. Results speak in court positions, not jargon.</li><li>Every insight ends in an action the plan can use.</li></ul></div>
+        </div>
+
+        <!-- 7 Empty + dark -->
+        <div class="screen theme-dark">
+          <div class="phone" aria-label="Empty progress screen mockup in the dark theme">
+            <div class="p-head"><span class="title">Progress</span><span style="width:44px"></span></div>
+            <div class="p-body" style="justify-content:center; align-items:center; text-align:center; gap:var(--space-4)">
+              <svg width="120" height="150" viewBox="0 0 120 150" aria-hidden="true"><use href="#pk"/></svg>
+              <h3 class="t-heading">No sessions yet</h3>
+              <p class="muted small" style="max-width:240px">Log your first session and Hasa will chart your skills here.</p>
+              <button class="btn btn-primary" type="button"><svg aria-hidden="true"><use href="#i-plus"/></svg>Log session</button>
+            </div>
+            <nav class="tabbar" aria-label="Main">
+              <a href="#screens"><svg aria-hidden="true"><use href="#i-home"/></svg>Home</a>
+              <a href="#screens"><svg aria-hidden="true"><use href="#i-plus"/></svg>Log</a>
+              <a href="#screens"><svg aria-hidden="true"><use href="#i-target"/></svg>Plan</a>
+              <a href="#screens" aria-current="page"><svg aria-hidden="true"><use href="#i-chart"/></svg>Progress</a>
+            </nav>
+          </div>
+          <div class="notes"><h3>Empty state, dark theme</h3><ul><li>Empty states name what will appear and the one way to start.</li><li>In dark, primary turns pickle green with ink text; paper becomes deep court green.</li></ul></div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="cleaner">
+    <div class="wrap">
+      <div class="sec-head"><span class="label">10 · A cleaner app</span><h2>Remove before you add</h2><p>The re-skin changes how the app looks, never what it does. These are the rules for every screen.</p></div>
+      <div class="compare">
+        <figure>
+          <div class="stage">
+            <div class="bad-card">
+              <div style="font-weight:800; font-size:18px">🔥 YOUR FOCUS AREA!!</div>
+              <div class="inner">THIRD SHOT DROP — Score 2.5/5 ⭐⭐</div>
+              <div class="inner">Recommended drills available below</div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px"><div class="b1">START NOW</div><div class="b2">VIEW DRILLS</div></div>
+            </div>
+          </div>
+          <figcaption class="small"><b style="color:var(--danger)">Before:</b> gradient, nested cards, stacked shadows, two competing buttons, emoji and shouting.</figcaption>
+        </figure>
+        <figure>
+          <div class="stage">
+            <div class="card">
+              <span class="label">Focus area</span>
+              <span class="t">Third-shot drop</span>
+              <span class="small muted">3 drills · 35 min</span>
+              <button class="btn btn-primary" type="button" style="align-self:flex-start; margin-top:var(--space-2)">Start practice</button>
+            </div>
+          </div>
+          <figcaption class="small"><b style="color:var(--pickle-ink)">After:</b> one surface, one border, one action, words that say what happens.</figcaption>
+        </figure>
+      </div>
+      <div class="grid-3">
+        <div class="panel"><h3>One job per screen</h3><p class="small muted">Lead with the single main action. Demote the rest to secondary or text buttons, or a menu.</p></div>
+        <div class="panel"><h3>Fewer surfaces</h3><p class="small muted">Paper, raised cards, one border style. No nested cards, decorative gradients or card shadows.</p></div>
+        <div class="panel"><h3>Numbers first</h3><p class="small muted">Scores and streaks in the stat style with a short label. Let the number carry the screen.</p></div>
+        <div class="panel"><h3>Plain words</h3><p class="small muted">Rewrite labels to the voice table. Replace instruction paragraphs with clear labels.</p></div>
+        <div class="panel"><h3>Same parts everywhere</h3><p class="small muted">Every button, chip, meter and card comes from the components above. No one-off styles.</p></div>
+        <div class="panel"><h3>Accessible by default</h3><p class="small muted">4.5:1 text in both themes, visible focus rings, 44 px targets, real buttons and labels.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="handoff">
+    <div class="wrap">
+      <div class="sec-head"><span class="label">11 · Handoff</span><h2>For the re-skin</h2><p>Everything here lives in the repo at <code>docs/brand/hasa/</code>.</p></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>File</th><th>Use</th></tr></thead>
+          <tbody>
+            <tr><td><code>tokens.css</code></td><td>CSS variables for light and dark, plus the mapping onto the app's shadcn variables (<code>--primary</code> → <code>--action-bg</code>, <code>--background</code> → <code>--paper</code>, and so on).</td></tr>
+            <tr><td><code>tokens.json</code></td><td>The same tokens as data.</td></tr>
+            <tr><td><code>logos/hasa-app-icon.svg</code></td><td>Full-face icon: Apple touch icon 180, PWA 192 and 512.</td></tr>
+            <tr><td><code>logos/hasa-app-icon-small.svg</code></td><td>Simplified icon: favicon 16, 32, 48.</td></tr>
+            <tr><td><code>logos/hasa-coach.svg</code></td><td>The coach in the master pose: onboarding, empty states, milestones.</td></tr>
+            <tr><td><code>logos/hasa-h-glyph.svg</code></td><td>The custom h for the <code>Wordmark</code> component.</td></tr>
+            <tr><td><code>CLAUDE_CODE_PROMPT.md</code></td><td>The frontend-only task for the coding agent.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="small muted" style="max-width:65ch">Fonts: Bricolage Grotesque 800 and DM Sans 400/700 from Google Fonts with <code>display=swap</code>. <code>theme-color</code>: #0F3D24. The logo files are clean vector mocks; have a designer redraw final masters before launch.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span class="wm" style="font-size:40px" role="img" aria-label="hasa"><svg aria-hidden="true"><use href="#hh"/></svg><span class="a1" aria-hidden="true">a</span><span class="s" aria-hidden="true">s</span><span class="a2" aria-hidden="true">a</span></span>
+    <span class="small muted">Hasa brand book · identity 01c · October 2026</span>
+  </div>
+</footer>
+
+<script>
+document.querySelectorAll('[data-seg]').forEach(function(group){
+  group.addEventListener('click', function(e){
+    var b = e.target.closest('button'); if(!b) return;
+    group.querySelectorAll('button').forEach(function(x){ x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+  });
+});
+document.querySelectorAll('button.ch').forEach(function(c){
+  c.addEventListener('click', function(){ c.setAttribute('aria-pressed', c.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'); });
+});
+</script>
+</body>
+</html>

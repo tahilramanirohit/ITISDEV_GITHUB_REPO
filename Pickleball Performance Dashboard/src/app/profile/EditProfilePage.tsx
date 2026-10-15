@@ -5,7 +5,7 @@ import { ArrowLeft, Camera, Trash2 } from "lucide-react";
 import { getProfile, saveProfile, supportsProfileExtras, type PlayerProfile, type ProfileInput } from "../../lib/api/profile";
 import { PhotoError, removeProfilePhoto, uploadProfilePhoto } from "../../lib/api/profilePhoto";
 import { Card, Chip, Notice, PageHero, PrimaryButton, SectionTitle, Sheet, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
-import { BORDER, DEEP, INK, ROSE, WHITE, WHITE_DIM, WHITE_SUB, YELLOW, YELLOW_INK } from "../theme";
+import { BORDER, DEEP, INK, ROSE, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
 import { announceProfileUpdate } from "./NavAvatar";
 import { ProfileAvatar } from "./ProfileAvatar";
 
@@ -103,9 +103,9 @@ export default function EditProfilePage({ sb, userId }: { sb: SupabaseClient; us
 
   if (loading) return <p className="text-sm" style={{ color: WHITE_SUB }}>Loading profile…</p>;
   const textField = (key: "home_court" | "paddle", label: string, max: number, placeholder: string) => (
-    <label className="grid min-w-0 gap-1 text-sm font-semibold">{label}
+    <label className="grid min-w-0 gap-1 text-sm font-bold">{label}
       <input maxLength={max} value={form[key] ?? ""} onChange={(e) => setForm({ ...form, [key]: e.target.value })} placeholder={placeholder}
-        className="w-full min-w-0 rounded-2xl px-4 py-3 text-base font-normal" style={fieldStyle} />
+        className="w-full min-w-0 px-4 py-3 text-base font-normal" style={fieldStyle} />
     </label>
   );
 
@@ -120,17 +120,17 @@ export default function EditProfilePage({ sb, userId }: { sb: SupabaseClient; us
             <div className="relative">
               <ProfileAvatar sb={sb} path={photoPath} name={form.display_name} size={104} preview={preview} />
               <button type="button" onClick={() => fileInput.current?.click()} disabled={!!photoBusy} aria-label={photoPath ? "Change profile photo" : "Add profile photo"}
-                className="absolute bottom-0 right-0 grid h-9 w-9 place-items-center rounded-full disabled:opacity-60" style={{ background: DEEP, color: YELLOW, border: `3px solid ${WHITE}` }}>
+                className="absolute bottom-0 right-0 grid h-11 w-11 place-items-center rounded-full disabled:opacity-60" style={{ background: DEEP, color: WHITE, border: `3px solid ${WHITE}` }}>
                 <Camera size={16} />
               </button>
             </div>
             <div className="grid gap-2">
               <button type="button" onClick={() => fileInput.current?.click()} disabled={!!photoBusy}
-                className="inline-flex min-h-[44px] items-center gap-2 rounded-full px-5 text-sm font-extrabold disabled:opacity-60" style={{ background: YELLOW, color: YELLOW_INK }}>
+                className="inline-flex min-h-[44px] items-center gap-2 rounded-[var(--radius-md)] px-5 text-sm font-bold disabled:opacity-60" style={{ border: `1px solid ${BORDER}`, color: INK, background: WHITE }}>
                 <Camera size={16} aria-hidden="true" /> {photoBusy === "uploading" ? "Uploading…" : photoPath ? "Change photo" : "Add photo"}
               </button>
               {photoPath && <button type="button" onClick={() => void removePhoto()} disabled={!!photoBusy}
-                className="inline-flex min-h-[40px] items-center gap-2 rounded-full px-4 text-sm font-bold disabled:opacity-60" style={{ border: `1px solid ${ROSE}40`, color: ROSE }}>
+                className="inline-flex min-h-[44px] items-center gap-2 rounded-[var(--radius-md)] px-4 text-sm font-bold disabled:opacity-60" style={{ border: `1px solid ${BORDER}`, color: ROSE, background: WHITE }}>
                 <Trash2 size={15} aria-hidden="true" /> {photoBusy === "removing" ? "Removing…" : "Remove photo"}
               </button>}
             </div>
@@ -144,15 +144,15 @@ export default function EditProfilePage({ sb, userId }: { sb: SupabaseClient; us
           <SectionTitle>About you</SectionTitle>
           {error && <div className="mt-4"><Notice tone="error">{error}</Notice></div>}
           <form onSubmit={(event) => void submit(event)} className="mt-4 grid gap-4">
-            <label className="grid gap-1 text-sm font-semibold">Display name
+            <label className="grid gap-1 text-sm font-bold">Display name
               <input required maxLength={80} value={form.display_name} onChange={(e) => setForm({ ...form, display_name: e.target.value })}
-                className="rounded-2xl px-4 py-3 text-base font-normal" style={fieldStyle} />
+                className="px-4 py-3 text-base font-normal" style={fieldStyle} />
             </label>
             {extras && <>
-              <label className="grid gap-1 text-sm font-semibold">
+              <label className="grid gap-1 text-sm font-bold">
                 <span className="flex justify-between gap-2">Bio <span className="font-normal tabular-nums" style={{ color: WHITE_SUB }}>{(form.bio ?? "").length}/{BIO_MAX}</span></span>
                 <textarea rows={3} maxLength={BIO_MAX} value={form.bio ?? ""} onChange={(e) => setForm({ ...form, bio: e.target.value })}
-                  placeholder="e.g. Weekend doubles player working on my dinks" className="rounded-2xl px-4 py-3 text-base font-normal" style={fieldStyle} />
+                  placeholder="e.g. Weekend doubles player working on my dinks" className="px-4 py-3 text-base font-normal" style={fieldStyle} />
               </label>
               <div className="grid gap-3 sm:grid-cols-2">
                 {textField("home_court", "Home court", 80, "e.g. Rizal Park courts")}
@@ -170,19 +170,19 @@ export default function EditProfilePage({ sb, userId }: { sb: SupabaseClient; us
                 onClick={() => setForm({ ...form, usual_format: form.usual_format === v ? null : v })}>{l}</Chip>)}</div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <label className="grid min-w-0 gap-1 text-sm font-semibold">Years playing
+              <label className="grid min-w-0 gap-1 text-sm font-bold">Years playing
                 <input type="number" inputMode="decimal" min="0" max="99" step="0.1" value={form.years_playing ?? ""}
                   onChange={(e) => setForm({ ...form, years_playing: e.target.value === "" ? null : Number(e.target.value) })}
-                  className="w-full min-w-0 rounded-2xl px-4 py-3 text-base font-normal" style={fieldStyle} />
+                  className="w-full min-w-0 px-4 py-3 text-base font-normal" style={fieldStyle} />
               </label>
-              <label className="grid min-w-0 gap-1 text-sm font-semibold">Level (your words)
+              <label className="grid min-w-0 gap-1 text-sm font-bold">Level (your words)
                 <input maxLength={40} value={form.self_level ?? ""} onChange={(e) => setForm({ ...form, self_level: e.target.value || null })}
-                  placeholder="e.g. 3.0" className="w-full min-w-0 rounded-2xl px-4 py-3 text-base font-normal" style={fieldStyle} />
+                  placeholder="e.g. 3.0" className="w-full min-w-0 px-4 py-3 text-base font-normal" style={fieldStyle} />
               </label>
             </div>
             <div className="flex flex-wrap gap-2">
               <PrimaryButton type="submit" className="flex-1" disabled={saving || !form.display_name.trim()}>{saving ? "Saving…" : "Save profile"}</PrimaryButton>
-              <a href="#/profile" className="inline-flex min-h-[48px] items-center rounded-full px-6 text-sm font-bold" style={{ border: `1px solid ${BORDER}`, color: INK }}>Cancel</a>
+              <a href="#/profile" className="inline-flex min-h-[48px] items-center rounded-[var(--radius-md)] px-6 text-sm font-bold" style={{ border: `1px solid ${BORDER}`, color: INK, background: WHITE }}>Cancel</a>
             </div>
             <p className="text-xs" style={{ color: WHITE_DIM }}>Your details give context to your plans. They are not a skill rating.</p>
           </form>
