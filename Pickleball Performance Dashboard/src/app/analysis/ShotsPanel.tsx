@@ -5,7 +5,7 @@ import { PUBLIC_SHOT_TYPES, SHOT_TYPES } from "../../lib/analysis/contract";
 import {
   SHOT_INFO, countByType, formatClock, isMine, playerName, shotsByPlayer, shotsOf,
 } from "../../lib/analysis/shotLabels";
-import { BLUE_SKY, BORDER, INK, VIOLET, WHITE_DIM } from "../theme";
+import { BLUE_SKY, BORDER, INK, VIOLET, WHITE_DIM, withAlpha } from "../theme";
 import { Card, Pill } from "../shell/primitives";
 
 const LIST_LIMIT = 60;
@@ -174,7 +174,7 @@ function ShotRow({ shot, who, onWatch }: { shot: ShotEvent; who: string; onWatch
       {onWatch && (
         <button type="button" onClick={() => onWatch(shot.time_seconds)}
           className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold min-h-[44px]"
-          style={{ color: BLUE_SKY, border: `1px solid ${BLUE_SKY}60` }}
+          style={{ color: BLUE_SKY, border: `1px solid ${withAlpha(BLUE_SKY, 0.38)}` }}
           aria-label={`Watch the ${info.name.toLowerCase()} at ${formatClock(shot.time_seconds)}`}>
           <PlayCircle size={18} aria-hidden="true" /> Watch
         </button>

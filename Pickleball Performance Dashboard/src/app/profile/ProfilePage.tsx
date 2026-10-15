@@ -5,7 +5,7 @@ import { getProfile, type PlayerProfile } from "../../lib/api/profile";
 import { useSessionsData, weekStreak } from "../sessions/sessionUi";
 import { playerCode } from "../../lib/api/players";
 import { Notice, PageHero, Sheet } from "../shell/primitives";
-import { BORDER, INK, ROSE, WHITE, WHITE_DIM, WHITE_SUB, YELLOW, YELLOW_INK } from "../theme";
+import { BORDER, INK, ROSE, WHITE, WHITE_DIM, WHITE_SUB, YELLOW, YELLOW_INK, withAlpha } from "../theme";
 import { ProfileAvatar } from "./ProfileAvatar";
 
 const HAND_LABEL = { right: "Right-handed", left: "Left-handed", ambidextrous: "Plays with both hands" } as const;
@@ -95,7 +95,7 @@ export default function ProfilePage({ sb, userId, account, signOut }: {
 
     {signOut && <div>
       <button type="button" onClick={signOut.onClick} title={signOut.warning}
-        className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-sm font-bold" style={{ border: `1px solid ${ROSE}40`, color: ROSE }}>
+        className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-sm font-bold" style={{ border: `1px solid ${withAlpha(ROSE, 0.25)}`, color: ROSE }}>
         <LogOut size={16} /> {signOut.label}
       </button>
       {signOut.warning && <p className="mt-2 text-center text-xs" style={{ color: WHITE_SUB }}>{signOut.warning}</p>}

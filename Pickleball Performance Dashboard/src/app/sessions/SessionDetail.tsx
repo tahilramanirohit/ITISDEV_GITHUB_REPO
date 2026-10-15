@@ -19,7 +19,7 @@ import {
 import { initials, listOtherPlayers, saveOtherPlayers, shortId, type OtherPlayer } from "../../lib/api/players";
 import { AvatarStack } from "./sessionUi";
 import { hasUploadConsent, recordUploadConsent } from "../../lib/api/capture";
-import { BLUE_SKY, BORDER, DEEP_2, DISPLAY_FONT, LAVENDER, NAVY, NEON, NEON_D, ORANGE, PICKLE, WHITE_DIM, WHITE_SUB } from "../theme";
+import { BLUE_SKY, BORDER, DEEP_2, DISPLAY_FONT, LAVENDER, NAVY, NEON, NEON_D, ORANGE, PICKLE, WHITE_DIM, WHITE_SUB, withAlpha } from "../theme";
 import { Card, Chip, Notice, SegmentedTabs, Sheet, fieldStyle, tabPanelProps } from "../shell/primitives";
 import { SelfAssessmentPanel } from "../selfAssessment/SelfAssessmentPanel";
 import { AnalysisParamsForm, ProgressBar, type AnalysisParams } from "../analysis/AnalysisStatus";
@@ -536,7 +536,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
                 Raw video is automatically removed 30 days after analysis unless I choose to keep it. The report remains saved. <a href="#/privacy" className="underline" style={{ color: BLUE_SKY }}>Data and privacy</a></span>
             </label>}
             <label className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold cursor-pointer"
-              style={{ background: params ? NEON : `${NEON}50`, color: NEON_D }}>
+              style={{ background: params ? NEON : `${withAlpha(NEON, 0.31)}`, color: NEON_D }}>
               <Upload size={14} /> {state === "upload_incomplete" ? "Resume upload (select the same file)" : markCourtMyself ? "Choose video & review court" : "Choose video & upload"}
               <input type="file" accept="video/mp4,video/quicktime,video/webm,video/x-msvideo" className="hidden"
                 disabled={!params || !!localUpload}
@@ -590,11 +590,11 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
             {state === "upload_incomplete" && video && (
               <div className="flex flex-wrap gap-2">
                 <button type="button" disabled={busy || !confirmedCourt} onClick={() => void run(() => finalizeUpload(sb, video.id, analysisJobParams(params ?? {}, confirmedCourt === "auto" ? null : confirmedCourt)))}
-                  className="rounded-xl px-3 py-1.5 text-sm font-semibold disabled:opacity-40" style={{ color: BLUE_SKY, border: `1px solid ${BLUE_SKY}60` }}>
+                  className="rounded-xl px-3 py-1.5 text-sm font-semibold disabled:opacity-40" style={{ color: BLUE_SKY, border: `1px solid ${withAlpha(BLUE_SKY, 0.38)}` }}>
                   Check if the upload finished{!confirmedCourt ? " (review the court first)" : ""}
                 </button>
                 <button type="button" disabled={busy} onClick={() => void run(() => removeVideo(sb, video))}
-                  className="rounded-xl px-3 py-1.5 text-sm font-semibold disabled:opacity-40" style={{ color: ORANGE, border: `1px solid ${ORANGE}60` }}>
+                  className="rounded-xl px-3 py-1.5 text-sm font-semibold disabled:opacity-40" style={{ color: ORANGE, border: `1px solid ${withAlpha(ORANGE, 0.38)}` }}>
                   Remove incomplete upload
                 </button>
               </div>

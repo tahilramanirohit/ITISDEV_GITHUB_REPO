@@ -3,8 +3,7 @@ import { Eye, EyeOff } from "lucide-react";
 import logoUrl from "../../assets/picklepro-logo.webp";
 import logo2xUrl from "../../assets/picklepro-logo@2x.webp";
 import {
-  BORDER, CARD_GLOW, COBALT, DEEP, DEEP_2, DISPLAY_FONT, DOT_BG, GREEN, GREEN_BG, INK, NEON, OPTIC, OPTIC_INK, ORANGE, PICKLE, VIOLET, WHITE, WHITE_DIM, WHITE_SUB, YELLOW,
-} from "../theme";
+  BORDER, CARD_GLOW, COBALT, DEEP, DEEP_2, DISPLAY_FONT, DOT_BG, GREEN, GREEN_BG, INK, NEON, OPTIC, OPTIC_INK, ORANGE, PICKLE, VIOLET, WHITE, WHITE_DIM, WHITE_SUB, YELLOW, withAlpha } from "../theme";
 
 // ── Card ──────────────────────────────────────────────────────────────────
 export function Card({ children, className = "", accent }: { children: ReactNode; className?: string; accent?: string }) {
@@ -22,7 +21,7 @@ export function SectionBanner({ n, eyebrow, title, subtitle, bg, accent, badge }
   n: string; eyebrow: string; title: string; subtitle: string; bg: string; accent: string; badge?: string;
 }) {
   return (
-    <div className="rounded-2xl px-5 py-4 mb-5 flex items-start gap-4" style={{ background: bg, border: `1px solid ${accent}40` }}>
+    <div className="rounded-2xl px-5 py-4 mb-5 flex items-start gap-4" style={{ background: bg, border: `1px solid ${withAlpha(accent, 0.25)}` }}>
       <div className="rounded-2xl w-11 h-11 flex items-center justify-center flex-shrink-0 font-bold text-lg"
         style={{ background: accent, color: WHITE }}>{n}</div>
       <div className="flex-1">
@@ -78,7 +77,7 @@ export function Pill({ children, color = VIOLET, title }: { children: ReactNode;
   return (
     <span title={title}
       className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold tracking-wide"
-      style={{ background: `${color}1a`, color, border: `1px solid ${color}40` }}>
+      style={{ background: `${withAlpha(color, 0.1)}`, color, border: `1px solid ${withAlpha(color, 0.25)}` }}>
       {children}
     </span>
   );
@@ -245,8 +244,8 @@ export function Notice({ tone = "info", onDark = false, children }: { tone?: "in
     <div role={tone === "error" ? "alert" : "status"}
       className="rounded-2xl px-4 py-3 text-sm leading-relaxed"
       style={onDark
-        ? { background: "rgba(255,255,255,0.08)", border: `1px solid ${darkColor}70`, color: darkColor }
-        : { background: tone === "info" ? GREEN_BG : `${color}0f`, border: `1px solid ${color}40`, color }}>
+        ? { background: "rgba(255,255,255,0.08)", border: `1px solid ${withAlpha(darkColor, 0.44)}`, color: darkColor }
+        : { background: tone === "info" ? GREEN_BG : `${withAlpha(color, 0.06)}`, border: `1px solid ${withAlpha(color, 0.25)}`, color }}>
       {children}
     </div>
   );

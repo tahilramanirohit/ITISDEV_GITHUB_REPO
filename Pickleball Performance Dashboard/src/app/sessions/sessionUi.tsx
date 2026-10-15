@@ -7,7 +7,7 @@ import { initials, listAllOtherPlayers, type OtherPlayer } from "../../lib/api/p
 import { CONTEXT_LABELS, FORMAT_LABELS, KIND_LABELS, sessionKind, type SessionRow } from "../../lib/api/types";
 import { deriveAnalysisState, STATE_LABELS, type AnalysisUiState } from "../../lib/analysis/state";
 import { buildSelfReport } from "../../lib/coaching/selfAssessment";
-import { BLUE, BLUE_BG, BORDER, INK, ORANGE, ROSE, SUCCESS, WHITE, WHITE_DIM, WHITE_SUB, YELLOW, YELLOW_BG, YELLOW_INK } from "../theme";
+import { BLUE, BLUE_BG, BORDER, INK, ORANGE, ROSE, SUCCESS, WHITE, WHITE_DIM, WHITE_SUB, YELLOW, YELLOW_BG, YELLOW_INK, withAlpha } from "../theme";
 
 export const reviewMode = (session: SessionRow) => session.review_mode ?? "video";
 
@@ -118,7 +118,7 @@ export function SessionCard({ item, assessment, players = [], you = "You" }: {
             <span className="block truncate text-xs" style={{ color: WHITE_SUB }}>{formatSessionDate(session.session_date)} · {FORMAT_LABELS[session.play_format]} · {CONTEXT_LABELS[session.session_context]}</span>
           </span>
         </div>
-        <span className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ background: `${status.color}14`, color: status.color }}>{status.text}</span>
+        <span className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ background: `${withAlpha(status.color, 0.08)}`, color: status.color }}>{status.text}</span>
       </div>
       <h3 className="mt-3 truncate text-base font-extrabold tracking-tight" style={{ color: INK }}>{session.title}</h3>
       {session.tournament_name && session.tournament_name !== session.title && <p className="truncate text-xs" style={{ color: WHITE_DIM }}>{session.tournament_name}</p>}

@@ -5,7 +5,7 @@ import { ArrowLeft, Camera, Trash2 } from "lucide-react";
 import { getProfile, saveProfile, supportsProfileExtras, type PlayerProfile, type ProfileInput } from "../../lib/api/profile";
 import { PhotoError, removeProfilePhoto, uploadProfilePhoto } from "../../lib/api/profilePhoto";
 import { Card, Chip, Notice, PageHero, PrimaryButton, SectionTitle, Sheet, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
-import { BORDER, DEEP, INK, ROSE, WHITE, WHITE_DIM, WHITE_SUB, YELLOW, YELLOW_INK } from "../theme";
+import { BORDER, DEEP, INK, ROSE, WHITE, WHITE_DIM, WHITE_SUB, YELLOW, YELLOW_INK, withAlpha } from "../theme";
 import { announceProfileUpdate } from "./NavAvatar";
 import { ProfileAvatar } from "./ProfileAvatar";
 
@@ -130,7 +130,7 @@ export default function EditProfilePage({ sb, userId }: { sb: SupabaseClient; us
                 <Camera size={16} aria-hidden="true" /> {photoBusy === "uploading" ? "Uploading…" : photoPath ? "Change photo" : "Add photo"}
               </button>
               {photoPath && <button type="button" onClick={() => void removePhoto()} disabled={!!photoBusy}
-                className="inline-flex min-h-[40px] items-center gap-2 rounded-full px-4 text-sm font-bold disabled:opacity-60" style={{ border: `1px solid ${ROSE}40`, color: ROSE }}>
+                className="inline-flex min-h-[40px] items-center gap-2 rounded-full px-4 text-sm font-bold disabled:opacity-60" style={{ border: `1px solid ${withAlpha(ROSE, 0.25)}`, color: ROSE }}>
                 <Trash2 size={15} aria-hidden="true" /> {photoBusy === "removing" ? "Removing…" : "Remove photo"}
               </button>}
             </div>

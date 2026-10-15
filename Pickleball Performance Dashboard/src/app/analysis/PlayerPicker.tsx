@@ -1,7 +1,7 @@
 import { UserCheck } from "lucide-react";
 import type { AnalysisResultV1 } from "../../lib/analysis/contract";
 import { courtPlayers, shotsOf } from "../../lib/analysis/shotLabels";
-import { BLUE_SKY, BORDER, INK, WHITE_DIM } from "../theme";
+import { BLUE_SKY, BORDER, INK, WHITE_DIM, withAlpha } from "../theme";
 import { Card, WidgetHeader } from "../shell/primitives";
 
 /**
@@ -44,7 +44,7 @@ export function PlayerPicker({ result, myPlayerId, onPick, onUpdateCourt, showSh
               <p className="text-sm" style={{ color: WHITE_DIM }}>{showShotCounts ? `${count} ${result.metrics.shot_classification.validation === "evaluated_on_real_footage" ? "estimated" : "experimental"} shot${count === 1 ? "" : "s"} · ` : ""}seen {Math.round(p.observed_frames * secondsPerFrame)} s</p>
               <button type="button" onClick={() => onPick(p.player_id)} aria-pressed={mine}
                 className="mt-2 inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold min-h-[44px]"
-                style={mine ? { background: BLUE_SKY, color: "#ffffff" } : { color: BLUE_SKY, border: `1px solid ${BLUE_SKY}60` }}>
+                style={mine ? { background: BLUE_SKY, color: "#ffffff" } : { color: BLUE_SKY, border: `1px solid ${withAlpha(BLUE_SKY, 0.38)}` }}>
                 <UserCheck size={16} aria-hidden="true" /> {mine ? "This is me" : "This is me?"}
               </button>
             </li>

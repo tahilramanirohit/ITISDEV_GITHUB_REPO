@@ -1,26 +1,27 @@
 // ── Palette ────────────────────────────────────────────────────────────────
-// Sports-community look (Reclub, Strava) with pickle-green headers: white cards,
-// Inter throughout, pill buttons. Older names are kept so the video analysis
-// views pick up the same palette.
-export const INK       = "#16181d";
-export const PAGE_BG   = "#f4f5f7";
-export const BLUE_DEEP = "#f4f5f7";
-export const BLUE_MID  = "#ffffff";   // card surface
-export const PAPER     = "#f8f9fb";
+// Hasa brand (identity 01c). Every value points at a CSS variable defined once in
+// src/styles/theme.css, so the palette lives in one place. Older names are kept
+// so existing screens recolour without edits.
+//
+// These are CSS strings ("var(--ink)"): use them in style props and CSS, never
+// on a <canvas> and never with a hex alpha suffix. For a translucent tint use
+// withAlpha(color, 0.25).
+export const INK       = "var(--ink)";
+export const PAGE_BG   = "var(--paper)";
+export const BLUE_DEEP = "var(--paper)";
+export const BLUE_MID  = "var(--surface-raised)";   // card surface
+export const PAPER     = "var(--surface-sunken)";
 
-// Design D ("Club Court"): deep green headers, pickle green for progress and
-// "good", Reclub yellow for the main action. "BLUE" is kept as the name of the
-// accent token so older screens recolor without edits; it is green now.
-export const DEEP      = "#0b2a1a";   // headers, primary buttons, selected states
-export const DEEP_2    = "#1f5a35";   // header gradient highlight
-export const PICKLE    = "#2fbf62";   // progress rings, active tab, "good"
-export const BLUE      = "#15803d";   // accent text and links (readable on white)
-export const BLUE_BG   = "#e3f6ea";
-export const HERO      = DEEP;
-export const YELLOW    = "#febc17";   // main actions: Log, Start rating, challenge
-export const YELLOW_INK = "#2b2100";
-export const YELLOW_BG = "#fff6dc";
-export const SUCCESS   = "#15803d";
+export const DEEP      = "var(--forest)";           // brand green: selected states, brand panel
+export const DEEP_2    = "var(--forest)";
+export const PICKLE    = "var(--pickle-ink)";       // progress fills, active tab, "good"
+export const BLUE      = "var(--pickle-ink)";       // green text and links (readable on paper)
+export const BLUE_BG   = "var(--surface-sunken)";   // selected / info tint
+export const HERO      = "var(--brand-surface)";
+export const YELLOW    = "var(--ball)";             // accent only, never text on paper
+export const YELLOW_INK = "var(--ink)";
+export const YELLOW_BG = "var(--surface-sunken)";
+export const SUCCESS   = "var(--pickle-ink)";
 
 // Older names, mapped onto the palette above.
 export const GREEN     = BLUE;
@@ -30,22 +31,27 @@ export const OPTIC_INK = YELLOW_INK;
 export const BLUE_POP  = BLUE;
 export const BLUE_SKY  = BLUE;
 export const COBALT    = BLUE;
-export const NEON      = DEEP;        // primary button background
-export const NEON_D    = "#ffffff";   // primary button text
-export const NAVY      = HERO;        // hero surfaces
-export const LAVENDER  = YELLOW;      // accent text on hero surfaces
+export const NEON      = "var(--action-bg)";        // primary button background
+export const NEON_D    = "var(--action-ink)";       // primary button text
+export const NAVY      = HERO;                      // brand surfaces
+export const LAVENDER  = YELLOW;                    // accent on brand surfaces
 
-export const ORANGE    = "#c2410c";
-export const ORANGE_L  = "#c2410c";
-export const ROSE      = "#be123c";
-export const VIOLET    = "#6d4fd6";
-export const WHITE     = "#ffffff";
-export const WHITE_DIM = "#4b5260";   // secondary text on light surfaces
-export const WHITE_SUB = "#6b7280";   // tertiary text on light surfaces
-export const BORDER    = "#e5e7eb";
-export const CARD_GLOW = "0 4px 12px rgba(15,23,42,0.05)";
-/** Faint dot grid behind the content panel, as on a club notice board. */
-export const DOT_BG = "radial-gradient(#e6e9ee 1.2px, transparent 1.3px)";
+export const ORANGE    = "var(--warning)";
+export const ORANGE_L  = "var(--warning)";
+export const ROSE      = "var(--danger)";
+export const VIOLET    = "var(--ink-muted)";
+export const WHITE     = "var(--surface-raised)";
+export const WHITE_DIM = "var(--ink-muted)";        // secondary text
+export const WHITE_SUB = "var(--ink-muted)";        // tertiary text (same token, keeps 4.5:1)
+export const BORDER    = "var(--line)";
+export const CARD_GLOW = "none";                    // cards use a border, never a shadow
+export const SHADOW_LIFT = "var(--shadow-lift)";    // floating layers only: sheets, menus, toasts, tab bar
+export const DOT_BG = "none";
 
-export const DISPLAY_FONT = "'Inter',system-ui,-apple-system,sans-serif";
-export const BODY_FONT = "'Inter',system-ui,-apple-system,sans-serif";
+export const DISPLAY_FONT = "var(--font-display)";
+export const BODY_FONT = "var(--font-body)";
+
+/** A translucent version of a palette colour, e.g. for tinted borders and chip fills. */
+export function withAlpha(color: string, alpha: number): string {
+  return `color-mix(in srgb, ${color} ${Math.round(alpha * 100)}%, transparent)`;
+}

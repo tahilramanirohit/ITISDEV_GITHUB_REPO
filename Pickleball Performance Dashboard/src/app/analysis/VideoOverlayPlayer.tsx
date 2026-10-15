@@ -7,6 +7,7 @@ const YOU = "#293df2";
 const OTHER = "#ffffff";
 const BALL = "#ff8a1f";
 const COURT = "rgba(255, 236, 64, 0.85)";
+const TAG_INK = "#16181d"; // canvas text needs a literal colour, not a CSS variable
 const TRAIL_S = 0.6;
 const SHOT_LABEL_S = 1.0;
 const BOUNCE_S = 0.5;
@@ -153,7 +154,7 @@ export function VideoOverlayPlayer({
       ctx.lineWidth = you ? 4 : 2;
       ctx.strokeRect(px(x1), py(y1), (x2 - x1) * scale, (y2 - y1) * scale);
       const name = you ? "You" : player.track_id != null ? `Player ${player.track_id}` : "Player";
-      tag(name, px(x1), py(y1), you ? YOU : OTHER, you ? "#ffffff" : INK);
+      tag(name, px(x1), py(y1), you ? YOU : OTHER, you ? "#ffffff" : TAG_INK);
     }
 
     // Ball with a short trail of where it was just seen.
