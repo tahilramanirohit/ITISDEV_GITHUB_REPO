@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SessionRow } from "../../lib/api/types";
 import { loadCapture, saveCheckin, saveRecovery, saveReflection, type Capture } from "../../lib/api/capture";
-import { BLUE_SKY, BORDER, WHITE_DIM } from "../theme";
+import { BLUE_SKY, BORDER, DEEP, NEON, NEON_D, PAPER, WHITE, WHITE_DIM } from "../theme";
 import { Card, Notice, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
 
 function localDateTime(iso: string | null): string {
@@ -95,7 +95,7 @@ export function CapturePanel({ sb, session, onSessionUpdated }: {
   const select = (id: string, label: string, current: string, change: (v: string) => void,
     values: [string, string][]) => <div>
       <label className={labelClass} style={labelStyle} htmlFor={id}>{label}</label>
-      <select id={id} value={current} onChange={(e) => change(e.target.value)} className="w-full rounded-xl px-3 py-2" style={fieldStyle}>
+      <select id={id} value={current} onChange={(e) => change(e.target.value)} className="w-full px-3 py-2 text-base" style={fieldStyle}>
         <option value="">Not recorded</option>
         {values.map(([v, name]) => <option key={v} value={v}>{name}</option>)}
       </select>
@@ -105,42 +105,42 @@ export function CapturePanel({ sb, session, onSessionUpdated }: {
 
   return <section aria-label="Private session context">
     <Card accent={BLUE_SKY}>
-      <p className="text-sm font-bold uppercase tracking-widest" style={{ color: BLUE_SKY }}>Private session context</p>
-      <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Answer at your own pace. Every question is optional, and your answers stay private.</p>
+      <p className="type-label" style={{ color: WHITE_DIM }}>Private session context</p>
+      <p className="mt-1 type-small" style={{ color: WHITE_DIM }}>Answer at your own pace. Every question is optional, and your answers stay private.</p>
       <ol aria-label="Questionnaire progress" className="mt-5 grid grid-cols-3 gap-2">
         {stepNames.map((name, index) => <li key={name} aria-current={step === index ? "step" : undefined}
-          className="rounded-lg px-2 py-2 text-center text-xs sm:text-sm font-semibold"
-          style={{ background: step === index ? BLUE_SKY : "#edf2f7", color: step === index ? "white" : WHITE_DIM }}>
-          <span className="block text-[11px] uppercase tracking-wide">Step {index + 1}</span>{name}
+          className="rounded-[var(--radius-sm)] px-2 py-2 text-center text-sm font-bold"
+          style={{ background: step === index ? DEEP : PAPER, color: step === index ? WHITE : WHITE_DIM }}>
+          <span className="block text-xs uppercase tracking-wide">Step {index + 1}</span>{name}
         </li>)}
       </ol>
 
       <div className="mt-6">
-        <p className="text-sm font-bold" style={{ color: BLUE_SKY }}>Step {step + 1} of 3</p>
+        <p className="type-label" style={{ color: WHITE_DIM }}>Step {step + 1} of 3</p>
         {step === 0 && <>
-          <h2 className="mt-1 text-xl font-bold">Before play · private check-in</h2>
-          <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>These entries add context to your report. They are not medical scores.</p>
+          <h2 className="mt-1 type-heading">Before play · private check-in</h2>
+          <p className="mt-1 type-small" style={{ color: WHITE_DIM }}>These entries add context to your report. They are not medical scores.</p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <div><label className={labelClass} style={labelStyle} htmlFor="actual-start">Actual start of play</label>
               <input id="actual-start" type="datetime-local" value={actualStart} onChange={(e) => setActualStart(e.target.value)}
-                className="w-full rounded-xl px-3 py-2" style={fieldStyle} /></div>
+                className="w-full px-3 py-2 text-base" style={fieldStyle} /></div>
             {select("warmup", "Warm-up completed", warmup, setWarmup, [["yes", "Yes"], ["no", "No"]])}
             <div><label className={labelClass} style={labelStyle} htmlFor="sleep">Sleep hours</label>
               <input id="sleep" type="number" min="0" max="24" step="0.5" value={sleep} onChange={(e) => setSleep(e.target.value)}
-                className="w-full rounded-xl px-3 py-2" style={fieldStyle} /></div>
+                className="w-full px-3 py-2 text-base" style={fieldStyle} /></div>
             {select("readiness", "Readiness (1–5)", readiness, setReadiness,
               [1, 2, 3, 4, 5].map((n) => [String(n), String(n)]))}
             <div className="sm:col-span-2"><label className={labelClass} style={labelStyle} htmlFor="focus">Session focus</label>
               <input id="focus" maxLength={500} value={focus} onChange={(e) => setFocus(e.target.value)}
-                className="w-full rounded-xl px-3 py-2" style={fieldStyle} /></div>
+                className="w-full px-3 py-2 text-base" style={fieldStyle} /></div>
           </div>
           <p className="mt-3 text-sm" style={{ color: WHITE_DIM }}>Timing: {capture?.checkin?.timing_status === "pre_game" ? "recorded before play" :
             capture?.checkin?.timing_status === "retrospective" ? "retrospective entry" : "unverified until actual start is entered"}.
             {capture?.checkin && ` Captured ${new Date(capture.checkin.captured_at).toLocaleString()}.`}</p>
         </>}
         {step === 1 && <>
-          <h2 className="mt-1 text-xl font-bold">After play · recovery context</h2>
-          <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Recovery is context only; it does not diagnose health or injury.</p>
+          <h2 className="mt-1 type-heading">After play · recovery context</h2>
+          <p className="mt-1 type-small" style={{ color: WHITE_DIM }}>Recovery is context only; it does not diagnose health or injury.</p>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             {select("exertion", "Exertion (1–10)", exertion, setExertion,
               Array.from({ length: 10 }, (_, i) => [String(i + 1), String(i + 1)]))}
@@ -150,26 +150,26 @@ export function CapturePanel({ sb, session, onSessionUpdated }: {
           </div>
         </>}
         {step === 2 && <>
-          <h2 className="mt-1 text-xl font-bold">Reflection · what comes next</h2>
-          <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Write down what worked and one thing to try next time.</p>
+          <h2 className="mt-1 type-heading">Reflection · what comes next</h2>
+          <p className="mt-1 type-small" style={{ color: WHITE_DIM }}>Write down what worked and one thing to try next time.</p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <div><label className={labelClass} style={labelStyle} htmlFor="went-well">What went well?</label>
               <textarea id="went-well" rows={3} maxLength={2000} value={wentWell} onChange={(e) => setWentWell(e.target.value)}
-                className="w-full rounded-xl px-3 py-2" style={fieldStyle} /></div>
+                className="w-full px-3 py-2 text-base" style={fieldStyle} /></div>
             <div><label className={labelClass} style={labelStyle} htmlFor="change-next">What will you change next?</label>
               <textarea id="change-next" rows={3} maxLength={2000} value={changeNext} onChange={(e) => setChangeNext(e.target.value)}
-                className="w-full rounded-xl px-3 py-2" style={fieldStyle} /></div>
+                className="w-full px-3 py-2 text-base" style={fieldStyle} /></div>
           </div>
         </>}
       </div>
 
       {error && <div className="mt-4"><Notice tone="error">Could not load or save your answers: {error}</Notice></div>}
-      {savedMessage && <p role="status" className="mt-4 text-sm font-semibold" style={{ color: BLUE_SKY }}>{savedMessage}</p>}
+      {savedMessage && <p role="status" className="mt-4 text-sm font-bold" style={{ color: BLUE_SKY }}>{savedMessage}</p>}
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
         <button type="button" disabled={saving || step === 0} onClick={() => { setError(""); setSavedMessage(""); setStep(step - 1); }}
-          className="rounded-xl px-4 py-2 font-semibold disabled:opacity-40" style={{ border: `1px solid ${BORDER}` }}>Back</button>
+          className="min-h-[48px] rounded-[var(--radius-md)] px-5 font-bold disabled:opacity-40" style={{ border: `1px solid ${BORDER}`, background: WHITE }}>Back</button>
         <button type="button" disabled={saving || !capture} onClick={() => void saveCurrentStep()}
-          className="rounded-xl px-4 py-2 font-semibold disabled:opacity-50" style={{ background: BLUE_SKY, color: "white" }}>
+          className="min-h-[48px] rounded-[var(--radius-md)] px-5 font-bold disabled:opacity-50" style={{ background: NEON, color: NEON_D }}>
           {saving ? "Saving…" : step === 2 ? "Save reflection" : "Save and continue"}
         </button>
       </div>
