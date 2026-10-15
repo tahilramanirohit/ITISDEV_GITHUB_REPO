@@ -11,6 +11,7 @@ import { SELF_SKILLS, SKILL_GROUPS, SKILL_INFO, type SkillRating } from "../../l
 import { BORDER, DISPLAY_FONT, GREEN, INK, NAVY, OPTIC, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Chip, Notice, PrimaryButton, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
 import { SkillRater } from "../selfAssessment/SkillRater";
+import { BRAND_NAME } from "../brand";
 
 export const EXPERIENCE = [
   { years: 0, label: "Brand new" }, { years: 0.5, label: "Under a year" }, { years: 1.5, label: "1–2 years" },
@@ -94,7 +95,7 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
       {step === 0 ? (
         <section className="relative overflow-hidden rounded-2xl p-5" style={{ background: NAVY, color: WHITE }}>
           <div aria-hidden="true" className="absolute -right-10 -top-10 h-36 w-36 rounded-full" style={{ background: OPTIC, opacity: 0.2 }} />
-          <p className="text-xs font-bold uppercase tracking-wider" style={{ color: OPTIC }}>Welcome to PicklePro</p>
+          <p className="text-xs font-bold uppercase tracking-wider" style={{ color: OPTIC }}>Welcome to {BRAND_NAME}</p>
           <h1 className="mt-1 text-2xl font-extrabold leading-tight" style={{ fontFamily: DISPLAY_FONT }}>Let's get to know your game</h1>
           <p className="mt-2 text-sm" style={{ color: "#c9dccf" }}>Five quick steps, about two minutes. Your answers stay private and shape your first practice plan. <a href="#/privacy" className="font-semibold underline" style={{ color: OPTIC }}>How we handle your data</a></p>
         </section>

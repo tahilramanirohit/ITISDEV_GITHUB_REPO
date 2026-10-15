@@ -3,6 +3,7 @@ import { config } from "../../lib/config";
 import { DEFAULT_UPLOAD_LIMITS } from "../../lib/upload/limits";
 import { BODY_FONT, BORDER, DISPLAY_FONT, GREEN, INK, PAGE_BG, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
 import { PickleProLogo } from "../shell/primitives";
+import { BRAND_NAME } from "../brand";
 
 const SECTIONS: { title: string; items: string[] }[] = [
   {
@@ -47,7 +48,7 @@ export default function PrivacyPage() {
     <div className="min-h-screen" style={{ background: PAGE_BG, color: INK, fontFamily: BODY_FONT }}>
       <main className="mx-auto max-w-2xl space-y-6 px-4 py-6 md:px-6 md:py-10">
         <div className="flex items-center justify-between gap-3">
-          <a href="#/" aria-label="PicklePro home"><PickleProLogo size="sm" tone="light" /></a>
+          <a href="#/" aria-label={`${BRAND_NAME} home`}><PickleProLogo size="sm" tone="light" /></a>
           <a href="#/" className="inline-flex min-h-[44px] items-center gap-1 text-sm font-semibold" style={{ color: GREEN }}><ArrowLeft size={16} /> Back</a>
         </div>
         <div>

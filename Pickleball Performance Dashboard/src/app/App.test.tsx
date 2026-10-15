@@ -125,7 +125,7 @@ describe("dev mode entry", () => {
   it("is hidden in production builds by default", async () => {
     render(<App cfg={{ ...prodConfig, supabase: { url: "x", anonKey: "y" } }} sb={fakeSupabase() as unknown as SupabaseClient} />);
     await screen.findByRole("button", { name: "Sign in" });
-    expect(screen.queryByRole("button", { name: /Try PicklePro with sample sessions/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Try Hasa with sample sessions/ })).toBeNull();
     expect(screen.queryByRole("link", { name: "Explore sample dashboard" })).toBeNull();
   });
 
@@ -141,7 +141,7 @@ describe("dev mode entry", () => {
     const sb = fakeSupabase();
     const previewConfig = getConfig({ DEV: false, PROD: true, VITE_ENABLE_DEV_MODE: "true" });
     render(<App cfg={previewConfig} sb={sb as unknown as SupabaseClient} />);
-    fireEvent.click(await screen.findByRole("button", { name: /Try PicklePro with sample sessions/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /Try Hasa with sample sessions/ }));
     // Shown in both the phone top bar and the desktop sidebar.
     expect((await screen.findAllByText("Dev mode (mock data)")).length).toBeGreaterThan(0);
     expect(sb.auth.signInAnonymously).toHaveBeenCalledOnce();
@@ -150,7 +150,7 @@ describe("dev mode entry", () => {
   it("signs in as a guest, seeds mock sessions, and enters the app", async () => {
     const sb = fakeSupabase();
     render(<App cfg={devConfig} sb={sb as unknown as SupabaseClient} />);
-    fireEvent.click(await screen.findByRole("button", { name: /Try PicklePro with sample sessions/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /Try Hasa with sample sessions/ }));
     // Shown in both the phone top bar and the desktop sidebar.
     expect((await screen.findAllByText("Dev mode (mock data)")).length).toBeGreaterThan(0);
     expect(sb.auth.signInAnonymously).toHaveBeenCalledOnce();
@@ -164,7 +164,7 @@ describe("dev mode entry", () => {
   it("explains how to fix a missing database function and stays signed out", async () => {
     const sb = fakeSupabase({ rpcError: { message: "Could not find the function public.seed_dev_mock_data" } });
     render(<App cfg={devConfig} sb={sb as unknown as SupabaseClient} />);
-    fireEvent.click(await screen.findByRole("button", { name: /Try PicklePro with sample sessions/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /Try Hasa with sample sessions/ }));
     expect(await screen.findByText(/Apply the database migrations/)).toBeTruthy();
     await waitFor(() => expect(sb.auth.signOut).toHaveBeenCalled());
   });
@@ -226,7 +226,7 @@ describe("getting to know the player", () => {
   it("is skipped in dev mode with sample sessions", async () => {
     const sb = fakeSupabase();
     render(<App cfg={devConfig} sb={sb as unknown as SupabaseClient} />);
-    fireEvent.click(await screen.findByRole("button", { name: /Try PicklePro with sample sessions/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /Try Hasa with sample sessions/ }));
     expect(await screen.findByRole("navigation", { name: "Main" })).toBeTruthy();
     expect(screen.queryByText("Let's get to know your game")).toBeNull();
   });

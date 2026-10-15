@@ -17,6 +17,7 @@ import { ShotsPanel } from "./ShotsPanel";
 import { ZoneTimePanel } from "./ZoneTimePanel";
 import { VideoOverlayPlayer, type JumpRequest } from "./VideoOverlayPlayer";
 import { courtPlayers, focusShots } from "../../lib/analysis/shotLabels";
+import { BRAND_NAME } from "../brand";
 
 const STATUS_COLORS: Record<MetricStatus, string> = {
   measured: NEON,
@@ -166,7 +167,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
           </Pill>
         </div>
         {audio && <div className="mb-3"><CoachLauncher shortScript={audio.short} fullScript={audio.full} tone="light" label={coaching.available ? undefined : "Play video review"} /></div>}
-        <p className="text-base text-[#101827]">{devMock ? "This sample shows the kind of practice plan PicklePro can display. It is not feedback about your play." : visibleMessage}</p>
+        <p className="text-base text-[#101827]">{devMock ? `This sample shows the kind of practice plan ${BRAND_NAME} can display. It is not feedback about your play.` : visibleMessage}</p>
         {warnings.length > 0 && (
           <details className="mt-3">
             <summary className="cursor-pointer text-sm font-semibold" style={{ color: ORANGE_L }}>
@@ -184,7 +185,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
       </Card>
 
       {result.data_origin === "measured" && !devMock && <section aria-label="What the video analysis found" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <h2 className="sr-only">What PicklePro could see</h2>
+        <h2 className="sr-only">What {BRAND_NAME} could see</h2>
         {[
           {
             label: "Players",
@@ -201,7 +202,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
             ok: !!result.calibration,
             value: result.calibration ? "Court lines found" : "Court not found",
             detail: result.calibration
-              ? "Yellow lines on the video show where PicklePro thinks the court is."
+              ? `Yellow lines on the video show where ${BRAND_NAME} thinks the court is.`
               : "Film so the whole court and its lines are visible to get court feedback.",
           },
           {
@@ -281,7 +282,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
               className="rounded-lg px-4 py-2.5 text-sm font-semibold min-h-[44px]" style={{ background: BLUE_SKY, color: "#ffffff" }}>
               {selectingPlayer ? "Cancel" : "Not you? Pick yourself in the video"}
             </button>
-            {selectingPlayer && <p className="text-base" style={{ color: INK }}>Pause the video where you can be seen, then tap the box around you. PicklePro will check the video again for you.</p>}
+            {selectingPlayer && <p className="text-base" style={{ color: INK }}>Pause the video where you can be seen, then tap the box around you. {BRAND_NAME} will check the video again for you.</p>}
           </div>
         )}
         <VideoOverlayPlayer src={videoUrl}

@@ -13,6 +13,7 @@ import { saveOtherPlayers, type OtherPlayer } from "../../lib/api/players";
 import { BORDER, CARD_GLOW, DEEP, GREEN, GREEN_BG, INK, PICKLE, WHITE, WHITE_DIM, WHITE_SUB, YELLOW } from "../theme";
 import { Chip, HeroProgress, Notice, PageHero, PrimaryButton, Sheet, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
 import { GoalFields } from "./GoalFields";
+import { BRAND_NAME } from "../brand";
 
 const today = () => new Date().toISOString().slice(0, 10);
 const ROUNDS = ["Pool play", "Round of 16", "Quarterfinal", "Semifinal", "Final", "Other"];
@@ -139,7 +140,7 @@ export default function NewSessionPage({ sb, userId, trialNoWorker = false }: { 
             detail="Rate ten skills from how the session felt. You get focus areas, drills and a practice plan right away." />
           <ModeCard selected={form.review_mode === "video"} onSelect={() => chooseMode("video")} icon={<Camera size={24} />}
             title="Analyze a video" tag="Computer vision · takes longer"
-            detail="Upload a rally clip. PicklePro maps where you stood on court. Best results need a fixed camera and a clear court view. Moving-camera clips may produce limited results. You can rate yourself too." />
+            detail={`Upload a rally clip. ${BRAND_NAME} maps where you stood on court. Best results need a fixed camera and a clear court view. Moving-camera clips may produce limited results. You can rate yourself too.`} />
         </div>
         {form.review_mode === "video" && trialNoWorker && <Notice tone="info">Video analysis is paused on this public trial. You can still create the session and rate yourself.</Notice>}
         <PrimaryButton type="button" className="w-full" onClick={() => setStep(2)}>Continue</PrimaryButton>

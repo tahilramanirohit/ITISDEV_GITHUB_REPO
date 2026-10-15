@@ -3,6 +3,7 @@ import { useLocation } from "react-router";
 import { BarChart3, CalendarDays, Home, Plus, UserRound } from "lucide-react";
 import { BODY_FONT, BORDER, DEEP, GREEN, GREEN_BG, INK, OPTIC, OPTIC_INK, PAGE_BG, WHITE, WHITE_SUB } from "../theme";
 import { PickleProLogo, PickleProMark } from "./primitives";
+import { BRAND_NAME } from "../brand";
 
 const TEXT_SIZE_KEY = "picklepro.largeText";
 
@@ -89,7 +90,7 @@ function SideNav({ account }: { account?: ReactNode }) {
   const items = TABS.filter((t) => !("primary" in t));
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-20 flex-col items-center border-r px-3 py-6 desktop:flex lg:w-64 lg:items-stretch lg:px-4" style={{ background: WHITE, borderColor: BORDER }}>
-      <a href="#/" aria-label="PicklePro home" className="lg:px-2">
+      <a href="#/" aria-label={`${BRAND_NAME} home`} className="lg:px-2">
         <span className="lg:hidden"><PickleProMark size={44} /></span>
         <span className="hidden lg:block"><PickleProLogo size="sm" tone="light" /></span>
       </a>
@@ -144,7 +145,7 @@ export function AppShell({ children, right, nav, tabs = false, wide = false, ava
         <header className={`sticky top-0 z-20 ${tabs ? "desktop:hidden" : "border-b"}`} style={{ background: tabs ? DEEP : "rgba(255,255,255,0.94)",
           color: tabs ? WHITE : INK, backdropFilter: "blur(12px)", borderColor: BORDER, paddingTop: "env(safe-area-inset-top)" }}>
           <div className={`${width} mx-auto flex min-h-[56px] items-center justify-between gap-3 px-4 md:px-6`}>
-            <a href="#/" aria-label="PicklePro home"><PickleProLogo size="sm" tone={tabs ? "dark" : "light"} /></a>
+            <a href="#/" aria-label={`${BRAND_NAME} home`}><PickleProLogo size="sm" tone={tabs ? "dark" : "light"} /></a>
             <div className="flex min-w-0 items-center gap-2">{right}</div>
           </div>
           {nav && <nav className={`${width} mx-auto flex flex-wrap gap-x-4 gap-y-1 px-4 pb-2 text-sm font-semibold`}>{nav}</nav>}

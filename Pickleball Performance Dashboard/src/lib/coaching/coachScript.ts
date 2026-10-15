@@ -1,5 +1,6 @@
 import type { CoachingReport } from "../analysis/coaching";
 import { skillInfo, type SelfProgressRow, type SelfReport } from "./selfAssessment";
+import { BRAND_NAME } from "../../app/brand";
 
 /** Where a spoken line comes from, shown as a tag so ratings and video findings are never mixed up. */
 export type CoachSource = "rating" | "video" | null;
@@ -125,8 +126,8 @@ export type VideoSeen = {
 
 export function videoReviewScript({ seen, sessionTitle }: { seen: VideoSeen; sessionTitle?: string | null }): CoachScript {
   const lines: CoachLine[] = [
-    line(seen.foundYou != null ? `PicklePro found you in ${Math.round(seen.foundYou * 100)}% of the video.`
-      : seen.playersFound ? "PicklePro found players in the video." : "PicklePro couldn't find any players in this video.", "video"),
+    line(seen.foundYou != null ? `${BRAND_NAME} found you in ${Math.round(seen.foundYou * 100)}% of the video.`
+      : seen.playersFound ? `${BRAND_NAME} found players in the video.` : `${BRAND_NAME} couldn't find any players in this video.`, "video"),
     line(seen.courtFound ? "It found the court lines." : "It couldn't find the court lines, so try filming the whole court next time.", "video"),
   ];
   if (seen.ballFollowed != null) lines.push(line(seen.ballFollowed ? "It followed the ball." : "It didn't see the ball.", "video"));
@@ -135,7 +136,7 @@ export function videoReviewScript({ seen, sessionTitle }: { seen: VideoSeen; ses
     lines.push(line("Shot names are experimental, so check them with the watch buttons."));
   }
   return { sections: [
-    { title: "Intro", lines: [line(`Here's your video review for ${sessionTitle?.trim() || "this session"}. It covers what PicklePro could see.`)] },
+    { title: "Intro", lines: [line(`Here's your video review for ${sessionTitle?.trim() || "this session"}. It covers what ${BRAND_NAME} could see.`)] },
     { title: "What the video showed", lines },
     { title: "Your practice plan", lines: [
       line("This video can't give practice advice yet, because court position tips are still being checked against labelled videos."),

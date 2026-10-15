@@ -7,6 +7,7 @@ import {
 } from "../../lib/analysis/shotLabels";
 import { BLUE_SKY, BORDER, INK, VIOLET, WHITE_DIM, withAlpha } from "../theme";
 import { Card, Pill } from "../shell/primitives";
+import { BRAND_NAME } from "../brand";
 
 const LIST_LIMIT = 60;
 type Tab = "all" | "mine";
@@ -34,7 +35,7 @@ export function ShotsPanel({ result, myPlayerId, onWatch, research = false }: {
         <p className="mt-1 text-base" style={{ color: WHITE_DIM }}>
           {metric.status === "not_computed"
             ? "Shot types are not available for this video."
-            : "PicklePro could not follow the ball well enough to name shots in this video."}
+            : `${BRAND_NAME} could not follow the ball well enough to name shots in this video.`}
         </p>
         {metric.reason && <p className="mt-2 text-sm" style={{ color: WHITE_DIM }}>{metric.reason}</p>}
         <p className="mt-2 text-sm" style={{ color: WHITE_DIM }}>

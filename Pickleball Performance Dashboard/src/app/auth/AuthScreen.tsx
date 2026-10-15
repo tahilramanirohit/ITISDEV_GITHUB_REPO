@@ -5,6 +5,7 @@ import mascotUrl from "../../assets/picklepro-mascot.webp";
 import { BORDER, CARD_GLOW, DISPLAY_FONT, GREEN, INK, NAVY, NEON, NEON_D, OPTIC, OPTIC_INK, ORANGE, PAGE_BG, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Notice, PasswordInput, PickleProLogo, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
 import { LargeTextToggle } from "../shell/AppShell";
+import { BRAND_NAME } from "../brand";
 
 type Mode = "sign_in" | "sign_up" | "reset";
 
@@ -93,18 +94,18 @@ export function AuthScreen({ sb, devMode, guestMode, samplePreviewEnabled = fals
         </div>
 
         <div className="relative mt-6 md:mt-8 lg:mt-6">
-          <p className="text-xs font-bold uppercase tracking-wider" style={{ color: OPTIC }}>Welcome to PicklePro</p>
+          <p className="text-xs font-bold uppercase tracking-wider" style={{ color: OPTIC }}>Welcome to {BRAND_NAME}</p>
           <h1 id="intro-title" className="mt-2 text-[2rem] font-extrabold leading-[1.05] md:text-5xl lg:text-[clamp(2.25rem,4.2vh,3.5rem)]" style={{ fontFamily: DISPLAY_FONT }}>
             Your pickleball coach, in your pocket.
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-relaxed md:text-base" style={{ color: "#c9dccf" }}>
             {trialNoWorker
               ? "Rate your own game for an instant practice plan, or explore the sample dashboard. Video analysis is not running on this public trial."
-              : "PicklePro turns a quick look back at your game into a clear plan: what is working, what to work on, and the drills to get there. Your sessions stay private to you."}
+              : `${BRAND_NAME} turns a quick look back at your game into a clear plan: what is working, what to work on, and the drills to get there. Your sessions stay private to you.`}
           </p>
         </div>
 
-        <ul className="relative mt-6 grid gap-3 sm:grid-cols-2" aria-label="What PicklePro does">
+        <ul className="relative mt-6 grid gap-3 sm:grid-cols-2" aria-label={`What ${BRAND_NAME} does`}>
           {features.map(({ icon: Icon, title, text }) => (
             <li key={title} className="flex items-start gap-3 rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)" }}>
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: OPTIC, color: OPTIC_INK }}><Icon size={20} /></span>
@@ -173,7 +174,7 @@ export function AuthScreen({ sb, devMode, guestMode, samplePreviewEnabled = fals
                   className="w-full inline-flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold disabled:opacity-60"
                   style={{ color: ORANGE, border: `1px dashed ${ORANGE}`, background: "transparent" }}>
                   <FlaskConical size={14} />
-                  {devMode.busy ? "Creating sample sessions…" : "Try PicklePro with sample sessions"}
+                  {devMode.busy ? "Creating sample sessions…" : `Try ${BRAND_NAME} with sample sessions`}
                 </button>
                 <p className="text-sm mt-2 text-center" style={{ color: WHITE_SUB }}>
                   Dev mode uses a temporary guest account and sample results, not a real video analysis.

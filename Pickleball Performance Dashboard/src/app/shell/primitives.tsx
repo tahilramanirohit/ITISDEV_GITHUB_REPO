@@ -1,7 +1,7 @@
 import { useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import logoUrl from "../../assets/picklepro-logo.webp";
 import logo2xUrl from "../../assets/picklepro-logo@2x.webp";
+import { AppIcon, Wordmark } from "./Wordmark";
 import {
   BORDER, CARD_GLOW, COBALT, DEEP, DEEP_2, DISPLAY_FONT, DOT_BG, GREEN, GREEN_BG, INK, NEON, OPTIC, OPTIC_INK, ORANGE, PICKLE, VIOLET, WHITE, WHITE_DIM, WHITE_SUB, YELLOW, withAlpha } from "../theme";
 
@@ -252,27 +252,14 @@ export function Notice({ tone = "info", onDark = false, children }: { tone?: "in
 }
 
 // ── Brand mark ────────────────────────────────────────────────────────────
-/** The pickle mascot on an optic-yellow tile, for narrow spaces such as the tablet rail. */
+/** The app icon, for narrow spaces such as the tablet rail. */
 export function PickleProMark({ size = 40 }: { size?: number }) {
-  return (
-    <span className="flex items-center justify-center overflow-hidden rounded-xl" style={{ width: size, height: size, background: OPTIC }} aria-hidden>
-      <img src={logoUrl} srcSet={`${logoUrl} 1x, ${logo2xUrl} 2x`} alt="" style={{ height: size * 0.86, width: "auto" }} />
-    </span>
-  );
+  return <AppIcon size={size} />;
 }
 
+/** The Hasa wordmark. `tone="dark"` sits on forest or ink, `tone="light"` on paper. */
 export function PickleProLogo({ size = "md", tone = "dark" }: { size?: "sm" | "md" | "lg"; tone?: "dark" | "light" }) {
-  const height = size === "lg" ? 64 : size === "sm" ? 40 : 52;
-  const onLight = tone === "light";
-  return (
-    <div className="flex items-center gap-2">
-      <img src={logoUrl} srcSet={`${logoUrl} 1x, ${logo2xUrl} 2x`} alt="" aria-hidden className="flex-shrink-0" style={{ height, width: "auto" }} />
-      <span style={{ fontFamily: DISPLAY_FONT, fontWeight: 800, fontSize: size === "lg" ? "2rem" : size === "sm" ? "1.25rem" : "1.6rem",
-        letterSpacing: "-0.02em", lineHeight: 1, color: onLight ? INK : WHITE }}>
-        Pickle<span style={{ color: onLight ? GREEN : OPTIC }}>Pro</span>
-      </span>
-    </div>
-  );
+  return <Wordmark size={size === "lg" ? 40 : size === "sm" ? 26 : 32} tone={tone} />;
 }
 
 export const fieldStyle = {
