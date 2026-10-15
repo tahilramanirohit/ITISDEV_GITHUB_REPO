@@ -1,7 +1,7 @@
 import { UserCheck } from "lucide-react";
 import type { AnalysisResultV1 } from "../../lib/analysis/contract";
 import { courtPlayers, shotsOf } from "../../lib/analysis/shotLabels";
-import { BLUE_SKY, BORDER, INK, WHITE_DIM, withAlpha } from "../theme";
+import { BLUE_SKY, BORDER, INK, NEON, NEON_D, WHITE_DIM, withAlpha } from "../theme";
 import { Card, WidgetHeader } from "../shell/primitives";
 
 /**
@@ -37,14 +37,14 @@ export function PlayerPicker({ result, myPlayerId, onPick, onUpdateCourt, showSh
             <li key={p.player_id} className="rounded-xl p-2 flex flex-col items-center text-center"
               style={{ border: `${mine ? 3 : 1}px solid ${mine ? BLUE_SKY : BORDER}` }}>
               {p.thumbnail
-                ? <img src={p.thumbnail} alt={`Player ${p.player_id}`} className="h-28 w-auto rounded-lg object-contain bg-[#f6f5ef]" />
-                : <div className="h-28 w-20 rounded-lg bg-[#f6f5ef]" aria-hidden="true" />}
+                ? <img src={p.thumbnail} alt={`Player ${p.player_id}`} className="h-28 w-auto rounded-lg object-contain bg-sunken" />
+                : <div className="h-28 w-20 rounded-lg bg-sunken" aria-hidden="true" />}
               <p className="mt-2 text-base font-bold" style={{ color: INK }}>{mine ? "You" : `Player ${p.player_id}`}</p>
               <p className="text-sm" style={{ color: WHITE_DIM }}>{p.label}</p>
               <p className="text-sm" style={{ color: WHITE_DIM }}>{showShotCounts ? `${count} ${result.metrics.shot_classification.validation === "evaluated_on_real_footage" ? "estimated" : "experimental"} shot${count === 1 ? "" : "s"} · ` : ""}seen {Math.round(p.observed_frames * secondsPerFrame)} s</p>
               <button type="button" onClick={() => onPick(p.player_id)} aria-pressed={mine}
-                className="mt-2 inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold min-h-[44px]"
-                style={mine ? { background: BLUE_SKY, color: "#ffffff" } : { color: BLUE_SKY, border: `1px solid ${withAlpha(BLUE_SKY, 0.38)}` }}>
+                className="mt-2 inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-bold min-h-[44px]"
+                style={mine ? { background: NEON, color: NEON_D } : { color: BLUE_SKY, border: `1px solid ${withAlpha(BLUE_SKY, 0.38)}` }}>
                 <UserCheck size={16} aria-hidden="true" /> {mine ? "This is me" : "This is me?"}
               </button>
             </li>
@@ -57,7 +57,7 @@ export function PlayerPicker({ result, myPlayerId, onPick, onUpdateCourt, showSh
             The saved analysis still describes {analysed != null ? `Player ${analysed}` : "the near-side player"}. Re-run it before treating this choice as your court feedback.
           </p>
           <button type="button" onClick={onUpdateCourt}
-            className="rounded-lg px-4 py-2.5 text-sm font-semibold min-h-[44px]" style={{ background: BLUE_SKY, color: "#ffffff" }}>
+            className="min-h-[48px] rounded-[var(--radius-md)] px-5 text-sm font-bold" style={{ background: NEON, color: NEON_D }}>
             Update court feedback for me (re-runs the analysis)
           </button>
         </div>
@@ -67,7 +67,7 @@ export function PlayerPicker({ result, myPlayerId, onPick, onUpdateCourt, showSh
       </p>
       {others.length > 0 && (
         <details className="mt-2">
-          <summary className="cursor-pointer text-sm font-semibold" style={{ color: BLUE_SKY }}>
+          <summary className="cursor-pointer text-sm font-bold" style={{ color: BLUE_SKY }}>
             {others.length} {others.length === 1 ? "person" : "people"} off the court (not counted)
           </summary>
           <ul className="mt-2 flex flex-wrap gap-3">

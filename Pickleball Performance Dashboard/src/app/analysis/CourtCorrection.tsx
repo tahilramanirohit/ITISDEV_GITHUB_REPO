@@ -4,7 +4,7 @@ import {
   COURT_LANDMARKS, parseCourtProposal, validateCourtDraft,
   type CourtConfirmation, type CourtDraft, type CourtLandmark,
 } from "../../lib/analysis/courtReview";
-import { BLUE_SKY, BORDER, WHITE_DIM } from "../theme";
+import { BLUE_SKY, BORDER, INK, NEON, NEON_D, PAPER, WHITE_DIM } from "../theme";
 import { Notice, fieldStyle } from "../shell/primitives";
 
 type Still = { url: string; blob: Blob; width: number; height: number; time: number };
@@ -132,11 +132,11 @@ export function CourtCorrection({ file, onConfirm, onCancel, onAutomatic }: {
   const point = (name: CourtLandmark) => draft?.points.find((p) => p.landmark === name)?.pixel;
   return <section aria-label="Review court mapping" className="space-y-3 rounded-xl p-4" style={{ border: `1px solid ${BORDER}` }}>
     <h3 className="text-lg font-bold">Confirm the court before analysis</h3>
-    {onAutomatic && <div className="rounded-2xl p-3" style={{ background: "#e3f6ea" }}>
-      <p className="text-sm font-bold" style={{ color: "#0b2a1a" }}>Find the court automatically{previewAvailable ? "" : " (recommended on phones)"}</p>
+    {onAutomatic && <div className="rounded-[var(--radius-lg)] p-3" style={{ background: PAPER }}>
+      <p className="text-sm font-bold" style={{ color: INK }}>Find the court automatically{previewAvailable ? "" : " (recommended on phones)"}</p>
       <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>The analyzer finds the court lines itself after upload. Mark points below only if it gets the court wrong.</p>
       <button type="button" onClick={onAutomatic} className="mt-2 inline-flex min-h-[44px] items-center rounded-full px-5 text-sm font-bold"
-        style={{ background: "#febc17", color: "#2b2100" }}>Upload and find the court automatically</button>
+        style={{ background: NEON, color: NEON_D }}>Upload and find the court automatically</button>
     </div>}
     <p className="text-sm" style={{ color: WHITE_DIM }}>Use a steady, fixed-camera view with visible painted lines. The correction applies only until the camera moves or cuts. Yellow points are a proposal, not proof that the court was found correctly.</p>
     <video ref={video} src={url} controls preload="metadata" playsInline onLoadedData={() => {
@@ -146,9 +146,9 @@ export function CourtCorrection({ file, onConfirm, onCancel, onAutomatic }: {
     }}
       className="w-full max-h-80 rounded-lg bg-black" aria-label="Video for choosing a court frame" />
     <div className="flex flex-wrap gap-2">
-      <button type="button" onClick={() => void useFrame()} className="rounded-lg px-3 py-2 text-sm font-semibold" style={{ border: `1px solid ${BORDER}` }}>Use current frame</button>
+      <button type="button" onClick={() => void useFrame()} className="rounded-lg px-3 py-2 text-sm font-bold" style={{ border: `1px solid ${BORDER}` }}>Use current frame</button>
       {previewAvailable && <button type="button" onClick={() => void detect()} disabled={!still || busy}
-        className="rounded-lg px-3 py-2 text-sm font-semibold disabled:opacity-50" style={{ border: `1px solid ${BORDER}` }}>
+        className="rounded-lg px-3 py-2 text-sm font-bold disabled:opacity-50" style={{ border: `1px solid ${BORDER}` }}>
         {busy ? "Checking…" : "Detect court on this frame"}
       </button>}
     </div>
@@ -177,14 +177,14 @@ export function CourtCorrection({ file, onConfirm, onCancel, onAutomatic }: {
           </g>)}
         </svg>
       </div>
-      <label className="block text-sm font-semibold" htmlFor="court-point">Point to place or move</label>
+      <label className="block text-sm font-bold" htmlFor="court-point">Point to place or move</label>
       <div className="flex flex-wrap gap-2">
         <select id="court-point" value={active} onChange={(e) => setActive(e.target.value as CourtLandmark)}
           className="w-full max-w-sm rounded-lg px-3 py-2" style={fieldStyle}>
           {COURT_LANDMARKS.map((name) => <option key={name} value={name}>{name.replaceAll("_", " ")}</option>)}
         </select>
         <button type="button" disabled={!point(active)} onClick={() => removePoint(active)}
-          className="rounded-lg px-3 py-2 text-sm font-semibold disabled:opacity-40" style={{ border: `1px solid ${BORDER}` }}>
+          className="rounded-lg px-3 py-2 text-sm font-bold disabled:opacity-40" style={{ border: `1px solid ${BORDER}` }}>
           Remove selected point
         </button>
       </div>
@@ -196,7 +196,7 @@ export function CourtCorrection({ file, onConfirm, onCancel, onAutomatic }: {
     {issue && still && <p className="text-sm" style={{ color: WHITE_DIM }}>{issue}</p>}
     <div className="flex flex-wrap gap-2">
       <button type="button" disabled={!!issue || busy} onClick={() => void confirm()}
-        className="rounded-lg px-4 py-2 font-semibold disabled:opacity-40" style={{ background: BLUE_SKY, color: "white" }}>Confirm mapping and continue</button>
+        className="rounded-lg px-4 py-2 font-bold disabled:opacity-40" style={{ background: BLUE_SKY, color: "white" }}>Confirm mapping and continue</button>
       <button type="button" onClick={onCancel} className="rounded-lg px-4 py-2" style={{ border: `1px solid ${BORDER}` }}>Cancel</button>
     </div>
   </section>;
