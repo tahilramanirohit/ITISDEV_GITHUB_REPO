@@ -1,7 +1,7 @@
 import { ArrowLeft } from "lucide-react";
 import { config } from "../../lib/config";
 import { DEFAULT_UPLOAD_LIMITS } from "../../lib/upload/limits";
-import { BORDER, DISPLAY_FONT, GREEN, INK, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
+import { BODY_FONT, BORDER, DISPLAY_FONT, GREEN, INK, PAGE_BG, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
 import { PickleProLogo } from "../shell/primitives";
 
 const SECTIONS: { title: string; items: string[] }[] = [
@@ -44,7 +44,7 @@ const SECTIONS: { title: string; items: string[] }[] = [
 /** Plain-language data-use explanation, reachable before sign-up and from Profile. */
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen" style={{ background: "#f4f5f7", color: INK, fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-h-screen" style={{ background: PAGE_BG, color: INK, fontFamily: BODY_FONT }}>
       <main className="mx-auto max-w-2xl space-y-6 px-4 py-6 md:px-6 md:py-10">
         <div className="flex items-center justify-between gap-3">
           <a href="#/" aria-label="PicklePro home"><PickleProLogo size="sm" tone="light" /></a>
