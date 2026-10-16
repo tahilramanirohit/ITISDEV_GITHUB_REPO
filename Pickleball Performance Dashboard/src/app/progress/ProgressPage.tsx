@@ -51,7 +51,7 @@ export default function ProgressPage({ sb }: { sb: SupabaseClient }) {
       {error && <Notice tone="error">{error}</Notice>}
       {points.length === 0 ? (
         <section className="flex flex-col items-center rounded-[var(--radius-lg)] p-6 text-center" style={{ background: WHITE, border: `1px solid ${BORDER}` }}>
-          <Coach size={72} />
+          <Coach size={120} />
           <p className="mt-3 type-heading" style={{ color: INK }}>Nothing to chart yet</p>
           <p className="mt-1 type-small" style={{ color: WHITE_DIM }}>Rate at least 3 skills for a session and it shows up here. Two or more rated sessions show trends.</p>
           <a href="#/new?mode=self" className="mt-4 inline-flex min-h-[48px] items-center rounded-[var(--radius-md)] px-5 type-body-strong" style={{ background: NEON, color: NEON_D }}>Log and rate a new session</a>

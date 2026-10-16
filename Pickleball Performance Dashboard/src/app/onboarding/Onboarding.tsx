@@ -95,7 +95,7 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
     <div className="space-y-5">
       {step === 0 ? (
         <section className="flex flex-col items-center pt-2 text-center">
-          <Coach size={96} title={`${MASCOT_NAME}, the ${BRAND_NAME} coach`} />
+          <Coach size={150} title={`${MASCOT_NAME}, the ${BRAND_NAME} coach`} />
           <p className="mt-3 type-label" style={{ color: GREEN }}>Welcome to {BRAND_NAME}</p>
           <h1 className="mt-1 type-display-lg">Let's get to know your game</h1>
           <p className="mt-2 max-w-md type-small" style={{ color: WHITE_DIM }}>5 quick steps, about 2 minutes. Your answers stay private and shape your first practice plan. <a href="#/privacy" className="font-bold underline" style={{ color: GREEN }}>How we handle your data</a></p>

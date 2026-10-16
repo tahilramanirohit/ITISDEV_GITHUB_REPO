@@ -1,6 +1,6 @@
 import { useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
 import { Check, CircleAlert, Eye, EyeOff, Info, TriangleAlert } from "lucide-react";
-import { AppIcon, Logo } from "./Wordmark";
+import { Logo, PikoMark } from "./Wordmark";
 import {
   BORDER, DEEP, GREEN, GREEN_BG, INK, NEON, NEON_D, ORANGE, PAPER, PICKLE, ROSE, SHADOW_LIFT, VIOLET, WHITE, WHITE_DIM, WHITE_SUB, YELLOW, YELLOW_INK,
 } from "../theme";
@@ -251,9 +251,9 @@ export function Notice({ tone = "info", onDark = false, children }: { tone?: "in
 }
 
 // ── Brand mark ────────────────────────────────────────────────────────────
-/** The app icon, for narrow spaces such as the tablet rail. */
+/** The Piko mark on its own, for narrow spaces such as the tablet rail. */
 export function PickleProMark({ size = 40 }: { size?: number }) {
-  return <AppIcon size={size} />;
+  return <PikoMark height={size} />;
 }
 
 /** The Hasa logo: Piko's icon and the wordmark. `tone="dark"` sits on forest or ink, `tone="light"` on paper. */
