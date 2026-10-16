@@ -70,10 +70,12 @@ function TalkingPickle({ talk, speaking, rate }: { talk: Talk; speaking: boolean
   useEffect(() => { if (!speaking) { clearTimers(); moveTo(REST_MOUTH); } }, [speaking, moveTo]);
 
   return (
-    // Piko's icon, with a paper ring so the forest square reads on the forest player.
-    <div className="coach-pickle grid aspect-square h-[clamp(104px,16vh,160px)] shrink-0 place-items-center lg:h-[min(36vh,320px)]"
-      style={{ transformOrigin: "50% 100%", opacity: speaking ? 1 : 0.96 }} aria-hidden="true">
-      <Coach size={320} className="h-full w-full rounded-[22.5%] ring-2 ring-[rgba(250,246,234,0.35)]" mouth={<path ref={mouth} fill="#0B2A1A" stroke="none" />} />
+    // Piko on a paper tile so the ink limbs and paddle stay visible on the forest player.
+    <div className="grid aspect-square h-[clamp(112px,17vh,168px)] shrink-0 place-items-center rounded-[var(--radius-lg)] p-2 lg:h-[min(40vh,360px)]"
+      style={{ background: "#F1ECDC", opacity: speaking ? 1 : 0.96 }} aria-hidden="true">
+      <div className="coach-pickle h-full w-full" style={{ transformOrigin: "50% 100%" }}>
+        <Coach size={320} shadow={false} className="h-full w-full" mouth={<path ref={mouth} fill="#0B2A1A" stroke="none" />} />
+      </div>
     </div>
   );
 }

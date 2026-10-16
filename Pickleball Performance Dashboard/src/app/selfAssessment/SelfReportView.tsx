@@ -81,7 +81,7 @@ export function SelfReportView({ report, progress, previousLabel, onEdit, sessio
               <p className="mt-2 type-display-lg">{report.focus[0].drill.name}</p>
               <p className="mt-2 type-small" style={{ color: ON_BRAND_MUTED }}>For your {report.focus[0].label.toLowerCase()} · 15 minutes, 3 times this week</p>
             </div>
-            <Coach size={64} title={MASCOT_NAME} />
+            <Coach size={84} onDark title={MASCOT_NAME} />
           </div>
           {coach && <div className="mt-5"><CoachLauncher shortScript={coach.short} fullScript={coach.full} /></div>}
         </section>
