@@ -1,6 +1,7 @@
 import { useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
 import { Check, CircleAlert, Eye, EyeOff, Info, TriangleAlert } from "lucide-react";
-import { Logo, PikoMark } from "./Wordmark";
+import { Logo } from "./Wordmark";
+import { Coach } from "./Coach";
 import {
   BORDER, DEEP, GREEN, GREEN_BG, INK, NEON, NEON_D, ORANGE, PAPER, PICKLE, ROSE, SHADOW_LIFT, VIOLET, WHITE, WHITE_DIM, WHITE_SUB, YELLOW, YELLOW_INK,
 } from "../theme";
@@ -251,12 +252,12 @@ export function Notice({ tone = "info", onDark = false, children }: { tone?: "in
 }
 
 // ── Brand mark ────────────────────────────────────────────────────────────
-/** The Piko mark on its own, for narrow spaces such as the tablet rail. */
+/** Piko on its own, for narrow spaces such as the tablet rail. */
 export function PickleProMark({ size = 40 }: { size?: number }) {
-  return <PikoMark height={size} />;
+  return <Coach size={size} shadow={false} />;
 }
 
-/** The Hasa logo: Piko's icon and the wordmark. `tone="dark"` sits on forest or ink, `tone="light"` on paper. */
+/** The Hasa logo: the full Piko mascot and the wordmark. `tone="dark"` sits on forest or ink, `tone="light"` on paper. */
 export function PickleProLogo({ size = "md", tone = "dark" }: { size?: "sm" | "md" | "lg"; tone?: "dark" | "light" }) {
   return <Logo size={size === "lg" ? 40 : size === "sm" ? 26 : 32} tone={tone} />;
 }

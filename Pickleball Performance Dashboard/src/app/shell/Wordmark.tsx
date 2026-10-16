@@ -1,4 +1,5 @@
 import { BRAND_NAME } from "../brand";
+import { Coach } from "./Coach";
 
 /**
  * The Hasa wordmark: the drawn "h" followed by live "asa" in Bricolage Grotesque 800,
@@ -43,11 +44,11 @@ export function PikoMark({ height = 40 }: { height?: number }) {
   );
 }
 
-/** The logo: the Piko mark beside the wordmark (01b lockup). Used in the header, sidebar and welcome. */
+/** The logo: the full Piko mascot beside the wordmark. Used in the header, sidebar and welcome. */
 export function Logo({ size = 26, tone = "light" }: { size?: number; tone?: "light" | "dark" }) {
   return (
-    <span className="inline-flex items-center gap-2">
-      <PikoMark height={Math.round(size * 1.45)} />
+    <span className="inline-flex items-center gap-1.5">
+      <Coach size={Math.round(size * 2)} shadow={false} />
       <Wordmark size={size} tone={tone} />
     </span>
   );

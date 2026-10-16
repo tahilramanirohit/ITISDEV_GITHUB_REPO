@@ -91,7 +91,7 @@ function SideNav({ account }: { account?: ReactNode }) {
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-20 flex-col items-center border-r px-3 py-6 desktop:flex lg:w-64 lg:items-stretch lg:px-4" style={{ background: PAGE_BG, borderColor: BORDER }}>
       <a href="#/" aria-label={`${BRAND_NAME} home`} className="lg:px-2">
-        <span className="lg:hidden"><PickleProMark size={44} /></span>
+        <span className="lg:hidden"><PickleProMark size={52} /></span>
         <span className="hidden lg:block"><PickleProLogo size="sm" tone="light" /></span>
       </a>
       <a href="#/new" aria-label="Log a session" title="Log a session" className="mt-6 flex h-12 w-12 items-center justify-center gap-2 rounded-[var(--radius-md)] type-body-strong lg:w-auto"

@@ -7,7 +7,7 @@ export const COACH_SMILE = "M49 106 Q60 116 71 106";
  * Piko, the Hasa mascot and logo: the pickle holding a paddle up, ball above, hand on hip
  * (identity 01b pose, same head and face as docs/brand/hasa/logos). This is the brand mark:
  * the header logo, welcome, onboarding, brand cards, empty states and the talking coach.
- * App and browser icons stay the face-only icon, because a full body is unreadable at 16–48px.
+ * The browser tab icon is Piko too (no square); the home-screen icons keep the forest square.
  *
  * `onDark` sets Piko on a paper tile so the ink limbs and paddle stay visible on forest.
  * `mouth` replaces the smile (the talking coach); draw it in head coordinates.
