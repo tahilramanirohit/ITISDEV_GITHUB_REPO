@@ -2,7 +2,9 @@
 
 **Know what to practice next.**
 
-This README describes the **`pickleproapp` branch**, including the merged Hasa rebrand. Hasa is a mobile-first pickleball coaching app: players log sessions, rate their game, receive practice focuses and drills, and follow their self-rated progress. Video analysis is optional.
+This README describes the **`pickleproapp` branch**, including the merged Hasa rebrand.
+
+> **`coaching` branch:** created on 22 October 2026 as a copy of `pickleproapp` for the next round of coaching work. Changes land here first; `pickleproapp` stays as it was. Vercel builds every push to `coaching` as a preview at <https://pickleprothesis-git-coaching-bumbai.vercel.app>. That preview needs `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` set for the **Preview** environment in Vercel. Hasa is a mobile-first pickleball coaching app: players log sessions, rate their game, receive practice focuses and drills, and follow their self-rated progress. Video analysis is optional.
 
 The user-facing brand is **Hasa**, and the coach mascot is **Piko**. The thesis project, Python package, internal identifiers and some research, privacy and consent wording retain **PicklePro**. The source folder remains `Pickleball Performance Dashboard/`.
 
