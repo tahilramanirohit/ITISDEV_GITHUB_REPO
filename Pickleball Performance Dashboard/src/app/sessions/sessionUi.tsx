@@ -137,7 +137,7 @@ export function SessionCard({ item, assessment, players = [], you = "You" }: {
 export function EmptySessions() {
   return (
     <div className="flex flex-col items-center rounded-[var(--radius-lg)] p-6 text-center" style={{ border: `1px solid ${BORDER}`, background: WHITE }}>
-      <Coach size={72} />
+      <Coach size={120} />
       <p className="mt-3 type-heading" style={{ color: INK }}>No sessions yet</p>
       <p className="mt-1 type-small" style={{ color: WHITE_DIM }}>Log your first game. Rating yourself takes about two minutes, no video needed.</p>
       <a href="#/new" className="mt-4 inline-flex min-h-[48px] items-center rounded-[var(--radius-md)] px-6 type-body-strong" style={{ background: NEON, color: NEON_D }}>

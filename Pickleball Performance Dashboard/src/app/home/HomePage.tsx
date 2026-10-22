@@ -118,7 +118,7 @@ export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: s
                     : "Log a session and rate how it felt. You'll get focus areas and drills."}
                 </p>
               </div>
-              <Coach size={72} title={MASCOT_NAME} />
+              <Coach size={96} onDark title={MASCOT_NAME} />
               </div>
               <div className="mt-5 flex flex-wrap items-center gap-2">
                 <a href={focus ? latestPlan!.href : "#/new"} className="inline-flex min-h-[48px] items-center gap-2 rounded-[var(--radius-md)] px-5 type-body-strong" style={{ background: YELLOW, color: YELLOW_INK }}>
