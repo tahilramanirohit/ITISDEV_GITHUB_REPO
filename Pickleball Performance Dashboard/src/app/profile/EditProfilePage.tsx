@@ -8,6 +8,8 @@ import { Card, Chip, Notice, PageHero, PrimaryButton, SectionTitle, Sheet, field
 import { BORDER, DEEP, INK, ROSE, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
 import { announceProfileUpdate } from "./NavAvatar";
 import { ProfileAvatar } from "./ProfileAvatar";
+import { LevelHint } from "../buddy/LevelHint";
+import { PROFILE_LEVELS } from "../../lib/api/buddy";
 
 const BIO_MAX = 160;
 const HANDS = [["right", "Right"], ["left", "Left"], ["ambidextrous", "Both"]] as const;
@@ -175,10 +177,14 @@ export default function EditProfilePage({ sb, userId }: { sb: SupabaseClient; us
                   onChange={(e) => setForm({ ...form, years_playing: e.target.value === "" ? null : Number(e.target.value) })}
                   className="w-full min-w-0 px-4 py-3 text-base font-normal" style={fieldStyle} />
               </label>
-              <label className="grid min-w-0 gap-1 text-sm font-bold">Level (your words)
-                <input maxLength={40} value={form.self_level ?? ""} onChange={(e) => setForm({ ...form, self_level: e.target.value || null })}
-                  placeholder="e.g. 3.0" className="w-full min-w-0 px-4 py-3 text-base font-normal" style={fieldStyle} />
-              </label>
+            </div>
+            <div>
+              <p className={labelClass} style={labelStyle}>Level</p>
+              <div className="flex flex-wrap gap-2">{PROFILE_LEVELS.map((l) => <Chip key={l} selected={form.self_level === l}
+                onClick={() => setForm({ ...form, self_level: form.self_level === l ? null : l })}>{l}</Chip>)}</div>
+              {form.self_level && !(PROFILE_LEVELS as readonly string[]).includes(form.self_level) &&
+                <p className="mt-1.5 text-sm" style={{ color: WHITE_DIM }}>Saved earlier as "{form.self_level}". Pick one of the levels above to update it.</p>}
+              <LevelHint level={form.self_level} />
             </div>
             <div className="flex flex-wrap gap-2">
               <PrimaryButton type="submit" className="flex-1" disabled={saving || !form.display_name.trim()}>{saving ? "Saving…" : "Save profile"}</PrimaryButton>

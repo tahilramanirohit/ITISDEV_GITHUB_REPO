@@ -9,7 +9,7 @@ create role authenticated nologin;
 create role service_role nologin bypassrls;
 
 create schema auth;
-create table auth.users (id uuid primary key, email text unique);
+create table auth.users (id uuid primary key, email text unique, is_anonymous boolean not null default false);
 -- Supabase derives auth.uid() from the request JWT's "sub" claim.
 create function auth.uid() returns uuid language sql stable as $$
   select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid

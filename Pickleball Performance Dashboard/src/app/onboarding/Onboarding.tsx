@@ -12,13 +12,15 @@ import { BORDER, DEEP, GREEN, INK, PAPER, PICKLE, WHITE, WHITE_DIM, WHITE_SUB } 
 import { Chip, Notice, PrimaryButton, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
 import { SkillRater } from "../selfAssessment/SkillRater";
 import { BRAND_NAME, MASCOT_NAME } from "../brand";
+import { LevelHint } from "../buddy/LevelHint";
+import { PROFILE_LEVELS } from "../../lib/api/buddy";
 import { Coach } from "../shell/Coach";
 
 export const EXPERIENCE = [
   { years: 0, label: "Brand new" }, { years: 0.5, label: "Under a year" }, { years: 1.5, label: "1–2 years" },
   { years: 3, label: "2–5 years" }, { years: 5, label: "5+ years" },
 ] as const;
-export const LEVELS = ["New to the game", "Beginner (2.0–2.5)", "Intermediate (3.0–3.5)", "Advanced (4.0+)", "Not sure"] as const;
+export const LEVELS = PROFILE_LEVELS;
 const FREQUENCY_LABELS: Record<PlayFrequency, string> = {
   first_time: "Just starting", monthly: "A few times a month", weekly: "About once a week", few_per_week: "2–3 times a week", daily: "Almost every day",
 };
@@ -142,6 +144,7 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
       {step === 2 && <div className="space-y-5">
         <Question label="Where would you place your level?">
           {LEVELS.map((l) => <Chip key={l} selected={form.self_level === l} onClick={() => set("self_level", l)}>{l}</Chip>)}
+          <LevelHint level={form.self_level} />
         </Question>
         <Question label="Why do you play? Pick any.">
           {PLAY_REASONS.map((r) => <Chip key={r} selected={form.play_reasons.includes(r)} onClick={() => set("play_reasons", toggle(form.play_reasons, r))}>{REASON_LABELS[r]}</Chip>)}

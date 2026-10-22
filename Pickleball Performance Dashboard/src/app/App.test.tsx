@@ -207,7 +207,7 @@ describe("getting to know the player", () => {
     fireEvent.click(await screen.findByRole("button", { name: "1–2 years" }));
     fireEvent.click(screen.getByRole("button", { name: "About once a week" }));
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Intermediate (3.0–3.5)" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Intermediate" }));
     fireEvent.click(screen.getByRole("button", { name: "Winning more games" }));
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
     fireEvent.click(await screen.findByRole("button", { name: /Court positioning/ }));
@@ -218,7 +218,7 @@ describe("getting to know the player", () => {
     expect(await screen.findByRole("navigation", { name: "Main" })).toBeTruthy();
     expect(sb.upserts[0]).toMatchObject({
       id: "guest", display_name: "Sam", years_playing: 1.5, play_frequency: "weekly",
-      self_level: "Intermediate (3.0–3.5)", play_reasons: ["compete"], main_goals: ["positioning"], baseline_ratings: { dinking: 2 },
+      self_level: "Intermediate", play_reasons: ["compete"], main_goals: ["positioning"], baseline_ratings: { dinking: 2 },
     });
     expect(sb.upserts[0].onboarding_completed_at).toBeTruthy();
   });

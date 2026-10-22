@@ -30,6 +30,8 @@ export type PlayerProfile = {
   bio?: string | null;
   home_court?: string | null;
   paddle?: string | null;
+  // Listed in Buddy; missing until the buddy migration.
+  buddy_visible?: boolean;
 };
 
 export type SessionDefaults = Required<Pick<PlayerProfile, "default_review_mode" | "default_session_kind" | "default_play_format">>;
