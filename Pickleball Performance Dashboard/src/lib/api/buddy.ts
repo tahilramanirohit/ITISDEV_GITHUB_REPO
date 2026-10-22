@@ -58,10 +58,26 @@ export type BuddyRequest = {
   purpose: BuddyPurpose;
   play_format: BuddyFormat;
   slots: FreeTime[];
+  /** Where to meet; null on requests sent before the meetup update. */
+  city: string | null;
+  location: string | null;
   status: RequestStatus;
   created_at: string;
   responded_at: string | null;
 };
+
+export type Meetup = { city: string; location: string };
+export const MAX_CITY = 60;
+export const MAX_LOCATION = 120;
+
+/** The same checks as send_buddy_request: both are needed, within their length limits. */
+export function meetupProblem(m: Meetup): string | null {
+  if (!m.city.trim()) return "Enter the city.";
+  if (m.city.trim().length > MAX_CITY) return `Keep the city under ${MAX_CITY} characters.`;
+  if (!m.location.trim()) return "Enter where to meet, such as a court name.";
+  if (m.location.trim().length > MAX_LOCATION) return `Keep the location under ${MAX_LOCATION} characters.`;
+  return null;
+}
 
 export const MAX_FREE_TIMES = 10;
 export const MAX_DAYS_AHEAD = 90;
@@ -113,6 +129,9 @@ export function formatFreeTime(s: FreeTime): string {
 /** Turns database errors into the messages shown on screen. */
 export function buddyErrorText(e: unknown): string {
   const message = e instanceof Error ? e.message : String((e as { message?: string })?.message ?? e);
+  if (/p_city|p_location|column [^ ]*\.?(city|location) does not exist/i.test(message) && !/^buddy:/.test(message)) {
+    return "Buddy needs a database update. Run supabase/scripts/pickleproapp_upgrade_5.sql in the Supabase SQL Editor, then reload.";
+  }
   if (/buddy_players|my_buddy_requests|send_buddy_request|buddy_visible|buddy_requests|schema cache|PGRST20[02]/i.test(message)
       && !/^buddy:/.test(message)) {
     return "Buddy needs a database update. Run supabase/scripts/pickleproapp_upgrade_4.sql in the Supabase SQL Editor, then reload.";
@@ -135,8 +154,9 @@ export async function listMyRequests(sb: SupabaseClient): Promise<BuddyRequest[]
 }
 
 export async function sendBuddyRequest(sb: SupabaseClient, to: string, purpose: BuddyPurpose, format: BuddyFormat,
-  slots: FreeTime[]): Promise<string> {
-  return rpc<string>(sb, "send_buddy_request", { p_to: to, p_purpose: purpose, p_format: format, p_slots: slots });
+  slots: FreeTime[], meetup: Meetup): Promise<string> {
+  return rpc<string>(sb, "send_buddy_request", { p_to: to, p_purpose: purpose, p_format: format, p_slots: slots,
+    p_city: meetup.city.trim(), p_location: meetup.location.trim() });
 }
 
 export async function respondToRequest(sb: SupabaseClient, id: string, accept: boolean): Promise<void> {

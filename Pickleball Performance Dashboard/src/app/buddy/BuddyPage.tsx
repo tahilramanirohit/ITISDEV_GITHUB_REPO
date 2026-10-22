@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { CalendarPlus, Check, Clock, Trash2, UserRoundPlus, X } from "lucide-react";
+import { CalendarPlus, Check, Clock, MapPin, Trash2, UserRoundPlus, X } from "lucide-react";
 import {
-  BUDDY_LEVELS, FORMATS, FORMAT_LABELS, LEVEL_LABELS, MAX_DAYS_AHEAD, MAX_FREE_TIMES, PURPOSES, PURPOSE_LABELS,
-  buddyErrorText, buddyLevel, cancelRequest, formatFreeTime, freeTimeProblem, isoDate, listBuddyPlayers, listMyRequests,
-  respondToRequest, sendBuddyRequest, setBuddyVisible, sortByLevel,
-  type BuddyFormat, type BuddyLevel, type BuddyPlayer, type BuddyPurpose, type BuddyRequest, type FreeTime,
+  BUDDY_LEVELS, FORMATS, FORMAT_LABELS, LEVEL_LABELS, MAX_CITY, MAX_DAYS_AHEAD, MAX_FREE_TIMES, MAX_LOCATION, PURPOSES,
+  PURPOSE_LABELS, buddyErrorText, buddyLevel, cancelRequest, formatFreeTime, freeTimeProblem, isoDate, listBuddyPlayers,
+  listMyRequests, meetupProblem, respondToRequest, sendBuddyRequest, setBuddyVisible, sortByLevel,
+  type BuddyFormat, type BuddyLevel, type BuddyPlayer, type BuddyPurpose, type BuddyRequest, type FreeTime, type Meetup,
 } from "../../lib/api/buddy";
 import { getProfile, type PlayerProfile } from "../../lib/api/profile";
 import { BORDER, GREEN, GREEN_BG, INK, ROSE, WHITE, WHITE_DIM } from "../theme";
-import { Card, Chip, Notice, PageHero, PrimaryButton, SectionTitle, Sheet, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
+import {
+  Card, Chip, Notice, PageHero, PrimaryButton, SectionTitle, SegmentedTabs, Sheet, fieldStyle, labelClass, labelStyle, tabPanelProps,
+} from "../shell/primitives";
 import { announceBuddyChange } from "./useBuddyBadge";
 
 const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("") || "?";
@@ -32,12 +34,14 @@ function emptyTime(): FreeTime {
   return { date: isoDate(d), start: "17:00", end: "19:00" };
 }
 
-/** Purpose, format and free times: what a player answers before asking someone to buddy up. */
+/** Purpose, format, where to meet and free times: what a player answers before asking someone to buddy up. */
 function RequestForm({ player, onSend, onClose }: {
-  player: BuddyPlayer; onSend: (purpose: BuddyPurpose, format: BuddyFormat, slots: FreeTime[]) => Promise<void>; onClose: () => void;
+  player: BuddyPlayer; onClose: () => void;
+  onSend: (purpose: BuddyPurpose, format: BuddyFormat, slots: FreeTime[], meetup: Meetup) => Promise<void>;
 }) {
   const [purpose, setPurpose] = useState<BuddyPurpose | null>(null);
   const [format, setFormat] = useState<BuddyFormat | null>(null);
+  const [meetup, setMeetup] = useState<Meetup>({ city: "", location: "" });
   const [slots, setSlots] = useState<FreeTime[]>([emptyTime()]);
   const [problem, setProblem] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -52,12 +56,12 @@ function RequestForm({ player, onSend, onClose }: {
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    const issue = !purpose ? "Choose a purpose." : !format ? "Choose a format." : freeTimeProblem(slots);
+    const issue = !purpose ? "Choose a purpose." : !format ? "Choose a format." : meetupProblem(meetup) ?? freeTimeProblem(slots);
     setProblem(issue);
     if (issue || !purpose || !format) return;
     setSending(true);
     try {
-      await onSend(purpose, format, slots);
+      await onSend(purpose, format, slots, meetup);
     } catch (err) {
       setProblem(buddyErrorText(err));
       setSending(false);
@@ -76,6 +80,18 @@ function RequestForm({ player, onSend, onClose }: {
         <p className={labelClass} style={labelStyle}>Format</p>
         <div className="flex flex-wrap gap-2">{FORMATS.map((f) =>
           <Chip key={f} selected={format === f} onClick={() => setFormat(f)}>{FORMAT_LABELS[f]}</Chip>)}</div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-[1fr_2fr]">
+        <label className="grid gap-1 text-sm font-bold">City
+          <input value={meetup.city} maxLength={MAX_CITY} autoComplete="address-level2" placeholder="e.g. Makati"
+            onChange={(e) => setMeetup({ ...meetup, city: e.target.value })}
+            className="w-full min-w-0 px-3 py-2 text-base font-normal" style={fieldStyle} />
+        </label>
+        <label className="grid gap-1 text-sm font-bold">Location
+          <input value={meetup.location} maxLength={MAX_LOCATION} placeholder="e.g. BGC Pickle Hub, court 3"
+            onChange={(e) => setMeetup({ ...meetup, location: e.target.value })}
+            className="w-full min-w-0 px-3 py-2 text-base font-normal" style={fieldStyle} />
+        </label>
       </div>
       <fieldset>
         <legend className={labelClass} style={labelStyle}>When are you free?</legend>
@@ -121,6 +137,9 @@ function RequestDetails({ r }: { r: BuddyRequest }) {
   return (
     <div className="mt-2 space-y-1 text-sm" style={{ color: INK }}>
       <p><strong>{PURPOSE_LABELS[r.purpose]}</strong> · {FORMAT_LABELS[r.play_format]}</p>
+      {(r.city || r.location) && <p className="flex items-start gap-1.5">
+        <MapPin size={14} aria-hidden="true" className="mt-0.5 shrink-0" />
+        <span><span className="sr-only">Meet at: </span>{[r.location, r.city].filter(Boolean).join(", ")}</span></p>}
       <ul aria-label="Free times" className="space-y-0.5">
         {r.slots.map((s, i) => <li key={i} className="flex items-center gap-1.5" style={{ color: WHITE_DIM }}>
           <Clock size={14} aria-hidden="true" />{formatFreeTime(s)}</li>)}
@@ -174,6 +193,8 @@ export default function BuddyPage({ sb, userId }: { sb: SupabaseClient; userId: 
   const [asking, setAsking] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
+  // Until the player picks a tab, open on Requests when someone is waiting for an answer.
+  const [tab, setTab] = useState<"available" | "requests" | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -196,6 +217,7 @@ export default function BuddyPage({ sb, userId }: { sb: SupabaseClient; userId: 
   const incoming = requests.filter((r) => r.direction === "incoming" && r.status === "pending");
   const buddies = requests.filter((r) => r.status === "accepted");
   const sent = requests.filter((r) => r.direction === "outgoing" && r.status !== "accepted");
+  const activeTab = tab ?? (incoming.length ? "requests" : "available");
   const shown = useMemo(() => sortByLevel((players ?? []).filter((p) => filter === "all" || p.level === filter), myLevel),
     [players, filter, myLevel]);
 
@@ -247,35 +269,17 @@ export default function BuddyPage({ sb, userId }: { sb: SupabaseClient; userId: 
           players can find a buddy at their level.</p>}
       </Card>
 
-      {incoming.length > 0 && <section aria-labelledby="incoming-heading" className="space-y-3">
-        <SectionTitle><span id="incoming-heading">Wants to buddy up with you ({incoming.length})</span></SectionTitle>
-        <ul className="space-y-3">
-          {incoming.map((r) => <li key={r.id}><Card>
-            <div className="flex items-center gap-3">
-              <Avatar name={r.other_name} />
-              <div className="min-w-0">
-                <p className="type-body-strong" style={{ color: INK }}>{r.other_name}</p>
-                <p className="text-sm" style={{ color: WHITE_DIM }}>{levelText(r.other_level)}</p>
-              </div>
-            </div>
-            <RequestDetails r={r} />
-            <div className="mt-3 flex flex-wrap gap-2">
-              <PrimaryButton disabled={busyId === r.id} onClick={() => act(r.id, () => respondToRequest(sb, r.id, true))}>
-                <Check size={18} aria-hidden="true" /> Accept</PrimaryButton>
-              <PrimaryButton tone="light" disabled={busyId === r.id} onClick={() => act(r.id, () => respondToRequest(sb, r.id, false))}>
-                <X size={18} aria-hidden="true" /> Decline</PrimaryButton>
-            </div>
-          </Card></li>)}
-        </ul>
-      </section>}
+      <SegmentedTabs label="Buddy" idBase="buddy" value={activeTab} onChange={setTab} tabs={[
+        { value: "available", label: "Available" },
+        { value: "requests", label: "Requests", badge: incoming.length ? `${incoming.length} new` : undefined },
+      ]} />
 
-      <section aria-labelledby="players-heading" className="space-y-3">
-        <SectionTitle><span id="players-heading">Available players</span></SectionTitle>
+      {activeTab === "available" && <div {...tabPanelProps("buddy", "available")} className="space-y-3 outline-none">
         <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by level">
           <Chip selected={filter === "all"} onClick={() => setFilter("all")}>All levels</Chip>
           {BUDDY_LEVELS.map((l) => <Chip key={l} selected={filter === l} onClick={() => setFilter(l)}>{LEVEL_LABELS[l]}</Chip>)}
         </div>
-        {sentTo && <Notice>Request sent to {sentTo}. You will see their answer here.</Notice>}
+        {sentTo && <Notice>Request sent to {sentTo}. Follow it under Requests.</Notice>}
         {players === null ? <p className="text-sm" style={{ color: WHITE_DIM }}>Loading players…</p>
           : shown.length === 0 ? <Card><p className="text-sm" style={{ color: WHITE_DIM }}>
               {filter === "all" ? "No other players are listed yet. Ask your playing partners to open Buddy and show themselves."
@@ -299,8 +303,8 @@ export default function BuddyPage({ sb, userId }: { sb: SupabaseClient; userId: 
                       : asking !== p.player_id && <PrimaryButton onClick={() => { setAsking(p.player_id); setSentTo(null); }}>
                           <UserRoundPlus size={18} aria-hidden="true" /> Buddy up</PrimaryButton>}
                   </div>
-                  {asking === p.player_id && <RequestForm player={p} onClose={() => setAsking(null)} onSend={async (purpose, format, slots) => {
-                    await sendBuddyRequest(sb, p.player_id, purpose, format, slots);
+                  {asking === p.player_id && <RequestForm player={p} onClose={() => setAsking(null)} onSend={async (purpose, format, slots, meetup) => {
+                    await sendBuddyRequest(sb, p.player_id, purpose, format, slots, meetup);
                     setAsking(null);
                     setSentTo(p.display_name);
                     announceBuddyChange();
@@ -309,7 +313,30 @@ export default function BuddyPage({ sb, userId }: { sb: SupabaseClient; userId: 
                 </Card></li>;
               })}
             </ul>}
-      </section>
+      </div>}
+
+      {activeTab === "requests" && <div {...tabPanelProps("buddy", "requests")} className="space-y-6 outline-none">
+      {incoming.length > 0 && <section aria-labelledby="incoming-heading" className="space-y-3">
+        <SectionTitle><span id="incoming-heading">Wants to buddy up with you ({incoming.length})</span></SectionTitle>
+        <ul className="space-y-3">
+          {incoming.map((r) => <li key={r.id}><Card>
+            <div className="flex items-center gap-3">
+              <Avatar name={r.other_name} />
+              <div className="min-w-0">
+                <p className="type-body-strong" style={{ color: INK }}>{r.other_name}</p>
+                <p className="text-sm" style={{ color: WHITE_DIM }}>{levelText(r.other_level)}</p>
+              </div>
+            </div>
+            <RequestDetails r={r} />
+            <div className="mt-3 flex flex-wrap gap-2">
+              <PrimaryButton disabled={busyId === r.id} onClick={() => act(r.id, () => respondToRequest(sb, r.id, true))}>
+                <Check size={18} aria-hidden="true" /> Accept</PrimaryButton>
+              <PrimaryButton tone="light" disabled={busyId === r.id} onClick={() => act(r.id, () => respondToRequest(sb, r.id, false))}>
+                <X size={18} aria-hidden="true" /> Decline</PrimaryButton>
+            </div>
+          </Card></li>)}
+        </ul>
+      </section>}
 
       {buddies.length > 0 && <section aria-labelledby="buddies-heading" className="space-y-3">
         <SectionTitle><span id="buddies-heading">Your buddies</span></SectionTitle>
@@ -345,6 +372,9 @@ export default function BuddyPage({ sb, userId }: { sb: SupabaseClient; userId: 
           </Card></li>)}
         </ul>
       </section>}
+        {incoming.length + buddies.length + sent.length === 0 && <Card><p className="text-sm" style={{ color: WHITE_DIM }}>
+          No requests yet. Find someone under Available and tap Buddy up. Requests other players send you show here.</p></Card>}
+      </div>}
     </Sheet>
   </>;
 }

@@ -53,7 +53,7 @@ describe("Buddy", () => {
     expect(within(screen.getByRole("list", { name: "Available players" })).queryByText("Ben")).toBeNull();
   });
 
-  it("sends a request only after purpose, format and free times are answered", async () => {
+  it("sends a request only after purpose, format, city, location and free times are answered", async () => {
     const { sb, rpc } = fakeSb({ profile: { ...me }, requests: [], players: [
       { player_id: "b", display_name: "Ben", level: "novice", usual_format: null, request_id: null, request_status: null, request_direction: null },
     ] });
@@ -63,27 +63,50 @@ describe("Buddy", () => {
     expect(await screen.findByText("Choose a purpose.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Casual game" }));
     fireEvent.click(screen.getByRole("button", { name: "Doubles" }));
+    fireEvent.click(screen.getByRole("button", { name: "Send to Ben" }));
+    expect(await screen.findByText("Enter the city.")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("City"), { target: { value: " Makati " } });
+    fireEvent.click(screen.getByRole("button", { name: "Send to Ben" }));
+    expect(await screen.findByText("Enter where to meet, such as a court name.")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Location"), { target: { value: "Ayala Triangle courts" } });
     fireEvent.click(screen.getByRole("button", { name: "Add another date or time" }));
     expect(screen.getAllByLabelText("Date")).toHaveLength(2);
     fireEvent.click(screen.getByRole("button", { name: "Send to Ben" }));
     await waitFor(() => expect(rpc).toHaveBeenCalledWith("send_buddy_request", expect.objectContaining({
-      p_to: "b", p_purpose: "casual_game", p_format: "doubles",
+      p_to: "b", p_purpose: "casual_game", p_format: "doubles", p_city: "Makati", p_location: "Ayala Triangle courts",
       p_slots: [expect.objectContaining({ start: "17:00", end: "19:00" }), expect.objectContaining({ start: "17:00", end: "19:00" })],
     })));
-    expect(await screen.findByText(/Request sent to Ben/)).toBeTruthy();
+    expect(await screen.findByText(/Request sent to Ben. Follow it under Requests/)).toBeTruthy();
   });
 
   it("shows requests waiting for an answer with accept and decline", async () => {
     const { sb, rpc } = fakeSb({ profile: { ...me }, players: [], requests: [
       { id: "r1", direction: "incoming", other_player_id: "c", other_name: "Cy", other_level: "intermediate", purpose: "practice",
-        play_format: "singles", slots: [{ date: "2026-10-25", start: "08:00", end: "10:00" }], status: "pending",
+        play_format: "singles", slots: [{ date: "2026-10-25", start: "08:00", end: "10:00" }], city: "Pasig",
+        location: "Capitol Commons court 2", status: "pending",
         created_at: "2026-10-22T00:00:00Z", responded_at: null },
     ] });
     render(<BuddyPage sb={sb} userId="me" />);
+    // Opens on the Requests tab because someone is waiting for an answer.
     expect(await screen.findByText("Wants to buddy up with you (1)")).toBeTruthy();
+    expect(screen.getByRole("tab", { name: /Requests/ }).getAttribute("aria-selected")).toBe("true");
+    expect(screen.getByText("1 new")).toBeTruthy();
     expect(screen.getByText("Practice / drills")).toBeTruthy();
+    expect(screen.getByText("Capitol Commons court 2, Pasig")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Accept" }));
     await waitFor(() => expect(rpc).toHaveBeenCalledWith("respond_buddy_request", { p_request_id: "r1", p_accept: true }));
     expect(screen.getByRole("button", { name: "Decline" })).toBeTruthy();
+  });
+
+  it("switches between Available and Requests", async () => {
+    const { sb } = fakeSb({ profile: { ...me }, requests: [], players: [
+      { player_id: "b", display_name: "Ben", level: "novice", usual_format: null, request_id: null, request_status: null, request_direction: null },
+    ] });
+    render(<BuddyPage sb={sb} userId="me" />);
+    expect(await screen.findByRole("tab", { name: "Available" })).toBeTruthy();
+    expect(screen.getByRole("list", { name: "Available players" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("tab", { name: "Requests" }));
+    expect(screen.getByText(/No requests yet/)).toBeTruthy();
+    expect(screen.queryByRole("list", { name: "Available players" })).toBeNull();
   });
 });

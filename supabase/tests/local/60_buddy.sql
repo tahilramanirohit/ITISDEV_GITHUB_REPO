@@ -32,25 +32,29 @@ select tests.expect_true((select level from public.buddy_players()) = 'intermedi
 select tests.expect_count($$ select 1 from public.profiles where id = 'b2222222-2222-4222-8222-222222222222' $$, 0,
   'the rest of a listed player''s profile stays private');
 
-select tests.expect_error($$ select public.send_buddy_request('b2222222-2222-4222-8222-222222222222', 'practice', 'doubles', '[]') $$,
+select tests.expect_error($$ select public.send_buddy_request('b2222222-2222-4222-8222-222222222222', 'practice', 'doubles', '[]', 'Makati', 'Ayala Triangle courts') $$,
   'a request needs at least one free time');
 select tests.expect_error(format($$ select public.send_buddy_request('b2222222-2222-4222-8222-222222222222', 'practice', 'doubles',
-  '[{"date":"%s","start":"18:00","end":"17:00"}]') $$, current_date), 'a free time must start before it ends');
+  '[{"date":"%s","start":"18:00","end":"17:00"}]', 'Makati', 'Ayala Triangle courts') $$, current_date), 'a free time must start before it ends');
 select tests.expect_error(format($$ select public.send_buddy_request('b2222222-2222-4222-8222-222222222222', 'practice', 'doubles',
-  '[{"date":"%s","start":"08:00","end":"10:00"}]') $$, current_date + 200), 'free times more than 90 days ahead are rejected');
+  '[{"date":"%s","start":"08:00","end":"10:00"}]', 'Makati', 'Ayala Triangle courts') $$, current_date + 200), 'free times more than 90 days ahead are rejected');
 select tests.expect_error(format($$ select public.send_buddy_request('b4444444-4444-4444-8444-444444444444', 'practice', 'doubles',
-  '[{"date":"%s","start":"08:00","end":"10:00"}]') $$, current_date + 1), 'players who are not listed cannot be asked');
+  '[{"date":"%s","start":"08:00","end":"10:00"}]', 'Makati', 'Ayala Triangle courts') $$, current_date + 1), 'players who are not listed cannot be asked');
 select tests.expect_error(format($$ select public.send_buddy_request('b3333333-3333-4333-8333-333333333333', 'practice', 'doubles',
-  '[{"date":"%s","start":"08:00","end":"10:00"}]') $$, current_date + 1), 'players who have not confirmed 18+ cannot be asked');
+  '[{"date":"%s","start":"08:00","end":"10:00"}]', 'Makati', 'Ayala Triangle courts') $$, current_date + 1), 'players who have not confirmed 18+ cannot be asked');
 select tests.expect_error($$ insert into public.buddy_requests (from_player_id, to_player_id, purpose, play_format, slots)
   values ('b1111111-1111-4111-8111-111111111111', 'b2222222-2222-4222-8222-222222222222', 'practice', 'doubles', '[]') $$,
   'requests cannot be written directly, only through the checked functions');
 
+select tests.expect_error(format($$ select public.send_buddy_request('b2222222-2222-4222-8222-222222222222', 'practice', 'doubles',
+  '[{"date":"%s","start":"08:00","end":"10:00"}]', null, 'Ayala Triangle courts') $$, current_date + 1), 'a request needs a city');
+select tests.expect_error(format($$ select public.send_buddy_request('b2222222-2222-4222-8222-222222222222', 'practice', 'doubles',
+  '[{"date":"%s","start":"08:00","end":"10:00"}]', 'Makati', '   ') $$, current_date + 1), 'a request needs a meetup location');
 select tests.expect_true(public.send_buddy_request('b2222222-2222-4222-8222-222222222222', 'practice', 'doubles',
   format('[{"date":"%s","start":"08:00","end":"10:00"},{"date":"%s","start":"18:30","end":"20:00"}]',
-         current_date + 1, current_date + 3)::jsonb) is not null, 'a request with two free times is sent');
+         current_date + 1, current_date + 3)::jsonb, 'Makati', 'Ayala Triangle courts') is not null, 'a request with two free times is sent');
 select tests.expect_error(format($$ select public.send_buddy_request('b2222222-2222-4222-8222-222222222222', 'casual_game', 'singles',
-  '[{"date":"%s","start":"08:00","end":"10:00"}]') $$, current_date + 2), 'only one open request per pair');
+  '[{"date":"%s","start":"08:00","end":"10:00"}]', 'Makati', 'Ayala Triangle courts') $$, current_date + 2), 'only one open request per pair');
 select tests.expect_true((select request_status from public.buddy_players()) = 'pending', 'the list shows the request is waiting');
 select tests.expect_error($$ select public.respond_buddy_request((select id from public.buddy_requests limit 1), true) $$,
   'the sender cannot accept their own request');
@@ -62,6 +66,8 @@ select tests.expect_count($$ select 1 from public.buddy_requests where to_player
   'the receiver can count waiting requests (notification badge)');
 select tests.expect_true((select other_name || ' ' || other_level || ' ' || direction from public.my_buddy_requests()) = 'Ana beginner incoming',
   'the receiver sees who asked and their level');
+select tests.expect_true((select city || ' / ' || location from public.my_buddy_requests()) = 'Makati / Ayala Triangle courts',
+  'the receiver sees the city and where to meet');
 select public.respond_buddy_request((select id from public.my_buddy_requests() limit 1), true);
 select tests.expect_true((select status from public.my_buddy_requests()) = 'accepted', 'the receiver accepts');
 select tests.expect_error($$ select public.respond_buddy_request((select id from public.my_buddy_requests() limit 1), false) $$,
@@ -77,7 +83,7 @@ select tests.expect_count($$ select 1 from public.my_buddy_requests() $$, 0, 'ot
 select set_config('request.jwt.claim.sub', 'b2222222-2222-4222-8222-222222222222', false);
 select set_config('request.jwt.claims', '{"sub":"b2222222-2222-4222-8222-222222222222","is_anonymous":false}', false);
 select tests.expect_true(public.send_buddy_request('b1111111-1111-4111-8111-111111111111', 'competition', 'either',
-  format('[{"date":"%s","start":"09:00","end":"11:00"}]', current_date + 5)::jsonb) is not null, 'a second, later request is allowed');
+  format('[{"date":"%s","start":"09:00","end":"11:00"}]', current_date + 5)::jsonb, 'Makati', 'Ayala Triangle courts') is not null, 'a second, later request is allowed');
 select set_config('request.jwt.claim.sub', 'b1111111-1111-4111-8111-111111111111', false);
 select set_config('request.jwt.claims', '{"sub":"b1111111-1111-4111-8111-111111111111","is_anonymous":false}', false);
 select tests.expect_error($$ select public.cancel_buddy_request((select id from public.my_buddy_requests() where status = 'pending')) $$,
@@ -86,7 +92,7 @@ select public.respond_buddy_request((select id from public.my_buddy_requests() w
 select set_config('request.jwt.claim.sub', 'b2222222-2222-4222-8222-222222222222', false);
 select set_config('request.jwt.claims', '{"sub":"b2222222-2222-4222-8222-222222222222","is_anonymous":false}', false);
 select tests.expect_error(format($$ select public.send_buddy_request('b1111111-1111-4111-8111-111111111111', 'practice', 'doubles',
-  '[{"date":"%s","start":"08:00","end":"10:00"}]') $$, current_date + 6), 'asking again within 7 days of a decline is blocked');
+  '[{"date":"%s","start":"08:00","end":"10:00"}]', 'Makati', 'Ayala Triangle courts') $$, current_date + 6), 'asking again within 7 days of a decline is blocked');
 
 -- ── Guests and players without 18+ confirmation cannot use Buddy ────────
 select set_config('request.jwt.claim.sub', 'b5555555-5555-4555-8555-555555555555', false);
@@ -112,9 +118,9 @@ set role authenticated;
 select set_config('request.jwt.claim.sub', 'b4444444-4444-4444-8444-444444444444', false);
 select set_config('request.jwt.claims', '{"sub":"b4444444-4444-4444-8444-444444444444","is_anonymous":false}', false);
 select public.send_buddy_request(('b9000000-0000-4000-8000-0000000000' || lpad(i::text, 2, '0'))::uuid, 'practice', 'singles',
-  format('[{"date":"%s","start":"07:00","end":"08:00"}]', current_date + 1)::jsonb) from generate_series(1, 10) i;
+  format('[{"date":"%s","start":"07:00","end":"08:00"}]', current_date + 1)::jsonb, 'Makati', 'Ayala Triangle courts') from generate_series(1, 10) i;
 select tests.expect_error(format($$ select public.send_buddy_request('b9000000-0000-4000-8000-000000000011', 'practice', 'singles',
-  '[{"date":"%s","start":"07:00","end":"08:00"}]') $$, current_date + 1), 'at most 10 requests can wait for an answer');
+  '[{"date":"%s","start":"07:00","end":"08:00"}]', 'Makati', 'Ayala Triangle courts') $$, current_date + 1), 'at most 10 requests can wait for an answer');
 select public.cancel_buddy_request((select id from public.my_buddy_requests() where status = 'pending' limit 1));
 select tests.expect_count($$ select 1 from public.my_buddy_requests() where status = 'pending' $$, 9,
   'the sender cancels a request; cancelled requests are no longer listed');

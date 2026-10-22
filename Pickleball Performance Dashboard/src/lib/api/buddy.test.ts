@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buddyErrorText, buddyLevel, freeTimeProblem, sortByLevel, type BuddyPlayer } from "./buddy";
+import { buddyErrorText, buddyLevel, freeTimeProblem, meetupProblem, sortByLevel, type BuddyPlayer } from "./buddy";
 
 const player = (name: string, level: BuddyPlayer["level"]): BuddyPlayer => ({
   player_id: name, display_name: name, level, usual_format: null, request_id: null, request_status: null, request_direction: null,
@@ -46,5 +46,18 @@ describe("error messages", () => {
   it("names the missing database update", () => {
     expect(buddyErrorText(new Error("Could not find the function public.buddy_players without parameters in the schema cache")))
       .toMatch(/pickleproapp_upgrade_4\.sql/);
+  });
+});
+
+describe("meetup place", () => {
+  it("needs a city and a location, within their limits", () => {
+    expect(meetupProblem({ city: "Makati", location: "Ayala Triangle courts" })).toBeNull();
+    expect(meetupProblem({ city: "  ", location: "x" })).toMatch(/city/);
+    expect(meetupProblem({ city: "Makati", location: "" })).toMatch(/where to meet/);
+    expect(meetupProblem({ city: "x".repeat(61), location: "x" })).toMatch(/60/);
+  });
+  it("names update 5 when the database does not have it yet", () => {
+    expect(buddyErrorText(new Error("Could not find the function public.send_buddy_request(p_city, p_format, p_location, p_purpose, p_slots, p_to) in the schema cache")))
+      .toMatch(/pickleproapp_upgrade_5\.sql/);
   });
 });

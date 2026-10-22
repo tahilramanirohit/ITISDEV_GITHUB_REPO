@@ -199,7 +199,10 @@ begin
 end $$;
 
 -- Requests the caller sent or received, with the other player's name and level.
-create or replace function public.my_buddy_requests()
+-- (20261023090000_buddy_meetup.sql adds the city and location; dropping first
+-- lets this file run again after that update, which changes the columns.)
+drop function if exists public.my_buddy_requests();
+create function public.my_buddy_requests()
 returns table (id uuid, direction text, other_player_id uuid, other_name text, other_level text,
                purpose text, play_format text, slots jsonb, status text, created_at timestamptz,
                responded_at timestamptz)
