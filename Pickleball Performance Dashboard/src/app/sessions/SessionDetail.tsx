@@ -29,6 +29,8 @@ import { ResultView } from "../analysis/ResultView";
 import type { PreviousSession } from "../analysis/CoachingPanel";
 import { GoalFields } from "./GoalFields";
 import { CapturePanel } from "./CapturePanel";
+import { ShareCard } from "../partners/ShareCard";
+import { PeerNotes } from "../partners/PeerNotes";
 
 const POLL_MS = 3000;
 
@@ -642,10 +644,12 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
       {parsed?.ok && job?.status === "failed" && <Notice tone="warn">The reanalysis failed. The report below is from the last completed run.</Notice>}
       {parsed?.ok && (job?.status === "queued" || job?.status === "processing") && <Notice tone="info">A new analysis is in progress. The report below is the last published run.</Notice>}
       {parsed?.ok && <ResultView result={parsed.result} videoUrl={videoUrl} previous={previous} session={session}
+        notes={(controls) => <PeerNotes sb={sb} sessionId={session.id} mode="owner" controls={controls} />}
         onRateSession={() => { setTab("plan"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
         onSelectTrack={job && finished && !video?.raw_video_deleted_at && !video?.raw_video_deleting_at && !config.trialNoWorker ? (trackId, timeSeconds) => void run(() => requestReanalysis(sb, job.id, {
           ...job.params, selection: { method: "track_id", track_id: trackId }, selection_time_s: timeSeconds,
         })) : undefined} />}
+      {parsed?.ok && <ShareCard sb={sb} sessionId={session.id} />}
       {parsed && !parsed.ok && (
         <Notice tone="error">The stored result could not be read ({parsed.error}). It is not shown to avoid presenting it incorrectly.</Notice>
       )}

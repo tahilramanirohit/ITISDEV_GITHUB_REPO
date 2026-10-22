@@ -13,6 +13,7 @@ function fakeSb(state: Fake) {
     if (fn === "my_buddy_requests") return { data: state.requests, error: null };
     if (fn === "send_buddy_request") return { data: "new-id", error: null };
     if (fn === "respond_buddy_request") return { data: null, error: null };
+    if (fn === "invite_buddy_as_partner") return { data: "p1", error: null };
     if (fn === "cancel_buddy_session") {
       state.requests = state.requests.map((r) => ((r as { id: string }).id === args?.p_request_id
         ? { ...(r as object), status: "called_off", cancelled_by_me: true, cancel_reason: args?.p_reason, cancelled_at: "2026-10-24T09:00:00Z" } : r));
@@ -131,6 +132,14 @@ describe("Buddy", () => {
     expect(screen.queryByText("Your buddies")).toBeNull();
     expect(screen.getByText(/^You cancelled/)).toBeTruthy();
     expect(screen.getByText("Bad weather, courts are flooded")).toBeTruthy();
+  });
+
+  it("invites an accepted buddy to be a partner", async () => {
+    const { sb, rpc } = fakeSb({ profile: { ...me }, players: [], requests: [session()] });
+    render(<BuddyPage sb={sb} userId="me" />);
+    fireEvent.click(await screen.findByRole("tab", { name: "Requests" }));
+    fireEvent.click(screen.getByRole("button", { name: "Invite as partner" }));
+    await waitFor(() => expect(rpc).toHaveBeenCalledWith("invite_buddy_as_partner", { p_player: "c" }));
   });
 
   it("shows when the other player cancelled, with or without a reason", async () => {

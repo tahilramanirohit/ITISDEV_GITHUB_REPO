@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useLocation } from "react-router";
-import { BarChart3, CalendarDays, Home, Plus, UserRound, UsersRound } from "lucide-react";
+import { BarChart3, CalendarDays, Handshake, Home, Plus, UserRound, UsersRound } from "lucide-react";
 import { BODY_FONT, BORDER, GREEN, GREEN_BG, INK, NEON, NEON_D, PAGE_BG, PAPER, SHADOW_LIFT, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
 import { PickleProLogo, PickleProMark } from "./primitives";
 import { BRAND_NAME } from "../brand";
@@ -55,7 +55,10 @@ const TABS = [
   { href: "#/sessions", label: "Sessions", icon: CalendarDays, match: (p: string) => p.startsWith("/sessions") },
   { href: "#/new", label: "Log", icon: Plus, match: (p: string) => p === "/new", primary: true },
   { href: "#/progress", label: "Progress", icon: BarChart3, match: (p: string) => p === "/progress" },
-  { href: "#/buddy", label: "Buddy", icon: UsersRound, match: (p: string) => p === "/buddy" },
+  // On phones, Partners is reached from the Buddy page (seven tabs do not fit), so the Buddy tab also counts partner invites.
+  { href: "#/buddy", label: "Buddy", icon: UsersRound, match: (p: string) => p === "/buddy",
+    phoneMatch: (p: string) => p === "/buddy" || p === "/partners" || p.startsWith("/shared"), phoneAlsoCounts: "#/partners" },
+  { href: "#/partners", label: "Partners", icon: Handshake, match: (p: string) => p === "/partners" || p.startsWith("/shared"), phone: false },
   { href: "#/profile", label: "Profile", icon: UserRound, match: (p: string) => p.startsWith("/profile") },
 ] as const;
 
@@ -70,13 +73,14 @@ function BottomTabs({ avatar, badges }: { avatar?: ReactNode; badges?: TabBadges
       style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 10px)" }}>
       <ul className="pointer-events-auto mx-auto flex max-w-md items-center justify-between rounded-[var(--radius-lg)] px-1.5 py-1.5 md:max-w-lg"
         style={{ background: WHITE, border: `1px solid ${BORDER}`, boxShadow: SHADOW_LIFT }}>
-        {TABS.map((tab) => {
-          const active = tab.match(pathname);
+        {TABS.filter((t) => !("phone" in t && t.phone === false)).map((tab) => {
+          const active = "phoneMatch" in tab ? tab.phoneMatch(pathname) : tab.match(pathname);
           const Icon = tab.icon;
           const isProfile = tab.href === "#/profile";
+          const count = (badges?.[tab.href] ?? 0) + ("phoneAlsoCounts" in tab ? badges?.[tab.phoneAlsoCounts] ?? 0 : 0);
           return (
             <li key={tab.href} className="flex-1">
-              <a href={tab.href} aria-label={badges?.[tab.href] ? `${tab.label}, ${badges[tab.href]} waiting` : tab.label} title={tab.label}
+              <a href={tab.href} aria-label={count ? `${tab.label}, ${count} waiting` : tab.label} title={tab.label}
                 aria-current={active ? "page" : undefined}
                 className="mx-auto flex h-14 max-w-[72px] flex-col items-center justify-center gap-0.5 rounded-[var(--radius-md)] transition-colors"
                 style={{ background: active ? GREEN_BG : "transparent", color: active ? INK : WHITE_DIM }}>
@@ -85,7 +89,7 @@ function BottomTabs({ avatar, badges }: { avatar?: ReactNode; badges?: TabBadges
                   : isProfile && avatar
                     ? <span className="rounded-full" style={{ boxShadow: active ? `0 0 0 2px ${GREEN}` : `0 0 0 1px ${BORDER}` }}>{avatar}</span>
                     : <span className="relative"><Icon size={22} strokeWidth={active ? 2 : 1.75} aria-hidden="true" />
-                      <Badge count={badges?.[tab.href]} label="waiting" /></span>}
+                      <Badge count={count} label="waiting" /></span>}
                 <span aria-hidden="true" className="text-[12px] font-bold leading-4">{tab.label}</span>
               </a>
             </li>

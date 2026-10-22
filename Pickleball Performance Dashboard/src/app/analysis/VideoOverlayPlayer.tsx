@@ -55,6 +55,7 @@ export function VideoOverlayPlayer({
   selectedTrackId,
   onSelectTrack,
   jump = null,
+  onVideoElement,
 }: {
   src: string | null;
   positions: PositionSnapshot[];
@@ -65,8 +66,14 @@ export function VideoOverlayPlayer({
   selectedTrackId?: number | null;
   onSelectTrack?: (trackId: number, timeSeconds: number) => void;
   jump?: JumpRequest;
+  /** Gives the page the video element, e.g. to pin a note at the current time. Pass a stable function. */
+  onVideoElement?: (video: HTMLVideoElement | null) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const setVideo = useCallback((video: HTMLVideoElement | null) => {
+    videoRef.current = video;
+    onVideoElement?.(video);
+  }, [onVideoElement]);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [showLabels, setShowLabels] = useState(true);
   const hasSelected = positions.some((s) => s.players.some((p) => p.selected)) || selectedTrackId != null;
@@ -220,7 +227,7 @@ export function VideoOverlayPlayer({
       <div className={`relative rounded-2xl border overflow-hidden min-h-[220px] flex items-center justify-center ${src ? "border-[#d6d5ce] bg-black" : "border-[#d6d5ce] bg-white"}`}>
         {src ? (
           <div className="relative w-full flex items-center justify-center">
-            <video ref={videoRef} src={src} controls playsInline className="w-full max-h-[480px] object-contain block" onLoadedMetadata={drawOverlay} />
+            <video ref={setVideo} src={src} controls playsInline className="w-full max-h-[480px] object-contain block" onLoadedMetadata={drawOverlay} />
             <canvas ref={canvasRef} onClick={selectPlayer}
               className={`absolute top-0 left-0 w-full h-full ${onSelectTrack ? "cursor-crosshair" : "pointer-events-none"}`} />
           </div>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { AlertTriangle, CheckCircle2, CircleDashed, FlaskConical, Info } from "lucide-react";
 import {
   METRIC_KEYS, METRIC_LABELS, VALIDATION_LABELS, publicShotResult,
@@ -93,8 +93,16 @@ function Row({ k, v }: { k: string; v: React.ReactNode }) {
   );
 }
 
-export function ResultView({ result, videoUrl, previous, session, onSelectTrack, onRateSession, experimentalReview = false }: {
+/** What the notes under the video can do with it: read the current time and jump to a moment. */
+export type VideoControls = { video: HTMLVideoElement | null; seek: (timeSeconds: number) => void };
+
+export function ResultView({ result, videoUrl, previous, session, onSelectTrack, onRateSession, experimentalReview = false, sharedBy,
+  notes }: {
   onRateSession?: () => void;
+  /** A partner viewing a shared report: the owner's name. Hides the owner's practice plan and audio (spec M02). */
+  sharedBy?: string;
+  /** Partner notes, shown under the video. */
+  notes?: (controls: VideoControls) => ReactNode;
   result: AnalysisResultV1; videoUrl: string | null; previous?: PreviousSession | null;
   session?: SessionRow; onSelectTrack?: (trackId: number, timeSeconds: number) => void;
   /** Research-only local prototype. Never used by saved player reports. */
@@ -107,6 +115,8 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
   const coaching = useMemo(() => buildCoachingReport(result), [result]);
   const [selectingPlayer, setSelectingPlayer] = useState(false);
   const [jump, setJump] = useState<JumpRequest>(null);
+  const [videoEl, setVideoEl] = useState<HTMLVideoElement | null>(null);
+  const seek = useCallback((time: number) => setJump({ time, id: Date.now() }), []);
   const shotMetric = result.metrics.shot_classification;
   const shotDisplayResult = experimentalReview ? result : publicShotResult(result);
   const shotsValidated = result.data_origin === "measured" && shotMetric.validation === "evaluated_on_real_footage";
@@ -128,7 +138,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
   const zonesValidated = devMock || zones.validation === "evaluated_on_real_footage";
   // Optional audio: the coaching plan when the video supports one, otherwise a spoken review of what was found.
   const audio = useMemo(() => {
-    if (result.data_origin !== "measured" || devMock) return null;
+    if (result.data_origin !== "measured" || devMock || sharedBy) return null;
     if (coaching.available) {
       return { short: videoCoachScript({ report: coaching, sessionTitle: session?.title, length: "short" }),
         full: videoCoachScript({ report: coaching, sessionTitle: session?.title, length: "full" }) };
@@ -140,7 +150,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
       ballFollowed: result.provenance.ball_detector ? (c.frames_with_ball_detections ?? 0) > 0 : null,
       hitsNamed: shotsShown ? shotCount.shots.length : 0,
     } }) };
-  }, [result, devMock, coaching, session?.title, sel, c, shotsShown, shotCount.shots.length]);
+  }, [result, devMock, coaching, session?.title, sel, c, shotsShown, shotCount.shots.length, sharedBy]);
   const warnings = devMock ? result.warnings.filter((warning) => !warning.startsWith("DEV MOCK DATA")) : result.warnings;
 
   return (
@@ -154,7 +164,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
 
       <Card accent={result.status === "ok" ? NEON : ORANGE}>
         <h2 className="mb-1 type-heading text-ink">Video review</h2>
-        {!devMock && result.data_origin === "measured" && (
+        {!devMock && !sharedBy && result.data_origin === "measured" && (
           <p className="mb-3 text-sm font-bold" style={{ color: coaching.available ? NEON : ORANGE_L }}>
             {coaching.available ? "Practice plan from this video: available below." : "Practice plan from this video: not available."}
             {!coaching.available && onRateSession && <> <button type="button" onClick={onRateSession} className="underline" style={{ color: BLUE_SKY }}>Rate this session instead</button></>}
@@ -191,7 +201,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
             label: "Players",
             ok: c.frames_with_detections > 0,
             value: sel && sel.tracked_fraction > 0
-              ? `Found you in ${Math.round(sel.tracked_fraction * 100)}% of the video`
+              ? `Found ${sharedBy ?? "you"} in ${Math.round(sel.tracked_fraction * 100)}% of the video`
               : c.frames_with_detections > 0 ? "Players found" : "No players found",
             detail: result.provenance.detector.confidence_is_model_score
               ? "Boxes on the video show who was found. \u201cYou\u201d is the player used for your feedback."
@@ -260,10 +270,10 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
         </Card>
       ) : null}
 
-      {(!session?.improvement_goals?.length || session.improvement_goals.includes("positioning")) &&
+      {!sharedBy && (!session?.improvement_goals?.length || session.improvement_goals.includes("positioning")) &&
         <CoachingPanel result={result} previous={previous} onRateSession={onRateSession} />}
 
-      {result.data_origin === "measured" && !devMock && hasPlayers && (
+      {result.data_origin === "measured" && !devMock && hasPlayers && !sharedBy && (
         <PlayerPicker result={shotDisplayResult} myPlayerId={myPlayerId} onPick={setMyPlayerId} showShotCounts={allowShotDisplay}
           onUpdateCourt={onSelectTrack && myPlayerId != null ? () => {
             const me = result.players?.find((p) => p.player_id === myPlayerId);
@@ -273,7 +283,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
 
       <section aria-labelledby="video-heading" className="space-y-3">
         <div>
-          <h2 id="video-heading" className="text-lg font-bold text-ink">Watch your video</h2>
+          <h2 id="video-heading" className="text-lg font-bold text-ink">{sharedBy ? `Watch ${sharedBy}'s video` : "Watch your video"}</h2>
           <p className="text-base" style={{ color: WHITE_DIM }}>Press play to review the recording. Player boxes, observed ball positions and court lines are shown when available.{shotsValidated ? " Evaluated shot estimates are also shown." : " Experimental shot estimates are also shown; check them against the video."}</p>
         </div>
         {videoUrl && onSelectTrack && result.tracks.length > 0 && (
@@ -290,9 +300,11 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
           ballPositions={result.ball_positions ?? []}
           courtLines={result.court_lines ?? []} shots={allowShotDisplay ? shotDisplayResult.metrics.shot_classification.value?.shots ?? [] : []}
           bounces={allowShotDisplay ? shotMetric.value?.bounces ?? [] : []}
-          selectedTrackId={myPlayerId} jump={jump}
+          selectedTrackId={myPlayerId} jump={jump} onVideoElement={setVideoEl}
           onSelectTrack={selectingPlayer ? (id, time) => { setSelectingPlayer(false); setMyPlayerId(id); onSelectTrack?.(id, time); } : undefined} />
       </section>
+
+      {notes?.({ video: videoEl, seek })}
 
       {result.data_origin === "measured" && !devMock && allowShotDisplay && (
         <ShotsPanel result={shotDisplayResult} myPlayerId={myPlayerId} research={experimentalReview}

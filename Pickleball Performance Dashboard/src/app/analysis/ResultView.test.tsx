@@ -66,6 +66,17 @@ describe("ResultView", () => {
     expect(screen.queryByRole("button", { name: /^Hear full plan/ })).toBeNull();
   });
 
+  it("shows a partner the shared report without the owner's plan or audio, with notes under the video", () => {
+    const result = structuredClone(testFixture);
+    result.data_origin = "measured";
+    render(<ResultView result={parseAnalysisResult(result)} videoUrl={null} sharedBy="Pia"
+      notes={() => <p>Partner notes here</p>} />);
+    expect(screen.queryByText(/Practice plan from this video/)).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Play video review/ })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Watch Pia's video" })).toBeTruthy();
+    expect(screen.getByText("Partner notes here")).toBeTruthy();
+  });
+
   it("offers optional audio coaching that reveals words only after they are spoken", () => {
     const result = structuredClone(testFixture);
     result.data_origin = "measured";

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { CalendarPlus, CalendarX, Check, Clock, MapPin, Trash2, UserRoundPlus, X } from "lucide-react";
+import { CalendarPlus, CalendarX, Check, ChevronRight, Clock, Handshake, MapPin, Trash2, UserRoundPlus, X } from "lucide-react";
 import {
   BUDDY_LEVELS, CANCEL_REASONS, FORMATS, FORMAT_LABELS, LEVEL_LABELS, MAX_CANCEL_REASON, MAX_CITY, MAX_DAYS_AHEAD, MAX_FREE_TIMES,
   MAX_LOCATION, PURPOSES, PURPOSE_LABELS, buddyErrorText, buddyLevel, cancelBuddySession, cancelRequest, formatFreeTime, freeTimeProblem, isoDate, listBuddyPlayers,
@@ -8,6 +8,7 @@ import {
   type BuddyFormat, type BuddyLevel, type BuddyPlayer, type BuddyPurpose, type BuddyRequest, type FreeTime, type Meetup,
 } from "../../lib/api/buddy";
 import { getProfile, type PlayerProfile } from "../../lib/api/profile";
+import { inviteBuddyAsPartner, listPartners, partnerErrorText, type PartnerLink } from "../../lib/api/partners";
 import { BORDER, GREEN, GREEN_BG, INK, ROSE, WHITE, WHITE_DIM } from "../theme";
 import {
   Card, Chip, Notice, PageHero, PrimaryButton, SectionTitle, SegmentedTabs, Sheet, fieldStyle, labelClass, labelStyle, tabPanelProps,
@@ -190,6 +191,17 @@ function CancelSessionForm({ name, onConfirm, onKeep }: {
   );
 }
 
+/** After an accepted session, a buddy can become a partner who sees the sessions you choose to share. */
+function PartnerAction({ link, busy, onInvite }: { link: PartnerLink | undefined; busy: boolean; onInvite: () => void }) {
+  if (link?.status === "active") return <a href="#/partners" className="rounded-full px-3 py-1 text-sm font-bold"
+    style={{ background: GREEN_BG, color: INK }}>Partner</a>;
+  if (link?.direction === "sent") return <span className="rounded-full px-3 py-1 text-sm font-bold"
+    style={{ background: GREEN_BG, color: INK }}>Partner invite sent</span>;
+  if (link) return <a href="#/partners" className="text-sm font-bold underline" style={{ color: GREEN }}>Invited you as a partner: answer</a>;
+  return <PrimaryButton disabled={busy} onClick={onInvite} title="Share chosen sessions and get notes on your video">
+    <Handshake size={18} aria-hidden="true" /> Invite as partner</PrimaryButton>;
+}
+
 const shortDate = (iso: string | null | undefined) =>
   iso ? new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "";
 
@@ -239,6 +251,7 @@ export default function BuddyPage({ sb, userId }: { sb: SupabaseClient; userId: 
   const [busyId, setBusyId] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState<string | null>(null);
+  const [partnerLinks, setPartnerLinks] = useState<PartnerLink[]>([]);
   // Until the player picks a tab, open on Requests when someone is waiting for an answer.
   const [tab, setTab] = useState<"available" | "requests" | null>(null);
 
@@ -251,6 +264,8 @@ export default function BuddyPage({ sb, userId }: { sb: SupabaseClient; userId: 
       setPlayers(list);
       setRequests(mine);
       setError("");
+      // Partner links are optional here: before the partners update, Buddy works without them.
+      setPartnerLinks(await listPartners(sb).catch(() => []));
     } catch (e) {
       setError(buddyErrorText(e));
     }
@@ -282,8 +297,19 @@ export default function BuddyPage({ sb, userId }: { sb: SupabaseClient; userId: 
     }
   }
 
+  // Phones reach Partners from here; on a computer the sidebar has its own entry.
+  const partnerInvites = partnerLinks.filter((l) => l.status === "pending" && l.direction === "received").length;
   const hero = <PageHero eyebrow="Find a playing partner" title="Buddy"
-    subtitle="Players who want a buddy, with their level. Ask someone, and they can accept or decline." />;
+    subtitle="Players who want a buddy, with their level. Ask someone, and they can accept or decline.">
+    <a href="#/partners" className="flex min-h-[56px] items-center gap-3 rounded-[var(--radius-lg)] px-4 py-3 desktop:hidden"
+      style={{ border: `1px solid ${BORDER}`, background: WHITE, color: INK }}>
+      <Handshake size={22} aria-hidden="true" style={{ color: GREEN }} />
+      <span className="min-w-0 flex-1"><span className="type-body-strong block">Partners</span>
+        <span className="block text-sm" style={{ color: WHITE_DIM }}>
+          {partnerInvites ? `${partnerInvites} partner invite${partnerInvites === 1 ? "" : "s"} waiting` : "Share sessions and get notes on your video"}</span></span>
+      <ChevronRight size={20} aria-hidden="true" style={{ color: WHITE_DIM }} />
+    </a>
+  </PageHero>;
 
   if (profile === undefined && !error) return <>{hero}<p className="text-sm" style={{ color: WHITE_DIM }}>Loading…</p></>;
   if (error) return <>{hero}<Notice tone="warn">{error}</Notice></>;
@@ -404,8 +430,14 @@ export default function BuddyPage({ sb, userId }: { sb: SupabaseClient; userId: 
                   announceBuddyChange();
                   await load();
                 }} />
-              : <PrimaryButton tone="light" className="mt-3" onClick={() => setCancelling(r.id)}>
-                  <CalendarX size={18} aria-hidden="true" /> Cancel buddy session</PrimaryButton>}
+              : <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <PartnerAction link={partnerLinks.find((l) => l.other_id === r.other_player_id)} busy={busyId === `partner-${r.id}`}
+                    onInvite={() => act(`partner-${r.id}`, () => inviteBuddyAsPartner(sb, r.other_player_id).catch((e) => {
+                      throw new Error(partnerErrorText(e));
+                    }))} />
+                  <PrimaryButton tone="light" onClick={() => setCancelling(r.id)}>
+                    <CalendarX size={18} aria-hidden="true" /> Cancel buddy session</PrimaryButton>
+                </div>}
           </Card></li>)}
         </ul>
       </section>}
