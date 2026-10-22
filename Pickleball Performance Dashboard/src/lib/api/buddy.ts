@@ -37,7 +37,8 @@ export type BuddyFormat = (typeof FORMATS)[number];
 export const FORMAT_LABELS: Record<BuddyFormat, string> = { singles: "Singles", doubles: "Doubles", either: "Either" };
 
 export type FreeTime = { date: string; start: string; end: string };
-export type RequestStatus = "pending" | "accepted" | "declined";
+/** "called_off": an accepted session one of the two players cancelled. */
+export type RequestStatus = "pending" | "accepted" | "declined" | "called_off";
 
 export type BuddyPlayer = {
   player_id: string;
@@ -64,7 +65,15 @@ export type BuddyRequest = {
   status: RequestStatus;
   created_at: string;
   responded_at: string | null;
+  /** Set when a session is called off; missing before the cancel update (upgrade 6). */
+  cancelled_by_me?: boolean | null;
+  cancel_reason?: string | null;
+  cancelled_at?: string | null;
 };
+
+export const MAX_CANCEL_REASON = 200;
+/** Quick picks for the cancel reason; the player can also type their own. */
+export const CANCEL_REASONS = ["Schedule changed", "Not feeling well", "Bad weather", "Court not available"] as const;
 
 export type Meetup = { city: string; location: string };
 export const MAX_CITY = 60;
@@ -129,6 +138,9 @@ export function formatFreeTime(s: FreeTime): string {
 /** Turns database errors into the messages shown on screen. */
 export function buddyErrorText(e: unknown): string {
   const message = e instanceof Error ? e.message : String((e as { message?: string })?.message ?? e);
+  if (/cancel_buddy_session|called_off|cancel_reason|cancelled_by/i.test(message) && !/^buddy:/.test(message)) {
+    return "Buddy needs a database update. Run supabase/scripts/pickleproapp_upgrade_6.sql in the Supabase SQL Editor, then reload.";
+  }
   if (/p_city|p_location|column [^ ]*\.?(city|location) does not exist/i.test(message) && !/^buddy:/.test(message)) {
     return "Buddy needs a database update. Run supabase/scripts/pickleproapp_upgrade_5.sql in the Supabase SQL Editor, then reload.";
   }
@@ -165,6 +177,11 @@ export async function respondToRequest(sb: SupabaseClient, id: string, accept: b
 
 export async function cancelRequest(sb: SupabaseClient, id: string): Promise<void> {
   await rpc<null>(sb, "cancel_buddy_request", { p_request_id: id });
+}
+
+/** Either player calls off an accepted session; a blank reason is saved as none. */
+export async function cancelBuddySession(sb: SupabaseClient, id: string, reason: string): Promise<void> {
+  await rpc<null>(sb, "cancel_buddy_session", { p_request_id: id, p_reason: reason.trim() || null });
 }
 
 export async function setBuddyVisible(sb: SupabaseClient, userId: string, visible: boolean): Promise<void> {

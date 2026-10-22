@@ -61,3 +61,10 @@ describe("meetup place", () => {
       .toMatch(/pickleproapp_upgrade_5\.sql/);
   });
 });
+
+describe("cancelling a session", () => {
+  it("names update 6 when the database does not have it yet", () => {
+    expect(buddyErrorText(new Error("Could not find the function public.cancel_buddy_session(p_reason, p_request_id) in the schema cache")))
+      .toMatch(/pickleproapp_upgrade_6\.sql/);
+  });
+});

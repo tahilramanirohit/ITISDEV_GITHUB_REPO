@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { CalendarPlus, Check, Clock, MapPin, Trash2, UserRoundPlus, X } from "lucide-react";
+import { CalendarPlus, CalendarX, Check, Clock, MapPin, Trash2, UserRoundPlus, X } from "lucide-react";
 import {
-  BUDDY_LEVELS, FORMATS, FORMAT_LABELS, LEVEL_LABELS, MAX_CITY, MAX_DAYS_AHEAD, MAX_FREE_TIMES, MAX_LOCATION, PURPOSES,
-  PURPOSE_LABELS, buddyErrorText, buddyLevel, cancelRequest, formatFreeTime, freeTimeProblem, isoDate, listBuddyPlayers,
+  BUDDY_LEVELS, CANCEL_REASONS, FORMATS, FORMAT_LABELS, LEVEL_LABELS, MAX_CANCEL_REASON, MAX_CITY, MAX_DAYS_AHEAD, MAX_FREE_TIMES,
+  MAX_LOCATION, PURPOSES, PURPOSE_LABELS, buddyErrorText, buddyLevel, cancelBuddySession, cancelRequest, formatFreeTime, freeTimeProblem, isoDate, listBuddyPlayers,
   listMyRequests, meetupProblem, respondToRequest, sendBuddyRequest, setBuddyVisible, sortByLevel,
   type BuddyFormat, type BuddyLevel, type BuddyPlayer, type BuddyPurpose, type BuddyRequest, type FreeTime, type Meetup,
 } from "../../lib/api/buddy";
@@ -148,6 +148,51 @@ function RequestDetails({ r }: { r: BuddyRequest }) {
   );
 }
 
+/** Calling off an accepted session: an optional reason, typed or picked, that the other player sees. */
+function CancelSessionForm({ name, onConfirm, onKeep }: {
+  name: string; onKeep: () => void; onConfirm: (reason: string) => Promise<void>;
+}) {
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setProblem(null);
+    try {
+      await onConfirm(reason);
+    } catch (err) {
+      setProblem(buddyErrorText(err));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="mt-4 space-y-3 rounded-[var(--radius-md)] p-4" style={{ border: `1px solid ${BORDER}` }}
+      aria-label={`Cancel buddy session with ${name}`}>
+      <p className="text-sm" style={{ color: INK }}>{name} will see that you cancelled, and your reason if you add one.</p>
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Quick reasons">
+        {CANCEL_REASONS.map((r) => <Chip key={r} selected={reason === r} onClick={() => setReason(reason === r ? "" : r)}>{r}</Chip>)}
+      </div>
+      <label className="grid gap-1 text-sm font-bold">Reason (optional)
+        <textarea rows={2} value={reason} maxLength={MAX_CANCEL_REASON} placeholder="e.g. Something came up at work"
+          onChange={(e) => setReason(e.target.value)}
+          className="w-full min-w-0 resize-y px-3 py-2 text-base font-normal" style={fieldStyle} />
+      </label>
+      <p className="text-xs" style={{ color: WHITE_DIM }} aria-live="polite">{reason.length}/{MAX_CANCEL_REASON} characters</p>
+      {problem && <Notice tone="error">{problem}</Notice>}
+      <div className="flex flex-wrap gap-2">
+        <PrimaryButton type="submit" disabled={busy}>{busy ? "Cancelling…" : "Cancel session"}</PrimaryButton>
+        <PrimaryButton type="button" tone="light" onClick={onKeep}>Keep session</PrimaryButton>
+      </div>
+    </form>
+  );
+}
+
+const shortDate = (iso: string | null | undefined) =>
+  iso ? new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "";
+
 /** First visit: confirm 18+ (required by the buddy finder's safety rules) and choose whether to be listed. */
 function JoinCard({ onJoin }: { onJoin: (listed: boolean) => Promise<void> }) {
   const [adult, setAdult] = useState(false);
@@ -193,6 +238,7 @@ export default function BuddyPage({ sb, userId }: { sb: SupabaseClient; userId: 
   const [asking, setAsking] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState<string | null>(null);
   // Until the player picks a tab, open on Requests when someone is waiting for an answer.
   const [tab, setTab] = useState<"available" | "requests" | null>(null);
 
@@ -216,7 +262,8 @@ export default function BuddyPage({ sb, userId }: { sb: SupabaseClient; userId: 
   const visible = !!profile?.buddy_visible;
   const incoming = requests.filter((r) => r.direction === "incoming" && r.status === "pending");
   const buddies = requests.filter((r) => r.status === "accepted");
-  const sent = requests.filter((r) => r.direction === "outgoing" && r.status !== "accepted");
+  const sent = requests.filter((r) => r.direction === "outgoing" && (r.status === "pending" || r.status === "declined"));
+  const calledOff = requests.filter((r) => r.status === "called_off");
   const activeTab = tab ?? (incoming.length ? "requests" : "available");
   const shown = useMemo(() => sortByLevel((players ?? []).filter((p) => filter === "all" || p.level === filter), myLevel),
     [players, filter, myLevel]);
@@ -350,6 +397,15 @@ export default function BuddyPage({ sb, userId }: { sb: SupabaseClient; userId: 
               </div>
             </div>
             <RequestDetails r={r} />
+            {cancelling === r.id
+              ? <CancelSessionForm name={r.other_name} onKeep={() => setCancelling(null)} onConfirm={async (reason) => {
+                  await cancelBuddySession(sb, r.id, reason);
+                  setCancelling(null);
+                  announceBuddyChange();
+                  await load();
+                }} />
+              : <PrimaryButton tone="light" className="mt-3" onClick={() => setCancelling(r.id)}>
+                  <CalendarX size={18} aria-hidden="true" /> Cancel buddy session</PrimaryButton>}
           </Card></li>)}
         </ul>
       </section>}
@@ -372,7 +428,25 @@ export default function BuddyPage({ sb, userId }: { sb: SupabaseClient; userId: 
           </Card></li>)}
         </ul>
       </section>}
-        {incoming.length + buddies.length + sent.length === 0 && <Card><p className="text-sm" style={{ color: WHITE_DIM }}>
+      {calledOff.length > 0 && <section aria-labelledby="called-off-heading" className="space-y-3">
+        <SectionTitle><span id="called-off-heading">Cancelled sessions</span></SectionTitle>
+        <ul className="space-y-3">
+          {calledOff.map((r) => <li key={r.id}><Card>
+            <div className="flex items-center gap-3">
+              <Avatar name={r.other_name} />
+              <div className="min-w-0">
+                <p className="type-body-strong" style={{ color: INK }}>{r.other_name}</p>
+                <p className="text-sm font-bold" style={{ color: ROSE }}>
+                  {r.cancelled_by_me ? "You cancelled" : `${r.other_name} cancelled`}{r.cancelled_at ? ` · ${shortDate(r.cancelled_at)}` : ""}</p>
+              </div>
+            </div>
+            <p className="mt-2 text-sm" style={{ color: INK }}>
+              {r.cancel_reason ? <><strong>Reason:</strong> {r.cancel_reason}</> : <span style={{ color: WHITE_DIM }}>No reason given</span>}</p>
+            <RequestDetails r={r} />
+          </Card></li>)}
+        </ul>
+      </section>}
+        {incoming.length + buddies.length + sent.length + calledOff.length === 0 && <Card><p className="text-sm" style={{ color: WHITE_DIM }}>
           No requests yet. Find someone under Available and tap Buddy up. Requests other players send you show here.</p></Card>}
       </div>}
     </Sheet>

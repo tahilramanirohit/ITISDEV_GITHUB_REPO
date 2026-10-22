@@ -13,6 +13,11 @@ function fakeSb(state: Fake) {
     if (fn === "my_buddy_requests") return { data: state.requests, error: null };
     if (fn === "send_buddy_request") return { data: "new-id", error: null };
     if (fn === "respond_buddy_request") return { data: null, error: null };
+    if (fn === "cancel_buddy_session") {
+      state.requests = state.requests.map((r) => ((r as { id: string }).id === args?.p_request_id
+        ? { ...(r as object), status: "called_off", cancelled_by_me: true, cancel_reason: args?.p_reason, cancelled_at: "2026-10-24T09:00:00Z" } : r));
+      return { data: null, error: null };
+    }
     return { data: null, error: { message: `unexpected ${fn} ${JSON.stringify(args)}` } };
   });
   const update = vi.fn((values: Record<string, unknown>) => ({
@@ -96,6 +101,48 @@ describe("Buddy", () => {
     fireEvent.click(screen.getByRole("button", { name: "Accept" }));
     await waitFor(() => expect(rpc).toHaveBeenCalledWith("respond_buddy_request", { p_request_id: "r1", p_accept: true }));
     expect(screen.getByRole("button", { name: "Decline" })).toBeTruthy();
+  });
+
+  const session = (extra: Record<string, unknown> = {}) => ({
+    id: "s1", direction: "outgoing", other_player_id: "c", other_name: "Cy", other_level: "intermediate", purpose: "casual_game",
+    play_format: "doubles", slots: [{ date: "2026-10-25", start: "08:00", end: "10:00" }], city: "Pasig",
+    location: "Capitol Commons court 2", status: "accepted", created_at: "2026-10-22T00:00:00Z", responded_at: "2026-10-22T01:00:00Z",
+    ...extra,
+  });
+
+  it("cancels an accepted buddy session with a reason the other player will see", async () => {
+    const { sb, rpc } = fakeSb({ profile: { ...me }, players: [], requests: [session()] });
+    render(<BuddyPage sb={sb} userId="me" />);
+    fireEvent.click(await screen.findByRole("tab", { name: "Requests" }));
+    expect(screen.getByText("Your buddies")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel buddy session" }));
+    fireEvent.click(screen.getByRole("button", { name: "Keep session" }));
+    expect(screen.queryByRole("form", { name: "Cancel buddy session with Cy" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel buddy session" }));
+    expect(screen.getByText(/Cy will see that you cancelled/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Bad weather" }));
+    expect((screen.getByLabelText("Reason (optional)") as HTMLTextAreaElement).value).toBe("Bad weather");
+    fireEvent.change(screen.getByLabelText("Reason (optional)"), { target: { value: "Bad weather, courts are flooded " } });
+    fireEvent.click(screen.getByRole("button", { name: "Cancel session" }));
+    await waitFor(() => expect(rpc).toHaveBeenCalledWith("cancel_buddy_session",
+      { p_request_id: "s1", p_reason: "Bad weather, courts are flooded" }));
+    expect(await screen.findByText("Cancelled sessions")).toBeTruthy();
+    expect(screen.queryByText("Your buddies")).toBeNull();
+    expect(screen.getByText(/^You cancelled/)).toBeTruthy();
+    expect(screen.getByText("Bad weather, courts are flooded")).toBeTruthy();
+  });
+
+  it("shows when the other player cancelled, with or without a reason", async () => {
+    const { sb } = fakeSb({ profile: { ...me }, players: [], requests: [
+      session({ status: "called_off", cancelled_by_me: false, cancel_reason: null, cancelled_at: "2026-10-24T09:00:00Z" }),
+    ] });
+    render(<BuddyPage sb={sb} userId="me" />);
+    fireEvent.click(await screen.findByRole("tab", { name: "Requests" }));
+    expect(screen.getByText(/^Cy cancelled/)).toBeTruthy();
+    expect(screen.getByText("No reason given")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Cancel buddy session" })).toBeNull();
+    expect(screen.queryByText(/No requests yet/)).toBeNull();
   });
 
   it("switches between Available and Requests", async () => {

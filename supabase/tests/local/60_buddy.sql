@@ -94,6 +94,31 @@ select set_config('request.jwt.claims', '{"sub":"b2222222-2222-4222-8222-2222222
 select tests.expect_error(format($$ select public.send_buddy_request('b1111111-1111-4111-8111-111111111111', 'practice', 'doubles',
   '[{"date":"%s","start":"08:00","end":"10:00"}]', 'Makati', 'Ayala Triangle courts') $$, current_date + 6), 'asking again within 7 days of a decline is blocked');
 
+-- ── Either player can call off an accepted session, with a reason ──────
+-- Ben: the session Ana asked for is accepted; his own later request was declined.
+select id as accepted_id from public.my_buddy_requests() where status = 'accepted' \gset
+select tests.expect_error($$ select public.cancel_buddy_session((select id from public.my_buddy_requests() where status = 'declined'), 'Busy') $$,
+  'only an accepted session can be called off');
+select set_config('request.jwt.claim.sub', 'b4444444-4444-4444-8444-444444444444', false);
+select set_config('request.jwt.claims', '{"sub":"b4444444-4444-4444-8444-444444444444","is_anonymous":false}', false);
+select tests.expect_error(format($$ select public.cancel_buddy_session(%L, 'Busy') $$, :'accepted_id'),
+  'players outside the session cannot call it off');
+select set_config('request.jwt.claim.sub', 'b1111111-1111-4111-8111-111111111111', false);
+select set_config('request.jwt.claims', '{"sub":"b1111111-1111-4111-8111-111111111111","is_anonymous":false}', false);
+select tests.expect_error(format($$ select public.cancel_buddy_session(%L, repeat('x', 201)) $$, :'accepted_id'),
+  'the reason is at most 200 characters');
+select public.cancel_buddy_session(:'accepted_id', E'  Rain, the courts are closed \n');
+select tests.expect_true((select status = 'called_off' and cancelled_by_me and cancelled_at is not null
+  from public.my_buddy_requests() where id = :'accepted_id'), 'the sender of the request can call off the accepted session');
+select tests.expect_error(format($$ select public.cancel_buddy_session(%L, null) $$, :'accepted_id'),
+  'a called-off session cannot be called off again');
+select set_config('request.jwt.claim.sub', 'b2222222-2222-4222-8222-222222222222', false);
+select set_config('request.jwt.claims', '{"sub":"b2222222-2222-4222-8222-222222222222","is_anonymous":false}', false);
+select tests.expect_true((select not cancelled_by_me and cancel_reason = 'Rain, the courts are closed'
+  from public.my_buddy_requests() where id = :'accepted_id'), 'the other player sees who called it off and the reason');
+select tests.expect_true((select request_status is null from public.buddy_players()
+  where player_id = 'b1111111-1111-4111-8111-111111111111'), 'after a call-off the list no longer shows them as buddies');
+
 -- ── Guests and players without 18+ confirmation cannot use Buddy ────────
 select set_config('request.jwt.claim.sub', 'b5555555-5555-4555-8555-555555555555', false);
 select set_config('request.jwt.claims', '{"sub":"b5555555-5555-4555-8555-555555555555","is_anonymous":true}', false);
@@ -124,5 +149,14 @@ select tests.expect_error(format($$ select public.send_buddy_request('b9000000-0
 select public.cancel_buddy_request((select id from public.my_buddy_requests() where status = 'pending' limit 1));
 select tests.expect_count($$ select 1 from public.my_buddy_requests() where status = 'pending' $$, 9,
   'the sender cancels a request; cancelled requests are no longer listed');
+
+-- The receiver can call off too, and the reason is optional.
+select id as many_request, other_player_id as many_player from public.my_buddy_requests() where status = 'pending' limit 1 \gset
+select set_config('request.jwt.claim.sub', :'many_player', false);
+select set_config('request.jwt.claims', format('{"sub":"%s","is_anonymous":false}', :'many_player'), false);
+select public.respond_buddy_request(:'many_request', true);
+select public.cancel_buddy_session(:'many_request', '   ');
+select tests.expect_true((select status = 'called_off' and cancelled_by_me and cancel_reason is null
+  from public.my_buddy_requests() where id = :'many_request'), 'the receiver can call off a session without giving a reason');
 reset role;
 select set_config('request.jwt.claims', '', false);
