@@ -105,13 +105,13 @@ export function CapturePanel({ sb, session, onSessionUpdated }: {
 
   return <section aria-label="Private session context">
     <Card accent={BLUE_SKY}>
-      <p className="text-sm font-bold uppercase tracking-widest" style={{ color: BLUE_SKY }}>Private session context</p>
+      <p className="text-sm font-bold" style={{ color: BLUE_SKY }}>Private session context</p>
       <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Answer at your own pace. Every question is optional, and your answers stay private.</p>
       <ol aria-label="Questionnaire progress" className="mt-5 grid grid-cols-3 gap-2">
         {stepNames.map((name, index) => <li key={name} aria-current={step === index ? "step" : undefined}
           className="rounded-lg px-2 py-2 text-center text-xs sm:text-sm font-semibold"
-          style={{ background: step === index ? BLUE_SKY : "#edf2f7", color: step === index ? "white" : WHITE_DIM }}>
-          <span className="block text-[11px] uppercase tracking-wide">Step {index + 1}</span>{name}
+          style={{ background: step === index ? BLUE_SKY : "var(--pp-surface-2)", color: step === index ? "white" : WHITE_DIM }}>
+          <span className="block text-xs">Step {index + 1}</span>{name}
         </li>)}
       </ol>
 

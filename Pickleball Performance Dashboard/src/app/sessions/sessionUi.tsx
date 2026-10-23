@@ -7,7 +7,7 @@ import { initials, listAllOtherPlayers, type OtherPlayer } from "../../lib/api/p
 import { CONTEXT_LABELS, FORMAT_LABELS, KIND_LABELS, sessionKind, type SessionRow } from "../../lib/api/types";
 import { deriveAnalysisState, STATE_LABELS, type AnalysisUiState } from "../../lib/analysis/state";
 import { buildSelfReport } from "../../lib/coaching/selfAssessment";
-import { BLUE, BLUE_BG, BORDER, INK, ORANGE, ROSE, SUCCESS, WHITE, WHITE_DIM, WHITE_SUB, YELLOW, YELLOW_BG, YELLOW_INK } from "../theme";
+import { BLUE, BLUE_BG, BORDER, INK, ORANGE, ROSE, SUCCESS, WHITE, WHITE_DIM, WHITE_SUB, YELLOW_BG, alpha } from "../theme";
 
 export const reviewMode = (session: SessionRow) => session.review_mode ?? "video";
 
@@ -60,7 +60,7 @@ export function formatSessionDate(iso: string, opts: Intl.DateTimeFormatOptions 
 /** Small round initials, stacked like a club member list. */
 export function AvatarStack({ names, max = 4, size = 28 }: { names: string[]; max?: number; size?: number }) {
   const shown = names.slice(0, max);
-  const colors = [BLUE_BG, YELLOW_BG, "#e7f6ee", "#fde8ef"];
+  const colors = [BLUE_BG, YELLOW_BG, "var(--pp-accent-soft)", "color-mix(in srgb, var(--pp-danger) 12%, transparent)"];
   return (
     <span className="flex items-center" aria-label={names.join(", ")}>
       {shown.map((name, i) => (
@@ -106,11 +106,11 @@ export function SessionCard({ item, assessment, players = [], you = "You" }: {
   const names = [you, ...players.map((p) => p.display_name)];
 
   return (
-    <a href={`#/sessions/${session.id}`} className="block rounded-2xl p-4 transition-shadow hover:shadow-md"
+    <a href={`#/sessions/${session.id}`} className="block rounded-[14px] p-4 transition-shadow hover:shadow-md"
       style={{ background: WHITE, border: `1px solid ${BORDER}` }}>
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style={{ background: kind === "tournament" ? YELLOW : BLUE_BG, color: kind === "tournament" ? YELLOW_INK : BLUE }}>
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style={{ background: "var(--pp-surface-2)", color: INK }}>
             <KindIcon size={17} aria-hidden="true" />
           </span>
           <span className="min-w-0">
@@ -118,7 +118,7 @@ export function SessionCard({ item, assessment, players = [], you = "You" }: {
             <span className="block truncate text-xs" style={{ color: WHITE_SUB }}>{formatSessionDate(session.session_date)} · {FORMAT_LABELS[session.play_format]} · {CONTEXT_LABELS[session.session_context]}</span>
           </span>
         </div>
-        <span className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ background: `${status.color}14`, color: status.color }}>{status.text}</span>
+        <span className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ background: alpha(status.color, 10), color: status.color }}>{status.text}</span>
       </div>
       <h3 className="mt-3 truncate text-base font-extrabold tracking-tight" style={{ color: INK }}>{session.title}</h3>
       {session.tournament_name && session.tournament_name !== session.title && <p className="truncate text-xs" style={{ color: WHITE_DIM }}>{session.tournament_name}</p>}
@@ -136,10 +136,10 @@ export function SessionCard({ item, assessment, players = [], you = "You" }: {
 
 export function EmptySessions() {
   return (
-    <div className="rounded-2xl border-2 border-dashed p-6 text-center" style={{ borderColor: BORDER, background: WHITE }}>
+    <div className="rounded-[14px] border-2 border-dashed p-6 text-center" style={{ borderColor: BORDER, background: WHITE }}>
       <p className="text-base font-bold" style={{ color: INK }}>No sessions yet</p>
       <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Log your first game. Rating yourself takes about two minutes, no video needed.</p>
-      <a href="#/new" className="mt-4 inline-flex min-h-[44px] items-center rounded-full px-6 text-sm font-bold" style={{ background: BLUE, color: WHITE }}>
+      <a href="#/new" className="mt-4 inline-flex min-h-[44px] items-center rounded-[12px] px-6 text-sm font-bold" style={{ background: "var(--pp-strong)", color: "var(--pp-on-strong)" }}>
         Log a session
       </a>
     </div>

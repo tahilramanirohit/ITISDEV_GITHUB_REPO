@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import {
   BLUE_MID, BLUE_POP, BLUE_SKY, BORDER, NEON, NEON_D, ORANGE, ORANGE_L, VIOLET, WHITE, WHITE_DIM, WHITE_SUB,
-} from "../theme";
+} from "./legacyTheme";
 import { Card, ChartTip, SectionBanner, WidgetHeader } from "../shell/primitives";
 import { config } from "../../lib/config";
 import {

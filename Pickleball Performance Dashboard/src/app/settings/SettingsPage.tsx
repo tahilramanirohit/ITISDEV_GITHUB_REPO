@@ -6,7 +6,7 @@ import { friendlyDbError } from "../../lib/api/selfAssessment";
 import { FORMAT_LABELS, KIND_LABELS, SOLO_FORMATS, type PlayFormat, type SessionKind } from "../../lib/api/types";
 import { Card, Chip, Notice, PageHero, PrimaryButton, SectionTitle, Sheet, labelClass, labelStyle } from "../shell/primitives";
 import { LargeTextToggle } from "../shell/AppShell";
-import { BORDER, INK, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
+import { BORDER, INK, WHITE, WHITE_DIM, WHITE_SUB, applyAppearance, readAppearance, type Appearance } from "../theme";
 
 function LinkRow({ href, title, detail }: { href: string; title: string; detail: string }) {
   return (
@@ -22,6 +22,7 @@ function LinkRow({ href, title, detail }: { href: string; title: string; detail:
 export default function SettingsPage({ sb, userId, account, devLinks }: {
   sb: SupabaseClient; userId: string; account?: string; devLinks?: ReactNode;
 }) {
+  const [appearance, setAppearance] = useState<Appearance>(readAppearance);
   const [defaults, setDefaults] = useState<SessionDefaults>({ default_review_mode: null, default_session_kind: null, default_play_format: null });
   const [savingDefaults, setSavingDefaults] = useState(false);
   const [defaultsMessage, setDefaultsMessage] = useState("");
@@ -87,10 +88,18 @@ export default function SettingsPage({ sb, userId, account, devLinks }: {
     <div className="space-y-6">
     <Card>
       <SectionTitle>Display</SectionTitle>
-      <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Make all text larger on this device.</p>
-      <div className="mt-3"><LargeTextToggle /></div>
+      <p className={`mt-3 ${labelClass}`} style={labelStyle} id="appearance-label">Appearance</p>
+      <div className="flex flex-wrap gap-2" role="group" aria-labelledby="appearance-label">
+        {(["system", "light", "dark"] as Appearance[]).map((a) => (
+          <Chip key={a} selected={appearance === a} onClick={() => { applyAppearance(a); setAppearance(a); }}>
+            {a === "system" ? "Match device" : a === "light" ? "Light" : "Dark"}
+          </Chip>
+        ))}
+      </div>
+      <p className="mt-4 text-sm" style={{ color: WHITE_DIM }}>Make all text larger on this device.</p>
+      <div className="mt-2"><LargeTextToggle /></div>
     </Card>
-    <section className="overflow-hidden rounded-2xl" style={{ background: WHITE, border: `1px solid ${BORDER}` }} aria-label="More settings">
+    <section className="overflow-hidden rounded-[14px]" style={{ background: WHITE, border: `1px solid ${BORDER}` }} aria-label="More settings">
       <LinkRow href="#/welcome" title="My game and starting skills" detail="Level, goals and your usual skill ratings" />
       <LinkRow href="#/privacy" title="Your data and privacy" detail="What is stored, who can see it, how to delete it" />
     </section>

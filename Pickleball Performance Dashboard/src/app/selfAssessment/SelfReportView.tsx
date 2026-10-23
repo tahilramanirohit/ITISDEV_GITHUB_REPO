@@ -1,9 +1,8 @@
 import { useMemo, useState } from "react";
-import { ChevronDown, Dumbbell, Target, TrendingDown, TrendingUp, Minus, Sparkles } from "lucide-react";
+import { ChevronDown, Dumbbell, Target, TrendingDown, TrendingUp, Minus } from "lucide-react";
 import type { SelfProgressRow, SelfReport } from "../../lib/coaching/selfAssessment";
 import { BORDER, DISPLAY_FONT, GREEN, GREEN_BG, INK, OPTIC, ORANGE, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
-import { Card, RingTile, SectionTitle } from "../shell/primitives";
-import mascotUrl from "../../assets/picklepro-logo@2x.webp";
+import { Card, RingTile, SectionTitle, cardStyle, mascot2xUrl } from "../shell/primitives";
 import { selfCoachScript } from "../../lib/coaching/coachScript";
 import { CoachLauncher } from "../coach/CoachPlayer";
 
@@ -26,7 +25,7 @@ export function ScoreRing({ value, size = 88 }: { value: number; size?: number }
 function RatingDots({ value }: { value: number }) {
   return (
     <span className="inline-flex gap-1" aria-label={`${value} of 5`}>
-      {[1, 2, 3, 4, 5].map((n) => <span key={n} className="h-1.5 w-4 rounded-full" style={{ background: n <= value ? GREEN : "#e2e5ea" }} />)}
+      {[1, 2, 3, 4, 5].map((n) => <span key={n} className="h-1.5 w-4 rounded-full" style={{ background: n <= value ? GREEN : "var(--pp-surface-2)" }} />)}
     </span>
   );
 }
@@ -36,8 +35,8 @@ function FocusCard({ index, item }: { index: number; item: SelfReport["focus"][n
   return (
     <Card className="!p-0 overflow-hidden">
       <button type="button" aria-expanded={open} onClick={() => setOpen((v) => !v)} className="flex w-full items-center gap-3 p-4 text-left">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-base font-extrabold"
-          style={{ background: index === 0 ? OPTIC : GREEN_BG, color: index === 0 ? INK : GREEN, fontFamily: DISPLAY_FONT }}>{index + 1}</span>
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] text-base font-extrabold"
+          style={{ background: index === 0 ? "var(--pp-strong)" : "var(--pp-surface-2)", color: index === 0 ? "var(--pp-on-strong)" : INK, fontFamily: DISPLAY_FONT }}>{index + 1}</span>
         <span className="min-w-0 flex-1">
           <span className="block text-base font-bold" style={{ color: INK }}>{item.title}</span>
           <span className="mt-1 block"><RatingDots value={item.rating} /></span>
@@ -47,7 +46,7 @@ function FocusCard({ index, item }: { index: number; item: SelfReport["focus"][n
       {open && <div className="space-y-3 border-t px-4 pb-4 pt-3 text-sm" style={{ borderColor: BORDER }}>
         <p style={{ color: INK }}>{item.observation}</p>
         <p style={{ color: WHITE_DIM }}>{item.why}</p>
-        <div className="rounded-2xl p-3" style={{ background: GREEN_BG }}>
+        <div className="rounded-[14px] p-3" style={{ background: GREEN_BG }}>
           <p className="flex items-center gap-1.5 font-bold" style={{ color: GREEN }}><Dumbbell size={15} /> Drill: {item.drill.name}</p>
           <p className="mt-1" style={{ color: INK }}>{item.drill.how}</p>
         </div>
@@ -73,17 +72,17 @@ export function SelfReportView({ report, progress, previousLabel, onEdit, sessio
   return (
     <div className="space-y-5">
       {report.focus[0] && (
-        <section className="relative overflow-hidden rounded-lg p-4 pr-28" style={{ background: OPTIC, color: "#2b2100" }} aria-label="This week's drill">
-          <img src={mascotUrl} alt="" aria-hidden="true" className="pointer-events-none absolute -bottom-3 right-1 h-28 w-auto -rotate-[8deg]" />
-          <p className="text-[11px] font-extrabold uppercase tracking-wider">This week's drill</p>
-          <p className="mt-1 text-xl font-black leading-tight">{report.focus[0].drill.name}</p>
-          <p className="mt-1 text-sm">For your {report.focus[0].label.toLowerCase()} · 15 minutes, 3 times this week</p>
+        <section className="relative overflow-hidden rounded-[14px] p-5 pr-28" style={cardStyle} aria-label="This week's drill">
+          <img src={mascot2xUrl} alt="" aria-hidden="true" className="pointer-events-none absolute bottom-2 right-3 h-28 w-auto" />
+          <p className="text-sm" style={{ color: WHITE_SUB }}>This week's drill</p>
+          <p className="mt-0.5 text-[1.35rem] font-extrabold leading-tight" style={{ fontFamily: DISPLAY_FONT }}>{report.focus[0].drill.name}</p>
+          <p className="mt-1 text-sm leading-relaxed" style={{ color: WHITE_DIM }}>For your {report.focus[0].label.toLowerCase()}. 15 minutes, 3 times this week.</p>
           {coach && <div className="relative mt-3"><CoachLauncher shortScript={coach.short} fullScript={coach.full} /></div>}
         </section>
       )}
       <div className="grid grid-cols-2 gap-3">
         <RingTile label="Self rating" value={report.overall.toFixed(1)} fraction={(report.overall - 1) / 4} />
-        <RingTile label="Level" value={report.level ?? "–"} fraction={(report.overall - 1) / 4} color={OPTIC} />
+        <RingTile label="Level" value={report.level ?? "–"} fraction={(report.overall - 1) / 4} />
       </div>
       <p className="text-sm" style={{ color: WHITE_DIM }}>{report.introduction}</p>
 
@@ -97,9 +96,9 @@ export function SelfReportView({ report, progress, previousLabel, onEdit, sessio
       {report.strengths.length > 0 && <section className="space-y-2">
         <SectionTitle>What's working</SectionTitle>
         <div className="flex flex-wrap gap-2">
-          {report.strengths.map((s) => <span key={s.skill} className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold"
+          {report.strengths.map((s) => <span key={s.skill} className="inline-flex items-center gap-1.5 rounded-[10px] px-3 py-2 text-sm font-semibold"
             style={{ background: WHITE, border: `1px solid ${BORDER}`, color: INK }} title={s.observation}>
-            <Sparkles size={14} style={{ color: GREEN }} />{s.title} · {s.rating}/5</span>)}
+            {s.title} · {s.rating}/5</span>)}
         </div>
       </section>}
 
@@ -115,7 +114,7 @@ export function SelfReportView({ report, progress, previousLabel, onEdit, sessio
                 {i < report.plan.length - 1 && <span className="mt-1 w-0.5 flex-1" style={{ background: BORDER }} />}
               </span>
               <span className="-mt-1 pb-1">
-                <span className="block text-xs font-bold uppercase tracking-wide" style={{ color: WHITE_SUB }}>{step.day}</span>
+                <span className="block text-xs font-bold" style={{ color: WHITE_SUB }}>{step.day}</span>
                 <span className="block text-sm font-bold" style={{ color: INK }}>{step.title}</span>
                 <span className="block text-sm" style={{ color: WHITE_DIM }}>{step.detail}</span>
               </span>
@@ -147,7 +146,7 @@ export function SelfReportView({ report, progress, previousLabel, onEdit, sessio
       </div>
 
       <p className="text-xs leading-relaxed" style={{ color: WHITE_SUB }}>{report.limitation}</p>
-      <button type="button" onClick={onEdit} className="w-full rounded-2xl py-3 text-sm font-bold lg:w-auto lg:px-8" style={{ border: `1px solid ${BORDER}`, background: WHITE, color: INK }}>
+      <button type="button" onClick={onEdit} className="w-full rounded-[14px] py-3 text-sm font-bold lg:w-auto lg:px-8" style={{ border: `1px solid ${BORDER}`, background: WHITE, color: INK }}>
         Edit my ratings
       </button>
     </div>

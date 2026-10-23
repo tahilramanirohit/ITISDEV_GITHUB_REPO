@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Share, X } from "lucide-react";
-import { DEEP, WHITE, YELLOW, YELLOW_INK } from "../theme";
+import { ACCENT_INK, INK, INK_2 } from "../theme";
+import { cardStyle, pressable } from "./primitives";
 
 const DISMISS_KEY = "picklepro.installTip.dismissed";
 type InstallPrompt = Event & { prompt: () => Promise<void> };
@@ -28,15 +29,15 @@ export function InstallTip() {
   if (hidden || (!isIOS() && !prompt)) return null;
   const close = () => { setHidden(true); try { localStorage.setItem(DISMISS_KEY, "1"); } catch { /* keep for this visit */ } };
   return (
-    <aside aria-label="Use PicklePro full screen" className="flex items-start gap-3 rounded-2xl p-3 pr-2" style={{ background: DEEP, color: WHITE }}>
-      <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style={{ background: YELLOW, color: YELLOW_INK }}><Share size={17} aria-hidden="true" /></span>
+    <aside aria-label="Use PicklePro full screen" className="flex items-start gap-3 rounded-[14px] p-4 pr-2" style={cardStyle}>
+      <Share size={18} aria-hidden="true" className="mt-0.5 shrink-0" style={{ color: ACCENT_INK }} />
       <div className="min-w-0 flex-1 text-sm">
         <p className="font-bold">Use PicklePro full screen</p>
         {prompt
-          ? <button type="button" onClick={() => void prompt.prompt().then(close)} className="mt-2 min-h-[36px] rounded-full px-4 text-xs font-extrabold" style={{ background: YELLOW, color: YELLOW_INK }}>Install the app</button>
-          : <p className="mt-0.5" style={{ color: "#c9dccf" }}>In Safari, tap <b>Share</b>, then <b>Add to Home Screen</b>. Open it from your home screen, like Facebook or Instagram.</p>}
+          ? <button type="button" onClick={() => void prompt.prompt().then(close)} className={`mt-2 min-h-[44px] rounded-[12px] px-4 text-sm font-bold ${pressable}`} style={{ background: "var(--pp-strong)", color: "var(--pp-on-strong)" }}>Install the app</button>
+          : <p className="mt-0.5 leading-relaxed" style={{ color: INK_2 }}>In Safari, tap <b style={{ color: INK }}>Share</b>, then <b style={{ color: INK }}>Add to Home Screen</b>. It then opens full screen from your home screen.</p>}
       </div>
-      <button type="button" onClick={close} aria-label="Dismiss tip" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style={{ color: "#c9dccf" }}><X size={18} /></button>
+      <button type="button" onClick={close} aria-label="Dismiss tip" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full" style={{ color: INK_2 }}><X size={18} aria-hidden="true" /></button>
     </aside>
   );
 }

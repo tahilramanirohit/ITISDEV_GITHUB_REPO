@@ -94,9 +94,9 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
   return (
     <div className="space-y-5">
       {step === 0 ? (
-        <section className="relative overflow-hidden rounded-2xl p-5" style={{ background: NAVY, color: WHITE }}>
+        <section className="relative overflow-hidden rounded-[14px] p-5" style={{ background: NAVY, color: "var(--pp-on-hero)" }}>
           <div aria-hidden="true" className="absolute -right-10 -top-10 h-36 w-36 rounded-full" style={{ background: OPTIC, opacity: 0.2 }} />
-          <p className="text-xs font-bold uppercase tracking-wider" style={{ color: OPTIC }}>Welcome to PicklePro</p>
+          <p className="text-xs font-bold" style={{ color: OPTIC }}>Welcome to PicklePro</p>
           <h1 className="mt-1 text-2xl font-extrabold leading-tight" style={{ fontFamily: DISPLAY_FONT }}>Let's get to know your game</h1>
           <p className="mt-2 text-sm" style={{ color: "#c9dccf" }}>Five quick steps, about two minutes. Your answers stay private and shape your first practice plan. <a href="#/privacy" className="font-semibold underline" style={{ color: OPTIC }}>How we handle your data</a></p>
         </section>
@@ -107,12 +107,12 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
       )}
 
       <div>
-        <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider">
+        <div className="flex items-center justify-between text-xs font-bold">
           <span style={{ color: GREEN }}>Step {step + 1} of {STEPS.length} · {STEPS[step]}</span>
           {onCancel && <button type="button" onClick={onCancel} className="normal-case underline" style={{ color: WHITE_SUB }}>Cancel</button>}
         </div>
         <div className="mt-2 grid gap-1.5" style={{ gridTemplateColumns: `repeat(${STEPS.length}, minmax(0, 1fr))` }} aria-hidden="true">
-          {STEPS.map((s, i) => <span key={s} className="h-1.5 rounded-full" style={{ background: i <= step ? INK : "#e2e5ea" }} />)}
+          {STEPS.map((s, i) => <span key={s} className="h-1.5 rounded-full" style={{ background: i <= step ? INK : "var(--pp-surface-2)" }} />)}
         </div>
       </div>
 
@@ -120,7 +120,7 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
         <div>
           <label className={labelClass} style={labelStyle} htmlFor="onboard-name">What should we call you?</label>
           <input id="onboard-name" autoComplete="given-name" maxLength={80} value={form.display_name}
-            onChange={(e) => set("display_name", e.target.value)} className="w-full rounded-2xl px-4 py-3 text-base" style={fieldStyle} />
+            onChange={(e) => set("display_name", e.target.value)} className="w-full rounded-[14px] px-4 py-3 text-base" style={fieldStyle} />
         </div>
       </div>}
 
@@ -154,10 +154,10 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
         {IMPROVEMENT_GOALS.map((goal) => {
           const selected = form.main_goals.includes(goal);
           return <button key={goal} type="button" aria-pressed={selected} onClick={() => set("main_goals", toggle(form.main_goals, goal))}
-            className="flex w-full items-center gap-3 rounded-2xl p-4 text-left"
+            className="flex w-full items-center gap-3 rounded-[14px] p-4 text-left"
             style={{ background: WHITE, border: `${selected ? 2 : 1}px solid ${selected ? INK : BORDER}` }}>
             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg" aria-hidden="true"
-              style={{ background: selected ? INK : WHITE, border: `1.5px solid ${selected ? INK : "#c7ccd4"}`, color: WHITE }}>{selected && <Check size={15} strokeWidth={3} />}</span>
+              style={{ background: selected ? INK : WHITE, border: `1.5px solid ${selected ? INK : "var(--pp-line-strong)"}`, color: WHITE }}>{selected && <Check size={15} strokeWidth={3} />}</span>
             <span><strong className="block text-sm" style={{ color: INK }}>{GOAL_LABELS[goal]}</strong>
               <span className="block text-xs" style={{ color: WHITE_DIM }}>{GOAL_HINTS[goal]}</span></span>
           </button>;
@@ -169,7 +169,7 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
           How does each skill usually go for you? 3 means "okay for my level". Skip any you're unsure about. Rate at least 3 to get a starting plan ({ratedCount} rated).
         </p>
         {SKILL_GROUPS.map((group) => <section key={group} className="space-y-3">
-          <h2 className="text-sm font-bold uppercase tracking-wider" style={{ color: WHITE_SUB }}>{group}</h2>
+          <h2 className="text-sm font-bold" style={{ color: WHITE_SUB }}>{group}</h2>
           <div className="grid gap-3 lg:grid-cols-2">
           {SELF_SKILLS.filter((s) => SKILL_INFO[s].group === group).map((skill) => (
             <SkillRater key={skill} skill={skill} value={form.baseline_ratings[skill]} question="Your usual level"

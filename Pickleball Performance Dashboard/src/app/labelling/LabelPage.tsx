@@ -541,7 +541,7 @@ export default function LabelPage() {
                         <td className="pr-2">
                           <select value={l.outcome ?? ""} onChange={(e) => update(l.id, { outcome: (e.target.value || undefined) as Outcome | undefined })}
                             className="rounded-md px-1 py-0.5" style={fieldStyle} aria-label="Outcome">
-                            <option value="">—</option>
+                            <option value="">None</option>
                             {OUTCOMES.map((o) => <option key={o} value={o}>{o}</option>)}
                           </select>
                         </td>

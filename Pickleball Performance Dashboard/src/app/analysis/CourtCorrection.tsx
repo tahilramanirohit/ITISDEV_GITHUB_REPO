@@ -132,11 +132,11 @@ export function CourtCorrection({ file, onConfirm, onCancel, onAutomatic }: {
   const point = (name: CourtLandmark) => draft?.points.find((p) => p.landmark === name)?.pixel;
   return <section aria-label="Review court mapping" className="space-y-3 rounded-xl p-4" style={{ border: `1px solid ${BORDER}` }}>
     <h3 className="text-lg font-bold">Confirm the court before analysis</h3>
-    {onAutomatic && <div className="rounded-2xl p-3" style={{ background: "#e3f6ea" }}>
+    {onAutomatic && <div className="rounded-[14px] p-3" style={{ background: "var(--pp-accent-soft)" }}>
       <p className="text-sm font-bold" style={{ color: "#0b2a1a" }}>Find the court automatically{previewAvailable ? "" : " (recommended on phones)"}</p>
       <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>The analyzer finds the court lines itself after upload. Mark points below only if it gets the court wrong.</p>
-      <button type="button" onClick={onAutomatic} className="mt-2 inline-flex min-h-[44px] items-center rounded-full px-5 text-sm font-bold"
-        style={{ background: "#febc17", color: "#2b2100" }}>Upload and find the court automatically</button>
+      <button type="button" onClick={onAutomatic} className="mt-2 inline-flex min-h-[44px] items-center rounded-[12px] px-5 text-sm font-bold"
+        style={{ background: "#febc17", color: "var(--pp-on-action)" }}>Upload and find the court automatically</button>
     </div>}
     <p className="text-sm" style={{ color: WHITE_DIM }}>Use a steady, fixed-camera view with visible painted lines. The correction applies only until the camera moves or cuts. Yellow points are a proposal, not proof that the court was found correctly.</p>
     <video ref={video} src={url} controls preload="metadata" playsInline onLoadedData={() => {

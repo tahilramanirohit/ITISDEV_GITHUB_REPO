@@ -21,7 +21,7 @@ export function AnalysisStateBadge({ state }: { state: AnalysisUiState }) {
 /** A null fraction draws a moving bar: work is happening, but how much is done is unknown. */
 export function ProgressBar({ fraction, label }: { fraction: number | null; label?: string }) {
   return (
-    <div className="h-3 rounded-full overflow-hidden" style={{ background: "rgba(41,61,242,0.1)" }}
+    <div className="h-3 rounded-full overflow-hidden" style={{ background: "var(--pp-accent-soft)" }}
       role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100}
       aria-valuenow={fraction === null ? undefined : Math.round(fraction * 100)}>
       {fraction === null
@@ -81,10 +81,10 @@ export function AnalysisParamsForm({ onChange, playFormat }: {
         <label className={labelClass} style={labelStyle} htmlFor="player-selection">Choose the player for positioning analysis</label>
         <select id="player-selection" value={mode} className="w-full rounded-xl px-3 py-2 text-sm" style={fieldStyle}
           onChange={(e) => { const v = e.target.value as typeof mode; setMode(v); emit({ mode: v }); }}>
-          <option value="none" className="bg-white">Not selected (no court metrics)</option>
-          <option value="near" className="bg-white">{doubles ? "The most-seen player on the near side" : "The player on the near side"}</option>
-          <option value="far" className="bg-white">{doubles ? "The most-seen player on the far side" : "The player on the far side"}</option>
-          <option value="track" className="bg-white">A specific player number (from the player cards)</option>
+          <option value="none" className="bg-surface">Not selected (no court metrics)</option>
+          <option value="near" className="bg-surface">{doubles ? "The most-seen player on the near side" : "The player on the near side"}</option>
+          <option value="far" className="bg-surface">{doubles ? "The most-seen player on the far side" : "The player on the far side"}</option>
+          <option value="track" className="bg-surface">A specific player number (from the player cards)</option>
         </select>
         {mode === "track" && (
           <input aria-label="Player number" inputMode="numeric" value={trackId} placeholder="e.g. 3"
@@ -104,7 +104,7 @@ export function AnalysisParamsForm({ onChange, playFormat }: {
         <label className={labelClass} style={labelStyle} htmlFor="frame-mode">Analysis detail</label>
         <select id="frame-mode" value={frameMode} className="w-full rounded-xl px-3 py-2 text-sm" style={fieldStyle}
           onChange={(e) => { const v = e.target.value as FrameMode; setFrameMode(v); emit({ frameMode: v }); }}>
-          {FRAME_MODES.map((m) => <option key={m.value} value={m.value} className="bg-white">{m.label}</option>)}
+          {FRAME_MODES.map((m) => <option key={m.value} value={m.value} className="bg-surface">{m.label}</option>)}
         </select>
         <p className="text-xs mt-1" style={{ color: WHITE_DIM }}>{FRAME_MODES.find((m) => m.value === frameMode)?.hint}</p>
         <p className="text-sm mt-3" style={{ color: WHITE_DIM }}>

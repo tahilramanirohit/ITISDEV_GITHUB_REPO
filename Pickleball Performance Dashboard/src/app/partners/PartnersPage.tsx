@@ -89,7 +89,7 @@ function AddPartnerCard({ codes, onCreate, onRedeem, onCancel, busyId }: {
           <div className="flex flex-wrap gap-2">
             <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="e.g. K7P4-QX9M" autoComplete="off"
               autoCapitalize="characters" spellCheck={false} maxLength={20}
-              className="min-w-0 flex-1 px-3 py-2 font-mono text-base font-normal uppercase tracking-wider" style={fieldStyle} />
+              className="min-w-0 flex-1 px-3 py-2 font-mono text-base font-normal" style={fieldStyle} />
             <PrimaryButton type="submit" disabled={linking}><Link2 size={18} aria-hidden="true" /> {linking ? "Linking…" : "Link"}</PrimaryButton>
           </div>
         </label>

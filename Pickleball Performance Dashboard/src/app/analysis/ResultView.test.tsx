@@ -11,7 +11,7 @@ afterEach(cleanup);
 describe("ResultView", () => {
   it("labels test-fixture results so they cannot be mistaken for the player's data", () => {
     render(<ResultView result={parseAnalysisResult(testFixture)} videoUrl={null} />);
-    expect(screen.getByText(/TEST DATA — NOT FROM YOUR VIDEO/)).toBeTruthy();
+    expect(screen.getByText(/Test data. Not from your video/)).toBeTruthy();
     expect(screen.getByText(/None\s+of the numbers below describe your video/)).toBeTruthy();
     expect(screen.getByText(/Coaching is unavailable for sample results/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Play audio coaching" })).toBeNull();

@@ -127,7 +127,7 @@ export function VideoOverlayPlayer({
     const fontPx = Math.max(12, Math.round(canvas.width / 55));
 
     const tag = (text: string, x: number, y: number, bg: string, fg: string) => {
-      ctx.font = `bold ${fontPx}px Inter, sans-serif`;
+      ctx.font = `bold ${fontPx}px Archivo, sans-serif`;
       const w = ctx.measureText(text).width + 12;
       const h = fontPx + 8;
       const tx = Math.min(Math.max(0, x), canvas.width - w);
@@ -223,7 +223,7 @@ export function VideoOverlayPlayer({
 
   return (
     <div className="space-y-2">
-      <div className={`relative rounded-2xl border overflow-hidden min-h-[220px] flex items-center justify-center ${src ? "border-[#d6d5ce] bg-black" : "border-[#d6d5ce] bg-white"}`}>
+      <div className={`relative rounded-[14px] border overflow-hidden min-h-[220px] flex items-center justify-center ${src ? "border-line bg-black" : "border-line bg-surface"}`}>
         {src ? (
           <div className="relative w-full flex items-center justify-center">
             <video ref={setVideo} src={src} controls playsInline className="w-full max-h-[480px] object-contain block" onLoadedMetadata={drawOverlay} />

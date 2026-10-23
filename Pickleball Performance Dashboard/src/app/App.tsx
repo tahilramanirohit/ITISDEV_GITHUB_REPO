@@ -65,7 +65,7 @@ function SetupRequired({ cfg }: { cfg: AppConfig }) {
           </li>
           <li>
             Fill in both lines with values from the Supabase dashboard, <em>Project Settings → API</em>:
-            <pre className="mt-1 rounded-lg p-2 text-xs overflow-x-auto" style={{ background: "#f3f4f6" }}>
+            <pre className="mt-1 rounded-lg p-2 text-xs overflow-x-auto" style={{ background: "var(--pp-surface-2)" }}>
 {`VITE_SUPABASE_URL=https://<project-ref>.supabase.co
 VITE_SUPABASE_ANON_KEY=<the "anon" public key>`}
             </pre>
@@ -160,7 +160,7 @@ function SignedInApp({ sb, cfg }: { sb: SupabaseClient; cfg: AppConfig }) {
   return (
     <OnboardingGate sb={sb} userId={user.id} skip={!!user.is_anonymous && !isGuest}>
     <SignedInShell sb={sb} userId={user.id}
-      right={<span className="truncate rounded-full px-3 py-1.5 text-xs font-semibold" style={{ background: "rgba(127,140,150,0.18)", color: "inherit", maxWidth: "12rem" }}>{account}</span>}>
+      right={<span className="truncate rounded-full px-3 py-1.5 text-xs font-semibold" style={{ background: "var(--pp-surface-2)", color: "inherit", maxWidth: "12rem" }}>{account}</span>}>
       <Suspense fallback={<Loading />}>
         <Routes>
           <Route path="/" element={<HomePage sb={sb} userId={user.id} />} />

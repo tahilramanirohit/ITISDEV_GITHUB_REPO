@@ -30,7 +30,7 @@ const STEPS = [...SKILL_GROUPS, "Wrap-up"] as const;
 
 function Stepper({ label, value, onChange, max }: { label: string; value: number | null; onChange: (v: number | null) => void; max: number }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3" style={{ background: WHITE, border: `1px solid ${BORDER}` }}>
+    <div className="flex items-center justify-between gap-3 rounded-[14px] px-4 py-3" style={{ background: WHITE, border: `1px solid ${BORDER}` }}>
       <span className="text-sm font-semibold" style={{ color: INK }}>{label}</span>
       <span className="flex items-center gap-3">
         <button type="button" aria-label={`Fewer ${label.toLowerCase()}`} disabled={!value} onClick={() => onChange(value && value > 1 ? value - 1 : null)}
@@ -125,7 +125,7 @@ export function SelfAssessmentPanel({ sb, session }: { sb: SupabaseClient; sessi
     <div className="space-y-4">
       <div>
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-xl font-black tracking-tight" style={{ color: INK }}>Rate your game</h2>
+          <h2 className="text-xl font-extrabold tracking-tight" style={{ color: INK }}>Rate your game</h2>
           <span className="text-xs font-bold" style={{ color: WHITE_SUB }}>{ratedCount} of {SELF_SKILLS.length} rated</span>
         </div>
         {/* Steps as underlined tabs; any step can be opened directly. */}
@@ -156,7 +156,7 @@ export function SelfAssessmentPanel({ sb, session }: { sb: SupabaseClient; sessi
           <label className={labelClass} style={labelStyle} htmlFor="struggle">What gave you the most trouble? (optional)</label>
           <textarea id="struggle" rows={3} maxLength={500} value={draft.biggest_struggle}
             onChange={(e) => setDraft((d) => ({ ...d, biggest_struggle: e.target.value }))}
-            placeholder="e.g. my dinks kept popping up, I got stuck mid-court" className="w-full rounded-2xl px-4 py-3 text-base" style={fieldStyle} />
+            placeholder="e.g. my dinks kept popping up, I got stuck mid-court" className="w-full rounded-[14px] px-4 py-3 text-base" style={fieldStyle} />
         </div>
       </div>}
 
@@ -166,7 +166,7 @@ export function SelfAssessmentPanel({ sb, session }: { sb: SupabaseClient; sessi
       {error && <Notice tone="error">{error}</Notice>}
       <div className="flex gap-2 lg:max-w-xl">
         {step > 0 && <button type="button" onClick={() => setStep(step - 1)} aria-label="Previous step"
-          className="flex min-h-[48px] w-14 items-center justify-center rounded-2xl" style={{ border: `1px solid ${BORDER}`, background: WHITE }}><ArrowLeft size={18} /></button>}
+          className="flex min-h-[48px] w-14 items-center justify-center rounded-[14px]" style={{ border: `1px solid ${BORDER}`, background: WHITE }}><ArrowLeft size={18} /></button>}
         {last
           ? <PrimaryButton type="button" className="flex-1" disabled={busy || ratedCount < MIN_RATED_SKILLS} onClick={() => void save()}>{busy ? "Saving…" : "See my practice plan"}</PrimaryButton>
           : <PrimaryButton type="button" className="flex-1" onClick={() => { setError(""); setStep(step + 1); window.scrollTo({ top: 0 }); }}>Next</PrimaryButton>}

@@ -1,84 +1,142 @@
 @custom-variant dark (&:is(.dark *));
 
+/* Night Court palette. Light is the default; dark follows the device unless the
+   player picks one in Settings (data-theme on <html>). */
 :root {
-  --font-size: 16px;
-  --background: #071a3e;
-  --foreground: #ffffff;
-  --card: #0d2554;
-  --card-foreground: #ffffff;
-  --popover: #0d2554;
-  --popover-foreground: #ffffff;
-  --primary: #b8f523;
-  --primary-foreground: #1a3300;
-  --secondary: #0f3070;
-  --secondary-foreground: #ffffff;
-  --muted: #0f3070;
-  --muted-foreground: #7aaad8;
-  --accent: #f97316;
-  --accent-foreground: #ffffff;
-  --destructive: #f97316;
-  --destructive-foreground: #ffffff;
-  --border: rgba(100,160,255,0.18);
-  --input: #0f3070;
-  --input-background: #0f3070;
-  --switch-background: #1a5fb4;
-  --font-weight-medium: 500;
-  --font-weight-normal: 400;
-  --ring: #b8f523;
-  --chart-1: #b8f523;
-  --chart-2: #f97316;
-  --chart-3: #38bdf8;
-  --chart-4: #a78bfa;
-  --chart-5: #fb923c;
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: #030213;
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --pp-bg: #f4f6f3;
+  --pp-surface: #ffffff;
+  --pp-surface-2: #eaefe9;
+  --pp-ink: #121a15;
+  --pp-ink-2: #36413a;
+  --pp-ink-3: #56615a;
+  --pp-line: #dfe5df;
+  --pp-line-strong: #8c988f;
+  --pp-accent: #2f8f46;
+  --pp-accent-ink: #1f6b35;
+  --pp-accent-soft: #e2f0e4;
+  --pp-action: #d9f75a;
+  --pp-on-action: #121a15;
+  --pp-action-edge: #b5d33a;
+  --pp-action-soft: #f1fbcf;
+  --pp-strong: #121a15;
+  --pp-on-strong: #ffffff;
+  --pp-hero: #0f1a14;
+  --pp-on-hero: #eef3ee;
+  --pp-warn: #a64a0b;
+  --pp-danger: #b4233f;
+  --pp-violet: #5e45c4;
+  --pp-focus: #1f6b35;
+  color-scheme: light;
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --pp-bg: #0f1a14;
+    --pp-surface: #17251d;
+    --pp-surface-2: #1f3127;
+    --pp-ink: #eef3ee;
+    --pp-ink-2: #c8d4cb;
+    --pp-ink-3: #a3b3a8;
+    --pp-line: #2c4434;
+    --pp-line-strong: #5d7a66;
+    --pp-accent: #d9f75a;
+    --pp-accent-ink: #d9f75a;
+    --pp-accent-soft: #243826;
+    --pp-action: #d9f75a;
+    --pp-on-action: #0f1a14;
+    --pp-action-edge: #d9f75a;
+    --pp-action-soft: #26341a;
+    --pp-strong: #eef3ee;
+    --pp-on-strong: #0f1a14;
+    --pp-hero: #0b140f;
+    --pp-on-hero: #eef3ee;
+    --pp-warn: #f5a05c;
+    --pp-danger: #ff8fa3;
+    --pp-violet: #c3b4ff;
+    --pp-focus: #d9f75a;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --pp-bg: #0f1a14;
+  --pp-surface: #17251d;
+  --pp-surface-2: #1f3127;
+  --pp-ink: #eef3ee;
+  --pp-ink-2: #c8d4cb;
+  --pp-ink-3: #a3b3a8;
+  --pp-line: #2c4434;
+  --pp-line-strong: #5d7a66;
+  --pp-accent: #d9f75a;
+  --pp-accent-ink: #d9f75a;
+  --pp-accent-soft: #243826;
+  --pp-action: #d9f75a;
+  --pp-on-action: #0f1a14;
+  --pp-action-edge: #d9f75a;
+  --pp-action-soft: #26341a;
+  --pp-strong: #eef3ee;
+  --pp-on-strong: #0f1a14;
+  --pp-hero: #0b140f;
+  --pp-on-hero: #eef3ee;
+  --pp-warn: #f5a05c;
+  --pp-danger: #ff8fa3;
+  --pp-violet: #c3b4ff;
+  --pp-focus: #d9f75a;
+  color-scheme: dark;
+}
+
+/* Library components (components/ui) read these names. */
+:root {
+  --font-size: 16px;
+  --background: var(--pp-bg);
+  --foreground: var(--pp-ink);
+  --card: var(--pp-surface);
+  --card-foreground: var(--pp-ink);
+  --popover: var(--pp-surface);
+  --popover-foreground: var(--pp-ink);
+  --primary: var(--pp-strong);
+  --primary-foreground: var(--pp-on-strong);
+  --secondary: var(--pp-surface-2);
+  --secondary-foreground: var(--pp-ink);
+  --muted: var(--pp-surface-2);
+  --muted-foreground: var(--pp-ink-3);
+  --accent: var(--pp-accent-soft);
+  --accent-foreground: var(--pp-ink);
+  --destructive: var(--pp-danger);
+  --destructive-foreground: #ffffff;
+  --border: var(--pp-line);
+  --input: var(--pp-line);
+  --input-background: var(--pp-surface);
+  --switch-background: var(--pp-line-strong);
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+  --ring: var(--pp-focus);
+  --chart-1: var(--pp-accent);
+  --chart-2: var(--pp-warn);
+  --chart-3: var(--pp-ink-3);
+  --chart-4: var(--pp-violet);
+  --chart-5: var(--pp-danger);
+  --radius: 0.75rem;
+  --sidebar: var(--pp-surface);
+  --sidebar-foreground: var(--pp-ink);
+  --sidebar-primary: var(--pp-strong);
+  --sidebar-primary-foreground: var(--pp-on-strong);
+  --sidebar-accent: var(--pp-surface-2);
+  --sidebar-accent-foreground: var(--pp-ink);
+  --sidebar-border: var(--pp-line);
+  --sidebar-ring: var(--pp-focus);
 }
 
 @theme inline {
+  --color-ink: var(--pp-ink);
+  --color-ink-2: var(--pp-ink-2);
+  --color-ink-3: var(--pp-ink-3);
+  --color-surface: var(--pp-surface);
+  --color-sunken: var(--pp-surface-2);
+  --color-line: var(--pp-line);
+  --color-page: var(--pp-bg);
+  --font-display: 'Archivo', system-ui, sans-serif;
+  --font-body: 'IBM Plex Sans', system-ui, sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -126,6 +184,22 @@
 
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-body);
+    font-optical-sizing: auto;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--pp-focus);
+    outline-offset: 2px;
+  }
+
+  /* Stats and scores line up. */
+  .tabular, time, td, [data-numeric] {
+    font-variant-numeric: tabular-nums;
   }
 
   /**
@@ -139,19 +213,19 @@
 
   h1 {
     font-size: var(--text-2xl);
-    font-weight: var(--font-weight-medium);
+    font-weight: 800;
     line-height: 1.5;
   }
 
   h2 {
     font-size: var(--text-xl);
-    font-weight: var(--font-weight-medium);
+    font-weight: 700;
     line-height: 1.5;
   }
 
   h3 {
     font-size: var(--text-lg);
-    font-weight: var(--font-weight-medium);
+    font-weight: 700;
     line-height: 1.5;
   }
 

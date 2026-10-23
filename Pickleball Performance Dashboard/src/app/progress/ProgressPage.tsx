@@ -2,8 +2,8 @@ import { useMemo } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { TrendingDown, TrendingUp, Minus } from "lucide-react";
 import { buildSelfReport, SELF_SKILLS, SKILL_INFO, type SelfSkill } from "../../lib/coaching/selfAssessment";
-import { BORDER, DISPLAY_FONT, GREEN, INK, NAVY, OPTIC, ORANGE, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
-import { Card, Notice, PageHero, SectionTitle, Sheet } from "../shell/primitives";
+import { ACCENT, ACCENT_INK, BORDER, DISPLAY_FONT, GREEN, INK, INK_3, ORANGE, SURFACE_2, WHITE_DIM, WHITE_SUB } from "../theme";
+import { Card, Notice, PageHero, SectionTitle, Sheet, cardStyle, pressable } from "../shell/primitives";
 import { useSessionsData } from "../sessions/sessionUi";
 
 type Point = { sessionId: string; date: string; title: string; overall: number; ratings: Partial<Record<SelfSkill, number>> };
@@ -43,7 +43,7 @@ export default function ProgressPage({ sb }: { sb: SupabaseClient }) {
 
   return (
     <div>
-      <PageHero eyebrow="Self-rated" title="Progress" subtitle="How your own skill ratings change over time. Video measurements are not turned into skill scores." />
+      <PageHero title="Progress" subtitle="How your own skill ratings change over time. Video measurements are not turned into skill scores." />
       <Sheet>
       <div className="space-y-6">
       {error && <Notice tone="error">{error}</Notice>}
@@ -58,7 +58,7 @@ export default function ProgressPage({ sb }: { sb: SupabaseClient }) {
             <a href={`#/sessions/${s.id}?tab=plan`} className="flex min-h-[48px] items-center justify-between gap-3 py-2 text-sm">
               <span className="min-w-0"><span className="block truncate font-semibold" style={{ color: INK }}>{s.title}</span>
                 <span className="text-xs" style={{ color: WHITE_SUB }}>{s.session_date}</span></span>
-              <span className="shrink-0 font-bold" style={{ color: GREEN }}>Rate this session →</span>
+              <span className="shrink-0 font-bold" style={{ color: GREEN }}>Rate it</span>
             </a>
           </li>)}
         </ul>
@@ -68,24 +68,25 @@ export default function ProgressPage({ sb }: { sb: SupabaseClient }) {
         <Card>
           <p className="text-base font-bold" style={{ color: INK }}>Nothing to chart yet</p>
           <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Rate at least 3 skills for a session and it shows up here. Two or more rated sessions show trends.</p>
-          <a href="#/new?mode=self" className="mt-4 inline-flex min-h-[44px] items-center rounded-full px-5 text-sm font-bold" style={{ background: INK, color: WHITE }}>Log and rate a new session</a>
+          <a href="#/new?mode=self" className={`mt-4 inline-flex min-h-[48px] items-center rounded-[12px] px-5 text-[0.95rem] font-bold ${pressable}`} style={{ background: "var(--pp-strong)", color: "var(--pp-on-strong)" }}>Log and rate a game</a>
         </Card>
       ) : <div className="space-y-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
-        <section className="rounded-2xl p-5" style={{ background: NAVY, color: WHITE }}>
+        <section className="rounded-[14px] p-5" style={cardStyle}>
           <div className="flex items-end justify-between gap-3">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider" style={{ color: OPTIC }}>Average self rating</p>
-              <p className="text-4xl font-extrabold" style={{ fontFamily: DISPLAY_FONT }}>{last!.overall.toFixed(1)}<span className="text-lg" style={{ color: "#a7c4b2" }}>/5</span></p>
+              <h2 className="text-[15px] font-bold" style={{ fontFamily: DISPLAY_FONT }}>Average self rating</h2>
+              <p className="text-4xl font-extrabold tabular-nums" style={{ fontFamily: DISPLAY_FONT }}>{last!.overall.toFixed(1)}<span className="text-lg font-semibold" style={{ color: INK_3 }}>/5</span></p>
             </div>
-            {change != null && <p className="text-sm font-bold" style={{ color: change > 0 ? OPTIC : change < 0 ? "#ffb08a" : "#c9dccf" }}>
-              {change > 0 ? "+" : ""}{change.toFixed(1)} since first</p>}
+            {change != null && <p className="text-sm font-bold tabular-nums" style={{ color: change > 0 ? ACCENT_INK : change < 0 ? ORANGE : INK_3 }}>
+              {change > 0 ? "+" : ""}{change.toFixed(1)} since your first rating</p>}
           </div>
-          <div className="mt-4 flex h-28 items-end gap-1.5 lg:h-48" role="img" aria-label={`Average rating for the last ${recent.length} rated sessions`}>
-            {recent.map((p, i) => <div key={p.sessionId} className="flex h-full flex-1 flex-col justify-end" title={`${p.title}: ${p.overall.toFixed(1)}`}>
-              <div className="w-full rounded-t-lg" style={{ height: `${(p.overall / 5) * 100}%`, background: i === recent.length - 1 ? OPTIC : "rgba(254,188,23,0.45)" }} />
+          <div className="mt-4 flex h-32 items-end gap-2 border-b lg:h-48" style={{ borderColor: BORDER }} role="img" aria-label={`Average rating for the last ${recent.length} rated sessions`}>
+            {recent.map((p, i) => <div key={p.sessionId} className="flex h-full flex-1 flex-col items-center justify-end gap-1" title={`${p.title}: ${p.overall.toFixed(1)}`}>
+              <span className="text-xs font-bold tabular-nums" style={{ color: i === recent.length - 1 ? ACCENT_INK : INK_3 }}>{p.overall.toFixed(1)}</span>
+              <div className="w-full rounded-t-[6px]" style={{ height: `${(p.overall / 5) * 100}%`, background: i === recent.length - 1 ? ACCENT : SURFACE_2 }} />
             </div>)}
           </div>
-          <p className="mt-2 text-xs" style={{ color: "#a7c4b2" }}>{recent.length} most recent rated session{recent.length === 1 ? "" : "s"}</p>
+          <p className="mt-2 text-xs" style={{ color: INK_3 }}>Your {recent.length} most recent rated game{recent.length === 1 ? "" : "s"}. Your own ratings, not measured scores.</p>
         </section>
 
         <section className="space-y-3">

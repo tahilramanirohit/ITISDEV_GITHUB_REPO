@@ -53,7 +53,7 @@ export function ZoneTimePanel({ result, myPlayerId }: { result: AnalysisResultV1
             const mine = row.player_id === myPlayerId;
             return (
               <li key={row.player_id} className="rounded-xl p-3"
-                style={{ border: `1px solid ${mine ? "#293df2" : BORDER}`, background: mine ? "rgba(41,61,242,0.04)" : undefined }}>
+                style={{ border: `1px solid ${mine ? "#293df2" : BORDER}`, background: mine ? "var(--pp-surface-2)" : undefined }}>
                 <div className="flex items-center gap-3">
                   {person?.thumbnail && <img src={person.thumbnail} alt="" className="h-12 w-auto rounded" />}
                   <div className="min-w-0 flex-1">

@@ -1,5 +1,5 @@
 import { skillInfo, type SelfSkill, type SkillRating } from "../../lib/coaching/selfAssessment";
-import { BORDER, DEEP, GREEN, INK, OPTIC, WHITE_DIM, WHITE_SUB } from "../theme";
+import { BORDER, DEEP, GREEN, INK, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Card, rovingIndex } from "../shell/primitives";
 
 /** One skill's 1-5 rating as a W3C radio group. Shared by session rating and onboarding. */
@@ -29,8 +29,8 @@ export function SkillRater({ skill, value, onChange, question, playFormat }: {
               onChange((next + 1) as SkillRating);
               document.getElementById(`rate-${skill}-${next + 1}`)?.focus();
             }}
-            onClick={() => onChange(n)} className="min-h-[44px] rounded-full text-base font-black transition-colors"
-            style={selected ? { background: DEEP, color: OPTIC, border: `1.5px solid ${DEEP}` } : { background: "#ffffff", color: INK, border: `1.5px solid ${BORDER}` }}>{n}</button>;
+            onClick={() => onChange(n)} className="min-h-[44px] rounded-full text-base font-extrabold transition-colors"
+            style={selected ? { background: DEEP, color: "var(--pp-on-strong)", border: `1.5px solid ${DEEP}` } : { background: "var(--pp-surface)", color: INK, border: `1.5px solid ${BORDER}` }}>{n}</button>;
         })}
       </div>
       <p className="mt-2 min-h-[1.25rem] text-sm font-semibold" style={{ color: value ? GREEN : WHITE_SUB }}>

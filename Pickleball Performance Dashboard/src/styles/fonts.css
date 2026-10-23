@@ -1,2 +1,2 @@
-/* One family keeps the first paint fast. The sample design preview loads its own display face. */
-/* Inter is linked from index.html (with preconnect) so it starts loading before the CSS bundle. */
+/* Archivo (headings) and IBM Plex Sans (body) are linked from index.html with a
+   preconnect so they start loading before the CSS bundle. */

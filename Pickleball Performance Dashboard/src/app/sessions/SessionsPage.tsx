@@ -34,7 +34,7 @@ export default function SessionsPage({ sb, userId }: { sb: SupabaseClient; userI
   return (
     <div>
       <PageHero eyebrow="Your games" title="Sessions" subtitle={items ? `${items.length} logged` : undefined}
-        action={<a href="#/new" aria-label="Log a session" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl" style={{ background: YELLOW, color: YELLOW_INK }}><Plus size={22} /></a>} />
+        action={<a href="#/new" aria-label="Log a session" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px]" style={{ background: YELLOW, color: YELLOW_INK }}><Plus size={22} /></a>} />
       <Sheet>
       <div className="space-y-5">
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 lg:mx-0 lg:flex-wrap lg:px-0" role="group" aria-label="Filter sessions">
