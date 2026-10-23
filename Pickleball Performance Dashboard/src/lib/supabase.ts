@@ -1,12 +1,15 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { config } from "./config";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+// The browser only ever gets the public anon key; row-level security enforces
+// per-user access. The service-role key lives in the worker's environment only.
+export const supabase: SupabaseClient | null = config.supabase
+  ? createClient(config.supabase.url, config.supabase.anonKey, {
+      auth: { persistSession: true, autoRefreshToken: true },
+    })
+  : null;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error(
-    "Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY in .env.local"
-  );
+export function requireSupabase(): SupabaseClient {
+  if (!supabase) throw new Error("Supabase is not configured (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).");
+  return supabase;
 }
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);

@@ -1,0 +1,233 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import App from "./App";
+import { getConfig } from "../lib/config";
+
+// Values that only exist in the sample-data design preview.
+const SAMPLE_MARKERS = ["ALEX GARCIA", "76.4%", "18W", "Pearson", "+12 wks", "DOMINANT STYLE", "coach@picklepro.app"];
+
+const prodConfig = getConfig({ DEV: false });
+const devConfig = getConfig({ DEV: true });
+
+afterEach(() => {
+  cleanup();
+  window.location.hash = "";
+});
+
+function expectNoSampleData() {
+  const text = document.body.textContent ?? "";
+  for (const marker of SAMPLE_MARKERS) expect(text).not.toContain(marker);
+}
+
+describe("application entry point", () => {
+  it("without Supabase, production shows setup instructions and no fabricated numbers", async () => {
+    render(<App cfg={prodConfig} sb={null} />);
+    expect(await screen.findByText("Supabase is not configured")).toBeTruthy();
+    expect(screen.queryByText(/Design preview/)).toBeNull();
+    expect(screen.getByText("VITE_SUPABASE_URL is missing or empty.")).toBeTruthy();
+    expectNoSampleData();
+  });
+
+  it("the old demo login no longer exists", async () => {
+    render(<App cfg={prodConfig} sb={null} />);
+    await screen.findByText("Supabase is not configured");
+    expect(document.body.textContent).not.toContain("demo123");
+    expect(screen.queryByText(/Demo account/i)).toBeNull();
+  });
+
+  it("the shot labelling page works without Supabase or an account", async () => {
+    window.location.hash = "#/label";
+    render(<App cfg={prodConfig} sb={null} />);
+    expect(await screen.findByText("Label shots", { selector: "h2, h3, [class*='font']" })).toBeTruthy();
+    expect(screen.getByLabelText(/1\. Video/)).toBeTruthy();
+    expect(screen.queryByText("Supabase is not configured")).toBeNull();
+  });
+
+  it("explains data use without an account", async () => {
+    window.location.hash = "#/privacy";
+    render(<App cfg={prodConfig} sb={null} />);
+    expect(await screen.findByRole("heading", { name: "Your data and privacy" })).toBeTruthy();
+    expect(screen.getByText(/deleted automatically 30 days after analysis/)).toBeTruthy();
+  });
+
+  it("production builds refuse the design-preview route", async () => {
+    window.location.hash = "#/design-preview";
+    render(<App cfg={prodConfig} sb={null} />);
+    expect(await screen.findByText(/not available in this build/)).toBeTruthy();
+    expectNoSampleData();
+  });
+
+  it("the design preview, when enabled, is visibly labelled as sample data", async () => {
+    window.location.hash = "#/design-preview";
+    render(<App cfg={devConfig} sb={null} />);
+    expect(await screen.findByText(/DESIGN PREVIEW — sample data/, {}, { timeout: 5000 })).toBeTruthy();
+    expect(screen.getAllByText("SAMPLE DATA").length).toBeGreaterThanOrEqual(4);
+  });
+});
+
+// Minimal stand-in for the Supabase client: signed out until signInAnonymously().
+// `profile` is what the profiles table holds; writes to it are kept in `upserts`.
+function fakeSupabase({ rpcError = null as { message: string } | null, profile = null as Record<string, unknown> | null } = {}) {
+  let listener: ((event: string, session: unknown) => void) | null = null;
+  const upserts: Record<string, unknown>[] = [];
+  const makeQuery = (table: string): any => {
+    const result = () => table === "profiles" ? { data: profile, error: null } : { data: [], error: null };
+    const query: any = new Proxy({}, {
+      get: (_t, prop) => prop === "then" ? (resolve: (v: unknown) => void) => resolve(result())
+        : prop === "upsert" ? (row: Record<string, unknown>) => {
+          upserts.push(row);
+          if (table === "profiles") profile = { ...(profile ?? {}), ...row };
+          return query;
+        }
+        : prop === "maybeSingle" || prop === "single" ? async () => result()
+        : () => query,
+    });
+    return query;
+  };
+  const sb = {
+    upserts,
+    auth: {
+      getSession: vi.fn(async () => ({ data: { session: null } })),
+      onAuthStateChange: vi.fn((cb: typeof listener) => {
+        listener = cb;
+        return { data: { subscription: { unsubscribe: () => {} } } };
+      }),
+      signInAnonymously: vi.fn(async () => {
+        listener?.("SIGNED_IN", { user: { id: "guest", is_anonymous: true } });
+        return { error: null };
+      }),
+      signOut: vi.fn(async () => { listener?.("SIGNED_OUT", null); return { error: null }; }),
+    },
+    rpc: vi.fn(async () => ({ data: 4, error: rpcError })),
+    from: vi.fn((table: string) => makeQuery(table)),
+  };
+  return sb;
+}
+
+const onboarded = { id: "guest", display_name: "Sam", onboarding_completed_at: "2026-10-06T00:00:00Z", baseline_ratings: {} };
+
+describe("dev mode entry", () => {
+  it("lets a public trial visitor enter a private guest session without seeding mock data", async () => {
+    const sb = fakeSupabase({ profile: onboarded });
+    const cfg = getConfig({ DEV: false, VITE_ENABLE_GUEST_MODE: "true" });
+    render(<App cfg={cfg} sb={sb as unknown as SupabaseClient} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Try with my own video/ }));
+    // Shown in both the phone top bar and the desktop sidebar.
+    expect((await screen.findAllByText("Private guest")).length).toBeGreaterThan(0);
+    expect(sb.auth.signInAnonymously).toHaveBeenCalledOnce();
+    expect(sb.rpc).not.toHaveBeenCalled();
+    // Sign-out lives on the Profile tab of the mobile layout.
+    fireEvent.click(within(screen.getByRole("navigation", { name: "Main" })).getByRole("link", { name: "Profile" }));
+    expect(await screen.findByRole("button", { name: "Leave guest session" })).toBeTruthy();
+  });
+
+  it("is hidden in production builds by default", async () => {
+    render(<App cfg={{ ...prodConfig, supabase: { url: "x", anonKey: "y" } }} sb={fakeSupabase() as unknown as SupabaseClient} />);
+    await screen.findByRole("button", { name: "Sign in" });
+    expect(screen.queryByRole("button", { name: /Try Hasa with sample sessions/ })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Explore sample dashboard" })).toBeNull();
+  });
+
+  it("links to the labelled sample dashboard in a trial build", async () => {
+    const cfg = getConfig({ DEV: false, VITE_ENABLE_DESIGN_PREVIEW: "true", VITE_TRIAL_NO_WORKER: "true" });
+    render(<App cfg={cfg} sb={fakeSupabase() as unknown as SupabaseClient} />);
+    expect((await screen.findByRole("link", { name: "Explore sample dashboard" })).getAttribute("href"))
+      .toBe("#/design-preview");
+    expect(screen.getByText(/Video analysis is not running on this public trial/)).toBeTruthy();
+  });
+
+  it("offers guest testing on an explicitly enabled production preview", async () => {
+    const sb = fakeSupabase();
+    const previewConfig = getConfig({ DEV: false, PROD: true, VITE_ENABLE_DEV_MODE: "true" });
+    render(<App cfg={previewConfig} sb={sb as unknown as SupabaseClient} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Try Hasa with sample sessions/ }));
+    // Shown in both the phone top bar and the desktop sidebar.
+    expect((await screen.findAllByText("Dev mode (mock data)")).length).toBeGreaterThan(0);
+    expect(sb.auth.signInAnonymously).toHaveBeenCalledOnce();
+  });
+
+  it("signs in as a guest, seeds mock sessions, and enters the app", async () => {
+    const sb = fakeSupabase();
+    render(<App cfg={devConfig} sb={sb as unknown as SupabaseClient} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Try Hasa with sample sessions/ }));
+    // Shown in both the phone top bar and the desktop sidebar.
+    expect((await screen.findAllByText("Dev mode (mock data)")).length).toBeGreaterThan(0);
+    expect(sb.auth.signInAnonymously).toHaveBeenCalledOnce();
+    const [fn, args] = sb.rpc.mock.calls[0] as unknown as [string, { p_sessions: unknown[] }];
+    expect(fn).toBe("seed_dev_mock_data");
+    expect(args.p_sessions.length).toBeGreaterThan(0);
+    fireEvent.click(within(screen.getByRole("navigation", { name: "Main" })).getByRole("link", { name: "Profile" }));
+    expect(await screen.findByRole("button", { name: "Exit dev mode" })).toBeTruthy();
+  });
+
+  it("explains how to fix a missing database function and stays signed out", async () => {
+    const sb = fakeSupabase({ rpcError: { message: "Could not find the function public.seed_dev_mock_data" } });
+    render(<App cfg={devConfig} sb={sb as unknown as SupabaseClient} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Try Hasa with sample sessions/ }));
+    expect(await screen.findByText(/Apply the database migrations/)).toBeTruthy();
+    await waitFor(() => expect(sb.auth.signOut).toHaveBeenCalled());
+  });
+});
+
+describe("mobile app layout", () => {
+  it("shows bottom tabs and offers rating without video when logging a session", async () => {
+    const sb = fakeSupabase({ profile: onboarded });
+    const cfg = getConfig({ DEV: false, VITE_ENABLE_GUEST_MODE: "true" });
+    render(<App cfg={cfg} sb={sb as unknown as SupabaseClient} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Try with my own video/ }));
+    const nav = await screen.findByRole("navigation", { name: "Main" });
+    for (const name of ["Home", "Sessions", "Log", "Progress", "Profile"]) {
+      expect(within(nav).getByRole("link", { name })).toBeTruthy();
+    }
+    fireEvent.click(within(nav).getByRole("link", { name: "Log" }));
+    // Desktop sidebar offers the same destinations.
+    const sidebar = screen.getByRole("navigation", { name: "Sidebar" });
+    for (const name of ["Home", "Sessions", "Progress", "Profile"]) expect(within(sidebar).getByRole("link", { name })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: /Rate my own game/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Analyze a video/ })).toBeTruthy();
+  });
+});
+
+describe("getting to know the player", () => {
+  it("asks a new player about their game once, then opens the app", async () => {
+    const sb = fakeSupabase();
+    const cfg = getConfig({ DEV: false, VITE_ENABLE_GUEST_MODE: "true" });
+    render(<App cfg={cfg} sb={sb as unknown as SupabaseClient} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Try with my own video/ }));
+    expect(await screen.findByText("Let's get to know your game")).toBeTruthy();
+    expect(screen.queryByRole("navigation", { name: "Main" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByText("Tell us what to call you.")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("What should we call you?"), { target: { value: "Sam" } });
+    // No age gate: younger players can use PicklePro too.
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    fireEvent.click(await screen.findByRole("button", { name: "1–2 years" }));
+    fireEvent.click(screen.getByRole("button", { name: "About once a week" }));
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Intermediate" }));
+    fireEvent.click(screen.getByRole("button", { name: "Winning more games" }));
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Court positioning/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    fireEvent.click(await screen.findByRole("radio", { name: /^Dinking 2 of 5/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Finish and see my plan" }));
+
+    expect(await screen.findByRole("navigation", { name: "Main" })).toBeTruthy();
+    expect(sb.upserts[0]).toMatchObject({
+      id: "guest", display_name: "Sam", years_playing: 1.5, play_frequency: "weekly",
+      self_level: "Intermediate", play_reasons: ["compete"], main_goals: ["positioning"], baseline_ratings: { dinking: 2 },
+    });
+    expect(sb.upserts[0].onboarding_completed_at).toBeTruthy();
+  });
+
+  it("is skipped in dev mode with sample sessions", async () => {
+    const sb = fakeSupabase();
+    render(<App cfg={devConfig} sb={sb as unknown as SupabaseClient} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Try Hasa with sample sessions/ }));
+    expect(await screen.findByRole("navigation", { name: "Main" })).toBeTruthy();
+    expect(screen.queryByText("Let's get to know your game")).toBeNull();
+  });
+});

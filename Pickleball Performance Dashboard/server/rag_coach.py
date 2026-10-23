@@ -1,29 +1,21 @@
+"""Experimental RAG coaching prototype (outside increments 1–2).
+
+Only imported by main.py when PICKLEPRO_ENABLE_EXPERIMENTAL_RAG=1. The vector
+store and the Claude client are created on first use, so importing this module
+does not download the embedding model or require an API key.
+"""
+import logging
 import os
-import json
-import chromadb
-from chromadb.utils import embedding_functions
+from functools import lru_cache
+from typing import List, Literal, Optional
+
 import anthropic
 from pydantic import BaseModel
-from typing import List, Optional
 
-# Load API key securely on the backend
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+logger = logging.getLogger(__name__)
 
-# ── IN-MEMORY VECTOR STORE & STRATEGY DATABASE ─────────────────────────────
-chroma_client = chromadb.Client()
-
-# Fix WinError 5 by explicitly creating the ONNX embedding function 
-# and manually setting its download path to bypass the locked .cache folder.
-from chromadb.utils.embedding_functions import ONNXMiniLM_L6_V2
-
-local_cache_path = os.path.join(os.getcwd(), ".chroma_cache")
-os.makedirs(local_cache_path, exist_ok=True)
-
-default_ef = ONNXMiniLM_L6_V2()
-default_ef.DOWNLOAD_PATH = local_cache_path
-
-# ChromaDB acts as our vector store for the MVP (replacing pgvector for local testing)
-collection = chroma_client.create_collection(name="pickleball_rules_and_strategy", embedding_function=default_ef)
+# Override with PICKLEPRO_RAG_MODEL to try another Claude model.
+RAG_MODEL = os.getenv("PICKLEPRO_RAG_MODEL", "claude-opus-5-5")
 
 KB_DOCS = [
     {
@@ -43,12 +35,35 @@ KB_DOCS = [
     }
 ]
 
-# Insert documents into Chroma Vector Store for fast semantic retrieval
-collection.add(
-    documents=[doc["content"] for doc in KB_DOCS],
-    metadatas=[{"title": doc["title"]} for doc in KB_DOCS],
-    ids=[doc["id"] for doc in KB_DOCS]
-)
+
+@lru_cache(maxsize=1)
+def _collection():
+    # ChromaDB acts as the vector store for this prototype (instead of pgvector).
+    import chromadb
+    from chromadb.utils.embedding_functions import ONNXMiniLM_L6_V2
+
+    # Keep the ONNX download in the working directory; on Windows the default
+    # user cache folder can be locked (WinError 5).
+    embedding = ONNXMiniLM_L6_V2()
+    embedding.DOWNLOAD_PATH = os.path.join(os.getcwd(), ".chroma_cache")
+    os.makedirs(embedding.DOWNLOAD_PATH, exist_ok=True)
+
+    collection = chromadb.Client().get_or_create_collection(
+        name="pickleball_rules_and_strategy", embedding_function=embedding)
+    collection.upsert(
+        documents=[doc["content"] for doc in KB_DOCS],
+        metadatas=[{"title": doc["title"]} for doc in KB_DOCS],
+        ids=[doc["id"] for doc in KB_DOCS],
+    )
+    return collection
+
+
+@lru_cache(maxsize=1)
+def _client() -> anthropic.Anthropic:
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        raise ValueError("Backend ANTHROPIC_API_KEY is missing. RAG generation aborted.")
+    return anthropic.Anthropic()
+
 
 # ── REQUEST / RESPONSE MODELS ──────────────────────────────────────────────
 class PlayerGoals(BaseModel):
@@ -66,88 +81,72 @@ class Metrics(BaseModel):
 class RAGRequest(BaseModel):
     playerGoals: PlayerGoals
     metrics: Metrics
+    playerName: Optional[str] = None
+    sessionDate: Optional[str] = None
 
 class RAGRecommendation(BaseModel):
-    priority: str
+    priority: Literal["HIGH", "MED", "LOW"]
     title: str
     body: str
 
-class RAGResponse(BaseModel):
+class CoachOutput(BaseModel):
+    """The part of the response Claude writes; validated by structured outputs."""
     summary: str
     recommendations: List[RAGRecommendation]
+
+class RAGResponse(CoachOutput):
     retrievedDocs: List[str]
-    confidence: float
+
 
 # ── RAG LOGIC FUNCTION ──────────────────────────────────────────────────
 def generate_coach_response(payload: RAGRequest) -> RAGResponse:
-    # 1. RETRIEVAL: Query Vector DB based on player's focus area
-    search_query = f"Pickleball strategy for {payload.playerGoals.focusArea}, dinks, and volleys"
-    results = collection.query(
-        query_texts=[search_query],
-        n_results=3
+    # 1. RETRIEVAL: query the vector store for the player's focus area.
+    results = _collection().query(
+        query_texts=[f"Pickleball strategy for {payload.playerGoals.focusArea}, dinks, and volleys"],
+        n_results=3,
     )
-    
-    retrieved_texts = results['documents'][0] if results['documents'] else []
-    retrieved_titles = [meta['title'] for meta in results['metadatas'][0]] if results['metadatas'] else []
-    context_str = "\n\n".join([f"### {title}\n{text}" for title, text in zip(retrieved_titles, retrieved_texts)])
+    retrieved_texts = results["documents"][0] if results["documents"] else []
+    retrieved_titles = [meta["title"] for meta in results["metadatas"][0]] if results["metadatas"] else []
+    context_str = "\n\n".join(f"### {title}\n{text}" for title, text in zip(retrieved_titles, retrieved_texts))
 
-    # 2. GENERATION: Build RAG prompt with context & Player Baseline Data
+    # 2. GENERATION: the stats come only from the request; nothing is invented.
     system_prompt = (
         "You are PicklePro's AI coaching engine. You generate personalized, data-driven "
         "pickleball post-game analysis for players using retrieved coaching knowledge. "
-        "Be specific, encouraging, and reference exact stats. Use second-person voice."
+        "Be specific and encouraging, reference only the stats you are given, and use second-person voice."
     )
-    
-    user_prompt = f"""
-Player: Alex Garcia | Session: July 8, 2026
-Stats: Dink Rate {payload.metrics.avgDinkRate}% (target {payload.playerGoals.dinkTarget}%) | Kitchen Time {payload.metrics.kitchenTime}% (target {payload.playerGoals.kitchenTarget}%) | Volley Rate {payload.metrics.volleyRate}% (target {payload.playerGoals.volleyTarget}%) | Rally Fatigue Threshold 18 shots
+    header = " | ".join(part for part in (
+        f"Player: {payload.playerName}" if payload.playerName else "",
+        f"Session: {payload.sessionDate}" if payload.sessionDate else "",
+    ) if part)
+    m, g = payload.metrics, payload.playerGoals
+    user_prompt = f"""{header}
+Stats: Dink Rate {m.avgDinkRate}% (target {g.dinkTarget}%) | Kitchen Time {m.kitchenTime}% (target {g.kitchenTarget}%) | Volley Rate {m.volleyRate}% (target {g.volleyTarget}%) | Unforced Errors {m.unforcedErrors}
 
 Retrieved coaching knowledge:
 {context_str}
 
-TASK 1: Write a spoken audio coaching summary (90-110 seconds at 0.92 speech rate).
-Structure: greeting -> descriptive performance -> positioning analysis -> diagnostic finding -> predictive outlook -> 3 specific recommendations -> closing.
-Plain prose only — no markdown, headers, or bullet characters. Conversational tone.
+summary: a spoken audio coaching summary of 90-110 seconds when read aloud.
+Structure: greeting, descriptive performance, positioning analysis, diagnostic finding, predictive outlook, 3 specific recommendations, closing.
+Plain conversational prose only, with no markdown, headers or bullet characters.
 
-TASK 2: Return exactly 3 prescriptive action recommendations.
+recommendations: exactly 3 prescriptive actions, each with a short title and a 2-3 sentence body."""
 
-Format your ENTIRE response as a valid JSON object matching this schema exactly:
-{{
-  "summary": "The plain prose text here...",
-  "recommendations": [
-    {{ "priority": "HIGH" or "MED" or "LOW", "title": "Short title", "body": "2-3 sentences" }}
-  ]
-}}
-"""
+    response = _client().messages.parse(
+        model=RAG_MODEL,
+        max_tokens=16000,
+        system=system_prompt,
+        messages=[{"role": "user", "content": user_prompt.strip()}],
+        output_format=CoachOutput,
+        # If a safety classifier declines, retry server-side on Anthropic's
+        # recommended fallback model instead of returning a refusal.
+        extra_headers={"anthropic-beta": "server-side-fallback-2026-07-01"},
+        extra_body={"fallbacks": "default"},
+    )
+    if response.stop_reason == "refusal":
+        raise RuntimeError("The model declined to generate coaching for this request.")
+    if response.parsed_output is None:
+        raise RuntimeError(f"No coaching output (stop_reason={response.stop_reason}).")
 
-    if not ANTHROPIC_API_KEY:
-        raise ValueError("Backend ANTHROPIC_API_KEY is missing. RAG generation aborted.")
-
-    try:
-        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-        response = client.messages.create(
-            model="claude-3-haiku-20240307",
-            max_tokens=1500,
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_prompt}]
-        )
-        
-        response_text = response.content[0].text.strip()
-        
-        # Extract JSON block securely
-        json_start = response_text.find('{')
-        json_end = response_text.rfind('}') + 1
-        json_str = response_text[json_start:json_end]
-        data = json.loads(json_str)
-        
-        recs = [RAGRecommendation(**rec) for rec in data.get("recommendations", [])]
-        return RAGResponse(
-            summary=data.get("summary", ""),
-            recommendations=recs,
-            retrievedDocs=retrieved_titles,
-            confidence=0.92
-        )
-            
-    except Exception as e:
-        print(f"RAG Generation Error: {e}")
-        raise
+    out = response.parsed_output
+    return RAGResponse(summary=out.summary, recommendations=out.recommendations, retrievedDocs=retrieved_titles)

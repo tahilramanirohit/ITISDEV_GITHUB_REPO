@@ -1,0 +1,90 @@
+{
+  "video": "CHvsBJ.mp4",
+  "labelled_by": "",
+  "time_resolution_s": 0.1,
+  "notes": "Frame-precise labels by the team (30 Sep 2026). Singles; tracker mapping (players 1 and 2) supplied by the labeller for the app run they made.",
+  "identity_scheme": "human",
+  "tracker_mapping": {
+    "1": 1,
+    "2": 2
+  },
+  "shots": [
+    {
+      "t": 2.981,
+      "player": 2,
+      "type": "serve"
+    },
+    {
+      "t": 3.963,
+      "player": 1,
+      "type": "return"
+    },
+    {
+      "t": 5.245,
+      "player": 2,
+      "type": "drive"
+    },
+    {
+      "t": 5.811,
+      "player": 1,
+      "type": "volley"
+    },
+    {
+      "t": 7.093,
+      "player": 2,
+      "type": "drive"
+    },
+    {
+      "t": 7.559,
+      "player": 1,
+      "type": "volley",
+      "outcome": "error"
+    },
+    {
+      "t": 18.749,
+      "player": 2,
+      "type": "serve"
+    },
+    {
+      "t": 19.681,
+      "player": 1,
+      "type": "return"
+    },
+    {
+      "t": 21.013,
+      "player": 2,
+      "type": "drive"
+    },
+    {
+      "t": 22.146,
+      "player": 1,
+      "type": "drive"
+    },
+    {
+      "t": 23.461,
+      "player": 2,
+      "type": "drive"
+    },
+    {
+      "t": 24.044,
+      "player": 1,
+      "type": "volley"
+    },
+    {
+      "t": 24.993,
+      "player": 2,
+      "type": "drop"
+    },
+    {
+      "t": 25.459,
+      "player": 1,
+      "type": "volley"
+    },
+    {
+      "t": 26.092,
+      "player": 2,
+      "type": "volley",
+      "outcome": "error"
+    }
+  ]
+}

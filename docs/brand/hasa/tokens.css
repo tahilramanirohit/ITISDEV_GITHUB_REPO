@@ -1,0 +1,85 @@
+/* Hasa brand tokens (identity 01c). Source of truth: docs/brand/hasa/tokens.json */
+/* Fonts: Bricolage Grotesque 800 (display) and DM Sans 400/700 (body), Google Fonts, display=swap. */
+
+:root {
+  /* colour, light (default) */
+  --paper: #FAF6EA;
+  --surface-raised: #FFFFFF;
+  --surface-sunken: #F1ECDC;
+  --line: #E2DAC2;
+  --ink: #0B2A1A;
+  --ink-muted: #3E5446;
+  --forest: #0F3D24;
+  --brand-surface: #0F3D24;
+  --pickle: #8CC63F;      /* decorative only, never text on paper */
+  --pickle-ink: #2E6B2F;  /* green text, links, positive deltas */
+  --ball: #F5C518;        /* accent only, never text */
+  --action-bg: #0F3D24;
+  --action-ink: #FAF6EA;
+  --focus: #1F7A3A;
+  --danger: #B42318;
+  --warning: #8A5300;
+
+  /* type */
+  --font-display: "Bricolage Grotesque", system-ui, sans-serif;
+  --font-body: "DM Sans", system-ui, sans-serif;
+
+  /* spacing, 4px grid */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  /* radius */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --radius-pill: 999px;
+
+  /* floating layers only (sheets, menus, toasts); cards use a border */
+  --shadow-lift: 0 1px 2px rgba(11, 42, 26, 0.06), 0 8px 24px rgba(11, 42, 26, 0.08);
+}
+
+[data-theme="dark"],
+.dark {
+  --paper: #0B2A1A;
+  --surface-raised: #123522;
+  --surface-sunken: #082114;
+  --line: #24493A;
+  --ink: #F1EEE3;
+  --ink-muted: #B4C2B8;
+  --brand-surface: #1F5C38;
+  --pickle-ink: #A6D86A;
+  --action-bg: #8CC63F;
+  --action-ink: #0B2A1A;
+  --focus: #F5C518;
+  --danger: #FF8A7A;
+  --warning: #F5C518;
+  --shadow-lift: none;
+}
+
+/*
+  Suggested mapping onto the app's existing shadcn/ui theme variables.
+  Point the existing variables at Hasa tokens rather than adding a second theme.
+  Check the format your theme file uses (hex, hsl() or oklch()) and keep it consistent.
+
+  --background            -> var(--paper)
+  --foreground            -> var(--ink)
+  --card / --popover      -> var(--surface-raised)
+  --card-foreground       -> var(--ink)
+  --primary               -> var(--action-bg)
+  --primary-foreground    -> var(--action-ink)
+  --secondary             -> var(--surface-raised)
+  --secondary-foreground  -> var(--ink)
+  --muted / --accent      -> var(--surface-sunken)
+  --muted-foreground      -> var(--ink-muted)
+  --accent-foreground     -> var(--ink)
+  --border / --input      -> var(--line)
+  --ring                  -> var(--focus)
+  --destructive           -> var(--danger)
+  --radius                -> 14px (cards use --radius-lg, 22px)
+  chart colours           -> pickle-ink, forest, ball, ink-muted, line
+*/

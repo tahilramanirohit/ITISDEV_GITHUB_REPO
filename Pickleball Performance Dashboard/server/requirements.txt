@@ -1,8 +1,9 @@
-fastapi
-uvicorn[standard]
-opencv-python-headless
-numpy
-python-multipart
-pydantic
-chromadb
-anthropic
+# Core analysis pipeline, local API, and job worker. Python >= 3.10.
+# Versions are lower bounds that were tested together (see README).
+fastapi>=0.115
+uvicorn[standard]>=0.30
+opencv-python-headless>=4.10
+numpy>=1.26
+python-multipart>=0.0.9
+pydantic>=2.7
+httpx>=0.27

@@ -1,0 +1,1506 @@
+{
+  "schema_version": "1.0",
+  "status": "ok",
+  "data_origin": "test_fixture",
+  "message": "TEST DATA: produced from a synthetic clip by the worker's test_fixture mode. It is not an analysis of your video.",
+  "provenance": {
+    "pipeline_version": "0.7.0-dev",
+    "generated_at": "2026-01-01T00:00:00+00:00",
+    "detector": {
+      "name": "opencv-mog2-motion",
+      "confidence_is_model_score": false
+    },
+    "ball_detector": null,
+    "ball_tracking": null,
+    "source": {
+      "filename": "synthetic_fixture.mp4",
+      "sha256": null
+    }
+  },
+  "video": {
+    "width": 960,
+    "height": 540,
+    "fps": 15.0,
+    "frame_count_reported": 300,
+    "container_duration_s": 20.0
+  },
+  "coverage": {
+    "analyzed_start_s": 0.0,
+    "analyzed_end_s": 20.0,
+    "analyzed_duration_s": 20.0,
+    "frames_decoded": 300,
+    "frames_analyzed": 150,
+    "sample_stride": 2,
+    "decode_failures": 0,
+    "stopped_early_reason": null,
+    "fraction_of_video_analyzed": 1.0,
+    "frames_with_detections": 146,
+    "frames_with_ball_detections": 0,
+    "ball_sample_stride": null,
+    "frames_with_carried_court_map": null,
+    "selected_view_duration_s": null
+  },
+  "calibration": {
+    "method": "manual_landmarks",
+    "court_model": "pickleball_full_court_v1",
+    "landmarks_used": [
+      "far_left_baseline",
+      "far_right_baseline",
+      "near_left_baseline",
+      "near_left_kitchen",
+      "near_right_baseline",
+      "near_right_kitchen"
+    ],
+    "reprojection_rmse_px": 0.003,
+    "reprojection_rmse_m": 0.0,
+    "quality": "good"
+  },
+  "player_selection": {
+    "method": "court_half",
+    "track_id": null,
+    "court_half": "near",
+    "tracked_time_s": 18.667,
+    "tracked_fraction": 0.9333,
+    "ambiguous_frames": 6
+  },
+  "players": [
+    {
+      "player_id": 1,
+      "label": "Near side, right",
+      "on_court": true,
+      "side": "near",
+      "first_seen_s": 0.533,
+      "last_seen_s": 19.867,
+      "observed_frames": 146,
+      "median_court_m": [
+        3.89,
+        3.26
+      ],
+      "thumbnail": "data:image/jpeg;base64,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"
+    },
+    {
+      "player_id": 2,
+      "label": "Near side, right",
+      "on_court": true,
+      "side": "near",
+      "first_seen_s": 1.6,
+      "last_seen_s": 2.4,
+      "observed_frames": 6,
+      "median_court_m": [
+        4.92,
+        1.37
+      ],
+      "thumbnail": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAkGBwgHBgkIBwgKCgkLDRYPDQwMDRsUFRAWIB0iIiAdHx8kKDQsJCYxJx8fLT0tMTU3Ojo6Iys/RD84QzQ5Ojf/2wBDAQoKCg0MDRoPDxo3JR8lNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzf/wAARCACAAA0DASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDm6K20tovJ+VIGfBLAYOBjjv14/nWVeKqTEIMDHpiuWVNxVzilScdzddn5kx+8yT9wjJx0PXAwfb61kaqwa7JG3btGNo4rXEkaMojUZeQ7HUkBhjpg9zj/ACKw71dlwV5JCjJyPT29sVrW1jc1rLQ2XXCYZRtL7tygnfxjk+mOKsr4dfXI1l0ooJYiUnikkAK91P4gkf8AAaqpI8ilVRgoOcrHk9OmO54PcZrM1C8uLe+k+zzSR5VQxVsbsdCa6oUXU9xjxErJORssRLJG0T4YMSpLAFhjk4/Ppx+grPn1SG1lMTaTYTkfxzJJu/RwKsmFVJ8plBjbouTnA6fTkcViam++7LZBJA6HNaYZc0/IWJ92FkzftpQky/MiKCW9ADnp+Of0rD1jb9ubZyu0AN/ewMZrbhjXIjUIU+8Bt6DGCAc/XvisHUlK3bAkscD5ueR26+1PDL958hYqzhdG7Cz/ADq8SeWRwBkbueT+vtWLq67L5hgD5R0Oe1byDzIBBhgqqBuK4zk+3I7j8D2FYOsrsvmXy9nGcdBzzx7UYV3qbCxLfJsb4eNmbcMRM4C/LgDBGBwMngY71gayu2+fBYg8jd1rYjXZCFMg8xcZygBPJHIJx3/n+GLqh3XQOAuUBxjGPYilhElUsisT8F/M2n1O080qJx5YGd2CST9D+FYmpzrcXbSoQcgZIqpRXVTw8acuZM5alZzjZo//2Q=="
+    }
+  ],
+  "tracks": [
+    {
+      "track_id": 1,
+      "first_seen_s": 0.533,
+      "last_seen_s": 19.867,
+      "observed_frames": 146
+    },
+    {
+      "track_id": 2,
+      "first_seen_s": 1.6,
+      "last_seen_s": 2.4,
+      "observed_frames": 6
+    }
+  ],
+  "player_positions": [
+    {
+      "time_seconds": 0.533,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            476,
+            156,
+            536,
+            416
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 0.667,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            534,
+            155,
+            582,
+            413
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 0.8,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            546,
+            155,
+            592,
+            413
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 0.933,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            558,
+            155,
+            604,
+            410
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 1.067,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            570,
+            156,
+            614,
+            410
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 1.2,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            582,
+            156,
+            624,
+            407
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 1.333,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            554,
+            155,
+            634,
+            405
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 1.467,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            560,
+            155,
+            640,
+            400
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 1.6,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            572,
+            156,
+            624,
+            399
+          ],
+          "confidence": null,
+          "selected": false
+        },
+        {
+          "track_id": 2,
+          "bbox": [
+            632,
+            154,
+            650,
+            399
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 1.733,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            580,
+            156,
+            616,
+            394
+          ],
+          "confidence": null,
+          "selected": false
+        },
+        {
+          "track_id": 2,
+          "bbox": [
+            640,
+            155,
+            656,
+            395
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 1.867,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            586,
+            156,
+            624,
+            393
+          ],
+          "confidence": null,
+          "selected": false
+        },
+        {
+          "track_id": 2,
+          "bbox": [
+            640,
+            155,
+            664,
+            393
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 2.0,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            592,
+            154,
+            638,
+            389
+          ],
+          "confidence": null,
+          "selected": false
+        },
+        {
+          "track_id": 2,
+          "bbox": [
+            648,
+            153,
+            670,
+            389
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 2.133,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            598,
+            154,
+            640,
+            384
+          ],
+          "confidence": null,
+          "selected": false
+        },
+        {
+          "track_id": 2,
+          "bbox": [
+            656,
+            153,
+            672,
+            384
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 2.267,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            602,
+            154,
+            654,
+            381
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 2.4,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            609,
+            155,
+            654,
+            377
+          ],
+          "confidence": null,
+          "selected": false
+        },
+        {
+          "track_id": 2,
+          "bbox": [
+            667,
+            153,
+            682,
+            376
+          ],
+          "confidence": null,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "time_seconds": 2.533,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            611,
+            153,
+            686,
+            375
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 2.667,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            614,
+            153,
+            686,
+            371
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 2.8,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            617,
+            152,
+            686,
+            365
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 2.933,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            618,
+            151,
+            674,
+            361
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 3.067,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            619,
+            151,
+            672,
+            357
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 3.2,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            620,
+            151,
+            684,
+            352
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 3.333,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            618,
+            149,
+            683,
+            349
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 3.467,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            618,
+            149,
+            681,
+            345
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 3.6,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            616,
+            149,
+            680,
+            341
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 3.733,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            614,
+            148,
+            672,
+            336
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 3.867,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            610,
+            148,
+            670,
+            331
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 4.0,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            604,
+            147,
+            664,
+            327
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 4.133,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            600,
+            146,
+            660,
+            323
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 4.267,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            594,
+            145,
+            653,
+            319
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 4.4,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            592,
+            144,
+            648,
+            316
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 4.533,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            585,
+            144,
+            639,
+            311
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 4.667,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            578,
+            141,
+            632,
+            307
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 4.8,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            570,
+            140,
+            624,
+            303
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 4.933,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            564,
+            140,
+            616,
+            299
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 5.067,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            557,
+            138,
+            609,
+            295
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 5.2,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            549,
+            139,
+            600,
+            291
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 5.333,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            541,
+            137,
+            592,
+            287
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 5.467,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            533,
+            136,
+            582,
+            283
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 5.6,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            526,
+            135,
+            573,
+            281
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    },
+    {
+      "time_seconds": 5.733,
+      "players": [
+        {
+          "track_id": 1,
+          "bbox": [
+            516,
+            134,
+            566,
+            277
+          ],
+          "confidence": null,
+          "selected": true
+        }
+      ]
+    }
+  ],
+  "ball_positions": [],
+  "court_lines": [
+    {
+      "time_seconds": 0.0,
+      "lines": [
+        [
+          130,
+          500,
+          830,
+          500
+        ],
+        [
+          370,
+          90,
+          590,
+          90
+        ],
+        [
+          130,
+          500,
+          370,
+          90
+        ],
+        [
+          830,
+          500,
+          590,
+          90
+        ],
+        [
+          279,
+          245,
+          681,
+          245
+        ],
+        [
+          336,
+          147,
+          624,
+          147
+        ],
+        [
+          313,
+          188,
+          647,
+          188
+        ],
+        [
+          480,
+          500,
+          480,
+          245
+        ],
+        [
+          480,
+          147,
+          480,
+          90
+        ]
+      ]
+    }
+  ],
+  "metrics": {
+    "court_heatmap": {
+      "status": "measured",
+      "validation": "not_evaluated",
+      "scope": "whole_clip",
+      "reason": "Positional accuracy has not been evaluated on real footage. Dwell time covers the selected view when the upload has cuts, and includes time between rallies.",
+      "value": {
+        "units": "seconds",
+        "coordinate_system": "pickleball_full_court_v1: x across court from near-left sideline, y from near baseline (metres)",
+        "cell_size_m": 0.6096,
+        "x_edges_m": [
+          -1.2192,
+          -0.6096,
+          0.0,
+          0.6096,
+          1.2192,
+          1.8288,
+          2.4384,
+          3.048,
+          3.6576,
+          4.2672,
+          4.8768,
+          5.4864,
+          6.096,
+          6.7056,
+          7.3152
+        ],
+        "y_edges_m": [
+          -2.4384,
+          -1.8288,
+          -1.2192,
+          -0.6096,
+          -0.0,
+          0.6096,
+          1.2192,
+          1.8288,
+          2.4384,
+          3.048,
+          3.6576,
+          4.2672,
+          4.8768,
+          5.4864,
+          6.096,
+          6.7056,
+          7.3152,
+          7.9248,
+          8.5344,
+          9.144,
+          9.7536,
+          10.3632,
+          10.9728,
+          11.5824,
+          12.192,
+          12.8016,
+          13.4112,
+          14.0208,
+          14.6304,
+          15.24,
+          15.8496
+        ],
+        "dwell_seconds": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.667,
+            1.467,
+            0.133,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.333,
+            0.8,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            2.133,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.333,
+            0.533,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.067,
+            0.8,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.267,
+            1.333,
+            0.267,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.2,
+            1.067,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            2.0,
+            1.867,
+            0.4,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "tracked_time_s": 18.667,
+        "outside_mapped_area_s": 0.0
+      }
+    },
+    "zone_occupancy": {
+      "status": "experimental",
+      "validation": "synthetic_only",
+      "scope": "whole_clip",
+      "reason": "Zone boundaries are defined but positional error has only been measured on synthetic video. Kitchen-line presence is not computed.",
+      "value": {
+        "zone_definitions": {
+          "kitchen": "Inside the sidelines and between the two kitchen (non-volley-zone) lines, i.e. within 7 ft of the net on either side.",
+          "mid_court": "Inside the court lines but outside the kitchen.",
+          "outside_court_lines": "Within the mapped area (4 ft beyond sidelines, 8 ft behind baselines) but outside the court lines."
+        },
+        "seconds": {
+          "kitchen": 5.467,
+          "mid_court": 13.2,
+          "outside_court_lines": 0.0
+        },
+        "fraction_of_tracked_time": {
+          "kitchen": 0.2929,
+          "mid_court": 0.7071,
+          "outside_court_lines": 0.0
+        }
+      }
+    },
+    "positioning": {
+      "status": "measured",
+      "validation": "synthetic_only",
+      "scope": "whole_clip",
+      "reason": "Depth bands, lingers and approaches from the selected player's smoothed foot position. Checked on synthetic video only; includes time between rallies; describes position, not shot quality.",
+      "value": {
+        "court_half": "near",
+        "band_definitions": {
+          "behind_baseline": "Behind the player's own baseline (serving and returning happen here).",
+          "baseline_area": "Within 1.5 m inside the baseline.",
+          "transition": "Between the baseline area and the kitchen-line area (often called no-man's land).",
+          "kitchen_line": "From 1 m behind the kitchen line to 0.3 m past it: the usual ready position at the net.",
+          "inside_kitchen": "Further inside the non-volley zone, up to the net."
+        },
+        "seconds": {
+          "behind_baseline": 0.0,
+          "baseline_area": 3.2,
+          "transition": 6.8,
+          "kitchen_line": 4.4,
+          "inside_kitchen": 4.267
+        },
+        "fraction_of_mapped_time": {
+          "behind_baseline": 0.0,
+          "baseline_area": 0.1714,
+          "transition": 0.3643,
+          "kitchen_line": 0.2357,
+          "inside_kitchen": 0.2286
+        },
+        "mapped_time_s": 18.667,
+        "left_side_fraction": 0.3643,
+        "transition_lingers": 2,
+        "longest_transition_linger_s": 3.467,
+        "approaches_to_kitchen_line": 1,
+        "median_approach_s": 4.267,
+        "retreats_to_baseline": 1,
+        "distance_covered_m": 15.02
+      }
+    },
+    "rally_segmentation": {
+      "status": "not_computed",
+      "validation": "not_evaluated",
+      "scope": "whole_clip",
+      "reason": "Rallies are found from detected ball hits, which needs a ball model. All other metrics are whole-clip metrics.",
+      "value": null
+    },
+    "shot_classification": {
+      "status": "not_computed",
+      "validation": "not_evaluated",
+      "scope": "whole_clip",
+      "reason": "No ball model is set up, so hits and shot types cannot be found.",
+      "value": null
+    }
+  },
+  "warnings": [
+    "Motion-based detection finds moving objects, not specifically people: stationary players can be missed and non-players (balls, shadows, passers-by) can be detected. Detection confidence is not available.",
+    "6 frame(s) excluded because more than one detection matched the selection."
+  ]
+}

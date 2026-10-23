@@ -1,0 +1,151 @@
+// Row types for the tables in supabase/migrations. Hand-written until the team
+// can run `supabase gen types typescript` against a real project.
+
+export const SESSION_CONTEXTS = ["practice", "casual_match", "tournament", "leveling_game", "drill"] as const;
+export const PLAY_FORMATS = ["singles", "doubles", "wall_practice", "ball_machine", "drill_other"] as const;
+export const PERFORMANCE_SCOPES = ["individual", "pair"] as const;
+export const IMPROVEMENT_GOALS = ["positioning", "shot_outcomes", "shot_technique"] as const;
+
+export type SessionContext = (typeof SESSION_CONTEXTS)[number];
+export type PlayFormat = (typeof PLAY_FORMATS)[number];
+export type PerformanceScope = (typeof PERFORMANCE_SCOPES)[number];
+export type ImprovementGoal = (typeof IMPROVEMENT_GOALS)[number];
+export type SelfRating = 1 | 2 | 3 | 4 | 5;
+export type ReviewMode = "self" | "video";
+export type SessionKind = "solo" | "match" | "tournament";
+export type MatchResult = "win" | "loss";
+
+export const SOLO_FORMATS: PlayFormat[] = ["wall_practice", "ball_machine", "drill_other"];
+/** Solo practice, a match, or a tournament match, from the stored context and format. */
+export function sessionKind(s: Pick<SessionRow, "session_context" | "play_format">): SessionKind {
+  if (s.session_context === "tournament") return "tournament";
+  return SOLO_FORMATS.includes(s.play_format) ? "solo" : "match";
+}
+export const KIND_LABELS: Record<SessionKind, string> = { solo: "Solo practice", match: "Casual game", tournament: "Tournament" };
+
+export const GOAL_LABELS: Record<ImprovementGoal, string> = {
+  positioning: "Court positioning",
+  shot_outcomes: "Shot outcomes",
+  shot_technique: "Shot technique",
+};
+
+export const CONTEXT_LABELS: Record<SessionContext, string> = {
+  practice: "Practice",
+  casual_match: "Casual match",
+  tournament: "Tournament",
+  leveling_game: "Leveling game",
+  drill: "Drill",
+};
+export const FORMAT_LABELS: Record<PlayFormat, string> = {
+  singles: "Singles",
+  doubles: "Doubles",
+  wall_practice: "Wall practice",
+  ball_machine: "Ball machine",
+  drill_other: "Other drill",
+};
+
+export type SessionRow = {
+  id: string;
+  owner_id: string;
+  active_run_id?: string | null;
+  title: string;
+  session_date: string;
+  actual_start_at: string | null;
+  actual_end_at: string | null;
+  session_context: SessionContext;
+  play_format: PlayFormat;
+  performance_scope: PerformanceScope;
+  /** Missing before the self-assessment migration is applied; treat as "video". */
+  review_mode?: ReviewMode;
+  // Tournament details; missing until the adviser-notes migration is applied.
+  tournament_name?: string | null;
+  tournament_round?: string | null;
+  match_result?: MatchResult | null;
+  match_score?: string | null;
+  notes: string | null;
+  improvement_goals: ImprovementGoal[];
+  positioning_rating: SelfRating | null;
+  shot_outcomes_rating: SelfRating | null;
+  shot_technique_rating: SelfRating | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type GoalValues = Pick<SessionRow,
+  "improvement_goals" | "positioning_rating" | "shot_outcomes_rating" | "shot_technique_rating">;
+
+export type VideoAssetRow = {
+  id: string;
+  owner_id: string;
+  session_id: string;
+  storage_bucket: "session-videos";
+  storage_path: string;
+  original_filename: string;
+  mime_type: string;
+  byte_size: number;
+  upload_status: "pending" | "uploaded";
+  created_at: string;
+  uploaded_at: string | null;
+  raw_video_expires_at: string | null;
+  raw_video_kept: boolean;
+  raw_video_deleting_at: string | null;
+  raw_video_deleted_at: string | null;
+  /** Clip length measured in the browser before upload; null for older uploads. */
+  duration_s?: number | null;
+};
+
+export type JobStatus = "queued" | "processing" | "completed" | "failed";
+
+export type AnalysisJobRow = {
+  id: string;
+  current_run_id?: string | null;
+  owner_id: string;
+  video_asset_id: string;
+  session_id: string;
+  status: JobStatus;
+  params: Record<string, unknown>;
+  attempts: number;
+  max_attempts: number;
+  available_at: string;
+  error_code: string | null;
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
+  started_at: string | null;
+  finished_at: string | null;
+  /** 0-1 while the worker is analysing; missing before the progress migration is applied. */
+  progress?: number | null;
+  progress_stage?: ProgressStage | null;
+  progress_updated_at?: string | null;
+};
+
+export type ProgressStage = "downloading" | "checking" | "analyzing" | "finishing";
+
+export type AnalysisResultRow = {
+  id: string;
+  run_id?: string | null;
+  job_id: string;
+  session_id: string;
+  video_asset_id: string;
+  schema_version: string;
+  result_status: "ok" | "insufficient_data";
+  data_origin: "measured" | "test_fixture";
+  pipeline_version: string;
+  analyzed_duration_s: number | null;
+  video_duration_s: number | null;
+  fraction_analyzed: number | null;
+  result: unknown;
+  created_at: string;
+};
+
+export type AnalysisRunSummary = {
+  id: string;
+  session_id: string;
+  run_number: number;
+  status: JobStatus;
+  result_status: "ok" | "insufficient_data" | null;
+  pipeline_version: string | null;
+  metric_definition_version: string;
+  created_at: string;
+  published_at: string | null;
+};

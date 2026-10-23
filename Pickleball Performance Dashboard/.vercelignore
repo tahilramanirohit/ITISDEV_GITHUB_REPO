@@ -1,0 +1,7 @@
+# Never upload local secrets or bulky research files to Vercel.
+.env
+.env.*
+!.env.example
+server/
+*.mp4
+*.pdf
