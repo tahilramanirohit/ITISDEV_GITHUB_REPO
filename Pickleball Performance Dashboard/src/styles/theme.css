@@ -1,99 +1,81 @@
 @custom-variant dark (&:is(.dark *));
 
-/* ── Hasa brand tokens (identity 01c) ─────────────────────────────────────
-   The single home for colour, type, spacing, radius and shadow. Source:
-   docs/brand/hasa/tokens.css. The app is light-only; the dark values are
-   defined for completeness but nothing applies .dark or [data-theme]. */
 :root {
-  /* colour, light */
-  --paper: #FAF6EA;          /* page background */
-  --surface-raised: #FFFFFF; /* cards, inputs, sheets */
-  --surface-sunken: #F1ECDC; /* wells, meter tracks, chips */
-  --line: #E2DAC2;           /* 1px borders, dividers */
-  --ink: #0B2A1A;            /* primary text */
-  --ink-muted: #3E5446;      /* secondary text */
-  --forest: #0F3D24;         /* brand green, wordmark */
-  --brand-surface: #0F3D24;  /* one highlight panel per screen */
-  --pickle: #8CC63F;         /* mascot + decorative only, never text on paper */
-  --pickle-ink: #2E6B2F;     /* green text: links, positive deltas, selected */
-  --ball: #F5C518;           /* accent only, never text */
-  --action-bg: #0F3D24;      /* primary button */
-  --action-ink: #FAF6EA;     /* text on primary button */
-  --focus: #1F7A3A;          /* focus ring */
-  --danger: #B42318;
-  --warning: #8A5300;
-
-  /* type */
-  --font-display: "Bricolage Grotesque", system-ui, sans-serif; /* wordmark, screen titles, big numbers only */
-  --font-body: "DM Sans", system-ui, sans-serif;                /* everything else */
-
-  /* spacing, 4px grid */
-  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
-  --space-6: 24px; --space-8: 32px; --space-12: 48px;
-
-  /* radius (also Tailwind's rounded-sm/md/lg, see @theme below) */
-  --radius-sm: 8px; --radius-md: 14px; --radius-lg: 22px; --radius-pill: 999px;
-
-  /* floating layers only (sheets, menus, toasts); cards use a border */
-  --shadow-lift: 0 1px 2px rgba(11, 42, 26, 0.06), 0 8px 24px rgba(11, 42, 26, 0.08);
-
-  /* shadcn/ui variables, pointed at the Hasa tokens */
   --font-size: 16px;
-  --background: var(--paper);
-  --foreground: var(--ink);
-  --card: var(--surface-raised);
-  --card-foreground: var(--ink);
-  --popover: var(--surface-raised);
-  --popover-foreground: var(--ink);
-  --primary: var(--action-bg);
-  --primary-foreground: var(--action-ink);
-  --secondary: var(--surface-raised);
-  --secondary-foreground: var(--ink);
-  --muted: var(--surface-sunken);
-  --muted-foreground: var(--ink-muted);
-  --accent: var(--surface-sunken);
-  --accent-foreground: var(--ink);
-  --destructive: var(--danger);
-  --destructive-foreground: #FFFFFF;
-  --border: var(--line);
-  --input: var(--line);
-  --input-background: var(--surface-raised);
-  --switch-background: var(--line);
+  --background: #071a3e;
+  --foreground: #ffffff;
+  --card: #0d2554;
+  --card-foreground: #ffffff;
+  --popover: #0d2554;
+  --popover-foreground: #ffffff;
+  --primary: #b8f523;
+  --primary-foreground: #1a3300;
+  --secondary: #0f3070;
+  --secondary-foreground: #ffffff;
+  --muted: #0f3070;
+  --muted-foreground: #7aaad8;
+  --accent: #f97316;
+  --accent-foreground: #ffffff;
+  --destructive: #f97316;
+  --destructive-foreground: #ffffff;
+  --border: rgba(100,160,255,0.18);
+  --input: #0f3070;
+  --input-background: #0f3070;
+  --switch-background: #1a5fb4;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: var(--focus);
-  --chart-1: var(--pickle-ink);
-  --chart-2: var(--forest);
-  --chart-3: var(--ball);
-  --chart-4: var(--ink-muted);
-  --chart-5: var(--line);
-  --radius: 14px;
-  --sidebar: var(--surface-raised);
-  --sidebar-foreground: var(--ink);
-  --sidebar-primary: var(--action-bg);
-  --sidebar-primary-foreground: var(--action-ink);
-  --sidebar-accent: var(--surface-sunken);
-  --sidebar-accent-foreground: var(--ink);
-  --sidebar-border: var(--line);
-  --sidebar-ring: var(--focus);
+  --ring: #b8f523;
+  --chart-1: #b8f523;
+  --chart-2: #f97316;
+  --chart-3: #38bdf8;
+  --chart-4: #a78bfa;
+  --chart-5: #fb923c;
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: #030213;
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
 }
 
-[data-theme="dark"],
 .dark {
-  --paper: #0B2A1A;
-  --surface-raised: #123522;
-  --surface-sunken: #082114;
-  --line: #24493A;
-  --ink: #F1EEE3;
-  --ink-muted: #B4C2B8;
-  --brand-surface: #1F5C38;
-  --pickle-ink: #A6D86A;
-  --action-bg: #8CC63F;
-  --action-ink: #0B2A1A;
-  --focus: #F5C518;
-  --danger: #FF8A7A;
-  --warning: #F5C518;
-  --shadow-lift: none;
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.145 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.145 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.396 0.141 25.723);
+  --destructive-foreground: oklch(0.637 0.237 25.331);
+  --border: oklch(0.269 0 0);
+  --input: oklch(0.269 0 0);
+  --ring: oklch(0.439 0 0);
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.269 0 0);
+  --sidebar-ring: oklch(0.439 0 0);
 }
 
 @theme inline {
@@ -123,10 +105,10 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
-  --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 22px;
-  --radius-xl: 22px;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -135,37 +117,7 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-
-  /* Hasa names as Tailwind utilities: bg-paper, text-ink, border-line, … */
-  --color-paper: var(--paper);
-  --color-surface: var(--surface-raised);
-  --color-sunken: var(--surface-sunken);
-  --color-line: var(--line);
-  --color-ink: var(--ink);
-  --color-ink-muted: var(--ink-muted);
-  --color-forest: var(--forest);
-  --color-brand: var(--brand-surface);
-  --color-pickle: var(--pickle);
-  --color-pickle-ink: var(--pickle-ink);
-  --color-ball: var(--ball);
-  --color-action: var(--action-bg);
-  --color-action-ink: var(--action-ink);
-  --color-focus: var(--focus);
-  --color-danger: var(--danger);
-  --color-warning: var(--warning);
-  --font-sans: var(--font-body);
-  --shadow-lift: var(--shadow-lift);
 }
-
-/* Hasa type scale. Use only these styles. Phones get the smaller display sizes. */
-@utility type-display-xl { font-family: var(--font-display); font-weight: 800; font-size: 2.25rem; line-height: 2.5rem; letter-spacing: -0.02em; @media (min-width: 640px) { font-size: 3rem; line-height: 3.25rem; } }
-@utility type-display-lg { font-family: var(--font-display); font-weight: 800; font-size: 1.625rem; line-height: 2rem; letter-spacing: -0.015em; @media (min-width: 640px) { font-size: 2rem; line-height: 2.375rem; } }
-@utility type-stat { font-family: var(--font-display); font-weight: 800; font-size: 2.5rem; line-height: 2.75rem; letter-spacing: -0.02em; }
-@utility type-heading { font-family: var(--font-body); font-weight: 700; font-size: 1.25rem; line-height: 1.75rem; }
-@utility type-body { font-family: var(--font-body); font-weight: 400; font-size: 1rem; line-height: 1.5rem; }
-@utility type-body-strong { font-family: var(--font-body); font-weight: 700; font-size: 1rem; line-height: 1.5rem; }
-@utility type-small { font-family: var(--font-body); font-weight: 400; font-size: 0.875rem; line-height: 1.25rem; }
-@utility type-label { font-family: var(--font-body); font-weight: 700; font-size: 0.75rem; line-height: 1rem; letter-spacing: 0.12em; text-transform: uppercase; }
 
 @layer base {
   * {

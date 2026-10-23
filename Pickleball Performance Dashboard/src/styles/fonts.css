@@ -1,3 +1,2 @@
-/* Hasa type: Bricolage Grotesque 800 (display) and DM Sans 400/700 (body), with display=swap.
-   They are linked from index.html (with preconnect) so they start loading before the CSS bundle.
-   The font stacks live in theme.css as --font-display and --font-body. */
+/* One family keeps the first paint fast. The sample design preview loads its own display face. */
+/* Inter is linked from index.html (with preconnect) so it starts loading before the CSS bundle. */

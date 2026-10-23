@@ -5,7 +5,7 @@ import {
   MAX_NOTE, addNote, deleteNote, editNote, formatVideoTime, listNotes, partnerErrorText, type PeerNote,
 } from "../../lib/api/partners";
 import type { VideoControls } from "../analysis/ResultView";
-import { BORDER, GREEN, GREEN_BG, INK, WHITE_DIM } from "../theme";
+import { BORDER, GREEN, GREEN_BG, INK, ROSE, WHITE_DIM } from "../theme";
 import { Card, Notice, PrimaryButton, WidgetHeader, fieldStyle } from "../shell/primitives";
 
 /** The video's current time, kept up to date while it plays or is moved. */
@@ -147,7 +147,7 @@ export function PeerNotes({ sb, sessionId, mode, ownerName, controls }: {
               {(n.mine || mode === "owner") && (confirmDelete === n.id
                 ? <span className="inline-flex flex-wrap items-center gap-3">
                     <span style={{ color: INK }}>Delete this note?</span>
-                    <button type="button" className="min-h-[36px] underline" style={{ color: "var(--danger)" }} disabled={busyId === n.id}
+                    <button type="button" className="min-h-[36px] underline" style={{ color: ROSE }} disabled={busyId === n.id}
                       onClick={() => void run(n.id, () => deleteNote(sb, n.id))}>Delete</button>
                     <button type="button" className="min-h-[36px]" style={{ color: WHITE_DIM }} onClick={() => setConfirmDelete(null)}>Keep</button>
                   </span>

@@ -7,8 +7,7 @@ import { initials, listAllOtherPlayers, type OtherPlayer } from "../../lib/api/p
 import { CONTEXT_LABELS, FORMAT_LABELS, KIND_LABELS, sessionKind, type SessionRow } from "../../lib/api/types";
 import { deriveAnalysisState, STATE_LABELS, type AnalysisUiState } from "../../lib/analysis/state";
 import { buildSelfReport } from "../../lib/coaching/selfAssessment";
-import { BLUE, BLUE_BG, BORDER, INK, NEON, NEON_D, ORANGE, PAPER, ROSE, SUCCESS, WHITE, WHITE_DIM, WHITE_SUB, YELLOW, YELLOW_INK } from "../theme";
-import { Coach } from "../shell/Coach";
+import { BLUE, BLUE_BG, BORDER, INK, ORANGE, ROSE, SUCCESS, WHITE, WHITE_DIM, WHITE_SUB, YELLOW, YELLOW_BG, YELLOW_INK } from "../theme";
 
 export const reviewMode = (session: SessionRow) => session.review_mode ?? "video";
 
@@ -61,14 +60,15 @@ export function formatSessionDate(iso: string, opts: Intl.DateTimeFormatOptions 
 /** Small round initials, stacked like a club member list. */
 export function AvatarStack({ names, max = 4, size = 28 }: { names: string[]; max?: number; size?: number }) {
   const shown = names.slice(0, max);
+  const colors = [BLUE_BG, YELLOW_BG, "#e7f6ee", "#fde8ef"];
   return (
     <span className="flex items-center" aria-label={names.join(", ")}>
       {shown.map((name, i) => (
         <span key={`${name}-${i}`} aria-hidden="true" className="flex items-center justify-center rounded-full font-bold"
-          style={{ width: size, height: size, fontSize: size * 0.38, background: PAPER, color: INK,
+          style={{ width: size, height: size, fontSize: size * 0.38, background: colors[i % colors.length], color: INK,
             border: `2px solid ${WHITE}`, marginLeft: i ? -size * 0.28 : 0 }}>{initials(name)}</span>
       ))}
-      {names.length > max && <span className="ml-1 text-xs font-bold" style={{ color: WHITE_SUB }}>+{names.length - max}</span>}
+      {names.length > max && <span className="ml-1 text-xs font-semibold" style={{ color: WHITE_SUB }}>+{names.length - max}</span>}
     </span>
   );
 }
@@ -78,9 +78,9 @@ function Stat({ label, value, caption }: { label: string; value: string; caption
   const short = value.length <= 7;
   return (
     <div className="min-w-0">
-      <p className="text-xs" style={{ color: WHITE_SUB }}>{label}</p>
-      <p className={`${short ? "type-heading" : "text-sm font-bold leading-tight"} break-words`} style={{ color: INK }}>{value}</p>
-      {caption && <p className="truncate text-xs" style={{ color: WHITE_SUB }}>{caption}</p>}
+      <p className="text-[11px] font-medium" style={{ color: WHITE_SUB }}>{label}</p>
+      <p className={`${short ? "text-lg" : "text-sm"} break-words font-extrabold leading-tight tracking-tight`} style={{ color: INK }}>{value}</p>
+      {caption && <p className="truncate text-[11px]" style={{ color: WHITE_SUB }}>{caption}</p>}
     </div>
   );
 }
@@ -106,7 +106,7 @@ export function SessionCard({ item, assessment, players = [], you = "You" }: {
   const names = [you, ...players.map((p) => p.display_name)];
 
   return (
-    <a href={`#/sessions/${session.id}`} className="block rounded-[var(--radius-lg)] p-4 transition-colors hover:border-[var(--ink-muted)] sm:p-6"
+    <a href={`#/sessions/${session.id}`} className="block rounded-2xl p-4 transition-shadow hover:shadow-md"
       style={{ background: WHITE, border: `1px solid ${BORDER}` }}>
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
@@ -114,20 +114,20 @@ export function SessionCard({ item, assessment, players = [], you = "You" }: {
             <KindIcon size={17} aria-hidden="true" />
           </span>
           <span className="min-w-0">
-            <span className="block truncate text-xs font-bold" style={{ color: INK }}>{KIND_LABELS[kind]}{session.tournament_round ? ` · ${session.tournament_round}` : ""}</span>
+            <span className="block truncate text-xs font-semibold" style={{ color: INK }}>{KIND_LABELS[kind]}{session.tournament_round ? ` · ${session.tournament_round}` : ""}</span>
             <span className="block truncate text-xs" style={{ color: WHITE_SUB }}>{formatSessionDate(session.session_date)} · {FORMAT_LABELS[session.play_format]} · {CONTEXT_LABELS[session.session_context]}</span>
           </span>
         </div>
-        <span className="shrink-0 rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: PAPER, color: status.color }}>{status.text}</span>
+        <span className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ background: `${status.color}14`, color: status.color }}>{status.text}</span>
       </div>
-      <h3 className="mt-3 truncate type-body-strong" style={{ color: INK }}>{session.title}</h3>
+      <h3 className="mt-3 truncate text-base font-extrabold tracking-tight" style={{ color: INK }}>{session.title}</h3>
       {session.tournament_name && session.tournament_name !== session.title && <p className="truncate text-xs" style={{ color: WHITE_DIM }}>{session.tournament_name}</p>}
-      {stats.length > 0 && <div className="mt-3 grid grid-cols-[repeat(3,minmax(0,1fr))] gap-3 border-t pt-3" style={{ borderColor: BORDER }}>
+      {stats.length > 0 && <div className="mt-3 grid grid-cols-3 gap-3 border-t pt-3" style={{ borderColor: BORDER }}>
         {stats.slice(0, 3).map((s) => <Stat key={s.label} label={s.label} value={s.value} caption={s.caption} />)}
       </div>}
       <div className="mt-3 flex items-center justify-between gap-3">
         <AvatarStack names={names} />
-        <span className="text-sm font-bold" style={{ color: BLUE }}>{status.text === "Rate yourself" ? "Rate now" : "Open"} →</span>
+        <span className="text-xs font-semibold" style={{ color: BLUE }}>{status.text === "Rate yourself" ? "Rate now" : "Open"} →</span>
       </div>
       {item.result?.data_origin === "test_fixture" && <p className="mt-2 text-xs font-bold" style={{ color: ROSE }}>TEST DATA</p>}
     </a>
@@ -136,11 +136,10 @@ export function SessionCard({ item, assessment, players = [], you = "You" }: {
 
 export function EmptySessions() {
   return (
-    <div className="flex flex-col items-center rounded-[var(--radius-lg)] p-6 text-center" style={{ border: `1px solid ${BORDER}`, background: WHITE }}>
-      <Coach size={72} />
-      <p className="mt-3 type-heading" style={{ color: INK }}>No sessions yet</p>
-      <p className="mt-1 type-small" style={{ color: WHITE_DIM }}>Log your first game. Rating yourself takes about two minutes, no video needed.</p>
-      <a href="#/new" className="mt-4 inline-flex min-h-[48px] items-center rounded-[var(--radius-md)] px-6 type-body-strong" style={{ background: NEON, color: NEON_D }}>
+    <div className="rounded-2xl border-2 border-dashed p-6 text-center" style={{ borderColor: BORDER, background: WHITE }}>
+      <p className="text-base font-bold" style={{ color: INK }}>No sessions yet</p>
+      <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Log your first game. Rating yourself takes about two minutes, no video needed.</p>
+      <a href="#/new" className="mt-4 inline-flex min-h-[44px] items-center rounded-full px-6 text-sm font-bold" style={{ background: BLUE, color: WHITE }}>
         Log a session
       </a>
     </div>

@@ -62,7 +62,7 @@ describe("spoken video review", () => {
   it("says what the video showed and points to self-rating for a plan", () => {
     const text = allText(videoReviewScript({ sessionTitle: "Sunday singles",
       seen: { foundYou: 0.82, playersFound: true, courtFound: true, ballFollowed: false, hitsNamed: 3 } }));
-    expect(text).toContain("Hasa found you in 82 percent of the video.");
+    expect(text).toContain("PicklePro found you in 82 percent of the video.");
     expect(text).toContain("It didn't see the ball.");
     expect(text).toContain("Shot names are experimental");
     expect(text).toContain("can't give practice advice yet");

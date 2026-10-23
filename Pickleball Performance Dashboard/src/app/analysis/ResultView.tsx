@@ -8,7 +8,7 @@ import { GOAL_LABELS, type SessionRow } from "../../lib/api/types";
 import { buildCoachingReport } from "../../lib/analysis/coaching";
 import { videoCoachScript, videoReviewScript } from "../../lib/coaching/coachScript";
 import { CoachLauncher } from "../coach/CoachPlayer";
-import { BLUE_SKY, BORDER, INK, NEON, NEON_D, ORANGE, ORANGE_L, ROSE, VIOLET, WHITE_DIM, WHITE_SUB } from "../theme";
+import { BLUE_SKY, BORDER, INK, NEON, ORANGE, ORANGE_L, ROSE, VIOLET, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Card, Notice, Pill, WidgetHeader } from "../shell/primitives";
 import { CourtDwellHeatmap } from "./CourtDwellHeatmap";
 import { CoachingPanel, type PreviousSession } from "./CoachingPanel";
@@ -17,7 +17,6 @@ import { ShotsPanel } from "./ShotsPanel";
 import { ZoneTimePanel } from "./ZoneTimePanel";
 import { VideoOverlayPlayer, type JumpRequest } from "./VideoOverlayPlayer";
 import { courtPlayers, focusShots } from "../../lib/analysis/shotLabels";
-import { BRAND_NAME } from "../brand";
 
 const STATUS_COLORS: Record<MetricStatus, string> = {
   measured: NEON,
@@ -163,9 +162,9 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
       )}
 
       <Card accent={result.status === "ok" ? NEON : ORANGE}>
-        <h2 className="mb-1 type-heading text-ink">Video review</h2>
+        <h2 className="mb-1 text-xl font-bold text-[#101827]">Video review</h2>
         {!devMock && !sharedBy && result.data_origin === "measured" && (
-          <p className="mb-3 text-sm font-bold" style={{ color: coaching.available ? NEON : ORANGE_L }}>
+          <p className="mb-3 text-sm font-semibold" style={{ color: coaching.available ? NEON : ORANGE_L }}>
             {coaching.available ? "Practice plan from this video: available below." : "Practice plan from this video: not available."}
             {!coaching.available && onRateSession && <> <button type="button" onClick={onRateSession} className="underline" style={{ color: BLUE_SKY }}>Rate this session instead</button></>}
           </p>
@@ -177,10 +176,10 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
           </Pill>
         </div>
         {audio && <div className="mb-3"><CoachLauncher shortScript={audio.short} fullScript={audio.full} tone="light" label={coaching.available ? undefined : "Play video review"} /></div>}
-        <p className="text-base text-ink">{devMock ? `This sample shows the kind of practice plan ${BRAND_NAME} can display. It is not feedback about your play.` : visibleMessage}</p>
+        <p className="text-base text-[#101827]">{devMock ? "This sample shows the kind of practice plan PicklePro can display. It is not feedback about your play." : visibleMessage}</p>
         {warnings.length > 0 && (
           <details className="mt-3">
-            <summary className="cursor-pointer text-sm font-bold" style={{ color: ORANGE_L }}>
+            <summary className="cursor-pointer text-sm font-semibold" style={{ color: ORANGE_L }}>
               {warnings.length === 1 ? "1 note about this video" : `${warnings.length} notes about this video`}
             </summary>
             <ul className="mt-2 space-y-1.5">
@@ -195,7 +194,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
       </Card>
 
       {result.data_origin === "measured" && !devMock && <section aria-label="What the video analysis found" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <h2 className="sr-only">What {BRAND_NAME} could see</h2>
+        <h2 className="sr-only">What PicklePro could see</h2>
         {[
           {
             label: "Players",
@@ -212,7 +211,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
             ok: !!result.calibration,
             value: result.calibration ? "Court lines found" : "Court not found",
             detail: result.calibration
-              ? `Yellow lines on the video show where ${BRAND_NAME} thinks the court is.`
+              ? "Yellow lines on the video show where PicklePro thinks the court is."
               : "Film so the whole court and its lines are visible to get court feedback.",
           },
           {
@@ -237,7 +236,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
                 : shotMetric.reason ?? "Shot types are not available for this video.",
           },
         ].map((item) => (
-          <div key={item.label} className="rounded-[var(--radius-lg)] border bg-white p-4" style={{ borderColor: BORDER }}>
+          <div key={item.label} className="rounded-2xl border bg-white p-4" style={{ borderColor: BORDER }}>
             <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider" style={{ color: BLUE_SKY }}>
               {item.ok ? <CheckCircle2 size={18} aria-label="found" style={{ color: NEON }} />
                 : <CircleDashed size={18} aria-label="not found" style={{ color: WHITE_SUB }} />}
@@ -261,7 +260,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
                   ? "Shot outcomes cannot be assessed. Shot success and in/out calls are outside this analysis scope."
                   : "Technique cannot be assessed yet. The current analysis does not measure body and paddle mechanics.";
               return <li key={goal} className="rounded-xl p-3 text-sm" style={{ border: `1px solid ${BORDER}` }}>
-                <p className="text-base font-bold text-ink">{GOAL_LABELS[goal]} · {observed ? (goal === "positioning" ? "video feedback available" : "early estimate available") : "cannot assess from this analysis"}</p>
+                <p className="text-base font-semibold text-[#101827]">{GOAL_LABELS[goal]} · {observed ? (goal === "positioning" ? "video feedback available" : "early estimate available") : "cannot assess from this analysis"}</p>
                 <p className="mt-1" style={{ color: WHITE_DIM }}>Your starting rating: {rating ? `${rating}/5` : "not set"}</p>
                 <p className="mt-1" style={{ color: observed ? NEON : ORANGE_L }}>{reason}</p>
               </li>;
@@ -283,16 +282,16 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
 
       <section aria-labelledby="video-heading" className="space-y-3">
         <div>
-          <h2 id="video-heading" className="text-lg font-bold text-ink">{sharedBy ? `Watch ${sharedBy}'s video` : "Watch your video"}</h2>
+          <h2 id="video-heading" className="text-lg font-bold text-[#101827]">{sharedBy ? `Watch ${sharedBy}'s video` : "Watch your video"}</h2>
           <p className="text-base" style={{ color: WHITE_DIM }}>Press play to review the recording. Player boxes, observed ball positions and court lines are shown when available.{shotsValidated ? " Evaluated shot estimates are also shown." : " Experimental shot estimates are also shown; check them against the video."}</p>
         </div>
         {videoUrl && onSelectTrack && result.tracks.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={() => setSelectingPlayer((value) => !value)}
-              className="min-h-[48px] rounded-[var(--radius-md)] px-5 text-sm font-bold" style={{ background: NEON, color: NEON_D }}>
+              className="rounded-lg px-4 py-2.5 text-sm font-semibold min-h-[44px]" style={{ background: BLUE_SKY, color: "#ffffff" }}>
               {selectingPlayer ? "Cancel" : "Not you? Pick yourself in the video"}
             </button>
-            {selectingPlayer && <p className="text-base" style={{ color: INK }}>Pause the video where you can be seen, then tap the box around you. {BRAND_NAME} will check the video again for you.</p>}
+            {selectingPlayer && <p className="text-base" style={{ color: INK }}>Pause the video where you can be seen, then tap the box around you. PicklePro will check the video again for you.</p>}
           </div>
         )}
         <VideoOverlayPlayer src={videoUrl}
@@ -313,9 +312,9 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
 
       {result.data_origin === "measured" && !devMock && <ZoneTimePanel result={result} myPlayerId={myPlayerId} />}
 
-      <details className="rounded-[var(--radius-lg)] p-4" style={{ border: `1px solid ${BORDER}` }}>
-        <summary className="cursor-pointer text-base font-bold" style={{ color: BLUE_SKY }}>Research details: measurements, analysis notes and export</summary>
-        {result.data_origin === "measured" && <button type="button" onClick={() => downloadResult(result)} className="mt-3 text-sm font-bold underline"
+      <details className="rounded-2xl p-4" style={{ border: `1px solid ${BORDER}` }}>
+        <summary className="cursor-pointer text-base font-semibold" style={{ color: BLUE_SKY }}>Research details: measurements, analysis notes and export</summary>
+        {result.data_origin === "measured" && <button type="button" onClick={() => downloadResult(result)} className="mt-3 text-sm font-semibold underline"
           style={{ color: BLUE_SKY }} title="For the Label shots page and for scoring shot detection">
           Download research result (JSON)
         </button>}
@@ -333,7 +332,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
                   return (
                     <li key={key} className="rounded-xl p-3" style={{ background: "rgba(41,61,242,0.025)", border: `1px solid ${BORDER}` }}>
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-sm font-bold text-ink">{METRIC_LABELS[key]}</span>
+                        <span className="text-sm font-semibold text-[#101827]">{METRIC_LABELS[key]}</span>
                         <Pill color={STATUS_COLORS[m.status]}>{STATUS_TEXT[m.status].toUpperCase()}</Pill>
                         {m.status !== "not_computed" && <Pill color={WHITE_SUB}>{VALIDATION_LABELS[m.validation]}</Pill>}
                       </div>
@@ -364,7 +363,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
               {zonesValidated && zones.status === "experimental" && zones.value && (
                 <div className="mt-4">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-bold text-ink">Zone occupancy</span>
+                    <span className="text-sm font-semibold text-[#101827]">Zone occupancy</span>
                     <Pill color={VIOLET}>EXPERIMENTAL</Pill>
                   </div>
                   {Object.entries(zones.value.fraction_of_tracked_time).map(([zone, f]) => (

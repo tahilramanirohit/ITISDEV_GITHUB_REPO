@@ -10,7 +10,8 @@ import {
   Activity, ChevronRight, Clock, Radio, X, FlaskConical, type LucideIcon,
 } from "lucide-react";
 import {
-  BLUE_MID, BLUE_POP, BLUE_SKY, BORDER, NEON, NEON_D, ORANGE, ORANGE_L, VIOLET, WHITE, WHITE_DIM, WHITE_SUB, withAlpha } from "../theme";
+  BLUE_MID, BLUE_POP, BLUE_SKY, BORDER, NEON, NEON_D, ORANGE, ORANGE_L, VIOLET, WHITE, WHITE_DIM, WHITE_SUB,
+} from "../theme";
 import { Card, ChartTip, SectionBanner, WidgetHeader } from "../shell/primitives";
 import { config } from "../../lib/config";
 import {
@@ -66,8 +67,8 @@ function GoalSettingModal({
         className="relative w-full max-w-lg p-6 rounded-2xl animate-in fade-in zoom-in-95 duration-200"
         style={{
           background: BLUE_MID,
-          border: `1px solid ${withAlpha(NEON, 0.31)}`,
-          boxShadow: `0 24px 64px rgba(0,0,0,0.6), 0 0 20px ${withAlpha(NEON, 0.13)}`,
+          border: `1px solid ${NEON}50`,
+          boxShadow: `0 24px 64px rgba(0,0,0,0.6), 0 0 20px ${NEON}20`,
         }}
       >
         <button
@@ -78,7 +79,7 @@ function GoalSettingModal({
         </button>
 
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-2.5 rounded-xl" style={{ background: `${withAlpha(NEON, 0.13)}`, border: `1px solid ${withAlpha(NEON, 0.31)}` }}>
+          <div className="p-2.5 rounded-xl" style={{ background: `${NEON}20`, border: `1px solid ${NEON}50` }}>
             <Target size={22} color={NEON} />
           </div>
           <div>
@@ -168,7 +169,7 @@ function GoalSettingModal({
               onClose();
             }}
             className="flex-1 py-3 rounded-xl text-xs font-bold transition-all active:scale-[0.98] hover:brightness-110"
-            style={{ background: NEON, color: NEON_D, boxShadow: `0 0 18px ${withAlpha(NEON, 0.31)}`, fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: "0.06em", fontSize: "0.95rem" }}
+            style={{ background: NEON, color: NEON_D, boxShadow: `0 0 18px ${NEON}50`, fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: "0.06em", fontSize: "0.95rem" }}
           >
             SAVE & UPDATE DASHBOARD →
           </button>
@@ -336,12 +337,12 @@ function AudioWidget({
       className="rounded-2xl px-5 py-4 flex flex-col gap-2.5 min-w-[300px]"
       style={{
         background: "linear-gradient(135deg,#0a2a6e 0%,#0d3a90 60%,#0f2560 100%)",
-        border: `1px solid ${withAlpha(NEON, 0.31)}`,
-        boxShadow: `0 0 20px ${withAlpha(NEON, 0.09)}`,
+        border: `1px solid ${NEON}50`,
+        boxShadow: `0 0 20px ${NEON}18`,
       }}
     >
       <div className="flex items-center gap-2 flex-wrap">
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: `${withAlpha(ORANGE, 0.15)}`, border: `1px solid ${withAlpha(ORANGE, 0.38)}` }}>
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: `${ORANGE}25`, border: `1px solid ${ORANGE}60` }}>
           <Radio size={10} color={ORANGE} />
           <span className="font-mono text-[10px] font-bold tracking-widest" style={{ color: ORANGE_L }}>
             SAMPLE SCRIPT · BROWSER TTS
@@ -373,7 +374,7 @@ function AudioWidget({
           <button
             onClick={togglePlay}
             className="rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-95 hover:scale-105"
-            style={{ width: 38, height: 38, background: NEON, boxShadow: `0 0 14px ${withAlpha(NEON, 0.5)}` }}
+            style={{ width: 38, height: 38, background: NEON, boxShadow: `0 0 14px ${NEON}80` }}
           >
             {playing ? <Pause size={16} color={NEON_D} fill={NEON_D} /> : <Play size={16} color={NEON_D} fill={NEON_D} />}
           </button>
@@ -396,7 +397,7 @@ function AudioWidget({
                   style={{
                     height: isActive ? Math.min(h * 1.35, MAX_H) : isHead ? Math.min(h * 1.2, MAX_H) : h,
                     background: isFilled ? NEON : isHead ? WHITE : "rgba(255,255,255,0.18)",
-                    boxShadow: isFilled ? `0 0 4px ${withAlpha(NEON, 0.5)}` : isHead ? `0 0 6px rgba(255,255,255,0.7)` : "none",
+                    boxShadow: isFilled ? `0 0 4px ${NEON}80` : isHead ? `0 0 6px rgba(255,255,255,0.7)` : "none",
                     transition: "height 0.08s ease, background 0.1s ease",
                   }}
                 />
@@ -464,14 +465,14 @@ function ActionCard({ icon: Icon, priority, accentColor, accentTextColor, title,
       onClick={() => setExpanded(e => !e)}
       className="w-full text-left rounded-xl p-4 transition-all duration-200 group"
       style={{
-        background: expanded ? `${withAlpha(accentColor, 0.08)}` : "rgba(255,255,255,0.04)",
+        background: expanded ? `${accentColor}15` : "rgba(255,255,255,0.04)",
         border: `1px solid ${expanded ? accentColor : BORDER}`,
         borderLeft: `4px solid ${accentColor}`,
-        boxShadow: expanded ? `0 0 16px ${withAlpha(accentColor, 0.15)}` : "none",
+        boxShadow: expanded ? `0 0 16px ${accentColor}25` : "none",
       }}
     >
       <div className="flex items-start gap-3">
-        <div className="p-2 rounded-lg flex-shrink-0 mt-0.5" style={{ background: `${withAlpha(accentColor, 0.13)}`, border: `1px solid ${withAlpha(accentColor, 0.25)}` }}>
+        <div className="p-2 rounded-lg flex-shrink-0 mt-0.5" style={{ background: `${accentColor}22`, border: `1px solid ${accentColor}40` }}>
           <Icon size={15} color={accentColor} />
         </div>
         <div className="flex-1 min-w-0">
@@ -613,7 +614,7 @@ export default function DesignPreview() {
             <div className="flex items-center gap-2 pr-5 border-r" style={{ borderColor: BORDER }}>
               <div
                 className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ background: NEON, boxShadow: `0 0 18px ${withAlpha(NEON, 0.5)}` }}
+                style={{ background: NEON, boxShadow: `0 0 18px ${NEON}80` }}
               >
                 <svg viewBox="0 0 20 30" width="24" height="30" fill="none">
                   <path
@@ -639,7 +640,7 @@ export default function DesignPreview() {
               style={{
                 width: 52, height: 52,
                 background: `linear-gradient(135deg,${BLUE_POP},${BLUE_SKY})`,
-                boxShadow: `0 0 16px ${withAlpha(BLUE_SKY, 0.38)}`,
+                boxShadow: `0 0 16px ${BLUE_SKY}60`,
                 color: WHITE, fontFamily: "'Barlow Condensed',sans-serif", fontSize: "1.1rem",
               }}
             >
@@ -659,7 +660,7 @@ export default function DesignPreview() {
                 <span style={{ color: BORDER }}>|</span>
                 <span style={{ color: WHITE_DIM }}><Clock size={10} className="inline mr-1" />Last match: {SAMPLE_PLAYER.lastMatch}</span>
                 <span style={{ color: BORDER }}>|</span>
-                <span className="font-mono font-bold px-2 py-0.5 rounded-md" style={{ background: `${withAlpha(BLUE_POP, 0.25)}`, color: BLUE_SKY, border: `1px solid ${withAlpha(BLUE_SKY, 0.31)}` }}>
+                <span className="font-mono font-bold px-2 py-0.5 rounded-md" style={{ background: `${BLUE_POP}40`, color: BLUE_SKY, border: `1px solid ${BLUE_SKY}50` }}>
                   SKILL: {SAMPLE_PLAYER.skill}
                 </span>
               </div>
@@ -699,7 +700,7 @@ export default function DesignPreview() {
           <button
             onClick={() => setIsGoalModalOpen(true)}
             className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 hover:scale-[1.02]"
-            style={{ color: NEON, border: `1px solid ${withAlpha(NEON, 0.38)}`, background: `${withAlpha(NEON, 0.08)}`, boxShadow: `0 0 12px ${withAlpha(NEON, 0.13)}` }}
+            style={{ color: NEON, border: `1px solid ${NEON}60`, background: `${NEON}15`, boxShadow: `0 0 12px ${NEON}20` }}
           >
             <Target size={15} color={NEON} />
             ADJUST GOALS & TARGETS
@@ -726,7 +727,7 @@ export default function DesignPreview() {
               bg: `linear-gradient(135deg,#3b0764,#6d28d9)`, border: VIOLET, valueColor: "#ddd6fe", subColor: "rgba(221,214,254,0.6)",
             },
           ].map(({ label, value, sub, bg, border, valueColor, subColor }) => (
-            <div key={label} className="rounded-2xl p-4" style={{ background: bg, border: `1px solid ${withAlpha(border, 0.31)}`, boxShadow: `0 4px 20px rgba(0,0,0,0.3)` }}>
+            <div key={label} className="rounded-2xl p-4" style={{ background: bg, border: `1px solid ${border}50`, boxShadow: `0 4px 20px rgba(0,0,0,0.3)` }}>
               <div className="text-xs font-medium mb-1" style={{ color: "rgba(255,255,255,0.65)" }}>{label}</div>
               <div className="text-2xl font-bold" style={{ color: valueColor, fontFamily: "'Barlow Condensed',sans-serif" }}>{value}</div>
               <div className="text-[10px] mt-0.5" style={{ color: subColor }}>{sub}</div>
@@ -787,7 +788,7 @@ export default function DesignPreview() {
                 accent={BLUE_SKY}
               />
               <CourtHeatmap />
-              <div className="flex items-start gap-2 mt-4 rounded-xl p-3" style={{ background: `${withAlpha(ORANGE, 0.13)}`, border: `1px solid ${withAlpha(ORANGE, 0.31)}` }}>
+              <div className="flex items-start gap-2 mt-4 rounded-xl p-3" style={{ background: `${ORANGE}20`, border: `1px solid ${ORANGE}50` }}>
                 <Activity size={13} color={ORANGE} className="flex-shrink-0 mt-0.5" />
                 <p className="text-xs font-medium leading-snug" style={{ color: ORANGE_L }}>
                   Right-baseline overuse detected — left-side exposure vulnerability flagged.
@@ -880,14 +881,14 @@ export default function DesignPreview() {
                   { label: "Late Game",  sub: "Shots 19+",   color: ORANGE,   textColor: "#7c2800" },
                 ].map(({ label, sub, color }) => (
                   <div key={label} className="flex items-center gap-2.5">
-                    <div className="w-3.5 h-3.5 rounded-full flex-shrink-0" style={{ background: color, boxShadow: `0 0 8px ${withAlpha(color, 0.5)}` }} />
+                    <div className="w-3.5 h-3.5 rounded-full flex-shrink-0" style={{ background: color, boxShadow: `0 0 8px ${color}80` }} />
                     <div>
                       <div className="text-xs font-bold text-white">{label}</div>
                       <div className="text-[10px]" style={{ color: WHITE_SUB }}>{sub}</div>
                     </div>
                   </div>
                 ))}
-                <div className="rounded-xl p-3 mt-1" style={{ background: `${withAlpha(ORANGE, 0.15)}`, border: `1px solid ${withAlpha(ORANGE, 0.31)}` }}>
+                <div className="rounded-xl p-3 mt-1" style={{ background: `${ORANGE}25`, border: `1px solid ${ORANGE}50` }}>
                   <div className="text-[10px] font-bold mb-0.5" style={{ color: ORANGE }}>FATIGUE THRESHOLD</div>
                   <div className="text-xl font-bold text-white">18 shots</div>
                   <div className="text-[10px] mt-0.5" style={{ color: ORANGE_L }}>Errors escalate sharply past this rally length.</div>
@@ -980,7 +981,7 @@ export default function DesignPreview() {
                     <div className="text-lg font-bold" style={{ color, fontFamily: "'Barlow Condensed',sans-serif" }}>{value}</div>
                   </div>
                 ))}
-                <div className="rounded-xl p-2.5 text-[10px] mt-1" style={{ background: `${withAlpha(VIOLET, 0.15)}`, border: `1px solid ${withAlpha(VIOLET, 0.31)}`, color: "#ddd6fe" }}>
+                <div className="rounded-xl p-2.5 text-[10px] mt-1" style={{ background: `${VIOLET}25`, border: `1px solid ${VIOLET}50`, color: "#ddd6fe" }}>
                   5× sessions/week moves best-case to ~4 weeks.
                 </div>
               </div>

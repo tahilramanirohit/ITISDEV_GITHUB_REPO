@@ -5,9 +5,8 @@ import { PUBLIC_SHOT_TYPES, SHOT_TYPES } from "../../lib/analysis/contract";
 import {
   SHOT_INFO, countByType, formatClock, isMine, playerName, shotsByPlayer, shotsOf,
 } from "../../lib/analysis/shotLabels";
-import { BLUE_SKY, BORDER, INK, VIOLET, WHITE_DIM, withAlpha } from "../theme";
+import { BLUE_SKY, BORDER, INK, VIOLET, WHITE_DIM } from "../theme";
 import { Card, Pill } from "../shell/primitives";
-import { BRAND_NAME } from "../brand";
 
 const LIST_LIMIT = 60;
 type Tab = "all" | "mine";
@@ -35,7 +34,7 @@ export function ShotsPanel({ result, myPlayerId, onWatch, research = false }: {
         <p className="mt-1 text-base" style={{ color: WHITE_DIM }}>
           {metric.status === "not_computed"
             ? "Shot types are not available for this video."
-            : `${BRAND_NAME} could not follow the ball well enough to name shots in this video.`}
+            : "PicklePro could not follow the ball well enough to name shots in this video."}
         </p>
         {metric.reason && <p className="mt-2 text-sm" style={{ color: WHITE_DIM }}>{metric.reason}</p>}
         <p className="mt-2 text-sm" style={{ color: WHITE_DIM }}>
@@ -58,11 +57,11 @@ export function ShotsPanel({ result, myPlayerId, onWatch, research = false }: {
         Tap <strong>Watch</strong> to see a shot in the video.
       </p>
 
-      <p className="mt-3 text-sm font-bold" style={{ color: INK }}>Choose whose shot suggestions to show <span className="font-normal" style={{ color: WHITE_DIM }}>(filter only; court measures are unchanged)</span></p>
+      <p className="mt-3 text-sm font-semibold" style={{ color: INK }}>Choose whose shot suggestions to show <span className="font-normal" style={{ color: WHITE_DIM }}>(filter only; court measures are unchanged)</span></p>
       <div role="group" aria-label="Whose shots" className="mt-2 inline-flex rounded-lg overflow-hidden" style={{ border: `1px solid ${BLUE_SKY}` }}>
         {([["all", `All players (${all.length})`], ["mine", `My shots (${myPlayerId != null ? mine.length : "?"})`]] as const).map(([value, label]) => (
           <button key={value} type="button" aria-pressed={tab === value} onClick={() => setTab(value)}
-            className="px-4 py-2 text-sm font-bold min-h-[44px]"
+            className="px-4 py-2 text-sm font-semibold min-h-[44px]"
             style={{ background: tab === value ? BLUE_SKY : "white", color: tab === value ? "white" : BLUE_SKY }}>
             {label}
           </button>
@@ -95,11 +94,11 @@ export function ShotsPanel({ result, myPlayerId, onWatch, research = false }: {
       )}
 
       <details className="mt-5">
-        <summary className="cursor-pointer text-sm font-bold" style={{ color: BLUE_SKY }}>What each shot type means</summary>
+        <summary className="cursor-pointer text-sm font-semibold" style={{ color: BLUE_SKY }}>What each shot type means</summary>
         <dl className="mt-2 grid gap-2 sm:grid-cols-2">
           {(research ? SHOT_TYPES : PUBLIC_SHOT_TYPES).map((type) => (
             <div key={type} className="text-sm">
-              <dt className="font-bold" style={{ color: INK }}>
+              <dt className="font-semibold" style={{ color: INK }}>
                 <span className="inline-block h-2.5 w-2.5 rounded-full mr-1.5" style={{ background: SHOT_INFO[type].color }} aria-hidden="true" />
                 {SHOT_INFO[type].name}
               </dt>
@@ -120,7 +119,7 @@ function ShotCounts({ shots }: { shots: ShotEvent[] }) {
       {counts.map(([type, n]) => (
         <li key={type} className="rounded-xl p-3" style={{ border: `1px solid ${BORDER}`, borderLeft: `5px solid ${SHOT_INFO[type].color}` }}>
           <p className="text-2xl font-bold" style={{ color: INK }}>{n}</p>
-          <p className="text-base font-bold" style={{ color: INK }}>{SHOT_INFO[type].name}</p>
+          <p className="text-base font-semibold" style={{ color: INK }}>{SHOT_INFO[type].name}</p>
           <p className="text-sm" style={{ color: WHITE_DIM }}>{SHOT_INFO[type].meaning}</p>
         </li>
       ))}
@@ -137,15 +136,15 @@ function PlayerTable({ result, myPlayerId, research }: { result: AnalysisResultV
       <table className="min-w-full text-sm" aria-label="Shots by player">
         <thead>
           <tr style={{ color: WHITE_DIM }}>
-            <th scope="col" className="text-left font-bold py-1 pr-3">Player</th>
-            <th scope="col" className="text-right font-bold py-1 px-2">Total</th>
-            {types.map((t: ShotType) => <th key={t} scope="col" className="text-right font-bold py-1 px-2 whitespace-nowrap">{SHOT_INFO[t].name}</th>)}
+            <th scope="col" className="text-left font-semibold py-1 pr-3">Player</th>
+            <th scope="col" className="text-right font-semibold py-1 px-2">Total</th>
+            {types.map((t: ShotType) => <th key={t} scope="col" className="text-right font-semibold py-1 px-2 whitespace-nowrap">{SHOT_INFO[t].name}</th>)}
           </tr>
         </thead>
         <tbody>
           {rows.map(({ player, shots }) => (
             <tr key={player?.player_id ?? "unknown"} className="border-t" style={{ borderColor: BORDER, color: INK }}>
-              <th scope="row" className="text-left font-bold py-1.5 pr-3">
+              <th scope="row" className="text-left font-semibold py-1.5 pr-3">
                 <span className="inline-flex items-center gap-2">
                   {player?.thumbnail && <img src={player.thumbnail} alt="" className="h-8 w-auto rounded" />}
                   {player ? playerName(result, player.player_id, myPlayerId) : "Hitter not identified"}
@@ -174,8 +173,8 @@ function ShotRow({ shot, who, onWatch }: { shot: ShotEvent; who: string; onWatch
       </span>
       {onWatch && (
         <button type="button" onClick={() => onWatch(shot.time_seconds)}
-          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-bold min-h-[44px]"
-          style={{ color: BLUE_SKY, border: `1px solid ${withAlpha(BLUE_SKY, 0.38)}` }}
+          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold min-h-[44px]"
+          style={{ color: BLUE_SKY, border: `1px solid ${BLUE_SKY}60` }}
           aria-label={`Watch the ${info.name.toLowerCase()} at ${formatClock(shot.time_seconds)}`}>
           <PlayCircle size={18} aria-hidden="true" /> Watch
         </button>

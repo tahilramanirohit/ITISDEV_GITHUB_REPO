@@ -304,7 +304,7 @@ export default function BuddyPage({ sb, userId }: { sb: SupabaseClient; userId: 
     <a href="#/partners" className="flex min-h-[56px] items-center gap-3 rounded-[var(--radius-lg)] px-4 py-3 desktop:hidden"
       style={{ border: `1px solid ${BORDER}`, background: WHITE, color: INK }}>
       <Handshake size={22} aria-hidden="true" style={{ color: GREEN }} />
-      <span className="min-w-0 flex-1"><span className="type-body-strong block">Partners</span>
+      <span className="min-w-0 flex-1"><span className="text-base font-bold block">Partners</span>
         <span className="block text-sm" style={{ color: WHITE_DIM }}>
           {partnerInvites ? `${partnerInvites} partner invite${partnerInvites === 1 ? "" : "s"} waiting` : "Share sessions and get notes on your video"}</span></span>
       <ChevronRight size={20} aria-hidden="true" style={{ color: WHITE_DIM }} />
@@ -329,7 +329,7 @@ export default function BuddyPage({ sb, userId }: { sb: SupabaseClient; userId: 
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="type-body-strong" style={{ color: INK }}>{visible ? "You are listed in Buddy" : "You are hidden from the Buddy list"}</p>
+            <p className="text-base font-bold" style={{ color: INK }}>{visible ? "You are listed in Buddy" : "You are hidden from the Buddy list"}</p>
             <p className="text-sm" style={{ color: WHITE_DIM }}>
               {visible ? `Others see: ${profile.display_name} · ${levelText(myLevel)}` : "You can still ask others. Turn this on so others can ask you."}
             </p>
@@ -366,7 +366,7 @@ export default function BuddyPage({ sb, userId }: { sb: SupabaseClient; userId: 
                   <div className="flex flex-wrap items-center gap-3">
                     <Avatar name={p.display_name} />
                     <div className="min-w-[9rem] flex-1">
-                      <p className="type-body-strong" style={{ color: INK }}>{p.display_name}</p>
+                      <p className="text-base font-bold" style={{ color: INK }}>{p.display_name}</p>
                       <p className="text-sm" style={{ color: WHITE_DIM }}>
                         {levelText(p.level)}{p.usual_format ? ` · usually ${p.usual_format === "both" ? "singles and doubles" : p.usual_format}` : ""}
                       </p>
@@ -396,7 +396,7 @@ export default function BuddyPage({ sb, userId }: { sb: SupabaseClient; userId: 
             <div className="flex items-center gap-3">
               <Avatar name={r.other_name} />
               <div className="min-w-0">
-                <p className="type-body-strong" style={{ color: INK }}>{r.other_name}</p>
+                <p className="text-base font-bold" style={{ color: INK }}>{r.other_name}</p>
                 <p className="text-sm" style={{ color: WHITE_DIM }}>{levelText(r.other_level)}</p>
               </div>
             </div>
@@ -418,7 +418,7 @@ export default function BuddyPage({ sb, userId }: { sb: SupabaseClient; userId: 
             <div className="flex items-center gap-3">
               <Avatar name={r.other_name} />
               <div className="min-w-0">
-                <p className="type-body-strong" style={{ color: INK }}>{r.other_name}</p>
+                <p className="text-base font-bold" style={{ color: INK }}>{r.other_name}</p>
                 <p className="text-sm" style={{ color: WHITE_DIM }}>{levelText(r.other_level)} · {r.direction === "outgoing" ? "accepted your request" : "you accepted"}</p>
               </div>
             </div>
@@ -449,7 +449,7 @@ export default function BuddyPage({ sb, userId }: { sb: SupabaseClient; userId: 
             <div className="flex flex-wrap items-center gap-3">
               <Avatar name={r.other_name} />
               <div className="min-w-[9rem] flex-1">
-                <p className="type-body-strong" style={{ color: INK }}>{r.other_name}</p>
+                <p className="text-base font-bold" style={{ color: INK }}>{r.other_name}</p>
                 <p className="text-sm font-bold" style={{ color: r.status === "declined" ? ROSE : WHITE_DIM }}>
                   {r.status === "pending" ? "Waiting for an answer" : "Declined"}</p>
               </div>
@@ -467,7 +467,7 @@ export default function BuddyPage({ sb, userId }: { sb: SupabaseClient; userId: 
             <div className="flex items-center gap-3">
               <Avatar name={r.other_name} />
               <div className="min-w-0">
-                <p className="type-body-strong" style={{ color: INK }}>{r.other_name}</p>
+                <p className="text-base font-bold" style={{ color: INK }}>{r.other_name}</p>
                 <p className="text-sm font-bold" style={{ color: ROSE }}>
                   {r.cancelled_by_me ? "You cancelled" : `${r.other_name} cancelled`}{r.cancelled_at ? ` · ${shortDate(r.cancelled_at)}` : ""}</p>
               </div>

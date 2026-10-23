@@ -1,12 +1,12 @@
-# Hasa — pickleball coaching thesis prototype
+# PicklePro — pickleball coaching thesis prototype
 
 **Know what to practice next.**
 
-This README describes the **`pickleproapp` branch**, including the merged Hasa rebrand.
+This README describes **`main`**, which now holds the `coaching` work with the Hasa re-skin undone: the app uses the original PicklePro design again.
 
-> **`coaching` branch:** created on 22 October 2026 as a copy of `pickleproapp` for the next round of coaching work. Changes land here first; `pickleproapp` stays as it was. Vercel builds every push to `coaching` as a preview at <https://pickleprothesis-git-coaching-bumbai.vercel.app>. That preview needs `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` set for the **Preview** environment in Vercel. Hasa is a mobile-first pickleball coaching app: players log sessions, rate their game, receive practice focuses and drills, and follow their self-rated progress. Video analysis is optional.
+> **`coaching` branch:** created on 22 October 2026 as a copy of `pickleproapp` for the next round of coaching work. Changes land here first; `pickleproapp` stays as it was. Vercel builds every push to `coaching` as a preview at <https://pickleprothesis-git-coaching-bumbai.vercel.app>. That preview needs `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` set for the **Preview** environment in Vercel. PicklePro is a mobile-first pickleball coaching app: players log sessions, rate their game, receive practice focuses and drills, and follow their self-rated progress. Video analysis is optional.
 
-The user-facing brand is **Hasa**, and the coach mascot is **Piko**. The thesis project, Python package, internal identifiers and some research, privacy and consent wording retain **PicklePro**. The source folder remains `Pickleball Performance Dashboard/`.
+The user-facing brand is **PicklePro**, and the coach mascot is **Pickle**. The source folder is `Pickleball Performance Dashboard/`.
 
 ## What this branch includes
 
@@ -14,16 +14,16 @@ The user-facing brand is **Hasa**, and the coach mascot is **Piko**. The thesis 
 - **Player onboarding:** five steps covering the player's name, adult confirmation, experience, play preferences, goals and optional starting skill ratings.
 - **Session logging:** solo practice, matches and tournaments; singles/doubles or solo drill formats; goals, partner/opponent names, and tournament details where relevant.
 - **Rate & plan:** ten skills rated from 1 to 5, with at least three ratings needed for a plan. Rules use ratings, chosen focuses and reported difficulties to suggest up to three focuses, drills, next-session targets and a week of practice. No video is required.
-- **Piko audio coaching:** browser speech synthesis, playback controls and a readable script. Voice availability depends on the browser/device.
+- **Pickle audio coaching:** browser speech synthesis, playback controls and a readable script. Voice availability depends on the browser/device.
 - **Self-rated progress:** trends in the player's average and individual skill ratings. These are self-reports, not measured skill scores.
 - **Private journal:** check-in, recovery and reflection alongside the Rate & plan and Video tabs.
 - **Buddy (on `coaching`):** find a playing partner by level (Beginner, Novice, Intermediate or Advanced). Players opt in to be listed with their name and level only. The page has two tabs: **Available** (players, with a level filter) and **Requests** (requests waiting for your answer, your buddies and requests you sent). To ask someone, a player picks a purpose (practice, casual game or competition prep), a format, the city and the place to meet (free text, such as a court name), and one or more free dates and times. The other player sees a badge on the Buddy tab and can accept or decline. Once accepted, either player can cancel the buddy session with an optional reason (type it or tap a quick pick); the other player sees who cancelled and why under **Cancelled sessions**. Safety rules from the requirements (N04, N05): adults only (confirmed once, on first use), no guest accounts, at most 10 waiting requests, one open request per pair, a 7-day pause after a decline, and no booking, payments or public listings. Rules are enforced in the database (`supabase/migrations/20261022090000_buddy_finder.sql`).
 - **Partners and peer coaching (on `coaching`):** link with a player you trust by a one-time invite code (8 characters, valid 7 days, works once) or with **Invite as partner** on an accepted buddy's card; the other player must accept, and either can unlink at any time. On a session's video report, **Share with a partner** shares that one session with the partners you pick. A partner opens it from **Partners → Shared with you** and sees the video report and video only: never the owner's goals, ratings, notes, journal, practice plan or audio (M02). Partners leave notes pinned to the paused moment of the video (or about the whole session) and edit only their own; the owner sees every note in their report, can tap a note's time to watch that moment, and can delete any note (M03). Stopping a share or unlinking hides the report and notes from the partner at once, and video links expire within 5 minutes (A04). On computers Partners has its own sidebar entry; on phones it is reached from the top of the Buddy page, and the Buddy tab's badge also counts partner invites. Rules are enforced in the database (`supabase/migrations/20261024090000_partners.sql`).
 - **Profiles and settings:** player ID, profile photo, short bio, home court, paddle, session defaults and larger text.
 - **Optional video review:** court landmark confirmation, private resumable uploads, queued analysis, player selection, court positions and dwell-time heatmaps, with coverage warnings and versioned report history.
-- **Hasa design:** paper and forest-green surfaces, yellow accents, Bricolage Grotesque headings, DM Sans body text and Piko's icon. Brand constants live in `src/app/brand.ts`; tokens live in `src/styles/theme.css`.
+- **PicklePro design:** the original Club Court look with the pickle mascot. Colors live in `src/app/theme.ts`; tokens live in `src/styles/theme.css`.
 
-The Hasa rebrand retains the existing routes, data model and analysis behavior. See the [Hasa handoff](HASA_RESKIN_HANDOFF.md) and [brand kit](docs/brand/hasa/README.md). The [mobile and self-assessment guide](docs/MOBILE_SELF_ASSESSMENT.md) explains the underlying flows; its older layout and palette descriptions predate the Hasa rebrand.
+The [mobile and self-assessment guide](docs/MOBILE_SELF_ASSESSMENT.md) explains the underlying flows.
 
 ## Architecture
 
@@ -146,7 +146,7 @@ The clip and result are synthetic test material. See [CV pipeline](docs/CV_PIPEL
 
 ## Research limitations
 
-Self-assessment plans use explicit rules and the player's own ratings. They do not establish measured technique, skill level or play style. Piko reads generated coaching scripts through browser speech synthesis; the normal coaching flow does not require an LLM API key.
+Self-assessment plans use explicit rules and the player's own ratings. They do not establish measured technique, skill level or play style. Pickle reads generated coaching scripts through browser speech synthesis; the normal coaching flow does not require an LLM API key.
 
 Video court mapping and player tracking can fail on moving, occluded or crowded footage. Ball tracking, shot classification and rally estimates remain experimental. Unvalidated shot statistics and positioning advice are withheld from real-player reports; research tools expose experimental output for inspection. A ground-plane homography cannot measure ball height, spin or true three-dimensional speed. An `insufficient_data` report can be a valid outcome, and model confidence is not evidence of real-world accuracy.
 
@@ -173,7 +173,7 @@ From the repository root, `bash supabase/tests/run_local_rls_tests.sh` runs data
 
 | Path | Contents |
 | --- | --- |
-| `Pickleball Performance Dashboard/src/app/` | Screens, navigation, Hasa brand constants and Piko |
+| `Pickleball Performance Dashboard/src/app/` | Screens, navigation and the Pickle coach |
 | `Pickleball Performance Dashboard/src/lib/` | Data access, configuration, coaching rules, uploads and result validation |
 | `Pickleball Performance Dashboard/server/` | FastAPI, CV pipeline, CLI, worker and Python tests |
 | `Pickleball Performance Dashboard/contracts/` | Versioned result schema and fixtures |
@@ -182,6 +182,6 @@ From the repository root, `bash supabase/tests/run_local_rls_tests.sh` runs data
 | `supabase/tests/` | Local database policy tests |
 | `docs/` | Setup, research status, evaluation and brand references |
 
-The [Hasa handoff](HASA_RESKIN_HANDOFF.md) covers the current presentation layer. [Run and handoff notes](PICKLEPRO_RUN_AND_HANDOFF.md) and [CV handoff](HANDOFF.md) retain earlier research context; use the branch and setup instructions above when they differ.
+[Run and handoff notes](PICKLEPRO_RUN_AND_HANDOFF.md) and [CV handoff](HANDOFF.md) retain earlier research context; use the branch and setup instructions above when they differ.
 
 The original dashboard design came from [Figma](https://www.figma.com/design/Mu6FwtQXEhhLAEJNXdRNWc/Pickleball-Performance-Dashboard). See [attributions](Pickleball%20Performance%20Dashboard/ATTRIBUTIONS.md) for existing credits.

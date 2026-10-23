@@ -164,7 +164,7 @@ export default function PartnersPage({ sb }: { sb: SupabaseClient; userId: strin
             <div className="flex items-center gap-3">
               <PartnerAvatar name={l.other_name ?? "?"} />
               <div className="min-w-0">
-                <p className="type-body-strong" style={{ color: INK }}>{l.other_name}</p>
+                <p className="text-base font-bold" style={{ color: INK }}>{l.other_name}</p>
                 <p className="text-sm" style={{ color: WHITE_DIM }}>{levelLine(l)}</p>
               </div>
             </div>
@@ -187,7 +187,7 @@ export default function PartnersPage({ sb }: { sb: SupabaseClient; userId: strin
               <div className="flex flex-wrap items-center gap-3">
                 <PartnerAvatar name={l.other_name ?? "?"} />
                 <div className="min-w-[9rem] flex-1">
-                  <p className="type-body-strong" style={{ color: INK }}>{l.other_name}</p>
+                  <p className="text-base font-bold" style={{ color: INK }}>{l.other_name}</p>
                   <p className="text-sm" style={{ color: WHITE_DIM }}>{levelLine(l)}{l.linked_at ? ` · partners since ${shortDate(l.linked_at)}` : ""}</p>
                 </div>
                 {unlinking !== l.id && <PrimaryButton tone="light" onClick={() => setUnlinking(l.id)}>Unlink</PrimaryButton>}
@@ -213,7 +213,7 @@ export default function PartnersPage({ sb }: { sb: SupabaseClient; userId: strin
             <div className="flex flex-wrap items-center gap-3">
               <PartnerAvatar name={l.other_name ?? "?"} />
               <div className="min-w-[9rem] flex-1">
-                <p className="type-body-strong" style={{ color: INK }}>{l.other_name}</p>
+                <p className="text-base font-bold" style={{ color: INK }}>{l.other_name}</p>
                 <p className="text-sm font-bold" style={{ color: WHITE_DIM }}>Waiting for an answer</p>
               </div>
               <PrimaryButton tone="light" disabled={busyId === l.id} onClick={() => void act(l.id, () => cancelInvite(sb, l.id))}>Cancel invite</PrimaryButton>
@@ -242,7 +242,7 @@ export default function PartnersPage({ sb }: { sb: SupabaseClient; userId: strin
                 <PartnerAvatar name={s.owner_name} />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold" style={{ color: WHITE_DIM }}>{s.owner_name}</p>
-                  <p className="type-body-strong truncate" style={{ color: INK }}>{s.title}</p>
+                  <p className="text-base font-bold truncate" style={{ color: INK }}>{s.title}</p>
                   <p className="text-sm" style={{ color: WHITE_DIM }}>
                     {shortDate(s.session_date)} · {CONTEXT_LABELS[s.session_context]} · {FORMAT_LABELS[s.play_format]}</p>
                   <p className="mt-1 flex items-center gap-1.5 text-sm font-bold" style={{ color: s.has_report ? GREEN : ROSE }}>
