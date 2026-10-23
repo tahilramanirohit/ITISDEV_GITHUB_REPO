@@ -95,9 +95,7 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
     <div className="space-y-5">
       {step === 0 ? (
         <section className="relative overflow-hidden rounded-[14px] p-5" style={{ background: NAVY, color: "var(--pp-on-hero)" }}>
-          <div aria-hidden="true" className="absolute -right-10 -top-10 h-36 w-36 rounded-full" style={{ background: OPTIC, opacity: 0.2 }} />
-          <p className="text-xs font-bold" style={{ color: OPTIC }}>Welcome to PicklePro</p>
-          <h1 className="mt-1 text-2xl font-extrabold leading-tight" style={{ fontFamily: DISPLAY_FONT }}>Let's get to know your game</h1>
+          <h1 className="text-2xl font-extrabold leading-tight" style={{ fontFamily: DISPLAY_FONT }}>Let's get to know your game</h1>
           <p className="mt-2 text-sm" style={{ color: "#c9dccf" }}>Five quick steps, about two minutes. Your answers stay private and shape your first practice plan. <a href="#/privacy" className="font-semibold underline" style={{ color: OPTIC }}>How we handle your data</a></p>
         </section>
       ) : (

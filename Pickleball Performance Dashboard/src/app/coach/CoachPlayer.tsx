@@ -4,7 +4,13 @@ import { Pause, Play, SkipBack, SkipForward, X } from "lucide-react";
 import talkingMascotUrl from "../../assets/pickle-mascot@2x.webp";
 import { CoachSpeech, flattenScript, unlockSpeech, type TimingMode } from "../../lib/coaching/coachSpeech";
 import { formatSeconds, scriptSeconds, type CoachScript } from "../../lib/coaching/coachScript";
-import { DEEP, PICKLE, YELLOW, YELLOW_INK } from "../theme";
+import { INK, LINE_STRONG, ON_STRONG, PICKLE, STRONG } from "../theme";
+import { pressable } from "../shell/primitives";
+
+// The player sheet is always a dark court surface, in light and dark mode alike.
+const COURT = "#0f1a14";
+const BALL = "#d9f75a";
+const BALL_INK = "#0f1a14";
 
 const SPEEDS = [0.75, 1, 1.25];
 const REST_MOUTH = 0.42;   // the mascot's usual open smile
@@ -204,7 +210,7 @@ export function CoachPlayer({ script, isShort, onFull, onClose }: {
 
   return createPortal(
     <div role="dialog" aria-modal="true" aria-label="Audio coaching" className={`fixed inset-0 z-50 text-white ${playing ? "coach-speaking" : ""}`}
-      style={{ background: `radial-gradient(70% 60% at 20% 10%, #1f6038 0%, rgba(31,96,56,0) 70%), linear-gradient(180deg, ${DEEP} 0%, #06190f 100%)`,
+      style={{ background: COURT,
         paddingTop: "env(safe-area-inset-top, 0px)" }}>
       <div className="grid h-full grid-rows-[auto_1fr_auto] px-4 pt-3 sm:px-8 lg:px-14">
         <div className="grid grid-cols-[44px_1fr_44px] items-center gap-3">
@@ -228,7 +234,7 @@ export function CoachPlayer({ script, isShort, onFull, onClose }: {
             <div className="grid min-w-0 gap-1 lg:mt-4 lg:justify-items-center">
               <span className="flex items-center text-xs font-extrabold tracking-[0.1em]" style={{ color: PICKLE }}>
                 {done ? "All done" : section?.eyebrow ?? `Part ${sectionIndex + 1} of ${script.sections.length}`}
-                <span className="coach-wave ml-2 inline-flex h-3.5 items-end gap-[3px]" style={{ color: YELLOW }} aria-hidden="true"><i /><i /><i /><i /></span>
+                <span className="coach-wave ml-2 inline-flex h-3.5 items-end gap-[3px]" style={{ color: BALL }} aria-hidden="true"><i /><i /><i /><i /></span>
               </span>
               <h2 className="text-[clamp(24px,5.4vw,34px)] font-extrabold leading-[1.08] tracking-tight lg:text-[clamp(28px,2.6vw,40px)]">{done ? "Finished" : section?.title}</h2>
               <p className="text-sm font-semibold" style={{ color: "#9fc3ab" }}>
@@ -257,7 +263,7 @@ export function CoachPlayer({ script, isShort, onFull, onClose }: {
                         {s.source === "video" ? "From your video" : "From your ratings"}</span>}
                       {s.words.map((word, w) => said(i, w)
                         ? <span key={w}><span className="coach-word" data-now={isCurrent && w === pos.w ? "" : undefined}
-                            style={isCurrent && w === pos.w && playing ? { color: YELLOW } : undefined}>{word.text}</span> </span>
+                            style={isCurrent && w === pos.w && playing ? { color: BALL } : undefined}>{word.text}</span> </span>
                         : fullText ? <span key={w} style={{ color: "rgba(255,255,255,0.16)" }}>{word.text} </span> : null)}
                     </p>;
                   })}
@@ -266,7 +272,7 @@ export function CoachPlayer({ script, isShort, onFull, onClose }: {
               {done && <div className="mt-2 grid max-w-[520px] gap-3 rounded-[20px] p-4 text-[15px] font-semibold" style={{ background: "rgba(255,255,255,0.07)", color: "#d6eadc" }}>
                 <span>That's your {isShort ? "short" : "full"} coaching. Everything from it is above.</span>
                 <span className="flex flex-wrap gap-2">
-                  <button type="button" onClick={() => playFrom(0)} className="min-h-[44px] rounded-[12px] px-5 font-extrabold" style={{ background: YELLOW, color: YELLOW_INK }}>Replay</button>
+                  <button type="button" onClick={() => playFrom(0)} className="min-h-[44px] rounded-[12px] px-5 font-extrabold" style={{ background: BALL, color: BALL_INK }}>Replay</button>
                   {isShort && onFull && <button type="button" onClick={onFull} className="min-h-[44px] rounded-[12px] px-5 font-extrabold" style={{ background: "rgba(255,255,255,0.1)" }}>Hear full plan</button>}
                   <button type="button" onClick={onClose} className="min-h-[44px] rounded-[12px] px-5 font-extrabold" style={{ background: "rgba(255,255,255,0.1)" }}>Close</button>
                 </span>
@@ -281,7 +287,7 @@ export function CoachPlayer({ script, isShort, onFull, onClose }: {
             <button type="button" onClick={changeSpeed} aria-label={`Speaking speed ${rate}x`} className="h-10 min-w-[50px] justify-self-start rounded-full px-3 text-sm font-extrabold tabular-nums" style={{ border: "1px solid rgba(255,255,255,0.18)" }}>{rate}×</button>
             <button type="button" onClick={() => playFrom(Math.max(0, Math.min(pos.s, sentences.length) - 1))} aria-label="Back one sentence" className="grid h-[50px] w-[50px] place-items-center rounded-full" style={{ background: "rgba(255,255,255,0.1)" }}><SkipBack size={22} fill="currentColor" /></button>
             <button ref={playButton} type="button" onClick={() => (playing ? pause() : playFrom(done ? 0 : pos.s))} aria-label={playing ? "Pause" : done ? "Replay" : "Play"}
-              className="grid h-[72px] w-[72px] place-items-center rounded-full" style={{ background: YELLOW, color: YELLOW_INK, boxShadow: "0 10px 30px rgba(254,188,23,0.22)" }}>
+              className="grid h-[72px] w-[72px] place-items-center rounded-full" style={{ background: BALL, color: BALL_INK }}>
               {playing ? <Pause size={30} fill="currentColor" /> : <Play size={30} fill="currentColor" className="ml-1" />}
             </button>
             <button type="button" onClick={next} aria-label="Skip to next part" className="grid h-[50px] w-[50px] place-items-center rounded-full" style={{ background: "rgba(255,255,255,0.1)" }}><SkipForward size={22} fill="currentColor" /></button>
@@ -290,7 +296,7 @@ export function CoachPlayer({ script, isShort, onFull, onClose }: {
           <div className="mx-auto flex rounded-full p-1" role="group" aria-label="How to show the words" style={{ background: "rgba(255,255,255,0.08)" }}>
             {([[false, "Word by word"], [true, "Full text"]] as const).map(([value, label]) => (
               <button key={label} type="button" aria-pressed={fullText === value} onClick={() => setTextMode(value)}
-                className="min-h-[36px] rounded-full px-4 text-[13px] font-bold" style={fullText === value ? { background: "#ffffff", color: DEEP } : { color: "#cfe6d7" }}>{label}</button>
+                className="min-h-[36px] rounded-full px-4 text-[13px] font-bold" style={fullText === value ? { background: "#ffffff", color: COURT } : { color: "#cfe6d7" }}>{label}</button>
             ))}
           </div>
           {timingLabel && <p className="text-center text-xs font-semibold" style={{ color: "#8fb59c" }}>{timingLabel}</p>}
@@ -305,7 +311,7 @@ export function CoachPlayer({ script, isShort, onFull, onClose }: {
  * Opt-in buttons for the audio coach. The written plan on the page is unchanged; nothing plays until tapped.
  * `tone` matches the surface the buttons sit on.
  */
-export function CoachLauncher({ shortScript, fullScript, tone = "yellow", compact = false, label }: {
+export function CoachLauncher({ shortScript, fullScript, compact = false, label }: {
   shortScript: CoachScript; fullScript?: CoachScript; tone?: "yellow" | "light"; compact?: boolean; label?: string;
 }) {
   const [open, setOpen] = useState<"short" | "full" | null>(null);
@@ -319,13 +325,13 @@ export function CoachLauncher({ shortScript, fullScript, tone = "yellow", compac
   return (
     <div className="flex flex-wrap gap-2">
       <button ref={opener} type="button" onClick={() => start("short")}
-        className={`inline-flex items-center gap-2 rounded-[12px] font-extrabold ${compact ? "min-h-[40px] px-4 text-xs" : "min-h-[48px] px-5 text-sm"}`}
-        style={{ background: DEEP, color: tone === "yellow" ? YELLOW : "#ffffff" }}>
+        className={`inline-flex items-center gap-2 rounded-[12px] font-bold ${pressable} ${compact ? "min-h-[44px] px-4 text-sm" : "min-h-[48px] px-5 text-[0.95rem]"}`}
+        style={{ background: STRONG, color: ON_STRONG, border: `1px solid ${STRONG}` }}>
         <Play size={compact ? 14 : 16} fill="currentColor" aria-hidden="true" />
         {label ?? (compact ? "Hear this week's plan" : "Play coaching")} · {shortLen}
       </button>
-      {hasFull && !compact && <button type="button" onClick={() => start("full")} className="min-h-[48px] rounded-[12px] px-4 text-sm font-bold"
-        style={{ border: `2px solid ${tone === "yellow" ? "rgba(43,33,0,0.35)" : "rgba(11,42,26,0.25)"}`, color: tone === "yellow" ? YELLOW_INK : DEEP }}>
+      {hasFull && !compact && <button type="button" onClick={() => start("full")} className={`min-h-[48px] rounded-[12px] px-4 text-[0.95rem] font-bold ${pressable}`}
+        style={{ border: `1px solid ${LINE_STRONG}`, color: INK, background: "transparent" }}>
         Hear full plan · {fullLen}
       </button>}
       {open && <CoachPlayer key={open} script={open === "short" ? shortScript : fullScript!} isShort={open === "short"}
