@@ -19,8 +19,9 @@ import {
 import { initials, listOtherPlayers, saveOtherPlayers, shortId, type OtherPlayer } from "../../lib/api/players";
 import { AvatarStack } from "./sessionUi";
 import { hasUploadConsent, recordUploadConsent } from "../../lib/api/capture";
-import { ACCENT_INK, BLUE_SKY, BORDER, DISPLAY_FONT, INK, NEON, NEON_D, ORANGE, WHITE_DIM, WHITE_SUB, alpha } from "../theme";
-import { Card, Chip, Notice, SegmentedTabs, Sheet, fieldStyle, tabPanelProps } from "../shell/primitives";
+import { BaselineNotice } from "./BaselineNotice";
+import { ACCENT_INK, BLUE_SKY, BORDER, DISPLAY_FONT, INK, ORANGE, WHITE_DIM, WHITE_SUB, alpha } from "../theme";
+import { Card, Chip, Notice, SegmentedTabs, Sheet, fieldStyle, pressable, tabPanelProps } from "../shell/primitives";
 import { SelfAssessmentPanel } from "../selfAssessment/SelfAssessmentPanel";
 import { AnalysisParamsForm, ProgressBar, type AnalysisParams } from "../analysis/AnalysisStatus";
 import { CourtCorrection } from "../analysis/CourtCorrection";
@@ -448,8 +449,8 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
           : state ? stateDescription(state, job) : ""}</p>
         {hasFeedback && (
           <button type="button" onClick={() => document.getElementById("feedback")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-            className="inline-flex items-center gap-2 rounded-xl px-4 py-2 mb-4 text-sm font-bold"
-            style={{ background: NEON, color: NEON_D }}>See your feedback <ArrowDown size={16} aria-hidden="true" /></button>
+            className={`mb-4 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full px-4 text-[15px] font-extrabold ${pressable}`}
+            style={{ background: "var(--pp-action)", color: "var(--pp-on-action)" }}>See your feedback <ArrowDown size={16} aria-hidden="true" /></button>
         )}
         {video && (
           <details className="mb-3">
@@ -517,8 +518,9 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
         {canChangeVideo && config.trialNoWorker && <Notice tone="info">Video upload is paused on this public trial because analysis is not running online. You can explore the sample dashboard and try session planning and check-in.</Notice>}
         {canChangeVideo && !config.trialNoWorker && (
           <div className="space-y-3">
-            <details className="rounded-xl p-3" style={{ border: `1px solid ${BORDER}` }}>
-              <summary className="cursor-pointer text-sm font-semibold" style={{ color: BLUE_SKY }}>How to record a usable match</summary>
+            <BaselineNotice />
+            <details className="rounded-[16px] p-3" style={{ border: `1px solid ${BORDER}` }}>
+              <summary className="cursor-pointer text-sm font-semibold" style={{ color: BLUE_SKY }}>More recording tips</summary>
               <ul className="mt-2 list-disc space-y-1 pl-5 text-sm" style={{ color: WHITE_DIM }}>
                 <li>Use a stable tripod behind a baseline, high enough to see players and court lines.</li>
                 <li>Keep the full court visible in landscape at 720p or higher and at least 30 fps.</li>
@@ -533,9 +535,9 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
               <span>I confirm that every person visible in this recording agreed to be recorded and uploaded for PicklePro analysis.
                 Raw video is automatically removed 30 days after analysis unless I choose to keep it. The report remains saved. <a href="#/privacy" className="underline" style={{ color: BLUE_SKY }}>Data and privacy</a></span>
             </label>}
-            <label className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold cursor-pointer"
-              style={{ background: params ? NEON : `${alpha(NEON, 31)}`, color: NEON_D }}>
-              <Upload size={14} /> {state === "upload_incomplete" ? "Resume upload (select the same file)" : markCourtMyself ? "Choose video & review court" : "Choose video & upload"}
+            <label className={`flex min-h-[52px] w-full cursor-pointer items-center justify-center gap-2 rounded-full px-5 text-base font-extrabold ${pressable}`}
+              style={{ background: "var(--pp-action)", color: "var(--pp-on-action)", opacity: params ? 1 : 0.45 }}>
+              <Upload size={18} aria-hidden="true" /> {state === "upload_incomplete" ? "Resume upload (select the same file)" : markCourtMyself ? "Choose video & review court" : "Choose video & upload"}
               <input type="file" accept="video/mp4,video/quicktime,video/webm,video/x-msvideo" className="hidden"
                 disabled={!params || !!localUpload}
                 onChange={(e) => {

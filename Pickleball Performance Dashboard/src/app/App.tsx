@@ -30,6 +30,7 @@ const EditProfilePage = lazy(() => import("./profile/EditProfilePage"));
 const SettingsPage = lazy(() => import("./settings/SettingsPage"));
 const LabelPage = lazy(() => import("./labelling/LabelPage"));
 const PrivacyPage = lazy(() => import("./privacy/PrivacyPage"));
+const ExamplePage = lazy(() => import("./example/ExamplePage"));
 
 const Loading = () => <p className="p-8 text-sm" style={{ color: WHITE_SUB }}>Loading…</p>;
 
@@ -168,6 +169,7 @@ function SignedInApp({ sb, cfg }: { sb: SupabaseClient; cfg: AppConfig }) {
           <Route path="/new" element={<NewSessionPage sb={sb} userId={user.id} trialNoWorker={cfg.trialNoWorker} />} />
           <Route path="/sessions/:sessionId" element={<SessionDetail sb={sb} userId={user.id} />} />
           <Route path="/progress" element={<ProgressPage sb={sb} />} />
+          <Route path="/example" element={<ExamplePage />} />
           <Route path="/buddy" element={<BuddyPage sb={sb} userId={user.id} />} />
           <Route path="/partners" element={<PartnersPage sb={sb} userId={user.id} />} />
           <Route path="/shared/:sessionId" element={<SharedReportPage sb={sb} userId={user.id} />} />

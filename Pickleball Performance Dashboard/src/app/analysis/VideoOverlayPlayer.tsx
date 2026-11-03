@@ -5,6 +5,8 @@ import { INK, WHITE_DIM } from "../theme";
 
 const YOU = "#293df2";
 const OTHER = "#ffffff";
+// Canvas drawing cannot read CSS variables, so the overlay keeps plain colours.
+const TAG_INK = "#121a15";
 const BALL = "#ff8a1f";
 const COURT = "rgba(255, 236, 64, 0.85)";
 const TRAIL_S = 0.6;
@@ -127,7 +129,7 @@ export function VideoOverlayPlayer({
     const fontPx = Math.max(12, Math.round(canvas.width / 55));
 
     const tag = (text: string, x: number, y: number, bg: string, fg: string) => {
-      ctx.font = `bold ${fontPx}px Archivo, sans-serif`;
+      ctx.font = `bold ${fontPx}px Inter, sans-serif`;
       const w = ctx.measureText(text).width + 12;
       const h = fontPx + 8;
       const tx = Math.min(Math.max(0, x), canvas.width - w);
@@ -160,7 +162,7 @@ export function VideoOverlayPlayer({
       ctx.lineWidth = you ? 4 : 2;
       ctx.strokeRect(px(x1), py(y1), (x2 - x1) * scale, (y2 - y1) * scale);
       const name = you ? "You" : player.track_id != null ? `Player ${player.track_id}` : "Player";
-      tag(name, px(x1), py(y1), you ? YOU : OTHER, you ? "#ffffff" : INK);
+      tag(name, px(x1), py(y1), you ? YOU : OTHER, you ? "#ffffff" : TAG_INK);
     }
 
     // Ball with a short trail of where it was just seen.

@@ -1,4 +1,4 @@
-// ── Palette: "Night Court" ──────────────────────────────────────────────────
+// ── Palette: "Pickle Court" (pickle green and ball yellow) ──────────────────────────────────────────────────
 // Every color is a CSS variable defined in styles/theme.css, with a light and a
 // dark value, so the whole app follows the chosen appearance without per-screen
 // code. One accent (court green, lime on dark) and one action color (ball lime)
@@ -35,6 +35,15 @@ export const ON_STRONG   = v("on-strong");
 // Dark court surfaces (welcome screen, audio coach) stay dark in both modes.
 export const HERO    = v("hero");
 export const ON_HERO = v("on-hero");
+
+// Pickle green (partner, success checks) and the cream coach bubble.
+export const CHECK    = v("green");
+export const ON_CHECK = v("on-green");
+export const CREAM    = v("cream");
+export const ON_CREAM = v("on-cream");
+/** Faint court lines drawn behind screens. */
+export const COURT_LINE = v("court-line");
+export const TABBAR = v("tabbar");
 
 // Status
 export const WARN   = v("warn");
@@ -81,8 +90,10 @@ export const BORDER    = LINE;
 export const CARD_GLOW = "none";
 export const DOT_BG = "none";
 
-export const DISPLAY_FONT = "'Archivo',system-ui,-apple-system,sans-serif";
-export const BODY_FONT = "'IBM Plex Sans',system-ui,-apple-system,sans-serif";
+export const DISPLAY_FONT = "'Inter',system-ui,-apple-system,sans-serif";
+export const BODY_FONT = "'Inter',system-ui,-apple-system,sans-serif";
+/** Scoreboard numerals for stats, scores and counts. */
+export const NUM_FONT = "'Barlow Condensed','Inter',system-ui,sans-serif";
 
 // ── Appearance (light, dark or follow the device) ──────────────────────────
 export type Appearance = "system" | "light" | "dark";

@@ -34,3 +34,16 @@
 @media (prefers-reduced-motion: reduce) {
   .coach-word, .coach-speaking .coach-pickle, .coach-speaking .coach-wave i { animation: none; }
 }
+
+/* Taps feel native: no grey flash, and buttons respond on touch. */
+a, button, label { -webkit-tap-highlight-color: transparent; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+}
+/* Slide-up sheets and one-time tips. */
+@keyframes pp-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes pp-sheet { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes pp-fade { from { opacity: 0; } to { opacity: 1; } }
+.pp-rise { animation: pp-rise 0.3s cubic-bezier(.2,.8,.2,1) both; }
+.pp-sheet { animation: pp-sheet 0.3s cubic-bezier(.2,.8,.2,1) both; }
+.pp-fade { animation: pp-fade 0.25s ease-out both; }

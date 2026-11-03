@@ -1,6 +1,6 @@
 import { skillInfo, type SelfSkill, type SkillRating } from "../../lib/coaching/selfAssessment";
-import { BORDER, DEEP, GREEN, INK, WHITE_DIM, WHITE_SUB } from "../theme";
-import { Card, rovingIndex } from "../shell/primitives";
+import { ACCENT_INK, ACTION, BORDER, INK, ON_ACTION, SURFACE_2, WHITE_DIM, WHITE_SUB } from "../theme";
+import { Card, numStyle, pressable, rovingIndex } from "../shell/primitives";
 
 /** One skill's 1-5 rating as a W3C radio group. Shared by session rating and onboarding. */
 export function SkillRater({ skill, value, onChange, question, playFormat }: {
@@ -29,11 +29,11 @@ export function SkillRater({ skill, value, onChange, question, playFormat }: {
               onChange((next + 1) as SkillRating);
               document.getElementById(`rate-${skill}-${next + 1}`)?.focus();
             }}
-            onClick={() => onChange(n)} className="min-h-[44px] rounded-full text-base font-extrabold transition-colors"
-            style={selected ? { background: DEEP, color: "var(--pp-on-strong)", border: `1.5px solid ${DEEP}` } : { background: "var(--pp-surface)", color: INK, border: `1.5px solid ${BORDER}` }}>{n}</button>;
+            onClick={() => onChange(n)} className={`min-h-[64px] rounded-[16px] text-[30px] leading-none ${pressable}`}
+            style={{ ...numStyle, ...(selected ? { background: ACTION, color: ON_ACTION, border: `1px solid ${ACTION}` } : { background: SURFACE_2, color: INK, border: `1px solid ${BORDER}` }) }}>{n}</button>;
         })}
       </div>
-      <p className="mt-2 min-h-[1.25rem] text-sm font-semibold" style={{ color: value ? GREEN : WHITE_SUB }}>
+      <p className="mt-2 min-h-[1.25rem] text-sm font-semibold" style={{ color: value ? ACCENT_INK : WHITE_SUB }}>
         {value ? info.anchors[value - 1] : "Tap a number, or leave it if it didn't come up."}
       </p>
     </Card>

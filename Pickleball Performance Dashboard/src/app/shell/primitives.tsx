@@ -3,17 +3,20 @@ import { Eye, EyeOff } from "lucide-react";
 import mascotUrl from "../../assets/pickle-mascot.webp";
 import mascot2xUrl from "../../assets/pickle-mascot@2x.webp";
 import {
-  ACCENT, ACCENT_INK, ACCENT_SOFT, ACTION, ACTION_EDGE, DANGER, DISPLAY_FONT, INK, INK_2, INK_3, LINE, LINE_STRONG, ON_ACTION, ON_HERO,
-  ON_STRONG, STRONG, SURFACE, SURFACE_2, VIOLET, WARN, alpha,
+  ACCENT, ACCENT_INK, ACCENT_SOFT, ACTION, ACTION_EDGE, CREAM, DANGER, DISPLAY_FONT, INK, INK_2, INK_3, LINE, LINE_STRONG, NUM_FONT, ON_ACTION, ON_CREAM, ON_HERO,
+  ON_STRONG, STRONG, SURFACE, SURFACE_2, TABBAR, VIOLET, WARN, alpha,
 } from "../theme";
 
 export { mascotUrl, mascot2xUrl };
 
-// One radius scale for the whole app: controls 12px, cards 14px, chips 10px.
+// One radius scale for the whole app: buttons and chips are pills, cards 18px.
 // Cards separate by a hairline border, never by a soft shadow.
 
-/** Shared interaction states, so every button presses and focuses the same way. */
-export const pressable = "transition-[filter,transform] duration-100 hover:brightness-[0.96] active:brightness-[0.92] disabled:opacity-50 disabled:pointer-events-none";
+/** Shared interaction states: every button shrinks a little when pressed (not with reduced motion). */
+export const pressable = "transition-[filter,transform,background-color,color] duration-150 ease-out hover:brightness-[0.97] active:scale-[0.97] active:brightness-[0.94] motion-reduce:transition-none motion-reduce:active:scale-100 disabled:opacity-50 disabled:pointer-events-none";
+
+/** Scoreboard numerals (Barlow Condensed) for scores, stats and counts. */
+export const numStyle = { fontFamily: NUM_FONT, fontWeight: 800, fontVariantNumeric: "tabular-nums" } as const;
 
 /** Card surface: hairline border, one radius, no shadow. */
 export const cardStyle = { background: SURFACE, border: `1px solid ${LINE}`, color: INK } as const;
@@ -21,7 +24,7 @@ export const cardStyle = { background: SURFACE, border: `1px solid ${LINE}`, col
 // ── Card ──────────────────────────────────────────────────────────────────
 export function Card({ children, className = "" }: { children: ReactNode; className?: string; accent?: string }) {
   return (
-    <div className={`rounded-[14px] p-5 ${className}`} style={cardStyle}>
+    <div className={`rounded-[18px] p-5 ${className}`} style={cardStyle}>
       {children}
     </div>
   );
@@ -92,9 +95,9 @@ export function Pill({ children, color = VIOLET, title }: { children: ReactNode;
 export function Chip({ selected, children, onClick, label }: { selected: boolean; children: ReactNode; onClick: () => void; label?: string }) {
   return (
     <button type="button" aria-pressed={selected} aria-label={label} onClick={onClick}
-      className={`inline-flex min-h-[44px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[10px] px-4 py-2 text-sm font-semibold ${pressable}`}
+      className={`inline-flex min-h-[44px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold ${pressable}`}
       style={selected
-        ? { background: STRONG, color: ON_STRONG, border: `1px solid ${STRONG}` }
+        ? { background: ACTION, color: ON_ACTION, border: `1px solid ${ACTION_EDGE}` }
         : { background: SURFACE, color: INK, border: `1px solid ${LINE}` }}>
       {children}
     </button>
@@ -102,17 +105,16 @@ export function Chip({ selected, children, onClick, label }: { selected: boolean
 }
 
 /**
- * Full-width action, sized for thumbs. "optic" is the one lime action per screen
- * (log a game, save a rating); "dark" is the ordinary primary; "light" is secondary.
+ * Full-width pill action, sized for thumbs. The main action is ball yellow ("dark" and
+ * "optic" both mean main action); "light" is the outlined secondary.
  */
 export function PrimaryButton({ children, className = "", tone = "dark", ...rest }:
   ButtonHTMLAttributes<HTMLButtonElement> & { tone?: "dark" | "optic" | "light" }) {
-  const style = tone === "optic" ? { background: ACTION, color: ON_ACTION, border: `1px solid ${ACTION_EDGE}` }
-    : tone === "light" ? { background: SURFACE, color: INK, border: `1px solid ${LINE_STRONG}` }
-    : { background: STRONG, color: ON_STRONG, border: `1px solid ${STRONG}` };
+  const style = tone === "light" ? { background: "transparent", color: INK, border: `1px solid ${LINE_STRONG}` }
+    : { background: ACTION, color: ON_ACTION, border: `1px solid ${ACTION_EDGE}` };
   return (
     <button {...rest}
-      className={`inline-flex min-h-[48px] items-center justify-center gap-2 rounded-[12px] px-6 py-3 text-[0.95rem] font-bold ${pressable} ${className}`}
+      className={`inline-flex min-h-[50px] items-center justify-center gap-2 rounded-full px-6 py-3 text-base font-extrabold ${pressable} ${className}`}
       style={{ ...style, ...rest.style }}>
       {children}
     </button>
@@ -148,16 +150,16 @@ export function SegmentedTabs<T extends string>({ tabs, value, onChange, label, 
     document.getElementById(`${idBase}-tab-${tabs[next].value}`)?.focus();
   }
   return (
-    <div role="tablist" aria-label={label} className="flex gap-5 overflow-x-auto border-b sm:gap-6" style={{ borderColor: LINE }}>
+    <div role="tablist" aria-label={label} className="flex gap-1 overflow-x-auto rounded-full p-1" style={{ background: TABBAR, border: `1px solid ${LINE}`, scrollbarWidth: "none" }}>
       {tabs.map((tab, index) => {
         const active = tab.value === value;
         return (
           <button key={tab.value} type="button" role="tab" id={`${idBase}-tab-${tab.value}`} aria-controls={`${idBase}-panel-${tab.value}`}
             aria-selected={active} tabIndex={active ? 0 : -1} onClick={() => onChange(tab.value)} onKeyDown={(e) => onKeyDown(e, index)}
-            className="-mb-px min-h-[44px] shrink-0 whitespace-nowrap border-b-[3px] px-0.5 py-2 text-sm font-semibold transition-colors"
-            style={active ? { color: INK, borderColor: ACCENT } : { color: INK_2, borderColor: "transparent" }}>
+            className={`min-h-[44px] flex-1 shrink-0 whitespace-nowrap rounded-full px-2.5 py-2 text-[13px] font-bold sm:px-3 sm:text-sm ${pressable}`}
+            style={active ? { background: ACTION, color: ON_ACTION } : { color: INK, background: "transparent" }}>
             {tab.label}
-            {tab.badge && <span className="ml-1.5 text-xs font-semibold" style={{ color: INK_3 }}>{tab.badge}</span>}
+            {tab.badge && <span className="ml-1.5 hidden text-xs font-semibold sm:inline" style={{ color: active ? ON_ACTION : INK_3, opacity: active ? 0.75 : 1 }}>{tab.badge}</span>}
           </button>
         );
       })}
@@ -177,7 +179,7 @@ export function PageHero({ eyebrow, title, subtitle, mascot = false, action, chi
       <div className="flex items-end justify-between gap-3">
         <div className="min-w-0 flex-1">
           {eyebrow && <p className="text-sm" style={{ color: INK_3 }}>{eyebrow}</p>}
-          <h1 className="mt-1 text-[1.75rem] font-extrabold leading-[1.12] tracking-[-0.02em] md:text-4xl" style={{ fontFamily: DISPLAY_FONT }}>{title}</h1>
+          <h1 className="mt-1 text-[1.75rem] font-extrabold leading-[1.12] tracking-[-0.015em] md:text-4xl" style={{ fontFamily: DISPLAY_FONT }}>{title}</h1>
           {subtitle && <div className="mt-1.5 text-[0.95rem] leading-relaxed" style={{ color: INK_2 }}>{subtitle}</div>}
         </div>
         {action}
@@ -208,12 +210,12 @@ export function HeroProgress({ value, label }: { value: number; label: string })
 export function RingTile({ label, value, fraction, color = ACCENT }: { label: string; value: string; fraction: number; color?: string }) {
   const p = Math.round(Math.max(0, Math.min(1, fraction)) * 100);
   return (
-    <div className="flex items-center justify-between gap-2 rounded-[14px] p-3.5" style={cardStyle}>
+    <div className="flex items-center justify-between gap-2 rounded-[18px] p-3.5" style={cardStyle}>
       <div className="min-w-0">
         <p className="text-[13px]" style={{ color: INK_3 }}>{label}</p>
         {/* Words (like a level name) wrap at a smaller size instead of overflowing the tile. */}
-        <p className={`${value.length > 6 ? "text-base leading-tight" : "text-[1.6rem] leading-tight"} font-extrabold tabular-nums`}
-          style={{ color: INK, fontFamily: DISPLAY_FONT }}>{value}</p>
+        <p className={`${value.length > 6 ? "text-base font-extrabold leading-tight" : "text-[2rem] leading-none"} tabular-nums`}
+          style={value.length > 6 ? { color: INK } : { color: INK, ...numStyle }}>{value}</p>
       </div>
       <span aria-hidden="true" className="grid h-11 w-11 shrink-0 place-items-center rounded-full" style={{ background: `conic-gradient(${color} ${p}%, ${SURFACE_2} 0)` }}>
         <span className="h-8 w-8 rounded-full" style={{ background: SURFACE }} />
@@ -248,11 +250,25 @@ export function Notice({ tone = "info", onDark = false, children }: { tone?: "in
   const color = tone === "error" ? DANGER : tone === "warn" ? WARN : ACCENT_INK;
   return (
     <div role={tone === "error" ? "alert" : "status"}
-      className="rounded-[12px] px-4 py-3 text-sm leading-relaxed"
+      className="rounded-[16px] px-4 py-3 text-sm leading-relaxed"
       style={onDark
         ? { background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.24)", color: ON_HERO }
         : { background: tone === "info" ? ACCENT_SOFT : alpha(color, 8), border: `1px solid ${alpha(color, 30)}`, color: tone === "info" ? INK : color }}>
       {children}
+    </div>
+  );
+}
+
+/** Pickle the coach saying something: the mascot beside a cream speech bubble. */
+export function PickleSays({ title, children, size = "md" }: { title: ReactNode; children?: ReactNode; size?: "sm" | "md" }) {
+  const h = size === "sm" ? "h-14" : "h-[88px]";
+  return (
+    <div className="flex items-end gap-2">
+      <img src={mascotUrl} srcSet={`${mascotUrl} 1x, ${mascot2xUrl} 2x`} alt="" aria-hidden="true" className={`pickle-hello pointer-events-none ${h} w-auto shrink-0`} />
+      <div className="mb-2 min-w-0 rounded-[18px] rounded-bl-[4px] px-3.5 py-2.5" style={{ background: CREAM, color: ON_CREAM }}>
+        <p className="text-[15px] font-extrabold leading-snug">{title}</p>
+        {children && <div className="mt-0.5 text-[13px] font-medium leading-snug" style={{ color: "#36413a" }}>{children}</div>}
+      </div>
     </div>
   );
 }
@@ -274,7 +290,7 @@ export function PickleProLogo({ size = "md", tone = "light" }: { size?: "sm" | "
       <img src={mascotUrl} srcSet={`${mascotUrl} 1x, ${mascot2xUrl} 2x`} alt="" aria-hidden className="flex-shrink-0" style={{ height, width: "auto" }} />
       <span style={{ fontFamily: DISPLAY_FONT, fontWeight: 800, fontSize: size === "lg" ? "1.9rem" : size === "sm" ? "1.25rem" : "1.55rem",
         letterSpacing: "-0.01em", lineHeight: 1, color: onHero ? ON_HERO : INK }}>
-        PicklePro
+        Pickle<span style={{ color: ACCENT_INK }}>Pro</span>
       </span>
     </div>
   );

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import testFixture from "../../../contracts/fixtures/analysis_result.test_fixture.v1.json";
 import insufficient from "../../../contracts/fixtures/analysis_result.insufficient.v1.json";
 import { parseAnalysisResult } from "../../lib/analysis/contract";
@@ -175,9 +175,9 @@ describe("ResultView", () => {
     window.localStorage.clear();
     // A saved player report shows the same estimates, marked experimental.
     const report = render(<ResultView result={parseAnalysisResult(result)} videoUrl="/demo.mp4" />);
-    expect(screen.getByRole("button", { name: "All players (4)" })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: "All, 4 shots" })).toBeTruthy();
     expect(screen.getAllByText("EXPERIMENTAL").length).toBeGreaterThan(0);
-    expect(screen.getByRole("button", { name: /Watch the serve at 0:01/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Serve at 0:01\. Jump the video here/ })).toBeTruthy();
     report.unmount();
     window.localStorage.clear();
     render(<ResultView result={parseAnalysisResult(result)} videoUrl="/demo.mp4" experimentalReview />);
@@ -185,23 +185,28 @@ describe("ResultView", () => {
     expect(screen.queryByText(/4 hits were estimated/)).toBeNull();
     // Experimental labels are shown, clearly marked, for every player.
     expect(screen.getAllByText("EXPERIMENTAL").length).toBeGreaterThan(0);
-    expect(screen.getByRole("button", { name: "All players (4)" })).toBeTruthy();
-    expect(screen.getByRole("table", { name: "Shots by player" })).toBeTruthy();
-    expect(screen.getAllByRole("button", { name: /Watch the/ })).toHaveLength(4);
+    expect(screen.getByRole("radio", { name: "All, 4 shots" })).toBeTruthy();
+    expect(screen.getByRole("table", { name: "Shots by player", hidden: true })).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: /Jump the video here/ })).toHaveLength(4);
     // Only people on the court can be picked.
     expect(screen.getByText("Which player are you?")).toBeTruthy();
     expect(screen.getAllByRole("button", { name: /This is me/ })).toHaveLength(2);
 
-    // Nobody chosen yet: "My shots" asks the player to pick themselves.
-    fireEvent.click(screen.getByRole("button", { name: "My shots (?)" }));
-    expect(screen.getByText(/to see only your shots/)).toBeTruthy();
-
-    // Choosing Player 2 shows their two shots straight away.
+    // Choosing Player 2 shows their two shots straight away, on your side of the chat.
     fireEvent.click(screen.getAllByRole("button", { name: /This is me/ })[1]);
-    fireEvent.click(screen.getByRole("button", { name: "My shots (2)" }));
-    expect(screen.getAllByRole("button", { name: /Watch the/ })).toHaveLength(2);
-    expect(screen.getByRole("button", { name: /Watch the return at 0:02/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole("radio", { name: "You, 2 shots" }));
+    expect(screen.getAllByRole("button", { name: /Jump the video here/ })).toHaveLength(2);
+    expect(screen.getByRole("button", { name: /^You, Return at 0:02/ })).toBeTruthy();
     expect(window.localStorage.getItem(`picklepro:me:${result.provenance.source.sha256 ?? result.provenance.generated_at}`)).toBe("2");
+
+    // Teams can be fixed by hand: moving one player makes the teams uneven until another moves too.
+    fireEvent.click(screen.getByRole("button", { name: "Teams" }));
+    const sheet = screen.getByRole("dialog", { name: "Fix teams" });
+    fireEvent.click(within(sheet).getByRole("button", { name: "Move player 1 to the other team" }));
+    expect(within(sheet).getByRole("alert").textContent).toContain("Each team needs 1 player.");
+    expect((within(sheet).getByRole("button", { name: "Done" }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(within(sheet).getByRole("button", { name: "Move you to the other team" }));
+    expect((within(sheet).getByRole("button", { name: "Done" }) as HTMLButtonElement).disabled).toBe(false);
   });
 
   it("shows where each player stood, with the estimated share visible", () => {

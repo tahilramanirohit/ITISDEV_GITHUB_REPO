@@ -124,8 +124,8 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
   const allowShotDisplay = true;
   const shotsShown = allowShotDisplay && !!shotMetric.value?.shots.length;
   const analysedId = sel?.method === "track_id" ? sel.track_id : null;
-  const [myPlayerId, setMyPlayerId] = useMyPlayer(
-    `picklepro:me:${session?.id ?? result.provenance.source.sha256 ?? result.provenance.generated_at}`, analysedId);
+  const reportKey = session?.id ?? result.provenance.source.sha256 ?? result.provenance.generated_at;
+  const [myPlayerId, setMyPlayerId] = useMyPlayer(`picklepro:me:${reportKey}`, analysedId);
   const hasPlayers = courtPlayers(result).length > 0;
   // Older saved reports included an experimental hit count in the summary.
   // Keep that count hidden until the shot detector has real-footage evaluation.
@@ -306,7 +306,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
       {notes?.({ video: videoEl, seek })}
 
       {result.data_origin === "measured" && !devMock && allowShotDisplay && (
-        <ShotsPanel result={shotDisplayResult} myPlayerId={myPlayerId} research={experimentalReview}
+        <ShotsPanel result={shotDisplayResult} myPlayerId={myPlayerId} research={experimentalReview} teamsKey={`picklepro:teams:${reportKey}`}
           onWatch={videoUrl ? (time) => setJump({ time, id: Date.now() }) : undefined} />
       )}
 

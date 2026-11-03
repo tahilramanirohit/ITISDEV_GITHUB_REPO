@@ -2,8 +2,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useLocation } from "react-router";
 import { BarChart3, CalendarDays, Handshake, Home, Monitor, Moon, Plus, Sun, UserRound, UsersRound } from "lucide-react";
 import {
-  ACCENT_INK, ACTION, ACTION_EDGE, BODY_FONT, DANGER, INK, INK_2, INK_3, LINE, LINE_STRONG, ON_ACTION, ON_STRONG, PAGE_BG, STRONG, SURFACE, SURFACE_2,
-  applyAppearance, readAppearance, type Appearance,
+  ACCENT_INK, ACTION, ACTION_EDGE, BODY_FONT, COURT_LINE, DANGER, INK, INK_2, INK_3, LINE, LINE_STRONG, ON_ACTION, ON_STRONG, PAGE_BG, STRONG, SURFACE, SURFACE_2,
+  TABBAR, applyAppearance, readAppearance, type Appearance,
 } from "../theme";
 import { PickleProLogo, PickleProMark, pressable } from "./primitives";
 
@@ -89,8 +89,8 @@ function BottomTabs({ avatar, badges }: { avatar?: ReactNode; badges?: TabBadges
   const { pathname } = useLocation();
   return (
     <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 border-t desktop:hidden"
-      style={{ background: SURFACE, borderColor: LINE, paddingBottom: "env(safe-area-inset-bottom)" }}>
-      <ul className="mx-auto flex max-w-lg items-stretch justify-between px-1.5 py-1.5">
+      style={{ background: TABBAR, borderColor: LINE, paddingBottom: "max(6px, env(safe-area-inset-bottom))" }}>
+      <ul className="mx-auto flex max-w-lg items-stretch justify-between px-1.5 pt-1">
         {TABS.filter((t) => !("phone" in t && t.phone === false)).map((tab) => {
           const active = "phoneMatch" in tab ? tab.phoneMatch(pathname) : tab.match(pathname);
           const Icon = tab.icon;
@@ -100,15 +100,15 @@ function BottomTabs({ avatar, badges }: { avatar?: ReactNode; badges?: TabBadges
             <li key={tab.href} className="flex-1">
               <a href={tab.href} aria-label={count ? `${tab.label}, ${count} waiting` : tab.label}
                 aria-current={active ? "page" : undefined}
-                className="mx-auto flex h-14 max-w-[68px] flex-col items-center justify-center gap-0.5 rounded-[10px] text-[11px] font-semibold transition-colors"
-                style={{ background: active && !("primary" in tab) ? SURFACE_2 : "transparent", color: active ? INK : INK_2 }}>
+                className={`mx-auto flex h-14 max-w-[68px] flex-col items-center justify-center gap-0.5 text-[11px] ${active ? "font-bold" : "font-semibold"} transition-[color,transform] duration-150 active:scale-[0.94] motion-reduce:transition-none`}
+                style={{ color: active ? ACCENT_INK : INK_2 }}>
                 {"primary" in tab
-                  ? <span className="flex h-8 w-11 items-center justify-center rounded-[10px]" style={{ background: ACTION, color: ON_ACTION, border: `1px solid ${ACTION_EDGE}` }}><Icon size={20} strokeWidth={2.6} aria-hidden="true" /></span>
+                  ? <span className="flex h-11 w-[52px] items-center justify-center rounded-full" style={{ background: ACTION, color: ON_ACTION, border: `1px solid ${ACTION_EDGE}` }}><Icon size={22} strokeWidth={2.6} aria-hidden="true" /></span>
                   : isProfile && avatar
-                    ? <span className="rounded-full" style={{ boxShadow: active ? `0 0 0 2px ${STRONG}` : `0 0 0 1px ${LINE_STRONG}` }}>{avatar}</span>
+                    ? <span className="rounded-full" style={{ boxShadow: active ? `0 0 0 2px ${ACCENT_INK}` : `0 0 0 1px ${LINE_STRONG}` }}>{avatar}</span>
                     : <span className="relative"><Icon size={22} strokeWidth={active ? 2.4 : 1.9} aria-hidden="true" />
                       <Badge count={count} label="waiting" /></span>}
-                <span aria-hidden="true">{tab.label}</span>
+                {!("primary" in tab) && <span aria-hidden="true">{tab.label}</span>}
               </a>
             </li>
           );
@@ -131,7 +131,7 @@ function SideNav({ account, badges }: { account?: ReactNode; badges?: TabBadges 
         <span className="lg:hidden"><PickleProMark size={44} /></span>
         <span className="hidden lg:block"><PickleProLogo size="sm" tone="light" /></span>
       </a>
-      <a href="#/new" aria-label="Log a game" title="Log a game" className={`mt-6 flex h-12 w-12 items-center justify-center gap-2 rounded-[12px] text-[0.95rem] font-bold lg:w-auto ${pressable}`}
+      <a href="#/new" aria-label="Log a game" title="Log a game" className={`mt-6 flex h-12 w-12 items-center justify-center gap-2 rounded-full text-[0.95rem] font-bold lg:w-auto ${pressable}`}
         style={{ background: ACTION, color: ON_ACTION, border: `1px solid ${ACTION_EDGE}` }}><Plus size={20} strokeWidth={2.6} aria-hidden="true" /><span className="hidden lg:inline">Log a game</span></a>
       <nav aria-label="Sidebar" className="mt-6 w-full">
         <ul className="space-y-1">
@@ -141,7 +141,7 @@ function SideNav({ account, badges }: { account?: ReactNode; badges?: TabBadges 
             return (
               <li key={tab.href}>
                 <a href={tab.href} aria-current={active ? "page" : undefined} title={tab.label}
-                  className="flex min-h-[44px] items-center justify-center gap-3 rounded-[10px] px-3 text-sm font-semibold transition-colors hover:bg-sunken lg:justify-start"
+                  className="flex min-h-[44px] items-center justify-center gap-3 rounded-full px-3 text-sm font-semibold transition-colors hover:bg-sunken lg:justify-start"
                   style={active ? { background: SURFACE_2, color: INK } : { color: INK_2 }}>
                   <span className="relative"><Icon size={19} strokeWidth={active ? 2.4 : 1.9} aria-hidden="true" style={active ? { color: ACCENT_INK } : undefined} />
                     <Badge count={badges?.[tab.href]} label="waiting" /></span><span className="sr-only lg:not-sr-only">{tab.label}</span>
@@ -158,6 +158,21 @@ function SideNav({ account, badges }: { account?: ReactNode; badges?: TabBadges 
         <p className="text-xs leading-relaxed" style={{ color: INK_3 }}>PicklePro research prototype. Video findings have not yet been validated on real footage.</p>
       </div>
     </aside>
+  );
+}
+
+/** Faint pickleball court lines behind the screen, like the court the player stands on. */
+function CourtBackdrop() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 340 740" preserveAspectRatio="xMidYMin slice"
+      className="pointer-events-none fixed inset-x-0 top-0 z-0 mx-auto h-[100dvh] w-full max-w-xl desktop:hidden">
+      <g fill="none" stroke={COURT_LINE} strokeWidth="2">
+        <rect x="34" y="40" width="272" height="660" />
+        <line x1="34" y1="370" x2="306" y2="370" strokeWidth="5" />
+        <line x1="34" y1="265" x2="306" y2="265" /><line x1="34" y1="475" x2="306" y2="475" />
+        <line x1="170" y1="40" x2="170" y2="265" /><line x1="170" y1="475" x2="170" y2="700" />
+      </g>
+    </svg>
   );
 }
 
@@ -180,8 +195,9 @@ export function AppShell({ children, right, nav, tabs = false, wide = false, ava
       <button type="button" onClick={() => document.getElementById("main-content")?.focus()}
         className="sr-only z-50 rounded-xl px-4 py-2 text-sm font-bold focus:not-sr-only focus:fixed focus:left-3 focus:top-3"
         style={{ background: STRONG, color: ON_STRONG }}>Skip to main content</button>
+      <CourtBackdrop />
       {tabs && <SideNav account={right} badges={badges} />}
-      <div className={tabs ? "desktop:pl-20 desktop:lg:pl-64" : undefined}>
+      <div className={`relative z-[1] ${tabs ? "desktop:pl-20 desktop:lg:pl-64" : ""}`}>
         <header className={`sticky top-0 z-20 border-b ${tabs ? "desktop:hidden" : ""}`} style={{ background: PAGE_BG,
           color: INK, borderColor: LINE, paddingTop: "env(safe-area-inset-top)" }}>
           <div className={`${width} mx-auto flex min-h-[60px] items-center justify-between gap-3 px-4 md:px-6`}>
