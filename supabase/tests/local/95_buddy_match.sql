@@ -28,6 +28,7 @@ insert into public.sessions (id, owner_id, title, session_context, play_format) 
 insert into public.self_assessments (session_id, owner_id, ratings) values
   ('6f000000-0000-4000-8000-000000000099', 'a3333333-3333-4333-8333-333333333333', '{"dinking": 5}');
 
+select tests.make_buddies('a1111111-1111-4111-8111-111111111111', 'a2222222-2222-4222-8222-222222222222');
 set role authenticated;
 select set_config('request.jwt.claim.sub', 'a2222222-2222-4222-8222-222222222222', false);
 select set_config('request.jwt.claims', '{"sub":"a2222222-2222-4222-8222-222222222222","is_anonymous":false}', false);

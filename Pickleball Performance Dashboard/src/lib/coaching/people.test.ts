@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { BuddyRequest } from "../api/buddy";
+import type { BuddyLink, BuddyRequest } from "../api/buddy";
 import type { PartnerLink, SharedSession } from "../api/partners";
 import { buildPeople, feedbackDue, recentSessions } from "./people";
 
@@ -53,5 +53,19 @@ describe("people: buddies and partners together", () => {
     expect(feedbackDue(shared("a", { focus_skills: [], has_report: true, my_notes: 0 }))).toBe(true);
     expect(feedbackDue(shared("a", { focus_skills: [], has_report: false }))).toBe(false);
     expect(recentSessions([{ id: "1", title: "", session_date: "2026-10-01" }, { id: "2", title: "", session_date: "2026-10-09" }], 1).map((s) => s.id)).toEqual(["2"]);
+  });
+
+  it("with a buddy list, lists every buddy (even without a game) and drops sessions with players no longer buddies", () => {
+    const link = (other: string): BuddyLink => ({ id: `b-${other}`, status: "active", direction: "sent", other_id: other,
+      other_name: other.toUpperCase(), other_level: null, created_at: "", responded_at: "2026-10-01T00:00:00Z" });
+    const people = buildPeople({
+      buddies: [link("a"), { ...link("p"), status: "pending" }],
+      requests: [req("r1", "x", "accepted", ["2026-10-20"]), req("r2", "a", "accepted", ["2026-11-20"])],
+      links: [], sessions: [], shares: [], sharedWithMe: [], today,
+    });
+    // a: a buddy with a session; p: only a waiting buddy request; x: removed as a buddy, so the old session is not listed.
+    expect(people.map((p) => p.id)).toEqual(["a"]);
+    expect(people[0].buddy?.id).toBe("b-a");
+    expect(people[0].buddySessions.map((r) => r.id)).toEqual(["r2"]);
   });
 });

@@ -14,6 +14,9 @@ insert into public.profiles (id, display_name, self_level, is_adult_confirmed, b
   ('c3333333-3333-4333-8333-333333333333', 'Rex', 'Novice', true, true),
   ('c5555555-5555-4555-8555-555555555555', 'Guest', null, false, false);
 
+-- Partnering needs a buddy (buddy-friends update): Pia and Quinn are buddies; Pia and Rex are not yet.
+select tests.make_buddies('c1111111-1111-4111-8111-111111111111', 'c2222222-2222-4222-8222-222222222222');
+
 -- Pia's session with an uploaded video and a finished report, plus a second session she keeps private.
 insert into public.sessions (id, owner_id, title, session_context, play_format, notes) values
   ('5e000000-0000-4000-8000-0000000000e1', 'c1111111-1111-4111-8111-111111111111', 'Sunday doubles', 'casual_match', 'doubles', 'private note'),
@@ -153,13 +156,12 @@ select tests.expect_count($$ select 1 from public.peer_notes $$, 0, 'the owner c
 
 -- ── From Buddy: invite an accepted buddy, who must accept ───────────────
 select tests.expect_error($$ select public.invite_buddy_as_partner('c3333333-3333-4333-8333-333333333333') $$,
-  'only players with an accepted buddy session can be invited from Buddy');
-select public.send_buddy_request('c3333333-3333-4333-8333-333333333333', 'practice', 'doubles',
-  format('[{"date":"%s","start":"08:00","end":"10:00"}]', current_date + 1)::jsonb, 'Makati', 'Ayala Triangle courts');
+  'only buddies can be invited as partners');
+select public.add_buddy('c3333333-3333-4333-8333-333333333333');
 select set_config('request.jwt.claim.sub', 'c3333333-3333-4333-8333-333333333333', false);
 select set_config('request.jwt.claims', '{"sub":"c3333333-3333-4333-8333-333333333333","is_anonymous":false}', false);
-select public.respond_buddy_request((select id from public.my_buddy_requests() limit 1), true);
-select tests.expect_true(public.invite_buddy_as_partner('c1111111-1111-4111-8111-111111111111') is not null, 'an accepted buddy can be invited as a partner');
+select public.respond_buddy((select id from public.my_buddies() limit 1), true);
+select tests.expect_true(public.invite_buddy_as_partner('c1111111-1111-4111-8111-111111111111') is not null, 'a buddy can be invited as a partner'); 
 select tests.expect_error($$ select public.invite_buddy_as_partner('c1111111-1111-4111-8111-111111111111') $$, 'only one waiting invite per pair');
 select set_config('request.jwt.claim.sub', 'c1111111-1111-4111-8111-111111111111', false);
 select set_config('request.jwt.claims', '{"sub":"c1111111-1111-4111-8111-111111111111","is_anonymous":false}', false);

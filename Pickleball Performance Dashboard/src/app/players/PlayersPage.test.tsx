@@ -10,6 +10,8 @@ type Row = Record<string, unknown>;
 type Fake = {
   profile: Row; players?: Row[]; requests?: Row[]; details?: Row[]; listing?: Row;
   links?: Row[]; shared?: Row[]; sessions?: Row[]; shares?: Row[]; peerRatings?: Row[];
+  /** The buddy list (upgrade 12); leave out to test a database before that update. */
+  buddies?: Row[];
 };
 
 const link = (extra: Row): Row => ({ id: "l1", status: "active", direction: "sent", other_id: "q", other_name: "Quinn",
@@ -38,6 +40,19 @@ function fakeSb(state: Fake) {
       case "buddy_players": return { data: state.players, error: null };
       case "my_buddy_requests": return { data: state.requests, error: null };
       case "my_partners": return { data: state.links, error: null };
+      case "my_buddies": return state.buddies ? { data: state.buddies, error: null } : { data: null, error: { message: "Could not find the function public.my_buddies" } };
+      case "add_buddy":
+        state.buddies = [...state.buddies!, { id: `add-${args?.p_player}`, status: "pending", direction: "sent", other_id: args?.p_player,
+          other_name: "Ben", other_level: "novice", created_at: "", responded_at: null }];
+        return { data: "x", error: null };
+      case "respond_buddy":
+        state.buddies = state.buddies!.map((b) => b.id === args?.p_id ? { ...b, status: args?.p_accept ? "active" : "declined" } : b)
+          .filter((b) => b.status !== "declined");
+        return { data: null, error: null };
+      case "remove_buddy":
+        state.buddies = state.buddies!.filter((b) => b.other_id !== args?.p_player);
+        state.requests = state.requests!.filter((q) => q.other_player_id !== args?.p_player);
+        return { data: null, error: null };
       case "shared_with_me": return { data: state.shared, error: null };
       case "send_buddy_request": case "respond_buddy_request": case "invite_buddy_as_partner": return { data: "x", error: null };
       case "buddy_player_details": return state.details ? { data: state.details, error: null } : { data: null, error: { message: "missing" } };
@@ -74,16 +89,18 @@ function fakeSb(state: Fake) {
   return { sb: { rpc, from } as unknown as SupabaseClient, rpc, update };
 }
 
+const buddy = (id: string, name: string, extra: Row = {}): Row => ({ id: `bl-${id}`, status: "active", direction: "sent", other_id: id,
+  other_name: name, other_level: "novice", created_at: "2026-10-01T00:00:00Z", responded_at: "2026-10-02T00:00:00Z", ...extra });
 const me = { id: "me", display_name: "Kim", self_level: "Novice", is_adult_confirmed: true, buddy_visible: true };
 const show = (sb: SupabaseClient, path = "/players") => render(<MemoryRouter initialEntries={[path]}><PlayersPage sb={sb} userId="me" /></MemoryRouter>);
 
 describe("Players: Find", () => {
   it("lets a player say what they look for, filters by purpose and suggests close matches", async () => {
     const players = [ben, { ...ben, player_id: "c", display_name: "Cy", level: "advanced" }];
-    const { sb, update } = fakeSb({ profile: { ...me, buddy_looking_for: [] }, players,
+    const { sb, update, rpc } = fakeSb({ profile: { ...me, buddy_looking_for: [] }, players,
       details: [{ player_id: "b", looking_for: ["practice"], game_rating: 2.5, strong_skills: [] },
         { player_id: "c", looking_for: ["competition"], game_rating: 4.5, strong_skills: ["dinking"] }],
-      listing: { game_rating: 2.5, strong_skills: [] } });
+      listing: { game_rating: 2.5, strong_skills: [] }, buddies: [] });
     show(sb, "/players?section=find");
     expect(await screen.findByText(/Pick what you're looking for above/)).toBeTruthy();
     fireEvent.click(within(screen.getByRole("group", { name: "I'm looking for" })).getByRole("button", { name: "Practice" }));
@@ -95,8 +112,12 @@ describe("Players: Find", () => {
     const list = screen.getByRole("list", { name: "Available players" });
     expect(within(list).queryByText("Ben")).toBeNull();
     expect(within(list).getByText("Cy")).toBeTruthy();
-    fireEvent.click(within(suggested).getByRole("button", { name: "Ask Ben" }));
-    expect(await screen.findByRole("form", { name: "Buddy up with Ben" })).toBeTruthy();
+    // Adding a suggested player sends a buddy request (no game yet); they then leave the suggestions.
+    fireEvent.click(within(suggested).getByRole("button", { name: "Add Ben as a buddy" }));
+    await waitFor(() => expect(rpc).toHaveBeenCalledWith("add_buddy", { p_player: "b" }));
+    expect(await screen.findByText(/Buddy request sent to Ben/)).toBeTruthy();
+    fireEvent.click(within(screen.getByRole("group", { name: "Filter by purpose" })).getByRole("button", { name: "All purposes" }));
+    expect(within(screen.getByRole("list", { name: "Available players" })).getByText("Buddy request sent")).toBeTruthy();
   });
 
   it("asks first-time users to confirm 18+ and whether to be listed", async () => {
@@ -110,14 +131,27 @@ describe("Players: Find", () => {
     expect(await screen.findByText("You are listed in Buddy")).toBeTruthy();
   });
 
-  it("lists available players by closeness to your level, filters by level and sends a complete request", async () => {
+  it("lists available players by closeness to your level, filters by level, and adds or accepts buddies", async () => {
     const { sb, rpc } = fakeSb({ profile: { ...me }, players: [
-      { ...ben, player_id: "a", display_name: "Ana", level: "advanced", usual_format: "doubles" }, ben] });
+      { ...ben, player_id: "a", display_name: "Ana", level: "advanced", usual_format: "doubles" }, ben],
+      buddies: [buddy("a", "Ana", { status: "pending", direction: "received", responded_at: null })] });
     show(sb, "/players?section=find");
     const list = await screen.findByRole("list", { name: "Available players" });
     expect(within(list).getAllByText(/^(Ana|Ben)$/).map((n) => n.textContent)).toEqual(["Ben", "Ana"]);
     expect(within(list).getByText("Advanced · usually doubles")).toBeTruthy();
-    fireEvent.click(within(list).getAllByRole("button", { name: "Buddy up" })[0]);
+    expect(within(list).queryByRole("button", { name: "Buddy up" })).toBeNull(); // asking to play happens from My partners
+    fireEvent.click(within(list).getByRole("button", { name: "Accept buddy" }));
+    await waitFor(() => expect(rpc).toHaveBeenCalledWith("respond_buddy", { p_id: "bl-a", p_accept: true }));
+    fireEvent.click(within(screen.getByRole("list", { name: "Available players" })).getByRole("button", { name: "Add buddy" }));
+    await waitFor(() => expect(rpc).toHaveBeenCalledWith("add_buddy", { p_player: "b" }));
+    fireEvent.click(screen.getByRole("button", { name: "Advanced" }));
+    expect(within(screen.getByRole("list", { name: "Available players" })).queryByText("Ben")).toBeNull();
+  });
+
+  it("before the buddy-list update, still offers Buddy up with the full request", async () => {
+    const { sb, rpc } = fakeSb({ profile: { ...me }, players: [ben] });
+    show(sb, "/players?section=find");
+    fireEvent.click(await screen.findByRole("button", { name: "Buddy up" }));
     fireEvent.click(screen.getByRole("button", { name: "Send to Ben" }));
     expect(await screen.findByText("Choose a purpose.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Casual game" }));
@@ -127,9 +161,6 @@ describe("Players: Find", () => {
     fireEvent.click(screen.getByRole("button", { name: "Send to Ben" }));
     await waitFor(() => expect(rpc).toHaveBeenCalledWith("send_buddy_request", expect.objectContaining({
       p_to: "b", p_purpose: "casual_game", p_format: "doubles", p_city: "Makati", p_location: "Ayala Triangle courts" })));
-    expect(await screen.findByText(/Request sent to Ben. Follow it under My partners/)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Advanced" }));
-    expect(within(screen.getByRole("list", { name: "Available players" })).queryByText("Ben")).toBeNull();
   });
 });
 
@@ -144,6 +175,17 @@ describe("Players: answers and shared sessions", () => {
     expect(screen.getByText("Capitol Commons court 2, Pasig")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Accept" }));
     await waitFor(() => expect(rpc).toHaveBeenCalledWith("respond_buddy_request", { p_request_id: "r1", p_accept: true }));
+  });
+
+  it("accepts a buddy request from My partners", async () => {
+    const { sb, rpc } = fakeSb({ profile: { ...me }, buddies: [buddy("j", "Jun", { status: "pending", direction: "received", responded_at: null })] });
+    show(sb);
+    expect(await screen.findByText("Wants to be your buddy (1)")).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "My partners (1)" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Accept" }));
+    await waitFor(() => expect(rpc).toHaveBeenCalledWith("respond_buddy", { p_id: "bl-j", p_accept: true }));
+    expect(await screen.findByText("You and Jun are buddies.")).toBeTruthy();
+    expect(within(screen.getByRole("list", { name: "My partners" })).getByRole("heading", { name: "Jun" })).toBeTruthy();
   });
 
   it("accepts a video partner invite, and counts feedback asked of you on the Shared tab", async () => {
@@ -223,13 +265,25 @@ describe("Players: My partners", () => {
       .toEqual(["#/sessions/m2?tab=plan&ask=q", "#/sessions/m1?tab=plan&ask=q"]);
   });
 
-  it("partners a buddy for video feedback from their card, and cancels a buddy session with a reason", async () => {
-    const { sb, rpc } = fakeSb({ profile: { ...me }, requests: [buddySession({ slots: [{ date: "2099-01-10", start: "08:00", end: "10:00" }] })] });
+  it("asks a buddy to play (even while hidden from the list), partners for video feedback, cancels a session and removes the buddy", async () => {
+    const { sb, rpc } = fakeSb({ profile: { ...me }, buddies: [buddy("c", "Cy")],
+      requests: [buddySession({ slots: [{ date: "2099-01-10", start: "08:00", end: "10:00" }] })] });
     show(sb);
     const people = await screen.findByRole("list", { name: "My partners" });
+    expect(within(people).getByText(/buddies since/)).toBeTruthy();
     expect(within(people).getByText(/sees your Buddy listing only/)).toBeTruthy();
-    expect(within(people).getByText(/not on the Buddy list right now/)).toBeTruthy();
-    fireEvent.click(within(people).getByRole("button", { name: "Partner for video feedback" }));
+    // Cy is not listed in Find, but buddies can still ask each other to play.
+    fireEvent.click(within(people).getByRole("button", { name: "Ask to play" }));
+    fireEvent.click(screen.getByRole("button", { name: "Send to Cy" }));
+    expect(await screen.findByText("Choose a purpose.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Practice / drills" }));
+    fireEvent.click(screen.getByRole("button", { name: "Singles" }));
+    fireEvent.change(screen.getByLabelText("City"), { target: { value: "Pasig" } });
+    fireEvent.change(screen.getByLabelText("Location"), { target: { value: "Court 3" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send to Cy" }));
+    await waitFor(() => expect(rpc).toHaveBeenCalledWith("send_buddy_request", expect.objectContaining({ p_to: "c", p_purpose: "practice" })));
+
+    fireEvent.click(within(screen.getByRole("list", { name: "My partners" })).getByRole("button", { name: "Partner for video feedback" }));
     await waitFor(() => expect(rpc).toHaveBeenCalledWith("invite_buddy_as_partner", { p_player: "c" }));
     expect(await screen.findByText(/Video partner invite sent to Cy/)).toBeTruthy();
 
@@ -237,7 +291,12 @@ describe("Players: My partners", () => {
     fireEvent.click(screen.getByRole("button", { name: "Bad weather" }));
     fireEvent.click(screen.getByRole("button", { name: "Cancel session" }));
     await waitFor(() => expect(rpc).toHaveBeenCalledWith("cancel_buddy_session", { p_request_id: "s1", p_reason: "Bad weather" }));
-    expect(await screen.findByText(/No one yet/)).toBeTruthy();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Remove buddy" }));
+    expect(screen.getByText(/Requests still waiting are withdrawn/)).toBeTruthy();
+    fireEvent.click(within(screen.getByRole("group", { name: "Remove Cy" })).getByRole("button", { name: "Remove buddy" }));
+    await waitFor(() => expect(rpc).toHaveBeenCalledWith("remove_buddy", { p_player: "c" }));
+    expect(await screen.findByText(/No buddies yet/)).toBeTruthy();
   });
 
   it("asks before ending a video partnership", async () => {
@@ -256,7 +315,7 @@ describe("Players: My partners", () => {
   it("has no partner codes: video partners come from buddies, and the steps are explained", async () => {
     const { sb } = fakeSb({ profile: { ...me } });
     show(sb, "/players?section=partners");
-    expect(await screen.findByText(/No one yet. Buddy up with someone under Find/)).toBeTruthy();
+    expect(await screen.findByText(/No buddies yet. Add players as buddies under Find/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Create an invite code" })).toBeNull();
     const how = screen.getByRole("region", { name: "Who sees what" });
     expect(within(how).getByText(/1\. Buddy/)).toBeTruthy();

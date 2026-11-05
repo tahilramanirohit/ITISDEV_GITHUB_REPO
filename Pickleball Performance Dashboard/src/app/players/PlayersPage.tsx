@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
-  buddyErrorText, getMyListing, listBuddyDetails, listBuddyPlayers, listMyRequests,
-  type BuddyDetails, type BuddyPlayer, type BuddyRequest, type MyListing,
+  buddyErrorText, getMyListing, listBuddyDetails, listBuddyPlayers, listMyBuddies, listMyRequests,
+  type BuddyDetails, type BuddyLink, type BuddyPlayer, type BuddyRequest, type MyListing,
 } from "../../lib/api/buddy";
 import { listPartners, listSharedWithMe, partnerErrorText, type PartnerLink, type SharedSession } from "../../lib/api/partners";
 import { getProfile, type PlayerProfile } from "../../lib/api/profile";
@@ -22,6 +22,8 @@ export type PlayersData = {
   /** Buddy needs the 18+ confirmation; until then only partners are loaded. */
   buddyReady: boolean;
   players: BuddyPlayer[];
+  /** Your buddy list; null before the buddy-friends update (upgrade 12), when Buddy works as before. */
+  buddies: BuddyLink[] | null;
   requests: BuddyRequest[];
   details: Map<string, BuddyDetails>;
   listing: MyListing | null;
@@ -73,8 +75,9 @@ export default function PlayersPage({ sb, userId }: { sb: SupabaseClient; userId
       if (!profile) throw new Error("Your profile could not be loaded. Reload the page.");
       const buddyReady = !!profile.is_adult_confirmed;
       // Partners and the extras are optional: before their database updates, the rest still works.
-      const [players, requests, links, shared, details, listing, mine] = await Promise.all([
+      const [players, buddies, requests, links, shared, details, listing, mine] = await Promise.all([
         buddyReady ? listBuddyPlayers(sb) : Promise.resolve([]),
+        listMyBuddies(sb),
         buddyReady ? listMyRequests(sb) : Promise.resolve([]),
         listPartners(sb).catch(() => []),
         listSharedWithMe(sb).catch(() => []),
@@ -82,7 +85,7 @@ export default function PlayersPage({ sb, userId }: { sb: SupabaseClient; userId
         buddyReady ? getMyListing(sb).catch(() => null) : Promise.resolve(null),
         loadSessions(sb, userId).catch(() => ({ sessions: [], shares: [], peerRatings: [] })),
       ]);
-      setData({ profile, buddyReady, players, requests, details, listing, links, shared, ...mine });
+      setData({ profile, buddyReady, players, buddies, requests, details, listing, links, shared, ...mine });
       setError("");
     } catch (e) {
       setError(buddyErrorText(e));
@@ -107,9 +110,10 @@ export default function PlayersPage({ sb, userId }: { sb: SupabaseClient; userId
     }
   }, [load]);
 
-  const people = useMemo(() => data ? buildPeople({ requests: data.requests, links: data.links, sessions: data.sessions,
+  const people = useMemo(() => data ? buildPeople({ buddies: data.buddies, requests: data.requests, links: data.links, sessions: data.sessions,
     shares: data.shares, sharedWithMe: data.shared }) : [], [data]);
   const answerCount = data ? data.requests.filter((r) => r.direction === "incoming" && r.status === "pending").length
+    + (data.buddies ?? []).filter((b) => b.status === "pending" && b.direction === "received").length
     + data.links.filter((l) => l.status === "pending" && l.direction === "received").length : 0;
   const dueCount = data ? data.shared.filter(feedbackDue).length : 0;
 
@@ -131,7 +135,7 @@ export default function PlayersPage({ sb, userId }: { sb: SupabaseClient; userId
   };
 
   const hero = <PageHero eyebrow="Play together, coach each other" title="Players"
-    subtitle="Buddy up to play. Partner with a buddy for video feedback on your game." />;
+    subtitle="Add players as buddies. Then ask a buddy to play, or partner for video feedback on your game." />;
   if (error) return <>{hero}<Notice tone="warn">{error}</Notice></>;
   if (!data) return <>{hero}<p className="text-sm" style={{ color: WHITE_DIM }}>Loading…</p></>;
 

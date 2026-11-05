@@ -47,4 +47,10 @@ begin
   raise notice 'PASS %', p_label;
 end $$;
 
+-- Make two players buddies (the friend list from 20261105130000_buddy_friends.sql), as test setup.
+create function tests.make_buddies(p_a uuid, p_b uuid) returns void
+language sql as $$
+  insert into public.buddies (requester_id, addressee_id, status, responded_at) values (p_a, p_b, 'active', now())
+$$;
+
 grant execute on all functions in schema tests to anon, authenticated, service_role;

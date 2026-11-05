@@ -1,10 +1,12 @@
 -- Link two real accounts for a demo: Carla becomes Rohit's buddy and video partner,
+-- they get a buddy session together,
 -- and Rohit's "videotest" session is shared with her, with the video.
 -- Afterwards both see it under Players -> Shared: Carla can watch it, rate and
 -- leave notes; Rohit sees the session he shared and her feedback.
 --
 -- Paste the whole file into Supabase Dashboard -> SQL Editor -> New query -> Run.
--- Needs the updates through pickleproapp_upgrade_10.sql. Safe to run more than once.
+-- Needs the updates through pickleproapp_upgrade_12.sql. Safe to run more than once.
+-- Works for any two players: change the names (or emails) and the session title below.
 --
 -- Change the four values just below if the names, emails or title differ. Emails
 -- win when set; otherwise each player is found by display name (it must match
@@ -59,7 +61,13 @@ begin
   end if;
   select exists (select 1 from public.video_assets v where v.session_id = sid) into has_video;
 
-  -- ── 1. Buddies: an accepted buddy session between them ─────────────
+  -- ── 1. Buddies (friend list), then a buddy session between them ─────
+  update public.buddies b set status = 'active', responded_at = now()
+  where b.status in ('pending', 'active')
+    and ((b.requester_id = rohit and b.addressee_id = carla) or (b.requester_id = carla and b.addressee_id = rohit));
+  if not found then
+    insert into public.buddies (requester_id, addressee_id, status, responded_at) values (rohit, carla, 'active', now());
+  end if;
   if not exists (select 1 from public.buddy_requests r where r.status = 'accepted'
                  and ((r.from_player_id = rohit and r.to_player_id = carla) or (r.from_player_id = carla and r.to_player_id = rohit))) then
     -- A waiting request between them would block the new one; it is answered by this link.

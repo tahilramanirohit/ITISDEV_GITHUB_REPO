@@ -1,7 +1,7 @@
 // "My people" on the Players tab: buddies and partners on one list, one entry per person.
 // Built from data the app already reads (buddy requests, partner links, the player's own
 // sessions and shares), so it needs no database change.
-import { upcomingBuddySessions, type BuddyLevel, type BuddyRequest, type FreeTime } from "../api/buddy";
+import { upcomingBuddySessions, type BuddyLevel, type BuddyLink, type BuddyRequest, type FreeTime } from "../api/buddy";
 import type { PartnerLink, SharedSession } from "../api/partners";
 
 /** The player's own sessions, as far as the people list needs them. */
@@ -15,6 +15,8 @@ export type Person = {
   id: string;
   name: string;
   level: BuddyLevel | null;
+  /** The buddy link (friend list), when buddies; null before the buddy-friends update. */
+  buddy: BuddyLink | null;
   /** The partnership, when it is active. */
   partner: PartnerLink | null;
   /** A partner invite between you that is waiting for an answer. */
@@ -41,7 +43,9 @@ export function feedbackDue(s: SharedSession): boolean {
   return s.has_report && s.my_notes === 0;
 }
 
-export function buildPeople({ requests, links, sessions, shares, sharedWithMe, today = new Date() }: {
+export function buildPeople({ buddies = null, requests, links, sessions, shares, sharedWithMe, today = new Date() }: {
+  /** Your buddy list; null before the buddy-friends update (then an accepted buddy session counts as buddies). */
+  buddies?: readonly BuddyLink[] | null;
   requests: readonly BuddyRequest[]; links: readonly PartnerLink[]; sessions: readonly MySessionLite[];
   shares: readonly MyShare[]; sharedWithMe: readonly SharedSession[]; today?: Date;
 }): Person[] {
@@ -49,7 +53,7 @@ export function buildPeople({ requests, links, sessions, shares, sharedWithMe, t
   const get = (id: string, name: string | null, level: BuddyLevel | null) => {
     let p = people.get(id);
     if (!p) {
-      p = { id, name: name || "Player", level, partner: null, invite: null, buddySessions: [], next: null, gamesTogether: 0,
+      p = { id, name: name || "Player", level, buddy: null, partner: null, invite: null, buddySessions: [], next: null, gamesTogether: 0,
         lastPlayed: null, askedThem: 0, theyShared: [], waitingOnYou: [] };
       people.set(id, p);
     }
@@ -57,7 +61,13 @@ export function buildPeople({ requests, links, sessions, shares, sharedWithMe, t
     return p;
   };
 
-  for (const r of requests) if (r.status === "accepted") get(r.other_player_id, r.other_name, r.other_level).buddySessions.push(r);
+  for (const b of buddies ?? []) if (b.status === "active") get(b.other_id, b.other_name, b.other_level).buddy = b;
+  for (const r of requests) {
+    if (r.status !== "accepted") continue;
+    // With a buddy list, sessions stay with people who are still buddies (or partners, added below).
+    if (buddies && !people.has(r.other_player_id) && !links.some((l) => l.other_id === r.other_player_id && l.status === "active")) continue;
+    get(r.other_player_id, r.other_name, r.other_level).buddySessions.push(r);
+  }
   for (const l of links) {
     if (!l.other_id) continue; // an unused invite code
     if (l.status === "active") get(l.other_id, l.other_name, l.other_level).partner = l;

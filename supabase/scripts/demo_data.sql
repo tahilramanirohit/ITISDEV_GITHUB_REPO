@@ -2,7 +2,7 @@
 -- walkthrough "with data" (the blank-slate walkthrough uses a new sign-up).
 --
 -- Paste the whole file into Supabase Dashboard -> SQL Editor -> New query -> Run.
--- Needs every update through pickleproapp_upgrade_10.sql. Running it again
+-- Needs every update through pickleproapp_upgrade_12.sql. Running it again
 -- deletes the four demo accounts (and everything they own) and creates them fresh.
 --
 -- Accounts (password below; change it first if this repository is public):
@@ -109,7 +109,11 @@ begin
    '{"serve": 3, "return": 2, "dinking": 2, "kitchen_line": 2, "consistency": 2}', now() - interval '30 days',
    'Looking for practice partners on weekends.', 'Makati Pickleball Courts', 'self', 'match', true, array['practice', 'casual_game']);
 
-  -- ── Buddy sessions ───────────────────────────────────────────────────
+  -- ── Buddies (friend list) and buddy sessions ─────────────────────────
+  -- Marco is buddies with Lia and Jun; asking to play and partnering need a buddy.
+  insert into public.buddies (requester_id, addressee_id, status, created_at, responded_at) values
+    (marco, lia, 'active', now() - interval '50 days', now() - interval '49 days'),
+    (marco, jun, 'active', now() - interval '5 days', now() - interval '4 days');
   -- Marco and Lia: an accepted practice session six weeks ago.
   insert into public.buddy_requests (from_player_id, to_player_id, purpose, play_format, slots, status, city, location, created_at, responded_at)
   values (marco, lia, 'practice', 'doubles', jsonb_build_array(jsonb_build_object('date', current_date - 42, 'start', '18:00', 'end', '20:00')),
@@ -122,10 +126,9 @@ begin
             jsonb_build_object('date', current_date + 6, 'start', '08:00', 'end', '10:00')),
           'accepted', 'Makati', 'Makati Pickleball Courts', now() - interval '2 days', now() - interval '1 day')
   returning id into marco_jun;
-  -- Jun asks Bea: waiting for her answer (Buddy badge).
-  insert into public.buddy_requests (from_player_id, to_player_id, purpose, play_format, slots, status, city, location, created_at)
-  values (jun, bea, 'practice', 'doubles', jsonb_build_array(jsonb_build_object('date', current_date + 4, 'start', '07:00', 'end', '09:00')),
-          'pending', 'Pasig', 'Pasig Sports Center', now() - interval '6 hours')
+  -- Jun adds Bea as a buddy: waiting for her answer (Players badge).
+  insert into public.buddies (requester_id, addressee_id, status, created_at)
+  values (jun, bea, 'pending', now() - interval '6 hours')
   returning id into jun_bea;
 
   -- ── Marco: 10 games over 9 weeks ─────────────────────────────────────

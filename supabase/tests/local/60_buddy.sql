@@ -21,6 +21,9 @@ select tests.expect_true(public.buddy_level('New to the game') = 'beginner'
   and public.buddy_level('Intermediate (3.0–3.5)') = 'intermediate' and public.buddy_level('Advanced (4.0+)') = 'advanced'
   and public.buddy_level('Not sure') is null, 'levels from old and new profile answers map to the four buddy levels');
 
+-- Asking to play needs a buddy (buddy-friends update): Ana and Ben are buddies.
+select tests.make_buddies('b1111111-1111-4111-8111-111111111111', 'b2222222-2222-4222-8222-222222222222');
+
 set role authenticated;
 
 -- ── Ana browses and asks Ben ─────────────────────────────────────────────
@@ -137,6 +140,7 @@ begin
     insert into auth.users (id, email) values (('b9000000-0000-4000-8000-0000000000' || lpad(i::text, 2, '0'))::uuid, 'many' || i || '@example.test');
     insert into public.profiles (id, display_name, is_adult_confirmed, buddy_visible)
     values (('b9000000-0000-4000-8000-0000000000' || lpad(i::text, 2, '0'))::uuid, 'Many ' || i, true, true);
+    perform tests.make_buddies('b4444444-4444-4444-8444-444444444444', ('b9000000-0000-4000-8000-0000000000' || lpad(i::text, 2, '0'))::uuid);
   end loop;
 end $$;
 set role authenticated;

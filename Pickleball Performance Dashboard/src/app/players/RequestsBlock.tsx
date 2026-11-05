@@ -1,18 +1,42 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Check, X } from "lucide-react";
-import { cancelRequest, respondToRequest } from "../../lib/api/buddy";
+import { cancelBuddyAdd, cancelRequest, respondBuddy, respondToRequest } from "../../lib/api/buddy";
 import { cancelInvite, respondToInvite } from "../../lib/api/partners";
 import { INK, ROSE, WHITE_DIM } from "../theme";
 import { Card, PrimaryButton, SectionTitle } from "../shell/primitives";
 import { Avatar, RequestDetails, levelText, shortDate } from "./parts";
 import type { Act, PlayersData } from "./PlayersPage";
 
-/** Buddy requests and video-partner invites waiting for your answer. */
+/** Buddy requests, requests to play and video-partner invites waiting for your answer. */
 export function NeedsAnswer({ sb, data, act, busyId }: { sb: SupabaseClient; data: PlayersData; act: Act; busyId: string | null }) {
+  const adds = (data.buddies ?? []).filter((b) => b.status === "pending" && b.direction === "received");
   const incoming = data.requests.filter((r) => r.direction === "incoming" && r.status === "pending");
   const invites = data.links.filter((l) => l.status === "pending" && l.direction === "received");
-  if (incoming.length + invites.length === 0) return null;
+  if (adds.length + incoming.length + invites.length === 0) return null;
   return <>
+    {adds.length > 0 && <section aria-labelledby="adds-heading" className="space-y-3">
+      <SectionTitle><span id="adds-heading">Wants to be your buddy ({adds.length})</span></SectionTitle>
+      <ul className="space-y-3">
+        {adds.map((b) => <li key={b.id}><Card>
+          <div className="flex flex-wrap items-center gap-3">
+            <Avatar name={b.other_name} />
+            <div className="min-w-[9rem] flex-1">
+              <p className="text-base font-bold" style={{ color: INK }}>{b.other_name}</p>
+              <p className="text-sm" style={{ color: WHITE_DIM }}>{levelText(b.other_level)}</p>
+            </div>
+          </div>
+          <p className="mt-2 text-sm" style={{ color: WHITE_DIM }}>Buddies can ask each other to play and partner for video feedback.
+            Nothing else is shared.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <PrimaryButton disabled={busyId === b.id} onClick={() => void act(b.id, () => respondBuddy(sb, b.id, true), `You and ${b.other_name} are buddies.`)}>
+              <Check size={18} aria-hidden="true" /> Accept</PrimaryButton>
+            <PrimaryButton tone="light" disabled={busyId === b.id} onClick={() => void act(b.id, () => respondBuddy(sb, b.id, false))}>
+              <X size={18} aria-hidden="true" /> Decline</PrimaryButton>
+          </div>
+        </Card></li>)}
+      </ul>
+    </section>}
+
     {incoming.length > 0 && <section aria-labelledby="incoming-heading" className="space-y-3">
       <SectionTitle><span id="incoming-heading">Wants to play with you ({incoming.length})</span></SectionTitle>
       <ul className="space-y-3">
@@ -25,10 +49,10 @@ export function NeedsAnswer({ sb, data, act, busyId }: { sb: SupabaseClient; dat
             </div>
           </div>
           <RequestDetails r={r} />
-          <p className="mt-2 text-sm" style={{ color: WHITE_DIM }}>Accepting makes you buddies. Later you can partner for video feedback too.</p>
+
           <div className="mt-3 flex flex-wrap gap-2">
             <PrimaryButton disabled={busyId === r.id} onClick={() => void act(r.id, () => respondToRequest(sb, r.id, true),
-              `You and ${r.other_name} are buddies.`)}>
+              `You're playing with ${r.other_name}. It's under My partners.`)}>
               <Check size={18} aria-hidden="true" /> Accept</PrimaryButton>
             <PrimaryButton tone="light" disabled={busyId === r.id} onClick={() => void act(r.id, () => respondToRequest(sb, r.id, false))}>
               <X size={18} aria-hidden="true" /> Decline</PrimaryButton>
@@ -62,20 +86,31 @@ export function NeedsAnswer({ sb, data, act, busyId }: { sb: SupabaseClient; dat
 
 /** Requests and invites you sent, and buddy sessions that were cancelled. */
 export function SentAndCancelled({ sb, data, act, busyId }: { sb: SupabaseClient; data: PlayersData; act: Act; busyId: string | null }) {
+  const sentAdds = (data.buddies ?? []).filter((b) => b.status === "pending" && b.direction === "sent");
   const sent = data.requests.filter((r) => r.direction === "outgoing" && (r.status === "pending" || r.status === "declined"));
   const waiting = data.links.filter((l) => l.status === "pending" && l.direction === "sent" && l.other_id);
   const calledOff = data.requests.filter((r) => r.status === "called_off");
   return <>
-    {sent.length + waiting.length > 0 && <section aria-labelledby="sent-heading" className="space-y-3">
+    {sentAdds.length + sent.length + waiting.length > 0 && <section aria-labelledby="sent-heading" className="space-y-3">
       <SectionTitle><span id="sent-heading">Waiting for others</span></SectionTitle>
       <ul className="space-y-3">
+        {sentAdds.map((b) => <li key={b.id}><Card>
+          <div className="flex flex-wrap items-center gap-3">
+            <Avatar name={b.other_name} />
+            <div className="min-w-[9rem] flex-1">
+              <p className="text-base font-bold" style={{ color: INK }}>{b.other_name}</p>
+              <p className="text-sm font-bold" style={{ color: WHITE_DIM }}>Buddy request · waiting for an answer</p>
+            </div>
+            <PrimaryButton tone="light" disabled={busyId === b.id} onClick={() => void act(b.id, () => cancelBuddyAdd(sb, b.id))}>Cancel request</PrimaryButton>
+          </div>
+        </Card></li>)}
         {sent.map((r) => <li key={r.id}><Card>
           <div className="flex flex-wrap items-center gap-3">
             <Avatar name={r.other_name} />
             <div className="min-w-[9rem] flex-1">
               <p className="text-base font-bold" style={{ color: INK }}>{r.other_name}</p>
               <p className="text-sm font-bold" style={{ color: r.status === "declined" ? ROSE : WHITE_DIM }}>
-                {r.status === "pending" ? "Buddy request · waiting for an answer" : "Buddy request · declined"}</p>
+                {r.status === "pending" ? "Asked to play · waiting for an answer" : "Asked to play · declined"}</p>
             </div>
             {r.status === "pending" && <PrimaryButton tone="light" disabled={busyId === r.id}
               onClick={() => void act(r.id, () => cancelRequest(sb, r.id))}>Cancel request</PrimaryButton>}

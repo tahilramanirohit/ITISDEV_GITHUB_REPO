@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { UserRoundPlus } from "lucide-react";
+import { Check, UserRoundPlus } from "lucide-react";
 import {
-  BUDDY_LEVELS, LEVEL_LABELS, LOOKING_FOR, buddyLevel, sendBuddyRequest, setBuddyVisible, setLookingFor, sortByLevel,
+  BUDDY_LEVELS, LEVEL_LABELS, LOOKING_FOR, addBuddy, buddyLevel, respondBuddy, sendBuddyRequest, setBuddyVisible, setLookingFor, sortByLevel,
   type BuddyLevel, type BuddyPurpose,
 } from "../../lib/api/buddy";
 import { goalTargets } from "../../lib/coaching/goals";
@@ -30,9 +30,14 @@ export function FindSection({ sb, userId, data, injured, act, busyId, reload }: 
   const shown = useMemo(() => sortByLevel(players.filter((p) => (filter === "all" || p.level === filter)
     && (purpose === "all" || details.get(p.player_id)?.looking_for.includes(purpose))), myLevel), [players, filter, purpose, details, myLevel]);
   const focusSkills = useMemo(() => goalTargets(profile.baseline_ratings, profile.main_goals ?? []).map((g) => g.skill), [profile]);
-  const suggestions = useMemo(() => listing ? suggestBuddies(players, details, {
+  // With the buddy list (upgrade 12), you add players as buddies here; asking to play happens from My partners.
+  const friends = data.buddies;
+  const linkWith = (id: string) => friends?.find((b) => b.other_id === id);
+  const suggestions = useMemo(() => listing ? suggestBuddies(players.filter((p) => !friends?.some((b) => b.other_id === p.player_id)), details, {
     gameRating: listing.game_rating, lookingFor: listing.looking_for, focusSkills, level: myLevel,
-  }) : [], [players, details, listing, focusSkills, myLevel]);
+  }) : [], [players, friends, details, listing, focusSkills, myLevel]);
+  const add = (id: string, name: string) => void act(`add-${id}`, () => addBuddy(sb, id),
+    `Buddy request sent to ${name}. Once they accept, find them under My partners to ask them to play or partner for video feedback.`);
 
   function askFromSuggestion(id: string) {
     setFilter("all");
@@ -93,7 +98,10 @@ export function FindSection({ sb, userId, data, injured, act, busyId, reload }: 
                   <p className="text-xs" style={{ color: WHITE_DIM }}>{levelText(s.player.level)}{s.details.game_rating != null ? ` · game ${s.details.game_rating.toFixed(1)}` : ""}</p>
                   <LookingFor list={s.details.looking_for} />
                 </div>
-                <PrimaryButton onClick={() => askFromSuggestion(s.player.player_id)} aria-label={`Ask ${s.player.display_name}`}>Ask</PrimaryButton>
+                {friends
+                  ? <PrimaryButton disabled={busyId === `add-${s.player.player_id}`} onClick={() => add(s.player.player_id, s.player.display_name)}
+                      aria-label={`Add ${s.player.display_name} as a buddy`}><UserRoundPlus size={18} aria-hidden="true" /> Add</PrimaryButton>
+                  : <PrimaryButton onClick={() => askFromSuggestion(s.player.player_id)} aria-label={`Ask ${s.player.display_name}`}>Ask</PrimaryButton>}
               </div>
             </Card></li>)}
           </ul>
@@ -114,7 +122,10 @@ export function FindSection({ sb, userId, data, injured, act, busyId, reload }: 
           : "No listed players match these filters right now."}</p></Card>
       : <ul className="space-y-3" aria-label="Available players">
           {shown.map((p) => {
-            const status = p.request_status === "accepted" ? "Buddies"
+            const link = linkWith(p.player_id);
+            const status = friends
+              ? link?.status === "active" ? "Buddies" : link?.direction === "sent" ? "Buddy request sent" : null
+              : p.request_status === "accepted" ? "Buddies"
               : p.request_status === "pending" && p.request_direction === "outgoing" ? "Request sent"
               : p.request_status === "pending" ? "Wants to buddy up with you" : null;
             const d = details.get(p.player_id);
@@ -130,6 +141,12 @@ export function FindSection({ sb, userId, data, injured, act, busyId, reload }: 
                 </div>
                 {status
                   ? <span className="rounded-full px-3 py-1 text-sm font-bold" style={{ background: GREEN_BG, color: INK }}>{status}</span>
+                  : friends && link
+                    ? <PrimaryButton disabled={busyId === link.id} onClick={() => void act(link.id, () => respondBuddy(sb, link.id, true),
+                        `You and ${p.display_name} are buddies.`)}><Check size={18} aria-hidden="true" /> Accept buddy</PrimaryButton>
+                  : friends
+                    ? <PrimaryButton disabled={busyId === `add-${p.player_id}`} onClick={() => add(p.player_id, p.display_name)}>
+                        <UserRoundPlus size={18} aria-hidden="true" /> Add buddy</PrimaryButton>
                   : asking !== p.player_id && <PrimaryButton onClick={() => { setAsking(p.player_id); setSentTo(null); }}>
                       <UserRoundPlus size={18} aria-hidden="true" /> Buddy up</PrimaryButton>}
               </div>

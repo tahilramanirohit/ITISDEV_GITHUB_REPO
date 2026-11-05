@@ -170,6 +170,9 @@ export function formatFreeTime(s: FreeTime): string {
 /** Turns database errors into the messages shown on screen. */
 export function buddyErrorText(e: unknown): string {
   const message = e instanceof Error ? e.message : String((e as { message?: string })?.message ?? e);
+  if (/add_buddy|respond_buddy\b|cancel_buddy_add|remove_buddy|my_buddies|public\.buddies/i.test(message) && !/^buddy:/.test(message)) {
+    return "Buddies need a database update. Run supabase/scripts/pickleproapp_upgrade_12.sql in the Supabase SQL Editor, then reload.";
+  }
   if (/cancel_buddy_session|called_off|cancel_reason|cancelled_by/i.test(message) && !/^buddy:/.test(message)) {
     return "Buddy needs a database update. Run supabase/scripts/pickleproapp_upgrade_6.sql in the Supabase SQL Editor, then reload.";
   }
@@ -221,12 +224,53 @@ export async function setBuddyVisible(sb: SupabaseClient, userId: string, visibl
   if (error) throw new Error(error.message);
 }
 
-/** Requests waiting for this player's answer: part of the number on the Players tab. */
+/** Play requests and buddy requests waiting for this player's answer: part of the number on the Players tab. */
 export async function countWaitingRequests(sb: SupabaseClient, userId: string): Promise<number> {
-  const { count, error } = await sb.from("buddy_requests").select("id", { count: "exact", head: true })
-    .eq("to_player_id", userId).eq("status", "pending");
-  if (error) return 0; // Before the database update the badge simply stays hidden.
-  return count ?? 0;
+  const [play, adds] = await Promise.all([
+    sb.from("buddy_requests").select("id", { count: "exact", head: true }).eq("to_player_id", userId).eq("status", "pending"),
+    sb.from("buddies").select("id", { count: "exact", head: true }).eq("addressee_id", userId).eq("status", "pending"),
+  ]);
+  // Before a database update, that part of the badge simply stays hidden.
+  return (play.error ? 0 : play.count ?? 0) + (adds.error ? 0 : adds.count ?? 0);
+}
+
+// ── Buddies as a friend list (buddy-friends update, upgrade 12) ───────────
+/** A buddy, or a buddy request waiting for an answer. */
+export type BuddyLink = {
+  id: string;
+  status: "pending" | "active";
+  /** "sent": you asked; "received": they asked you. */
+  direction: "sent" | "received";
+  other_id: string;
+  other_name: string;
+  other_level: BuddyLevel | null;
+  created_at: string;
+  responded_at: string | null;
+};
+
+/** Your buddies and buddy requests; null before the buddy-friends update (the app then works as before). */
+export async function listMyBuddies(sb: SupabaseClient): Promise<BuddyLink[] | null> {
+  const { data, error } = await sb.rpc("my_buddies");
+  if (error) return null;
+  return (data ?? []) as BuddyLink[];
+}
+
+/** Ask a listed player to be your buddy (accepts their request if they already asked you). */
+export async function addBuddy(sb: SupabaseClient, playerId: string): Promise<void> {
+  await rpc<string>(sb, "add_buddy", { p_player: playerId });
+}
+
+export async function respondBuddy(sb: SupabaseClient, id: string, accept: boolean): Promise<void> {
+  await rpc<null>(sb, "respond_buddy", { p_id: id, p_accept: accept });
+}
+
+export async function cancelBuddyAdd(sb: SupabaseClient, id: string): Promise<void> {
+  await rpc<null>(sb, "cancel_buddy_add", { p_id: id });
+}
+
+/** Stop being buddies: also ends a video partnership and withdraws requests still waiting. */
+export async function removeBuddy(sb: SupabaseClient, playerId: string): Promise<void> {
+  await rpc<null>(sb, "remove_buddy", { p_player: playerId });
 }
 
 // ── Matching on performance (buddy-match update) ──────────────────────────

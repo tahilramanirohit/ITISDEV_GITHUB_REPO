@@ -31,6 +31,7 @@ insert into public.analysis_results (job_id, owner_id, session_id, video_asset_i
 insert into public.self_assessments (session_id, owner_id, ratings) values
   ('5e100000-0000-4000-8000-000000000001', 'e1111111-1111-4111-8111-111111111111', '{"dinking": 4, "third_shot": 3, "serve": 5}');
 
+select tests.make_buddies('e1111111-1111-4111-8111-111111111111', 'e2222222-2222-4222-8222-222222222222');
 set role authenticated;
 -- ── Olga and Kyle link ──────────────────────────────────────────────────
 select set_config('request.jwt.claim.sub', 'e1111111-1111-4111-8111-111111111111', false);
