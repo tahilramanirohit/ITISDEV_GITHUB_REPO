@@ -30,6 +30,8 @@ describe("goal progress", () => {
 
   it("dates goals four weeks out and counts days since", () => {
     expect(goalDueDate("bad")).toBeNull();
+    expect(goalDueDate("2026-10-01T00:00:00Z", 9)).toBe("2026-11-07");
+    expect(goalTargets({ serve: 2 }, [], "2026-10-01T00:00:00Z", 9)[0].due).toBe("2026-11-07");
     expect(daysSince("2026-10-01T00:00:00Z", Date.parse("2026-10-29T12:00:00Z"))).toBe(28);
   });
 });

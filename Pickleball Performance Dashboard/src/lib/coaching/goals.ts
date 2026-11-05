@@ -16,12 +16,12 @@ export type GoalTarget = {
 
 const DAY_MS = 86_400_000;
 
-/** The date the goals are due: four weeks after the baseline was set. */
-export function goalDueDate(setAt: string | null | undefined): string | null {
+/** The date the goals are due: four weeks after the baseline was set, plus any days paused by an injury. */
+export function goalDueDate(setAt: string | null | undefined, pausedDays = 0): string | null {
   if (!setAt) return null;
   const start = Date.parse(setAt);
   if (Number.isNaN(start)) return null;
-  return new Date(start + GOAL_WINDOW_DAYS * DAY_MS).toISOString().slice(0, 10);
+  return new Date(start + (GOAL_WINDOW_DAYS + pausedDays) * DAY_MS).toISOString().slice(0, 10);
 }
 
 /** Whole days since the baseline was set, or null without a date. */
@@ -39,9 +39,10 @@ export function goalTargets(
   baseline: SelfRatings | null | undefined,
   mainGoals: readonly ImprovementGoal[] = [],
   setAt?: string | null,
+  pausedDays = 0,
 ): GoalTarget[] {
   if (!baseline) return [];
-  const due = goalDueDate(setAt);
+  const due = goalDueDate(setAt, pausedDays);
   const matchesGoal = (skill: SelfSkill) => (mainGoals.includes(SKILL_INFO[skill].goal) ? 0 : 1);
   return SELF_SKILLS
     .filter((skill) => baseline[skill] != null && baseline[skill]! < 5)

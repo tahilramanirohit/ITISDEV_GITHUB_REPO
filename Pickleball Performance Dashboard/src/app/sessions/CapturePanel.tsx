@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SessionRow } from "../../lib/api/types";
 import { loadCapture, saveCheckin, saveRecovery, saveReflection, type Capture } from "../../lib/api/capture";
+import { endInjury, injuryErrorText, startInjury } from "../../lib/api/injury";
+import { INJURY_AREAS, INJURY_AREA_LABELS, INJURY_DISCLAIMER, type InjuryArea, type InjuryPeriod } from "../../lib/coaching/injury";
 import { BLUE_SKY, BORDER, WHITE_DIM } from "../theme";
 import { Card, Notice, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
 
@@ -21,10 +23,13 @@ export type CaptureStep = 0 | 1 | 2;
  * The private pre-game check-in, post-game recovery and reflection.
  * `step` opens a given part (from the session's Pre-game / Post-game strip);
  * `onStepChange` and `onSaved` keep that strip in sync.
+ * `injury` is the open injury (null when not injured, undefined while unknown): the post-game
+ * step can mark "I'm injured", which pauses goals and hides the player from Buddy.
  */
-export function CapturePanel({ sb, session, onSessionUpdated, step: requestedStep, onStepChange, onSaved }: {
+export function CapturePanel({ sb, session, onSessionUpdated, step: requestedStep, onStepChange, onSaved, injury, onInjuryChanged }: {
   sb: SupabaseClient; session: SessionRow; onSessionUpdated: () => void;
   step?: CaptureStep; onStepChange?: (step: CaptureStep) => void; onSaved?: () => void;
+  injury?: InjuryPeriod | null; onInjuryChanged?: () => void;
 }) {
   const [step, setStepState] = useState<number>(requestedStep ?? 0);
   const setStep = (next: number) => { setStepState(next); onStepChange?.(next as CaptureStep); };
@@ -42,6 +47,14 @@ export function CapturePanel({ sb, session, onSessionUpdated, step: requestedSte
   const [cooldown, setCooldown] = useState("");
   const [wentWell, setWentWell] = useState("");
   const [changeNext, setChangeNext] = useState("");
+  const [injured, setInjured] = useState(false);
+  const [injuryArea, setInjuryArea] = useState<InjuryArea | "">("");
+  const [injuryNote, setInjuryNote] = useState("");
+  useEffect(() => {
+    setInjured(!!injury);
+    setInjuryArea(injury?.body_area ?? "");
+    setInjuryNote(injury?.note ?? "");
+  }, [injury]);
 
   const reload = useCallback(async () => {
     const data = await loadCapture(sb, session.id);
@@ -94,9 +107,22 @@ export function CapturePanel({ sb, session, onSessionUpdated, step: requestedSte
         });
       }, 1);
     } else if (step === 1) {
-      await save(() => saveRecovery(sb, capture.participantId, {
-        exertion: optionalNumber(exertion), soreness: optionalNumber(soreness), cooldown_done: optionalBoolean(cooldown),
-      }), 2);
+      await save(async () => {
+        await saveRecovery(sb, capture.participantId, {
+          exertion: optionalNumber(exertion), soreness: optionalNumber(soreness), cooldown_done: optionalBoolean(cooldown),
+        });
+        if (injury === undefined) return;
+        const area = injuryArea || null;
+        const note = injuryNote.trim() || null;
+        try {
+          if (injured && (!injury || injury.body_area !== area || (injury.note ?? null) !== note)) await startInjury(sb, area, note);
+          else if (!injured && injury) await endInjury(sb);
+          else return;
+        } catch (e) {
+          throw new Error(injuryErrorText(e));
+        }
+        onInjuryChanged?.();
+      }, 2);
     } else {
       await save(() => saveReflection(sb, capture.participantId, {
         went_well: wentWell.trim() || null, change_next: changeNext.trim() || null,
@@ -160,6 +186,29 @@ export function CapturePanel({ sb, session, onSessionUpdated, step: requestedSte
               [1, 2, 3, 4, 5].map((n) => [String(n), String(n)]))}
             {select("cooldown", "Cooldown completed", cooldown, setCooldown, [["yes", "Yes"], ["no", "No"]])}
           </div>
+          {injury !== undefined && <div className="mt-4 rounded-xl p-3" style={{ border: `1px solid ${BORDER}` }}>
+            <label className="flex min-h-[44px] cursor-pointer items-start gap-3">
+              <input type="checkbox" checked={injured} onChange={(e) => setInjured(e.target.checked)} className="mt-1 h-5 w-5 shrink-0" />
+              <span><b className="text-sm">I'm injured right now</b>
+                <span className="block text-sm" style={{ color: WHITE_DIM }}>
+                  {injury && !injured ? "Unticking this ends recovery mode when you save, as if you tapped \"I'm back\"."
+                    : "Your plan switches to rest, your goal deadlines pause and you're hidden from Buddy until you tap \"I'm back\"."}</span></span>
+            </label>
+            {injured && <>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div><label className={labelClass} style={labelStyle} htmlFor="injury-area">Where (optional)</label>
+                  <select id="injury-area" value={injuryArea} onChange={(e) => setInjuryArea(e.target.value as InjuryArea | "")}
+                    className="w-full rounded-xl px-3 py-2" style={fieldStyle}>
+                    <option value="">Not saying</option>
+                    {INJURY_AREAS.map((a) => <option key={a} value={a}>{INJURY_AREA_LABELS[a]}</option>)}
+                  </select></div>
+                <div><label className={labelClass} style={labelStyle} htmlFor="injury-note">Private note (optional)</label>
+                  <input id="injury-note" maxLength={500} value={injuryNote} onChange={(e) => setInjuryNote(e.target.value)}
+                    placeholder="What happened" className="w-full rounded-xl px-3 py-2" style={fieldStyle} /></div>
+              </div>
+              <p className="mt-2 text-xs" style={{ color: WHITE_DIM }}>{INJURY_DISCLAIMER}</p>
+            </>}
+          </div>}
         </>}
         {step === 2 && <>
           <h2 className="mt-1 text-xl font-bold">Reflection · what comes next</h2>

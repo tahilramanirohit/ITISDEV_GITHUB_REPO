@@ -1,5 +1,6 @@
 import type { ImprovementGoal } from "../api/types";
 import type { Drill } from "../analysis/coaching";
+import { RECOVERY_PLAN } from "./injury";
 
 // Keys must match public.valid_self_ratings in supabase/migrations.
 export const SELF_SKILLS = [
@@ -169,6 +170,8 @@ export type SelfAssessmentInput = {
   playFormat?: string | null;
   /** Post-game recovery for this session; high soreness or effort makes the plan lighter. */
   recovery?: RecoveryLevels | null;
+  /** The player marked an injury ("I'm injured"): the plan becomes a rest plan until they are back. */
+  injured?: boolean;
   /** Skills a partner rated at least 1 lower than the player (peer feedback): they become the first focus. */
   peerLower?: { skill: SelfSkill; by: string; peer: number }[];
 };
@@ -294,10 +297,11 @@ export function buildSelfReport(input: SelfAssessmentInput): SelfReport {
     }));
 
   const light = isHeavyRecovery(input.recovery);
-  const plan = buildPlan(focus, light);
+  const plan = input.injured && focus.length ? RECOVERY_PLAN.map((step) => ({ ...step })) : buildPlan(focus, light);
   const record = input.gamesPlayed ? ` You won ${input.gamesWon ?? 0} of ${input.gamesPlayed} games.` : "";
   const coverage = ` Based on ${rated.length} of ${SELF_SKILLS.length} skills; skipped skills were treated as not played, not as low scores.`;
-  const lighter = light ? " You logged high soreness or effort after this session, so this plan is lighter: shorter drills at an easy pace." : "";
+  const lighter = input.injured ? " You marked an injury, so this is a rest plan for now. These skills wait until you're back."
+    : light ? " You logged high soreness or effort after this session, so this plan is lighter: shorter drills at an easy pace." : "";
   const introduction = focus.length
     ? `${focus.length} thing${focus.length === 1 ? "" : "s"} to practice before your next session, picked from your ratings and goals.${record}${lighter}${coverage}`
     : `You rated every skill 5/5. Keep the same habits and rate yourself again after your next session.${record}`;

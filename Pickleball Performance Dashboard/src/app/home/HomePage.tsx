@@ -10,6 +10,7 @@ import { selfCoachScript } from "../../lib/coaching/coachScript";
 import { buildSelfReport } from "../../lib/coaching/selfAssessment";
 import { CoachLauncher } from "../coach/CoachPlayer";
 import { InstallTip } from "../shell/InstallTip";
+import { RecoveryCard, useInjury } from "../recovery/RecoveryCard";
 import {
   ACCENT, ACCENT_INK, ACTION, ACTION_EDGE, CHECK, HERO, INK, INK_2, INK_3, LINE, LINE_STRONG, ON_ACTION, ON_CHECK, ON_HERO,
   SURFACE, SURFACE_2,
@@ -154,6 +155,8 @@ export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: s
     return () => { active = false; };
   }, [sb, userId]);
   const name = firstName(profile?.display_name ?? "");
+  const injury = useInjury(sb);
+  const injured = !!injury.open;
 
   const byId = useMemo(() => new Map(assessments.map((a) => [a.session_id, a])), [assessments]);
   // Latest session that has a usable self-assessment plan.
@@ -191,12 +194,13 @@ export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: s
 
   const focus = latestPlan?.report.focus[0];
   const bubble = items === null ? null
+    : injured ? { title: `Rest up${name ? `, ${name}` : ""}.`, body: "Your plan is rest for now and your goals are paused. Tap \"I'm back to playing\" when you're ready." }
     : sessions.length === 0 ? { title: `Hi${name ? ` ${name}` : ""}, I'm Pickle.`, body: "Log your first game and I'll tell you what to work on." }
     : focus ? { title: hasRatedPlan ? `Next up: ${focus.label.toLowerCase()}` : "Nice first game!", body: `${focus.drill.name}, 3 times this week.` }
     : { title: thisWeek >= WEEKLY_TARGET ? "You hit this week's target." : "Good to see you back.", body: "Rate your next game and I'll pick a drill." };
 
   const left = Math.max(0, WEEKLY_TARGET - thisWeek);
-  const weekHint = thisWeek >= WEEKLY_TARGET ? "Target hit. Nice work." : sessions.length === 0 ? `Goal: ${WEEKLY_TARGET} games a week` : `${left} more to hit your goal`;
+  const weekHint = injured ? "Paused while you recover" : thisWeek >= WEEKLY_TARGET ? "Target hit. Nice work." : sessions.length === 0 ? `Goal: ${WEEKLY_TARGET} games a week` : `${left} more to hit your goal`;
   const last = sessions[0];
   const earlier = sessions.slice(1, 4);
 
@@ -207,7 +211,8 @@ export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: s
         <div className="space-y-4">
           <InstallTip />
           {error && <Notice tone="error">{error}</Notice>}
-          {newPlayer && <GetStarted steps={steps} />}
+          {injury.open && <RecoveryCard sb={sb} injury={injury.open} onChanged={() => void injury.reload()} />}
+          {newPlayer && !injured && <GetStarted steps={steps} />}
 
           <section aria-label="This week" className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-[18px] px-4 py-3.5" style={cardStyle}>
             <div>
@@ -262,7 +267,7 @@ export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: s
           {latestPlan && latestPlan.report.focus.length > 0 && <section className="space-y-2">
             <SectionTitle action={<a href={latestPlan.href} className="inline-flex min-h-[44px] items-center gap-1 text-sm font-bold" style={{ color: ACCENT_INK }}>
               {latestPlan.starting ? "Rate a game" : "Full plan"} <ArrowRight size={14} aria-hidden="true" /></a>}>
-              {latestPlan.starting ? "Where to start" : "Practice next"}
+              {injured ? "When you're back" : latestPlan.starting ? "Where to start" : "Practice next"}
             </SectionTitle>
             {latestPlan.starting && <p className="-mt-1 text-sm" style={{ color: INK_2 }}>From your setup answers. Rate a game after you play to update it.</p>}
             <ol className="border-b" style={{ borderColor: LINE }}>
@@ -271,7 +276,7 @@ export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: s
                   <a href={latestPlan.href} className="flex min-h-[56px] items-center justify-between gap-3 py-2.5">
                     <span className="min-w-0">
                       <b className="block text-[15px] font-bold" style={{ color: INK }}>{f.label}</b>
-                      <span className="block text-[13px]" style={{ color: INK_2 }}>{f.drill.name}{i === 0 ? ", 3 times this week" : ""}</span>
+                      <span className="block text-[13px]" style={{ color: INK_2 }}>{f.drill.name}{i === 0 && !injured ? ", 3 times this week" : ""}</span>
                     </span>
                     <RatingDots value={f.rating} />
                   </a>
@@ -279,7 +284,7 @@ export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: s
               ))}
             </ol>
           </section>}
-          {coachScript && <CoachLauncher shortScript={coachScript} tone="light" compact />}
+          {coachScript && !injured && <CoachLauncher shortScript={coachScript} tone="light" compact />}
           {!hasRatedPlan && <section className="rounded-[18px] p-4" style={{ background: SURFACE, border: `1px solid ${LINE}` }}>
             <p className="text-sm font-bold" style={{ color: INK }}>Have a recording?</p>
             <p className="mt-0.5 text-sm leading-relaxed" style={{ color: INK_2 }}>Film from behind the baseline with the whole court in view, and PicklePro maps where you stood. <a href="#/example" className="font-bold" style={{ color: ACCENT_INK }}>See an example</a></p>

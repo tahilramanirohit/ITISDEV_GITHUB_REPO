@@ -5,6 +5,8 @@ import { getProfile, type PlayerProfile } from "../../lib/api/profile";
 import { listJournalSummaries } from "../../lib/api/capture";
 import { SKILL_INFO, type ErrorLevel } from "../../lib/coaching/selfAssessment";
 import { daysSince, GOAL_WINDOW_DAYS, goalProgress, goalTargets } from "../../lib/coaching/goals";
+import { pausedDays } from "../../lib/coaching/injury";
+import { RecoveryCard, useInjury } from "../recovery/RecoveryCard";
 import {
   baselineSummary, buildPoints, gameResults, inMode, latestRating, MODE_LABELS, PROGRESS_MODES, skillRows, weeksCovered,
   type ProgressMode,
@@ -109,11 +111,14 @@ export default function ProgressPage({ sb, userId }: { sb: SupabaseClient; userI
   const results = useMemo(() => gameResults(points), [points]);
   const insights = useMemo(() => readinessInsights(points, journal), [points, journal]);
   const skills = useMemo(() => skillRows(rated, baseline?.ratings), [rated, baseline]);
-  const goals = useMemo(() => goalTargets(profile?.baseline_ratings, profile?.main_goals ?? [], profile?.onboarding_completed_at)
+  // Days spent injured since the baseline push the goal deadline and the re-rate reminder back.
+  const injury = useInjury(sb);
+  const goalPause = pausedDays(injury.periods, profile?.onboarding_completed_at);
+  const goals = useMemo(() => goalTargets(profile?.baseline_ratings, profile?.main_goals ?? [], profile?.onboarding_completed_at, goalPause)
     .map((g) => {
       const now = latestRating(allPoints, g.skill);
       return { ...g, now, ...goalProgress(g, now) };
-    }), [profile, allPoints]);
+    }), [profile, allPoints, goalPause]);
 
   const measured = useMemo(() => courtTestGoals(courtTests ?? []), [courtTests]);
   const peer = useMemo(() => latestPeerBySkill(peerRows), [peerRows]);
@@ -133,8 +138,9 @@ export default function ProgressPage({ sb, userId }: { sb: SupabaseClient; userI
   const baselineAge = daysSince(baseline?.setAt);
   const lastTest = courtTests ? lastTestedOn(courtTests) : null;
   const testAge = daysSince(lastTest);
-  const rerate = baselineAge != null && baselineAge >= GOAL_WINDOW_DAYS;
-  const retest = testAge != null && testAge >= GOAL_WINDOW_DAYS;
+  const testPause = pausedDays(injury.periods, lastTest);
+  const rerate = !injury.open && baselineAge != null && baselineAge - pausedDays(injury.periods, baseline?.setAt) >= GOAL_WINDOW_DAYS;
+  const retest = !injury.open && testAge != null && testAge - testPause >= GOAL_WINDOW_DAYS;
   const oldest = Math.max(rerate ? baselineAge! : 0, retest ? testAge! : 0);
   const kindWord = mode === "games" ? "game" : mode === "practice" ? "practice" : "session";
   const showResults = mode !== "practice" && (results.record || results.gamesWon || results.errors);
@@ -154,6 +160,7 @@ export default function ProgressPage({ sb, userId }: { sb: SupabaseClient; userI
       </div>
 
       {error && <Notice tone="error">{error}</Notice>}
+      {injury.open && <RecoveryCard sb={sb} injury={injury.open} onChanged={() => void injury.reload()} showPlan={false} />}
       <div className="space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
         <div className="space-y-4">
           <section aria-label={`Average ${kindWord} rating`} className="grid grid-cols-[1fr_auto] items-end gap-2 rounded-[18px] p-4" style={cardStyle}>
@@ -211,7 +218,8 @@ export default function ProgressPage({ sb, userId }: { sb: SupabaseClient; userI
           {(goals.length > 0 || measured.length > 0) && <section aria-label="Your goals" className="rounded-[18px] p-4" style={cardStyle}>
             <div className="flex items-baseline justify-between gap-2">
               <h2 className="text-[15px] font-extrabold">Your goals</h2>
-              <span className="text-xs" style={{ color: INK_3 }}>from your baseline{goals[0]?.due ? ` · due ${shortDate(goals[0].due)}` : ""}</span>
+              <span className="text-xs" style={{ color: INK_3 }}>from your baseline{injury.open ? " · paused while you recover"
+                : goals[0]?.due ? ` · due ${shortDate(goals[0].due)}` : ""}</span>
             </div>
             <ul className="mt-3 space-y-3.5">
               {goals.map((g) => <li key={g.skill}>

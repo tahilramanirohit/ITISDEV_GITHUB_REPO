@@ -18,6 +18,7 @@ import {
   Card, Chip, Notice, PageHero, PrimaryButton, SectionTitle, SegmentedTabs, Sheet, fieldStyle, labelClass, labelStyle, pressable, tabPanelProps,
 } from "../shell/primitives";
 import { announceBuddyChange } from "./useBuddyBadge";
+import { useInjury } from "../recovery/RecoveryCard";
 
 const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("") || "?";
 const levelText = (l: BuddyLevel | null) => (l ? LEVEL_LABELS[l] : "Level not set");
@@ -255,6 +256,7 @@ function JoinCard({ onJoin }: { onJoin: (listed: boolean) => Promise<void> }) {
 
 export default function BuddyPage({ sb, userId }: { sb: SupabaseClient; userId: string }) {
   const [profile, setProfile] = useState<PlayerProfile | null | undefined>(undefined);
+  const injury = useInjury(sb);
   const [players, setPlayers] = useState<BuddyPlayer[] | null>(null);
   const [requests, setRequests] = useState<BuddyRequest[]>([]);
   const [error, setError] = useState("");
@@ -376,7 +378,8 @@ export default function BuddyPage({ sb, userId }: { sb: SupabaseClient; userId: 
             <p className="text-sm" style={{ color: WHITE_DIM }}>
               {visible ? `Others see: ${[profile.display_name, levelText(myLevel), listing?.game_rating != null ? `game ${listing.game_rating.toFixed(1)}` : null,
                 listing?.looking_for.length ? `looking for ${listing.looking_for.map((l) => SHORT_PURPOSE[l].toLowerCase()).join(", ")}` : null]
-                .filter(Boolean).join(" · ")}` : "You can still ask others. Turn this on so others can ask you."}
+                .filter(Boolean).join(" · ")}` : injury.open ? "Hidden while you recover. \"I'm back to playing\" on Home lists you again."
+                : "You can still ask others. Turn this on so others can ask you."}
             </p>
           </div>
           <PrimaryButton tone="light" disabled={busyId === "visible"}

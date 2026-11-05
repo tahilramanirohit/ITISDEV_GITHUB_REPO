@@ -14,7 +14,17 @@
 | WP6 Buddy | ✅ Done (5 Nov 2026) | **Yes**: `20261105110000_buddy_match.sql` (`pickleproapp_upgrade_10.sql`) |
 | WP7 Optimise and tidy | ✅ Done (5 Nov 2026) | No |
 
+| After WP7: Oct 23 notes (demo data, error counting, 2/4 players, court lines, "I'm injured") | ✅ Done (5 Nov 2026) | **Yes** for "I'm injured" only: `20261105120000_injury.sql` (`pickleproapp_upgrade_11.sql`) |
+
 **All work packages are done.** Still open (not a work package): a review-only video for solo drills (gap analysis §4b.1), and the proposal text changes in section 7. Everything left needs a new migration, so read rule 6 in section 3 first.
+
+### 5 Nov 2026: after WP7 (adviser notes of 23 Oct)
+
+- **Demo data:** `supabase/scripts/demo_data.sql` (4 accounts, self-reported history; re-runnable) and `docs/DEMO_WALKTHROUGH.md`.
+- **Error counting (computer vision):** `server/picklepro/errors.py` counts serve faults, shots out, kitchen faults, no-man's-land stays and staying back after the return from the analysis; `metrics.error_counts` in the result contract; `ErrorsPanel` in the video report. No database change.
+- **2 or 4 players:** a toggle above "Choose video & upload" (and in the re-run form and the report) sends `players_on_court` to the analyzer, which keeps at most 1 or 2 players per side. No database change.
+- **Court lines:** drawn lines are clipped to the part in front of the camera and inside the frame (a camera standing at the baseline drew stray lines across the picture). Still open: with a low camera right at the baseline, the far half can be drawn about 20 px too high (seen on `TestVideoKirk_REAL.mp4`); the fit has two near-equal answers there.
+- **"I'm injured":** `20261105120000_injury.sql` (also `pickleproapp_upgrade_11.sql`). `injury_periods` (private; read and delete own rows), `start_injury(area, note)` hides the player from Buddy and remembers whether they were listed, `end_injury()` lists them again only if they were. App: a toggle in the post-game step, a Recovery mode card on Home, Progress and the session plan (rest plan, "I'm back to playing", not-medical-advice line), the plan becomes a rest plan, goal deadlines and re-test reminders pause by the days injured. Local SQL tests: `97_injury.sql` (17 checks).
 
 ### 5 Nov 2026: WP7 optimise and tidy
 

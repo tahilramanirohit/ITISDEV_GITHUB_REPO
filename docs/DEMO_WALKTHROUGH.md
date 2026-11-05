@@ -4,7 +4,7 @@ Two walkthroughs: a **blank slate** (a new sign-up) and one **with data** (the d
 
 ## Set up the demo accounts
 
-1. Apply every database update through `supabase/scripts/pickleproapp_upgrade_10.sql`.
+1. Apply every database update through `supabase/scripts/pickleproapp_upgrade_11.sql`.
 2. Paste [`supabase/scripts/demo_data.sql`](../supabase/scripts/demo_data.sql) into Supabase Dashboard → SQL Editor → New query → Run. Running it again resets the four accounts.
 3. Sign in with any account below. Password: `PickleDemo-2026` (change it in the script first if the repository is public).
 
@@ -33,6 +33,8 @@ Sign in as **Marco**.
 3. **Ask for feedback** on another session: pick Lia, up to 3 skills, With video or Ratings only, and read the privacy line.
 4. **Buddy:** the "Coming up" card with Jun → **Log this session** (fills in New session and links it). "I'm looking for", Suggested for you, purpose filter.
 5. **Court tests** from Progress: re-test one drill and watch the goal bar move.
+
+6. **What if I'm injured?** Open any session → Journal → Post-game → tick **I'm injured right now** (pick Knee) → Save. Home now shows **Recovery mode** with a rest plan, Progress says the goals are paused, Buddy says you're hidden, and the session plan is a rest plan. Tap **I'm back to playing** to undo it (Marco is listed again on Buddy).
 
 Then sign in as **Lia** → Partners → **Shared with you** → Marco's game → rate the asked skills → Send feedback. Sign in as **Bea** → Buddy → Requests → accept Jun's request.
 

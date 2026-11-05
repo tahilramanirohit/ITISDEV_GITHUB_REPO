@@ -41,6 +41,7 @@ import type { PeerRating } from "../../lib/coaching/peerFeedback";
 import type { SelfRatings, SelfSkill } from "../../lib/coaching/selfAssessment";
 import type { JumpRequest } from "../analysis/VideoOverlayPlayer";
 import { PeerNotes } from "../partners/PeerNotes";
+import { RecoveryCard, useInjury } from "../recovery/RecoveryCard";
 
 const POLL_MS = 3000;
 
@@ -79,6 +80,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
   const [consentChecked, setConsentChecked] = useState(false);
   const [tab, setTab] = useState<DetailTab | null>(requestedTab === "plan" || requestedTab === "players" || requestedTab === "video" || requestedTab === "journal" ? requestedTab : null);
   const [loadError, setLoadError] = useState("");
+  const injury = useInjury(sb);
   const loadedOnce = useRef(false);
   const [slow, setSlow] = useState(false);
   const [limits, setLimits] = useState<UploadLimits>(DEFAULT_UPLOAD_LIMITS);
@@ -400,7 +402,8 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
 
       {activeTab === "plan" && <div {...tabPanelProps("session", "plan")} className="space-y-4 outline-none">
         <PreGameSummary checkin={capture?.checkin ?? null} onOpen={() => openPhase("pre")} />
-        <SelfAssessmentPanel sb={sb} session={session} recovery={recovery} peerRatings={peerRatings}
+        {injury.open && <RecoveryCard sb={sb} injury={injury.open} onChanged={() => void injury.reload()} showPlan={false} />}
+        <SelfAssessmentPanel sb={sb} session={session} recovery={recovery} peerRatings={peerRatings} injured={!!injury.open}
           onSaved={() => { loadPhases(); void load(); loadFeedback(); }} />
         {rated && !(capture?.recovery || capture?.reflection) && <button type="button" onClick={() => openPhase("post")}
           className={`flex min-h-[52px] w-full items-center justify-center rounded-full px-4 text-base font-extrabold ${pressable}`}
@@ -410,7 +413,8 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
           onWatch={uploadedPath ? (time) => { setTab("video"); setVideoSeek({ time, id: Date.now() }); } : undefined} />
       </div>}
       {activeTab === "journal" && <div {...tabPanelProps("session", "journal")} className="outline-none"><CapturePanel key={session.id} sb={sb} session={session}
-        step={journalStep} onStepChange={setJournalStep} onSaved={loadPhases} onSessionUpdated={() => void load()} /></div>}
+        step={journalStep} onStepChange={setJournalStep} onSaved={loadPhases} onSessionUpdated={() => void load()}
+        injury={injury.loaded ? injury.open : undefined} onInjuryChanged={() => void injury.reload()} /></div>}
 
       {activeTab === "players" && <div {...tabPanelProps("session", "players")} className="space-y-4 outline-none">
         {(session.tournament_name || session.match_result || session.match_score) && <Card>

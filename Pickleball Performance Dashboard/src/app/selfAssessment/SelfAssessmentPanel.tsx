@@ -48,10 +48,11 @@ function Stepper({ label, value, onChange, max }: { label: string; value: number
 
 /**
  * The In-game step: rate the session's skills and record the result.
- * `recovery` (from the post-game step) makes the plan lighter after a hard session.
+ * `recovery` (from the post-game step) makes the plan lighter after a hard session;
+ * `injured` ("I'm injured") turns it into a rest plan.
  */
-export function SelfAssessmentPanel({ sb, session, recovery, onSaved, peerRatings = [] }: {
-  sb: SupabaseClient; session: SessionRow; recovery?: RecoveryLevels | null; onSaved?: () => void;
+export function SelfAssessmentPanel({ sb, session, recovery, onSaved, peerRatings = [], injured = false }: {
+  sb: SupabaseClient; session: SessionRow; recovery?: RecoveryLevels | null; onSaved?: () => void; injured?: boolean;
   /** Partners' ratings of this session; a skill they rated lower becomes the first focus. */
   peerRatings?: PeerRating[];
 }) {
@@ -90,8 +91,8 @@ export function SelfAssessmentPanel({ sb, session, recovery, onSaved, peerRating
   const report = useMemo(() => saved ? buildSelfReport({
     ratings: saved.ratings, goals: session.improvement_goals ?? [], biggestStruggle: saved.biggest_struggle,
     unforcedErrors: saved.unforced_errors, gamesPlayed: saved.games_played, gamesWon: saved.games_won, playFormat: session.play_format,
-    recovery, peerLower: peerLowerSkills(saved.ratings, peerRatings),
-  }) : null, [saved, session.improvement_goals, session.play_format, recovery, peerRatings]);
+    recovery, injured, peerLower: peerLowerSkills(saved.ratings, peerRatings),
+  }) : null, [saved, session.improvement_goals, session.play_format, recovery, injured, peerRatings]);
 
   const progress = useMemo(() => saved && previous ? compareSelfRatings(saved.ratings, previous.ratings, session.play_format) : null,
     [saved, previous, session.play_format]);
