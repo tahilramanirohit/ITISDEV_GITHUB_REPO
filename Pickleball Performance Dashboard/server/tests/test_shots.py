@@ -10,7 +10,7 @@ import math
 import numpy as np
 import pytest
 
-from picklepro.court import COURT_WIDTH_M, calibrate
+from picklepro.court import COURT_LENGTH_M, COURT_WIDTH_M, CourtCalibration, calibrate
 from picklepro.fixtures import court_to_image_homography, project
 from picklepro.shots import SHOT_TYPES, TYPE_DEFINITIONS, FrameObs, _classify, analyze_shots, court_line_segments
 from picklepro.court import LANDMARKS_M
@@ -176,6 +176,25 @@ def test_court_lines_project_back_onto_the_court():
     near_baseline = lines[0]
     assert near_baseline == pytest.approx([130, 500, 830, 500], abs=1)
     assert COURT_WIDTH_M > 0 and not any(math.isnan(v) for line in lines for v in line)
+
+
+def test_court_lines_stay_in_the_frame_when_the_camera_stands_on_the_court():
+    # A camera 1 m in front of the near baseline, 3 m up, looking down the court: the near
+    # baseline is behind it. Projecting its corners directly gives points far off the frame,
+    # or on the wrong side of it, and lines drawn across the picture.
+    f, cx, cy, h = 500.0, 480.0, 200.0, 3.0
+    court_to_img = np.array([[f, cx, -3.05 * f - cx], [0.0, cy, f * h - cy], [0.0, 1.0, -1.0]])
+    cal = CourtCalibration(np.linalg.inv(court_to_img), ["test"], (960, 540), 0.0, 0.0)
+    lines = court_line_segments(cal)
+    # A homography means the same with its sign flipped, as a fitted one may come out.
+    flipped = CourtCalibration(-np.linalg.inv(court_to_img), ["test"], (960, 540), 0.0, 0.0)
+    assert court_line_segments(flipped) == lines
+    assert lines and all(0 <= x <= 960 and 0 <= y <= 540 for line in lines for x, y in (line[:2], line[2:]))
+    far_baseline = project(court_to_img, [(0.0, COURT_LENGTH_M), (COURT_WIDTH_M, COURT_LENGTH_M)]).ravel().tolist()
+    assert any(line == pytest.approx(far_baseline, abs=1) for line in lines)
+    # Both sidelines run from the far baseline down to the bottom edge of the frame.
+    sidelines = [line for line in lines if sorted((line[1], line[3])) == [round(far_baseline[1]), 540]]
+    assert len(sidelines) == 2
 
 
 def _rule(**kw):

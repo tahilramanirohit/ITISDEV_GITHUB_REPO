@@ -57,6 +57,7 @@ from .court import (
     NET_Y_M,
     CourtCalibration,
     court_half,
+    facing_camera,
     foot_point,
 )
 from .swings import SwingIndex
@@ -308,14 +309,58 @@ def court_line_segments(cal: CourtCalibration) -> List[List[int]]:
     segs = [((0, 0), (w, 0)), ((0, l), (w, l)), ((0, 0), (0, l)), ((w, 0), (w, l)),
             ((0, k), (w, k)), ((0, l - k), (w, l - k)), ((0, n), (w, n)),
             ((w / 2, 0), (w / 2, k)), ((w / 2, l - k), (w / 2, l))]
-    flat = [pt for seg in segs for pt in seg]
-    img = _court_to_image(cal, flat)
+    width, height = cal.image_size
+    to_image = facing_camera(np.linalg.inv(cal.homography), width, height)
     out = []
-    for i in range(0, len(img), 2):
-        a, b = img[i], img[i + 1]
-        if np.all(np.isfinite([a, b])):
-            out.append([int(round(a[0])), int(round(a[1])), int(round(b[0])), int(round(b[1]))])
+    for a, b in segs:
+        clipped = _clip_projected(to_image, a, b, width, height)
+        if clipped is not None:
+            out.append(clipped)
     return out
+
+
+def _clip_projected(to_image: np.ndarray, a: Tuple[float, float], b: Tuple[float, float],
+                    width: int, height: int) -> Optional[List[int]]:
+    """The part of court segment a-b that is in front of the camera and inside the frame, in pixels.
+
+    ``to_image`` must give w > 0 in front of the camera. Clipping happens before the
+    perspective division (Liang-Barsky on homogeneous coordinates). Projecting the
+    endpoints first goes wrong when a court corner is behind or level with the camera,
+    as with a phone filming from just behind the baseline: the corner lands thousands
+    of pixels away or flips to the other side of the frame, and the drawn line crosses
+    the picture.
+    """
+    pa = to_image @ np.array([a[0], a[1], 1.0])
+    pb = to_image @ np.array([b[0], b[1], 1.0])
+    if not np.all(np.isfinite([pa, pb])):
+        return None
+    d = pb - pa
+    eps = 1e-9 * (abs(pa[2]) + abs(pb[2]))
+    # Each constraint c + t * e >= 0 must hold for the kept part, t in [0, 1]:
+    # in front of the camera (w > 0), then 0 <= x <= width and 0 <= y <= height times w.
+    constraints = [
+        (pa[2] - eps, d[2]),
+        (pa[0], d[0]), (width * pa[2] - pa[0], width * d[2] - d[0]),
+        (pa[1], d[1]), (height * pa[2] - pa[1], height * d[2] - d[1]),
+    ]
+    t0, t1 = 0.0, 1.0
+    for c, e in constraints:
+        if abs(e) < 1e-15:
+            if c < 0:
+                return None
+            continue
+        t = -c / e
+        if e > 0:
+            t0 = max(t0, t)
+        else:
+            t1 = min(t1, t)
+        if t0 > t1:
+            return None
+    p0, p1 = pa + t0 * d, pa + t1 * d
+    x0, y0, x1, y1 = p0[0] / p0[2], p0[1] / p0[2], p1[0] / p1[2], p1[1] / p1[2]
+    if math.hypot(x1 - x0, y1 - y0) < 1.0:
+        return None
+    return [int(round(x0)), int(round(y0)), int(round(x1)), int(round(y1))]
 
 
 def _find_events(points: List[_Point], frames: Sequence[FrameObs], frame_h: int, tol: float,

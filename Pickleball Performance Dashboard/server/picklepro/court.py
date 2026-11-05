@@ -93,6 +93,20 @@ class CourtCalibration:
         return cv2.perspectiveTransform(pts, self.homography).reshape(-1, 2)
 
 
+def facing_camera(h_court_to_img: np.ndarray, width: float, height: float) -> np.ndarray:
+    """The map scaled so that w > 0 for ground in front of the camera.
+
+    A homography is only defined up to scale, sign included. The bottom middle of the
+    frame always shows ground in front of the camera, so its court point sets the sign.
+    """
+    h = np.asarray(h_court_to_img, dtype=np.float64)
+    try:
+        ground = np.linalg.solve(h, np.array([width / 2.0, float(height), 1.0]))
+    except np.linalg.LinAlgError:
+        return h
+    return -h if ground[2] < 0 else h
+
+
 def calibrate(points: Dict[str, Tuple[float, float]], image_size: Tuple[int, int]) -> CourtCalibration:
     """Fit a ground-plane homography from named landmark pixel positions.
 
