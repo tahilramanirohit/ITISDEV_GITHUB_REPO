@@ -597,10 +597,10 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
               <summary className="cursor-pointer text-sm font-semibold" style={{ color: BLUE_SKY }}>More recording tips</summary>
               <ul className="mt-2 list-disc space-y-1 pl-5 text-sm" style={{ color: WHITE_DIM }}>
                 <li>Use a stable tripod behind a baseline, high enough to see players and court lines.</li>
-                <li>Keep the full court visible in landscape at 720p or higher and at least 30 fps.</li>
+                <li>Keep the full court visible in landscape at 1080p (720p minimum) and at least 30 fps.</li>
                 <li>Use good light and avoid players crossing out of the frame.</li>
                 <li>Ask every visible player for recording and upload consent before filming.</li>
-                <li>On a phone, record at 720p or 1080p and 30 fps (iPhone: Settings → Camera → Record Video). Videos over 50 MB won't upload, so trim to a rally or two first. On iPhone, Settings → Camera → Formats → Most Compatible avoids playback problems.</li>
+                <li>On a phone, record at 1080p and 30 fps (iPhone: Settings → Camera → Record Video). Videos over 50 MB won't upload, so trim to a rally or two first. On iPhone, Settings → Camera → Formats → Most Compatible avoids playback problems.</li>
                 <li>Keep this page open and the screen on until the upload reaches 100%. If it stops, choose the same video again to resume.</li>
               </ul>
             </details>
@@ -647,11 +647,11 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
               <ul className="mt-1 grid gap-x-4 gap-y-0.5 sm:grid-cols-2" style={{ color: WHITE_DIM }}>
                 <li>Up to {formatBytes(Math.min(config.maxUploadBytes, limits.max_file_bytes))} per video</li>
                 <li>{formatDuration(limits.min_duration_s)} to {formatDuration(limits.max_duration_s)} long</li>
-                <li>Landscape, 720p or higher</li>
+                <li>Landscape, 720p or higher (1080p recommended)</li>
                 <li>{usage ? `${usage.uploadsToday} of ${limits.max_uploads_per_day}` : `Up to ${limits.max_uploads_per_day}`} uploads today</li>
                 <li>{usage ? `${usage.storedBytes ? formatBytes(usage.storedBytes) : "0 MB"} of ${formatBytes(limits.max_total_bytes)}` : formatBytes(limits.max_total_bytes)} storage used</li>
               </ul>
-              <p className="mt-2 text-xs" style={{ color: WHITE_SUB }}>MP4, MOV, WEBM or AVI, 720p and 30 fps or higher. Trim to a rally clip on your device first. Your upload is private, and raw video is removed 30 days after analysis unless you keep it.</p>
+              <p className="mt-2 text-xs" style={{ color: WHITE_SUB }}>MP4, MOV, WEBM or AVI, 720p and 30 fps or higher; 1080p gives the best court mapping. Trim to a rally clip on your device first. Your upload is private, and raw video is removed 30 days after analysis unless you keep it.</p>
             </div>
             <p className="text-sm" style={{ color: WHITE_DIM }}>The analyzer finds the court lines by itself. If it gets them wrong, you can correct them later with "Re-run analysis".</p>
             <details className="rounded-xl p-3" style={{ border: `1px solid ${BORDER}` }}>

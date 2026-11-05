@@ -1,4 +1,4 @@
-import { ACCENT_INK, ACTION, CHECK, INK, INK_2, SURFACE, WARN } from "../theme";
+import { ACCENT_INK, ACTION, CHECK, INK, INK_2, SURFACE, SURFACE_2, WARN } from "../theme";
 
 /** A court filmed from behind the baseline: all four corners and both baselines in frame. */
 function GoodAngle() {
@@ -45,6 +45,9 @@ export function BaselineNotice({ exampleHref = "#/example" }: { exampleHref?: st
         <figure><GoodAngle /><figcaption className="mt-1 text-[11px] font-bold" style={{ color: CHECK }}>✓ Behind the baseline</figcaption></figure>
         <figure><SideAngle /><figcaption className="mt-1 text-[11px] font-bold" style={{ color: WARN }}>✕ From the side</figcaption></figure>
       </div>
+      <p className="rounded-[10px] px-2.5 py-2 text-[13px] leading-snug" style={{ background: SURFACE_2, color: INK }}>
+        <b>Video quality:</b> landscape, <b>1080p recommended</b> (720p minimum), 30 fps or more. Lower quality makes the court lines and the ball harder to find.
+      </p>
       <p className="text-xs leading-snug" style={{ color: INK_2 }}>Keep the camera still for the whole clip. A fence, tripod or water bottle works. <a href={exampleHref} className="font-bold" style={{ color: ACCENT_INK }}>See an example result →</a></p>
     </section>
   );
