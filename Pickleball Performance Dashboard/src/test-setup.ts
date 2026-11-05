@@ -8,3 +8,5 @@ globalThis.ResizeObserver ??= ResizeObserverStub as unknown as typeof ResizeObse
 
 // jsdom does not implement scrolling; wizard steps scroll to the top.
 window.scrollTo = () => {};
+// Buddy suggestions scroll to a player's card; jsdom has no layout to scroll.
+HTMLElement.prototype.scrollIntoView = () => {};
