@@ -43,13 +43,19 @@ export async function listSessions(sb: SupabaseClient): Promise<SessionListItem[
     sb.from("analysis_jobs").select("*"),
     sb.from("analysis_results").select("id, job_id, result_status, data_origin"),
   ]);
-  const vs = check<VideoAssetRow[]>(videos);
-  const js = check<AnalysisJobRow[]>(jobs);
-  const rs = check<ResultSummary[]>(results);
+  // Index once instead of searching every list for every session (keeps the first match, as before).
+  const firstBy = <T,>(rows: T[], key: (row: T) => string) => {
+    const map = new Map<string, T>();
+    for (const row of rows) if (!map.has(key(row))) map.set(key(row), row);
+    return map;
+  };
+  const videoBySession = firstBy(check<VideoAssetRow[]>(videos), (v) => v.session_id);
+  const jobByVideo = firstBy(check<AnalysisJobRow[]>(jobs), (j) => j.video_asset_id);
+  const resultByJob = firstBy(check<ResultSummary[]>(results), (r) => r.job_id);
   return check<SessionRow[]>(sessions).map((session) => {
-    const video = vs.find((v) => v.session_id === session.id) ?? null;
-    const job = video ? js.find((j) => j.video_asset_id === video.id) ?? null : null;
-    const result = job ? rs.find((r) => r.job_id === job.id) ?? null : null;
+    const video = videoBySession.get(session.id) ?? null;
+    const job = video ? jobByVideo.get(video.id) ?? null : null;
+    const result = job ? resultByJob.get(job.id) ?? null : null;
     return { session, video, job, result: result as SessionListItem["result"] };
   });
 }
@@ -197,6 +203,12 @@ export async function signedVideoUrl(sb: SupabaseClient, path: string): Promise<
 
 export type SessionDetailsInput = Pick<SessionRow, "title" | "session_date"> &
   Partial<Pick<SessionRow, "tournament_name" | "tournament_round" | "match_result" | "match_score">>;
+
+/** Save a game's result and score (any match or tournament, not only tournaments). */
+export async function updateMatchResult(sb: SupabaseClient, sessionId: string,
+  input: Pick<SessionRow, "match_result" | "match_score">): Promise<SessionRow> {
+  return check<SessionRow>(await sb.from("sessions").update(input).eq("id", sessionId).select("*").single());
+}
 
 /** Edit a saved session's name, date and, for tournaments, round and result. */
 export async function updateSessionDetails(sb: SupabaseClient, sessionId: string, input: SessionDetailsInput): Promise<SessionRow> {

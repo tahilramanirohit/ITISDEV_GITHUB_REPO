@@ -2,6 +2,59 @@
 
 > **For the AI reading this:** this file is a complete brief. Read all of it before writing code. Work on the git branch `cleanversion`. Follow the "Rules" section exactly. Build one work package at a time, run the checks after each one, and do not commit or push unless the person you work for asks.
 
+## 0. Progress log (read this first)
+
+| Work package | Status | Database change needed? |
+|---|---|---|
+| WP1 Baseline as the starting point | ✅ Done (5 Nov 2026) | No |
+| WP2 Progress centred on game performance | ✅ Done, except the "peer" column (needs WP5) | No |
+| WP3 Pre-game / In-game / Post-game | ✅ Done | No |
+| WP4 Measured court tests | ⏳ Not started | **Yes**: new `baseline_tests` table |
+| WP5 Peer ratings and targeted feedback | ⏳ Not started | **Yes**: `report_shares` columns, `peer_ratings` table, function updates |
+| WP6 Buddy | 🟡 Partly done: "Coming up" card and "Log this session". Not done: "looking for", purpose filter, suggested buddies | **Yes** for the rest: `profiles.buddy_looking_for`, `buddy_players()` update |
+| WP7 Optimise and tidy | 🟡 Partly done (see below) | No |
+
+**Next AI: start at WP4.** Everything left needs a new migration, so read rule 6 in section 3 first.
+
+### 5 Nov 2026: WP1, WP2, WP3 and part of WP6 (no database changes)
+
+All built on `cleanversion`. `npm run check` passes: typecheck, 195 tests and the build. Checked in the browser at 375 px in dark mode using the local fake-data preview (`harness.html`).
+
+**WP1: baseline**
+- `src/lib/coaching/goals.ts` (new, tested in `goals.test.ts`): `goalTargets()` picks the **2** lowest baseline skills (ties go to the player's chosen focus) and targets +1, due 28 days after the baseline. `goalProgress()` and `daysSince()` are helpers.
+- `src/app/onboarding/Onboarding.tsx`: step 5 is now "Where is your game today?", needs at least 3 ratings to finish (the old "Skip and finish" is gone), shows a "✓ N rated" bar, and shows a cream "Your goals for the next 4 weeks" card.
+- The baseline date is `profiles.onboarding_completed_at`, so no `baseline_set_at` column was added. "Re-rate your baseline" sends the player to `#/welcome` (onboarding again), which saves new ratings and a new date.
+- Changed from the plan: goals are shown in onboarding and on Progress, **not on Home** (Home already shows the plan's focus).
+
+**WP2: Progress (`src/app/progress/ProgressPage.tsx`, rewritten)**
+- Games / Practice / All switch. Default is Games, and the choice is remembered in `localStorage`, wrapped in try/catch.
+- Average rating vs the baseline, with a dashed baseline line on the chart. It falls back to the first rating when there is no baseline.
+- Game results card: win rate, games won (last 8 vs the 8 before) and unforced errors with a game-by-game bar strip. Each number needs at least 2 games.
+- Your goals card with progress bars and "✓ Reached".
+- Before and after card, from the pre-game check-in and recovery data (WP3 helper).
+- By skill table with base / now columns. The **peer column is left out until WP5** exists.
+- "Time to re-rate your baseline" card after 28 days; "Set your baseline" link when there is none.
+- Logic lives in `src/lib/coaching/progressStats.ts` (tested in `progressStats.test.ts`). The route now passes `userId` (`App.tsx`).
+- Journal data is loaded once with the new `listJournalSummaries()` in `src/lib/api/capture.ts` (3 queries in parallel).
+
+**WP3: Pre-game / In-game / Post-game**
+- `src/app/sessions/GamePhases.tsx` (new): the 3-step strip (Done / Now / To do) and the one-line pre-game summary ("slept 7.5 h · readiness 4 · warmed up · logged before play").
+- `SessionDetail.tsx`: the strip sits above the tabs; Pre-game opens Journal step 1, In-game opens Rate & plan, Post-game opens Journal step 2. After rating, a "Next: post-game recovery" button appears. The existing tabs and `?tab=` links still work.
+- `CapturePanel.tsx`: renamed to "Pre-game and post-game journal", with steps Pre-game / Post-game / Reflection. New optional props `step`, `onStepChange` and `onSaved`.
+- `SelfAssessmentPanel.tsx`: the wrap-up step now has **Result (Won/Lost) and Score for every game**, not only tournaments. They are saved with the new `updateMatchResult()` in `src/lib/api/sessions.ts`. The Players tab edit form also allows result and score for any game.
+- `src/lib/coaching/readinessInsights.ts` (new, tested): average rating by sleep (7 h or more vs less), readiness (4–5 vs 1–3) and warm-up. Each side needs at least 3 sessions. It also adds a recovery note when the last 2 sessions had soreness ≥ 4 or effort ≥ 8.
+- The plan reacts to recovery: `buildSelfReport({ recovery })` in `selfAssessment.ts` makes the plan lighter (10-minute blocks, first one at an easy pace) when soreness ≥ 4 or effort ≥ 8. `isHeavyRecovery()` lives there.
+
+**WP6 (part): Buddy**
+- `src/lib/api/buddy.ts`: `nextFreeTime()`, `upcomingBuddySessions()` and `logBuddySessionHref()` (tested in `buddy.test.ts`).
+- `BuddyPage.tsx`: a "Coming up" card for the next accepted buddy session, and a "Log this session" button on it and on every accepted buddy card.
+- `NewSessionPage.tsx`: `buddyPreset()` reads `?with=&date=&context=&format=` and fills in the partner (doubles) or opponent (singles), date, context and format. Saved session defaults don't override it.
+- Not stored: there is no `sessions.buddy_request_id`, so Progress can't count "games with buddies" yet. Add it with the rest of WP6.
+
+**WP7 (part): speed**
+- `listSessions()` matched videos, jobs and results with nested searches; it now uses lookup maps, so each session is linked in one pass.
+- Progress numbers are computed with `useMemo` from pure tested helpers; skill averages no longer build a whole practice plan per session.
+
 ## 1. Background
 
 PicklePro is a mobile-first pickleball coaching web app (thesis project). Players log sessions, rate their game, get practice plans, and can find a buddy or share a session with a partner for peer coaching.

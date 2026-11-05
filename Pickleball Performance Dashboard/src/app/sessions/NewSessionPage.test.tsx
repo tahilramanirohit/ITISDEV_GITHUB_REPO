@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import NewSessionPage from "./NewSessionPage";
+import NewSessionPage, { buddyPreset } from "./NewSessionPage";
 
 afterEach(cleanup);
 
@@ -22,8 +22,8 @@ function fakeSupabase(profile: Record<string, unknown> | null = null) {
   return { sb: { from } as unknown as SupabaseClient, inserts };
 }
 
-function renderPage(sb: SupabaseClient) {
-  render(<MemoryRouter initialEntries={["/new?mode=self"]}><Routes>
+function renderPage(sb: SupabaseClient, url = "/new?mode=self") {
+  render(<MemoryRouter initialEntries={[url]}><Routes>
     <Route path="/new" element={<NewSessionPage sb={sb} userId="u1" />} />
     <Route path="/sessions/:id" element={<p>Opened session</p>} />
   </Routes></MemoryRouter>);
@@ -66,5 +66,21 @@ describe("NewSessionPage", () => {
     expect(row).toMatchObject({ play_format: "ball_machine", improvement_goals: ["shot_technique"] });
     expect("tournament_name" in row).toBe(false);
     expect(inserts).toHaveLength(1);
+  });
+});
+
+describe("logging a buddy session", () => {
+  it("fills in the buddy, format and date from the Buddy link", async () => {
+    const { sb } = fakeSupabase({ id: "u1", default_session_kind: "solo", default_play_format: "wall_practice" });
+    renderPage(sb, "/new?mode=self&with=Kyle&date=2026-11-06&context=practice&format=doubles");
+    expect(await screen.findByLabelText("Partner name")).toHaveProperty("value", "Kyle");
+    // The saved defaults (solo practice) do not override the buddy session.
+    await waitFor(() => expect(screen.getByLabelText("Partner name")).toHaveProperty("value", "Kyle"));
+  });
+
+  it("puts a singles buddy in as the opponent and ignores bad values", () => {
+    expect(buddyPreset(new URLSearchParams("with=Mia&format=singles&date=nope&context=tournament")))
+      .toEqual({ name: "Mia", format: "singles", date: undefined, context: undefined });
+    expect(buddyPreset(new URLSearchParams("mode=self"))).toBeNull();
   });
 });

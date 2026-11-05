@@ -96,6 +96,35 @@ export function isoDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+const slotKey = (s: FreeTime) => `${s.date} ${s.start}`;
+
+/** The first free time from today on, or null when every one has passed. */
+export function nextFreeTime(r: Pick<BuddyRequest, "slots">, today = new Date()): FreeTime | null {
+  const day = isoDate(today);
+  return [...r.slots].filter((s) => s.date >= day).sort((a, b) => slotKey(a).localeCompare(slotKey(b)))[0] ?? null;
+}
+
+/** Accepted buddy sessions that still have a free time ahead, soonest first. */
+export function upcomingBuddySessions(requests: BuddyRequest[], today = new Date()): { request: BuddyRequest; when: FreeTime }[] {
+  return requests
+    .filter((r) => r.status === "accepted")
+    .flatMap((request) => { const when = nextFreeTime(request, today); return when ? [{ request, when }] : []; })
+    .sort((a, b) => slotKey(a.when).localeCompare(slotKey(b.when)));
+}
+
+/**
+ * A link to New session with the buddy, purpose, format and date filled in.
+ * The date is the next free time, or the latest one once they have all passed
+ * (logging after playing). Competition prep is still a casual game, not a tournament.
+ */
+export function logBuddySessionHref(r: Pick<BuddyRequest, "other_name" | "purpose" | "play_format" | "slots">, today = new Date()): string {
+  const sorted = [...r.slots].sort((a, b) => slotKey(a).localeCompare(slotKey(b)));
+  const date = nextFreeTime(r, today)?.date ?? sorted[sorted.length - 1]?.date ?? isoDate(today);
+  const params = new URLSearchParams({ mode: "self", with: r.other_name, date, context: r.purpose === "practice" ? "practice" : "casual_match" });
+  if (r.play_format !== "either") params.set("format", r.play_format);
+  return `#/new?${params.toString()}`;
+}
+
 /** The same checks as public.buddy_slots_valid, so the form can explain a problem before sending. */
 export function freeTimeProblem(slots: FreeTime[], today = new Date()): string | null {
   if (slots.length === 0) return "Add at least one date and time you are free.";

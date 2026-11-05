@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { CalendarPlus, CalendarX, Check, ChevronRight, Clock, Handshake, MapPin, Trash2, UserRoundPlus, X } from "lucide-react";
+import { CalendarPlus, CalendarX, Check, ChevronRight, ClipboardCheck, Clock, Handshake, MapPin, Trash2, UserRoundPlus, X } from "lucide-react";
 import {
   BUDDY_LEVELS, CANCEL_REASONS, FORMATS, FORMAT_LABELS, LEVEL_LABELS, MAX_CANCEL_REASON, MAX_CITY, MAX_DAYS_AHEAD, MAX_FREE_TIMES,
   MAX_LOCATION, PURPOSES, PURPOSE_LABELS, buddyErrorText, buddyLevel, cancelBuddySession, cancelRequest, formatFreeTime, freeTimeProblem, isoDate, listBuddyPlayers,
-  listMyRequests, meetupProblem, respondToRequest, sendBuddyRequest, setBuddyVisible, sortByLevel,
+  listMyRequests, logBuddySessionHref, meetupProblem, respondToRequest, sendBuddyRequest, setBuddyVisible, sortByLevel, upcomingBuddySessions,
   type BuddyFormat, type BuddyLevel, type BuddyPlayer, type BuddyPurpose, type BuddyRequest, type FreeTime, type Meetup,
 } from "../../lib/api/buddy";
 import { getProfile, type PlayerProfile } from "../../lib/api/profile";
 import { inviteBuddyAsPartner, listPartners, partnerErrorText, type PartnerLink } from "../../lib/api/partners";
-import { BORDER, GREEN, GREEN_BG, INK, ROSE, WHITE, WHITE_DIM } from "../theme";
+import { ACCENT_INK, ACTION, ACTION_SOFT, BORDER, GREEN, GREEN_BG, INK, ON_ACTION, ROSE, WHITE, WHITE_DIM } from "../theme";
 import {
-  Card, Chip, Notice, PageHero, PrimaryButton, SectionTitle, SegmentedTabs, Sheet, fieldStyle, labelClass, labelStyle, tabPanelProps,
+  Card, Chip, Notice, PageHero, PrimaryButton, SectionTitle, SegmentedTabs, Sheet, fieldStyle, labelClass, labelStyle, pressable, tabPanelProps,
 } from "../shell/primitives";
 import { announceBuddyChange } from "./useBuddyBadge";
 
@@ -279,6 +279,7 @@ export default function BuddyPage({ sb, userId }: { sb: SupabaseClient; userId: 
   const buddies = requests.filter((r) => r.status === "accepted");
   const sent = requests.filter((r) => r.direction === "outgoing" && (r.status === "pending" || r.status === "declined"));
   const calledOff = requests.filter((r) => r.status === "called_off");
+  const upcoming = useMemo(() => upcomingBuddySessions(requests)[0] ?? null, [requests]);
   const activeTab = tab ?? (incoming.length ? "requests" : "available");
   const shown = useMemo(() => sortByLevel((players ?? []).filter((p) => filter === "all" || p.level === filter), myLevel),
     [players, filter, myLevel]);
@@ -325,6 +326,15 @@ export default function BuddyPage({ sb, userId }: { sb: SupabaseClient; userId: 
     {hero}
     <Sheet className="space-y-6">
       {actionError && <Notice tone="error">{actionError}</Notice>}
+
+      {upcoming && <section aria-label="Coming up" className="rounded-[18px] p-4" style={{ background: ACTION_SOFT, color: INK }}>
+        <p className="text-xs font-extrabold tracking-wide" style={{ color: ACCENT_INK }}>COMING UP · {formatFreeTime(upcoming.when).toUpperCase()}</p>
+        <p className="mt-1.5 text-base font-extrabold">{PURPOSE_LABELS[upcoming.request.purpose]} with {upcoming.request.other_name}</p>
+        <p className="mt-0.5 text-sm" style={{ color: WHITE_DIM }}>{[FORMAT_LABELS[upcoming.request.play_format], upcoming.request.location, upcoming.request.city].filter(Boolean).join(" · ")}</p>
+        <a href={logBuddySessionHref(upcoming.request)} className={`mt-3 flex min-h-[48px] items-center justify-center rounded-full px-4 text-[15px] font-extrabold ${pressable}`}
+          style={{ background: ACTION, color: ON_ACTION }}>Log this session</a>
+        <p className="mt-1.5 text-center text-xs" style={{ color: WHITE_DIM }}>{upcoming.request.other_name}, the purpose, format and date are filled in for you</p>
+      </section>}
 
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -431,6 +441,8 @@ export default function BuddyPage({ sb, userId }: { sb: SupabaseClient; userId: 
                   await load();
                 }} />
               : <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <a href={logBuddySessionHref(r)} className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 text-sm font-extrabold ${pressable}`}
+                    style={{ background: ACTION, color: ON_ACTION }}><ClipboardCheck size={18} aria-hidden="true" /> Log this session</a>
                   <PartnerAction link={partnerLinks.find((l) => l.other_id === r.other_player_id)} busy={busyId === `partner-${r.id}`}
                     onInvite={() => act(`partner-${r.id}`, () => inviteBuddyAsPartner(sb, r.other_player_id).catch((e) => {
                       throw new Error(partnerErrorText(e));

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { buddyErrorText, buddyLevel, freeTimeProblem, meetupProblem, sortByLevel, type BuddyPlayer } from "./buddy";
+import {
+  buddyErrorText, buddyLevel, freeTimeProblem, logBuddySessionHref, meetupProblem, nextFreeTime, sortByLevel, upcomingBuddySessions,
+  type BuddyPlayer, type BuddyRequest,
+} from "./buddy";
 
 const player = (name: string, level: BuddyPlayer["level"]): BuddyPlayer => ({
   player_id: name, display_name: name, level, usual_format: null, request_id: null, request_status: null, request_direction: null,
@@ -66,5 +69,31 @@ describe("cancelling a session", () => {
   it("names update 6 when the database does not have it yet", () => {
     expect(buddyErrorText(new Error("Could not find the function public.cancel_buddy_session(p_reason, p_request_id) in the schema cache")))
       .toMatch(/pickleproapp_upgrade_6\.sql/);
+  });
+});
+
+describe("logging a buddy session", () => {
+  const today = new Date(2026, 10, 5); // 5 Nov 2026, local time
+  const request = {
+    id: "r1", direction: "outgoing", other_player_id: "k", other_name: "Kyle", other_level: "intermediate",
+    purpose: "competition", play_format: "doubles", city: "Makati", location: "Court 3", status: "accepted",
+    created_at: "", responded_at: null,
+    slots: [{ date: "2026-11-08", start: "09:00", end: "11:00" }, { date: "2026-11-01", start: "09:00", end: "10:00" }, { date: "2026-11-06", start: "18:00", end: "19:00" }],
+  } as BuddyRequest;
+
+  it("finds the next free time from today", () => {
+    expect(nextFreeTime(request, today)?.date).toBe("2026-11-06");
+    expect(nextFreeTime({ slots: [{ date: "2026-11-01", start: "09:00", end: "10:00" }] }, today)).toBeNull();
+    expect(upcomingBuddySessions([request, { ...request, id: "r2", status: "pending" }], today).map((u) => u.request.id)).toEqual(["r1"]);
+  });
+
+  it("links to New session with the buddy filled in", () => {
+    const href = logBuddySessionHref(request, today);
+    const params = new URLSearchParams(href.split("?")[1]);
+    expect(href.startsWith("#/new?")).toBe(true);
+    expect(Object.fromEntries(params)).toEqual({ mode: "self", with: "Kyle", date: "2026-11-06", context: "casual_match", format: "doubles" });
+    // After every free time has passed, use the latest one; "either" leaves the format alone.
+    const past = new URLSearchParams(logBuddySessionHref({ ...request, purpose: "practice", play_format: "either" }, new Date(2026, 11, 1)).split("?")[1]);
+    expect(Object.fromEntries(past)).toEqual({ mode: "self", with: "Kyle", date: "2026-11-08", context: "practice" });
   });
 });

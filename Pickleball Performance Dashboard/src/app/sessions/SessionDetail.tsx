@@ -18,7 +18,10 @@ import {
 } from "../../lib/upload/limits";
 import { initials, listOtherPlayers, saveOtherPlayers, shortId, type OtherPlayer } from "../../lib/api/players";
 import { AvatarStack } from "./sessionUi";
-import { hasUploadConsent, recordUploadConsent } from "../../lib/api/capture";
+import { hasUploadConsent, loadCapture, recordUploadConsent, type Capture } from "../../lib/api/capture";
+import { getSelfAssessment } from "../../lib/api/selfAssessment";
+import { GamePhases, PreGameSummary, type Phase } from "./GamePhases";
+import type { CaptureStep } from "./CapturePanel";
 import { BaselineNotice } from "./BaselineNotice";
 import { ACCENT_INK, BLUE_SKY, BORDER, DISPLAY_FONT, INK, ORANGE, WHITE_DIM, WHITE_SUB, alpha } from "../theme";
 import { Card, Chip, Notice, SegmentedTabs, Sheet, fieldStyle, pressable, tabPanelProps } from "../shell/primitives";
@@ -74,6 +77,10 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
   const [usage, setUsage] = useState<UploadUsage | null>(null);
   const [pendingDuration, setPendingDuration] = useState<number | null>(null);
   const [players, setPlayers] = useState<OtherPlayer[]>([]);
+  // Pre-game / In-game / Post-game progress. Optional: on older databases the strip just shows no ticks.
+  const [capture, setCapture] = useState<Capture | null>(null);
+  const [rated, setRated] = useState(false);
+  const [journalStep, setJournalStep] = useState<CaptureStep>(0);
   const uploadRef = useRef<UploadHandle | null>(null);
   const inFlight = useRef(false); // guards against double clicks before React re-renders
 
@@ -98,6 +105,14 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
   useEffect(() => { void getUploadLimits(sb).then(setLimits); }, [sb]);
   useEffect(() => { getUploadUsage(sb).then(setUsage).catch(() => setUsage(null)); }, [sb, bundle?.video?.id]);
   useEffect(() => { listOtherPlayers(sb, sessionId).then(setPlayers).catch(() => setPlayers([])); }, [sb, sessionId]);
+  const loadPhases = useCallback(() => {
+    void Promise.all([
+      loadCapture(sb, sessionId).catch(() => null),
+      getSelfAssessment(sb, sessionId).then((a) => !!a).catch(() => false),
+    ]).then(([c, r]) => { setCapture(c); setRated(r); });
+  }, [sb, sessionId]);
+  useEffect(loadPhases, [loadPhases]);
+  useEffect(() => setJournalStep(0), [sessionId]);
   useEffect(() => { void hasUploadConsent(sb).then(setConsentConfirmed).catch(() => setConsentConfirmed(false)); }, [sb]);
   const currentRunId = bundle?.job?.current_run_id;
   const runStatus = bundle?.job?.status;
@@ -252,6 +267,12 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
   const { session, video, job } = bundle;
   const selfMode = (session.review_mode ?? "video") === "self";
   const activeTab: DetailTab = tab ?? (selfMode && !video ? "plan" : "video");
+  const phase: Phase | null = activeTab === "plan" ? "in" : activeTab === "journal" ? (journalStep === 0 ? "pre" : "post") : null;
+  const openPhase = (p: Phase) => {
+    if (p === "in") setTab("plan");
+    else { setJournalStep(p === "pre" ? 0 : 1); setTab("journal"); }
+  };
+  const recovery = capture?.recovery ? { soreness: capture.recovery.soreness, exertion: capture.recovery.exertion } : null;
   const loggingOnly = session.play_format === "wall_practice" || session.play_format === "ball_machine";
   const canChangeVideo = !loggingOnly && (state === "not_uploaded" || state === "upload_incomplete");
   const finished = state === "completed" || state === "insufficient_data" || state === "failed";
@@ -335,6 +356,12 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
         </Card>
       )}
 
+      <GamePhases current={phase} onOpen={openPhase} done={{
+        pre: !!capture?.checkin,
+        in: rated,
+        post: !!(capture?.recovery || capture?.reflection),
+      }} />
+
       <SegmentedTabs label="Session views" idBase="session" value={activeTab} onChange={setTab} tabs={[
         { value: "plan", label: "Rate & plan" },
         { value: "players", label: "Players" },
@@ -342,8 +369,15 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
         { value: "journal", label: "Journal" },
       ]} />
 
-      {activeTab === "plan" && <div {...tabPanelProps("session", "plan")} className="outline-none"><SelfAssessmentPanel sb={sb} session={session} /></div>}
-      {activeTab === "journal" && <div {...tabPanelProps("session", "journal")} className="outline-none"><CapturePanel key={session.id} sb={sb} session={session} onSessionUpdated={() => void load()} /></div>}
+      {activeTab === "plan" && <div {...tabPanelProps("session", "plan")} className="space-y-4 outline-none">
+        <PreGameSummary checkin={capture?.checkin ?? null} onOpen={() => openPhase("pre")} />
+        <SelfAssessmentPanel sb={sb} session={session} recovery={recovery} onSaved={() => { loadPhases(); void load(); }} />
+        {rated && !(capture?.recovery || capture?.reflection) && <button type="button" onClick={() => openPhase("post")}
+          className={`flex min-h-[52px] w-full items-center justify-center rounded-full px-4 text-base font-extrabold ${pressable}`}
+          style={{ background: "var(--pp-action)", color: "var(--pp-on-action)" }}>Next: post-game recovery</button>}
+      </div>}
+      {activeTab === "journal" && <div {...tabPanelProps("session", "journal")} className="outline-none"><CapturePanel key={session.id} sb={sb} session={session}
+        step={journalStep} onStepChange={setJournalStep} onSaved={loadPhases} onSessionUpdated={() => void load()} /></div>}
 
       {activeTab === "players" && <div {...tabPanelProps("session", "players")} className="space-y-4 outline-none">
         {(session.tournament_name || session.match_result || session.match_score) && <Card>
@@ -393,6 +427,8 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
                 <label className="grid gap-1 text-sm font-semibold">Round
                   <input maxLength={60} value={detailsDraft.tournament_round} onChange={(e) => setDetailsDraft({ ...detailsDraft, tournament_round: e.target.value })} placeholder="e.g. Semifinal" className="rounded-[14px] px-4 py-3 text-base font-normal" style={fieldStyle} />
                 </label>
+              </>}
+              {sessionKind(session) !== "solo" && <>
                 <div className="grid gap-1 text-sm font-semibold">Result
                   <div className="flex gap-2">{(["win", "loss"] as const).map((r) => <Chip key={r} selected={detailsDraft.match_result === r}
                     onClick={() => setDetailsDraft({ ...detailsDraft, match_result: detailsDraft.match_result === r ? null : r })}>{r === "win" ? "Won" : "Lost"}</Chip>)}</div>
@@ -418,8 +454,9 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
                     title: d.title.trim(), session_date: d.session_date,
                     ...(sessionKind(session) === "tournament" ? {
                       tournament_name: d.tournament_name.trim() || null, tournament_round: d.tournament_round.trim() || null,
-                      match_result: d.match_result, match_score: d.match_score.trim() || null,
                     } : {}),
+                    // Any game can have a result, so Progress can show a win rate.
+                    ...(sessionKind(session) !== "solo" ? { match_result: d.match_result, match_score: d.match_score.trim() || null } : {}),
                   });
                   if (sessionKind(session) !== "solo") {
                     const next: OtherPlayer[] = [

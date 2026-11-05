@@ -1,6 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { buildSelfReport, compareSelfRatings, levelLabel, parseRatings, skillsMentioned } from "./selfAssessment";
 
+describe("plan after a hard session", () => {
+  it("is shorter and starts at an easy pace when soreness or effort was high", () => {
+    const ratings = { serve: 3, dinking: 2, consistency: 4 } as const;
+    const normal = buildSelfReport({ ratings, goals: [] });
+    const light = buildSelfReport({ ratings, goals: [], recovery: { soreness: 4, exertion: null } });
+    expect(normal.plan[0].detail).toMatch(/^15 minutes/);
+    expect(light.plan[0].detail).toMatch(/^Easy pace, 10 minutes/);
+    expect(light.introduction).toMatch(/plan is lighter/);
+    expect(buildSelfReport({ ratings, goals: [], recovery: { soreness: 2, exertion: 5 } }).plan[0].detail).toMatch(/^15 minutes/);
+  });
+});
+
 describe("self-assessment report", () => {
   it("needs a few rated skills before giving a plan", () => {
     const report = buildSelfReport({ ratings: { serve: 3, dinking: 2 }, goals: [] });

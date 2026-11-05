@@ -4,11 +4,11 @@ import { ArrowLeft, Minus, Plus } from "lucide-react";
 import {
   friendlyDbError, getSelfAssessment, listSelfAssessments, previousAssessment, saveSelfAssessment, type SelfAssessment,
 } from "../../lib/api/selfAssessment";
-import { listSessions } from "../../lib/api/sessions";
-import { sessionKind, type SessionRow } from "../../lib/api/types";
+import { listSessions, updateMatchResult } from "../../lib/api/sessions";
+import { sessionKind, type MatchResult, type SessionRow } from "../../lib/api/types";
 import {
   buildSelfReport, compareSelfRatings, MIN_RATED_SKILLS, ratedSkills, SELF_SKILLS, SKILL_GROUPS, SKILL_INFO,
-  type ErrorLevel, type SelfRatings, type SelfSkill, type SkillRating,
+  type ErrorLevel, type RecoveryLevels, type SelfRatings, type SelfSkill, type SkillRating,
 } from "../../lib/coaching/selfAssessment";
 import { BORDER, GREEN, INK, PICKLE, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Chip, Notice, PrimaryButton, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
@@ -23,9 +23,11 @@ type Draft = {
   games_won: number | null;
   unforced_errors: ErrorLevel | null;
   biggest_struggle: string;
+  match_result: MatchResult | null;
+  match_score: string;
 };
 
-const emptyDraft: Draft = { ratings: {}, games_played: null, games_won: null, unforced_errors: null, biggest_struggle: "" };
+const emptyDraft: Draft = { ratings: {}, games_played: null, games_won: null, unforced_errors: null, biggest_struggle: "", match_result: null, match_score: "" };
 const STEPS = [...SKILL_GROUPS, "Wrap-up"] as const;
 
 function Stepper({ label, value, onChange, max }: { label: string; value: number | null; onChange: (v: number | null) => void; max: number }) {
@@ -43,9 +45,16 @@ function Stepper({ label, value, onChange, max }: { label: string; value: number
   );
 }
 
-export function SelfAssessmentPanel({ sb, session }: { sb: SupabaseClient; session: SessionRow }) {
+/**
+ * The In-game step: rate the session's skills and record the result.
+ * `recovery` (from the post-game step) makes the plan lighter after a hard session.
+ */
+export function SelfAssessmentPanel({ sb, session, recovery, onSaved }: {
+  sb: SupabaseClient; session: SessionRow; recovery?: RecoveryLevels | null; onSaved?: () => void;
+}) {
   const [saved, setSaved] = useState<SelfAssessment | null | undefined>(undefined);
-  const [draft, setDraft] = useState<Draft>(emptyDraft);
+  const resultDraft = { match_result: session.match_result ?? null, match_score: session.match_score ?? "" };
+  const [draft, setDraft] = useState<Draft>({ ...emptyDraft, ...resultDraft });
   const [editing, setEditing] = useState(false);
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -68,8 +77,8 @@ export function SelfAssessmentPanel({ sb, session }: { sb: SupabaseClient; sessi
       if (!active) return;
       setSaved(row);
       setEditing(!row);
-      if (row) setDraft({ ratings: row.ratings, games_played: row.games_played, games_won: row.games_won,
-        unforced_errors: row.unforced_errors, biggest_struggle: row.biggest_struggle ?? "" });
+      if (row) setDraft((d) => ({ ...d, ratings: row.ratings, games_played: row.games_played, games_won: row.games_won,
+        unforced_errors: row.unforced_errors, biggest_struggle: row.biggest_struggle ?? "" }));
     }).catch((e) => { if (active) { setSaved(null); setEditing(true); setError(friendlyDbError(e instanceof Error ? e.message : String(e))); } });
     void loadPrevious();
     return () => { active = false; };
@@ -78,7 +87,8 @@ export function SelfAssessmentPanel({ sb, session }: { sb: SupabaseClient; sessi
   const report = useMemo(() => saved ? buildSelfReport({
     ratings: saved.ratings, goals: session.improvement_goals ?? [], biggestStruggle: saved.biggest_struggle,
     unforcedErrors: saved.unforced_errors, gamesPlayed: saved.games_played, gamesWon: saved.games_won, playFormat: session.play_format,
-  }) : null, [saved, session.improvement_goals, session.play_format]);
+    recovery,
+  }) : null, [saved, session.improvement_goals, session.play_format, recovery]);
 
   const progress = useMemo(() => saved && previous ? compareSelfRatings(saved.ratings, previous.ratings, session.play_format) : null,
     [saved, previous, session.play_format]);
@@ -98,7 +108,12 @@ export function SelfAssessmentPanel({ sb, session }: { sb: SupabaseClient; sessi
         games_won: draft.games_played == null ? null : Math.min(draft.games_won ?? 0, draft.games_played),
         unforced_errors: draft.unforced_errors, biggest_struggle: draft.biggest_struggle.trim() || null,
       });
+      const score = draft.match_score.trim() || null;
+      if (!solo && (draft.match_result !== (session.match_result ?? null) || score !== (session.match_score ?? null))) {
+        await updateMatchResult(sb, session.id, { match_result: draft.match_result, match_score: score });
+      }
       setSaved(row);
+      onSaved?.();
       setEditing(false);
       setStep(0);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -139,6 +154,18 @@ export function SelfAssessmentPanel({ sb, session }: { sb: SupabaseClient; sessi
 
       {group !== "Wrap-up" ? <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">{skills.map((skill) => <SkillRater key={skill} skill={skill} playFormat={session.play_format} value={draft.ratings[skill]} onChange={(v) => rate(skill, v)} />)}</div> : <div className="space-y-4 lg:max-w-xl">
         {!solo && <>
+        <div>
+          <p className={labelClass} style={labelStyle}>Result</p>
+          <div className="flex gap-2" role="group" aria-label="Result">
+            {(["win", "loss"] as MatchResult[]).map((r) => <Chip key={r} selected={draft.match_result === r}
+              onClick={() => setDraft((d) => ({ ...d, match_result: d.match_result === r ? null : r }))}>{r === "win" ? "Won" : "Lost"}</Chip>)}
+          </div>
+        </div>
+        <div>
+          <label className={labelClass} style={labelStyle} htmlFor="match-score">Score (optional)</label>
+          <input id="match-score" maxLength={40} value={draft.match_score} inputMode="text" placeholder="11-7, 9-11, 11-5"
+            onChange={(e) => setDraft((d) => ({ ...d, match_score: e.target.value }))} className="w-full rounded-[14px] px-4 py-3 text-base" style={fieldStyle} />
+        </div>
         <Stepper label="Games played" value={draft.games_played} max={50}
           onChange={(v) => setDraft((d) => ({ ...d, games_played: v, games_won: v == null ? null : Math.min(d.games_won ?? 0, v) }))} />
         {draft.games_played != null && <Stepper label="Games won" value={draft.games_won} max={draft.games_played}

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { JournalEntry } from "../coaching/readinessInsights";
 
 // Must equal the policy_version required in supabase/migrations (see capture.test.ts).
 export const UPLOAD_POLICY_VERSION = "2026-09-29-v4";
@@ -51,6 +52,47 @@ export async function loadCapture(sb: SupabaseClient, sessionId: string): Promis
     recovery: value<Recovery | null>(recovery),
     reflection: value<Reflection | null>(reflection),
   };
+}
+
+/**
+ * Pre-game and recovery answers for every session, keyed by session id, for
+ * the Progress page. Three small queries in parallel; RLS keeps them to the
+ * player's own rows.
+ */
+export async function listJournalSummaries(sb: SupabaseClient): Promise<Map<string, JournalEntry>> {
+  const [participants, checkins, recovery] = await Promise.all([
+    sb.from("session_participants").select("id,session_id").eq("role", "uploader"),
+    sb.from("checkins").select("participant_id,sleep_hours,readiness,warmup_done,timing_status"),
+    sb.from("recovery_logs").select("participant_id,soreness,exertion"),
+  ]);
+  const sessionOf = new Map(value<{ id: string; session_id: string }[]>(participants).map((p) => [p.id, p.session_id]));
+  const out = new Map<string, JournalEntry>();
+  const entry = (participantId: string) => {
+    const sessionId = sessionOf.get(participantId);
+    if (!sessionId) return null;
+    let e = out.get(sessionId);
+    if (!e) {
+      e = { sleepHours: null, readiness: null, warmupDone: null, preGame: false, soreness: null, exertion: null };
+      out.set(sessionId, e);
+    }
+    return e;
+  };
+  for (const c of value<Pick<Checkin, "participant_id" | "sleep_hours" | "readiness" | "warmup_done" | "timing_status">[]>(checkins)) {
+    const e = entry(c.participant_id);
+    if (!e) continue;
+    // numeric columns can arrive as strings from PostgREST.
+    e.sleepHours = c.sleep_hours == null ? null : Number(c.sleep_hours);
+    e.readiness = c.readiness;
+    e.warmupDone = c.warmup_done;
+    e.preGame = c.timing_status === "pre_game";
+  }
+  for (const r of value<Pick<Recovery, "participant_id" | "soreness" | "exertion">[]>(recovery)) {
+    const e = entry(r.participant_id);
+    if (!e) continue;
+    e.soreness = r.soreness;
+    e.exertion = r.exertion;
+  }
+  return out;
 }
 
 export async function saveCheckin(sb: SupabaseClient, participantId: string,

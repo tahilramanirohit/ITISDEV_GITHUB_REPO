@@ -168,7 +168,7 @@ function SignedInApp({ sb, cfg }: { sb: SupabaseClient; cfg: AppConfig }) {
           <Route path="/sessions" element={<SessionsPage sb={sb} userId={user.id} />} />
           <Route path="/new" element={<NewSessionPage sb={sb} userId={user.id} trialNoWorker={cfg.trialNoWorker} />} />
           <Route path="/sessions/:sessionId" element={<SessionDetail sb={sb} userId={user.id} />} />
-          <Route path="/progress" element={<ProgressPage sb={sb} />} />
+          <Route path="/progress" element={<ProgressPage sb={sb} userId={user.id} />} />
           <Route path="/example" element={<ExamplePage />} />
           <Route path="/buddy" element={<BuddyPage sb={sb} userId={user.id} />} />
           <Route path="/partners" element={<PartnersPage sb={sb} userId={user.id} />} />

@@ -167,7 +167,16 @@ export type SelfAssessmentInput = {
   gamesWon?: number | null;
   /** The session's play format, so wording fits singles, doubles or solo practice. */
   playFormat?: string | null;
+  /** Post-game recovery for this session; high soreness or effort makes the plan lighter. */
+  recovery?: RecoveryLevels | null;
 };
+
+export type RecoveryLevels = { soreness: number | null; exertion: number | null };
+
+/** High soreness (4+ of 5) or effort (8+ of 10) after play: the next plan should be lighter. */
+export function isHeavyRecovery(entry: RecoveryLevels | null | undefined): boolean {
+  return !!entry && ((entry.soreness ?? 0) >= 4 || (entry.exertion ?? 0) >= 8);
+}
 
 export type SelfFocusItem = {
   skill: SelfSkill;
@@ -277,25 +286,29 @@ export function buildSelfReport(input: SelfAssessmentInput): SelfReport {
       observation: `"${info(skill).anchors[rating(skill) - 1]}"`,
     }));
 
-  const plan = buildPlan(focus);
+  const light = isHeavyRecovery(input.recovery);
+  const plan = buildPlan(focus, light);
   const record = input.gamesPlayed ? ` You won ${input.gamesWon ?? 0} of ${input.gamesPlayed} games.` : "";
   const coverage = ` Based on ${rated.length} of ${SELF_SKILLS.length} skills; skipped skills were treated as not played, not as low scores.`;
+  const lighter = light ? " You logged high soreness or effort after this session, so this plan is lighter: shorter drills at an easy pace." : "";
   const introduction = focus.length
-    ? `${focus.length} thing${focus.length === 1 ? "" : "s"} to practice before your next session, picked from your ratings and goals.${record}${coverage}`
+    ? `${focus.length} thing${focus.length === 1 ? "" : "s"} to practice before your next session, picked from your ratings and goals.${record}${lighter}${coverage}`
     : `You rated every skill 5/5. Keep the same habits and rate yourself again after your next session.${record}`;
 
   return { available: true, introduction, overall, level: levelLabel(overall), strengths, focus, plan, limitation: LIMITATION };
 }
 
-function buildPlan(focus: SelfFocusItem[]): SelfReport["plan"] {
+function buildPlan(focus: SelfFocusItem[], light = false): SelfReport["plan"] {
   if (!focus.length) return [];
   const [first, second, third] = focus;
+  // After a hard session: shorter blocks, and the first one at an easy pace.
+  const mins = light ? "10 minutes" : "15 minutes";
   const plan = [
-    { day: "Session 1", title: first.drill.name, detail: `15 minutes on your ${first.label.toLowerCase()}. ${first.drill.how}` },
-    { day: "Session 2", title: (second ?? first).drill.name, detail: `15 minutes. ${(second ?? first).drill.how}` },
+    { day: "Session 1", title: first.drill.name, detail: `${light ? "Easy pace, " : ""}${mins} on your ${first.label.toLowerCase()}. ${first.drill.how}` },
+    { day: "Session 2", title: (second ?? first).drill.name, detail: `${mins}. ${(second ?? first).drill.how}` },
   ];
   plan.push(third
-    ? { day: "Session 3", title: third.drill.name, detail: `15 minutes, then play games and notice when it comes up. ${third.drill.how}` }
+    ? { day: "Session 3", title: third.drill.name, detail: `${mins}, then play games and notice when it comes up. ${third.drill.how}` }
     : { day: "Session 3", title: "Play and notice", detail: "Play games as normal. After each game, think of one moment where your focus skill mattered." });
   plan.push({ day: "Then", title: "Rate yourself again", detail: "Log a new session and rate the same skills to see what changed." });
   return plan;

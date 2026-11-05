@@ -15,6 +15,21 @@ import { Chip, HeroProgress, Notice, PageHero, PrimaryButton, Sheet, fieldStyle,
 import { GoalFields } from "./GoalFields";
 
 const today = () => new Date().toISOString().slice(0, 10);
+
+/** Values from a Buddy "Log this session" link; anything malformed is ignored. */
+export function buddyPreset(params: URLSearchParams): { name: string; date?: string; context?: SessionContext; format?: PlayFormat } | null {
+  const name = params.get("with")?.trim().slice(0, 80);
+  if (!name) return null;
+  const date = params.get("date");
+  const context = params.get("context");
+  const format = params.get("format");
+  return {
+    name,
+    date: date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : undefined,
+    context: context === "practice" || context === "casual_match" ? context : undefined,
+    format: format === "singles" || format === "doubles" ? format : undefined,
+  };
+}
 const ROUNDS = ["Pool play", "Round of 16", "Quarterfinal", "Semifinal", "Final", "Other"];
 
 function defaultTitle(date: string, context: NewSession["session_context"]) {
@@ -52,15 +67,18 @@ export default function NewSessionPage({ sb, userId, trialNoWorker = false }: { 
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const preset = params.get("mode");
+  // "Log this session" from Buddy: the buddy, purpose, format and date arrive in the link.
+  const buddy = buddyPreset(params);
   const [step, setStep] = useState<1 | 2>(preset === "self" || preset === "video" ? 2 : 1);
   const [form, setForm] = useState<NewSession>({
-    title: "", session_date: today(), session_context: "casual_match", play_format: "doubles",
+    title: "", session_date: buddy?.date ?? today(), session_context: buddy?.context ?? "casual_match", play_format: buddy?.format ?? "doubles",
     performance_scope: "individual", review_mode: preset === "video" ? "video" : "self", notes: null, improvement_goals: [],
     positioning_rating: null, shot_outcomes_rating: null, shot_technique_rating: null,
   });
   const [kind, setKindState] = useState<SessionKind>("match");
-  const [partner, setPartner] = useState("");
-  const [opponents, setOpponents] = useState(["", ""]);
+  // In doubles a buddy is your partner; in singles they are your opponent.
+  const [partner, setPartner] = useState(buddy && (buddy.format ?? "doubles") === "doubles" ? buddy.name : "");
+  const [opponents, setOpponents] = useState([buddy?.format === "singles" ? buddy.name : "", ""]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const set = <K extends keyof NewSession>(k: K, v: NewSession[K]) => setForm((f) => ({ ...f, [k]: v }));
@@ -86,7 +104,8 @@ export default function NewSessionPage({ sb, userId, trialNoWorker = false }: { 
         improvement_goals: f.improvement_goals.length ? f.improvement_goals : p.main_goals ?? [],
         review_mode: preset ? f.review_mode : p.default_review_mode ?? f.review_mode,
       }));
-      setKind(p.default_session_kind ?? "match", format);
+      // A buddy session keeps the format and context from the link.
+      if (!buddy) setKind(p.default_session_kind ?? "match", format);
     }).catch(() => {});
     return () => { active = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per player

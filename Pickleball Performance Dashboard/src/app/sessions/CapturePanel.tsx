@@ -15,10 +15,19 @@ const optionalNumber = (v: string) => v === "" ? null : Number(v);
 const optionalBoolean = (v: string) => v === "" ? null : v === "yes";
 const booleanValue = (v: boolean | null) => v === null ? "" : v ? "yes" : "no";
 
-export function CapturePanel({ sb, session, onSessionUpdated }: {
+export type CaptureStep = 0 | 1 | 2;
+
+/**
+ * The private pre-game check-in, post-game recovery and reflection.
+ * `step` opens a given part (from the session's Pre-game / Post-game strip);
+ * `onStepChange` and `onSaved` keep that strip in sync.
+ */
+export function CapturePanel({ sb, session, onSessionUpdated, step: requestedStep, onStepChange, onSaved }: {
   sb: SupabaseClient; session: SessionRow; onSessionUpdated: () => void;
+  step?: CaptureStep; onStepChange?: (step: CaptureStep) => void; onSaved?: () => void;
 }) {
-  const [step, setStep] = useState(0);
+  const [step, setStepState] = useState<number>(requestedStep ?? 0);
+  const setStep = (next: number) => { setStepState(next); onStepChange?.(next as CaptureStep); };
   const [capture, setCapture] = useState<Capture | null>(null);
   const [error, setError] = useState("");
   const [savedMessage, setSavedMessage] = useState("");
@@ -50,7 +59,9 @@ export function CapturePanel({ sb, session, onSessionUpdated }: {
 
   useEffect(() => { void reload().catch((err) => setError(err.message)); }, [reload]);
   useEffect(() => setActualStart(localDateTime(session.actual_start_at)), [session.actual_start_at]);
-  useEffect(() => { setStep(0); setError(""); setSavedMessage(""); }, [session.id]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- a new session starts at the requested step, else the first
+  useEffect(() => { setStepState(requestedStep ?? 0); setError(""); setSavedMessage(""); }, [session.id]);
+  useEffect(() => { if (requestedStep != null) setStepState(requestedStep); }, [requestedStep]);
 
   async function save(action: () => Promise<void>, nextStep?: number) {
     setSaving(true);
@@ -59,6 +70,7 @@ export function CapturePanel({ sb, session, onSessionUpdated }: {
     try {
       await action();
       setCapture(await loadCapture(sb, session.id));
+      onSaved?.();
       if (nextStep !== undefined) setStep(nextStep);
       else setSavedMessage("Reflection saved. You can return to any step to edit your answers.");
     }
@@ -101,11 +113,11 @@ export function CapturePanel({ sb, session, onSessionUpdated }: {
       </select>
     </div>;
 
-  const stepNames = ["Before play", "After play", "Reflection"];
+  const stepNames = ["Pre-game", "Post-game", "Reflection"];
 
-  return <section aria-label="Private session context">
+  return <section aria-label="Pre-game and post-game journal">
     <Card accent={BLUE_SKY}>
-      <p className="text-sm font-bold" style={{ color: BLUE_SKY }}>Private session context</p>
+      <p className="text-sm font-bold" style={{ color: BLUE_SKY }}>Pre-game and post-game journal</p>
       <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Answer at your own pace. Every question is optional, and your answers stay private.</p>
       <ol aria-label="Questionnaire progress" className="mt-5 grid grid-cols-3 gap-2">
         {stepNames.map((name, index) => <li key={name} aria-current={step === index ? "step" : undefined}
@@ -118,7 +130,7 @@ export function CapturePanel({ sb, session, onSessionUpdated }: {
       <div className="mt-6">
         <p className="text-sm font-bold" style={{ color: BLUE_SKY }}>Step {step + 1} of 3</p>
         {step === 0 && <>
-          <h2 className="mt-1 text-xl font-bold">Before play · private check-in</h2>
+          <h2 className="mt-1 text-xl font-bold">Pre-game · private check-in</h2>
           <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>These entries add context to your report. They are not medical scores.</p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <div><label className={labelClass} style={labelStyle} htmlFor="actual-start">Actual start of play</label>
@@ -139,8 +151,8 @@ export function CapturePanel({ sb, session, onSessionUpdated }: {
             {capture?.checkin && ` Captured ${new Date(capture.checkin.captured_at).toLocaleString()}.`}</p>
         </>}
         {step === 1 && <>
-          <h2 className="mt-1 text-xl font-bold">After play · recovery context</h2>
-          <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Recovery is context only; it does not diagnose health or injury.</p>
+          <h2 className="mt-1 text-xl font-bold">Post-game · recovery</h2>
+          <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>High soreness or effort makes your next practice plan lighter. This does not diagnose health or injury.</p>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             {select("exertion", "Exertion (1–10)", exertion, setExertion,
               Array.from({ length: 10 }, (_, i) => [String(i + 1), String(i + 1)]))}

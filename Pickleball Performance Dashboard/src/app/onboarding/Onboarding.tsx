@@ -7,8 +7,9 @@ import {
 } from "../../lib/api/profile";
 import { friendlyDbError } from "../../lib/api/selfAssessment";
 import { GOAL_LABELS, IMPROVEMENT_GOALS, type ImprovementGoal } from "../../lib/api/types";
-import { SELF_SKILLS, SKILL_GROUPS, SKILL_INFO, type SkillRating } from "../../lib/coaching/selfAssessment";
-import { BORDER, DISPLAY_FONT, GREEN, INK, NAVY, OPTIC, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
+import { MIN_RATED_SKILLS, SELF_SKILLS, SKILL_GROUPS, SKILL_INFO, type SkillRating } from "../../lib/coaching/selfAssessment";
+import { goalTargets } from "../../lib/coaching/goals";
+import { BORDER, CHECK, CREAM, DISPLAY_FONT, GREEN, INK, NAVY, ON_CHECK, ON_CREAM, OPTIC, SURFACE_2, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Chip, Notice, PrimaryButton, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
 import { SkillRater } from "../selfAssessment/SkillRater";
 import { LevelHint } from "../buddy/LevelHint";
@@ -77,6 +78,7 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
   }
 
   async function finish() {
+    if (ratedCount < MIN_RATED_SKILLS) return setError(`Rate at least ${MIN_RATED_SKILLS} skills so Pickle can set your goals. You have rated ${ratedCount}.`);
     setBusy(true);
     setError("");
     try {
@@ -90,6 +92,8 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
 
   const ratedCount = Object.keys(form.baseline_ratings).length;
   const last = step === STEPS.length - 1;
+  const enough = ratedCount >= MIN_RATED_SKILLS;
+  const goals = enough ? goalTargets(form.baseline_ratings, form.main_goals) : [];
 
   return (
     <div className="space-y-5">
@@ -163,9 +167,17 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
       </div>}
 
       {step === 4 && <div className="space-y-4">
-        <p className="text-sm" style={{ color: WHITE_DIM }}>
-          How does each skill usually go for you? 3 means "okay for my level". Skip any you're unsure about. Rate at least 3 to get a starting plan ({ratedCount} rated).
-        </p>
+        <div>
+          <h2 className="text-2xl font-extrabold leading-tight" style={{ color: INK, fontFamily: DISPLAY_FONT }}>Where is your game today?</h2>
+          <p className="mt-1.5 text-sm leading-relaxed" style={{ color: WHITE_DIM }}>
+            This is your <strong style={{ color: INK }}>baseline</strong>. Pickle measures your progress against it and sets your goals from your lowest skills. 3 means "okay for my level". Skip any you're unsure about.
+          </p>
+        </div>
+        <div role="status" aria-live="polite" className="flex items-center gap-2.5 rounded-[14px] px-3 py-2.5" style={{ background: SURFACE_2 }}>
+          <span aria-hidden="true" className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-sm font-black"
+            style={enough ? { background: CHECK, color: ON_CHECK } : { border: `2px solid ${BORDER}`, color: WHITE_SUB }}>{enough ? <Check size={15} strokeWidth={3} /> : ratedCount}</span>
+          <span className="text-sm"><strong style={{ color: INK }}>{ratedCount} rated</strong> <span style={{ color: WHITE_DIM }}>· at least {MIN_RATED_SKILLS} needed</span></span>
+        </div>
         {SKILL_GROUPS.map((group) => <section key={group} className="space-y-3">
           <h2 className="text-sm font-bold" style={{ color: WHITE_SUB }}>{group}</h2>
           <div className="grid gap-3 lg:grid-cols-2">
@@ -179,11 +191,16 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
           ))}
           </div>
         </section>)}
+        {goals.length > 0 && <section aria-label="Your goals" className="rounded-[18px] p-4" style={{ background: CREAM, color: ON_CREAM }}>
+          <p className="text-xs font-extrabold tracking-wide" style={{ color: "#1f6b35" }}>YOUR GOALS FOR THE NEXT 4 WEEKS</p>
+          <p className="mt-1.5 text-[15px] font-extrabold">{goals.map((g) => `${g.label} ${g.from} → ${g.target}`).join(" · ")}</p>
+          <p className="mt-1 text-[13px]" style={{ color: "#36413a" }}>From your lowest ratings. Track them on the Progress page.</p>
+        </section>}
       </div>}
 
       {error && <Notice tone="error">{error}</Notice>}
       {last
-        ? <PrimaryButton type="button" className="w-full" disabled={busy} onClick={() => void finish()}>{busy ? "Saving…" : ratedCount ? "Finish and see my plan" : "Skip and finish"}</PrimaryButton>
+        ? <PrimaryButton type="button" className="w-full" disabled={busy} onClick={() => void finish()}>{busy ? "Saving…" : "Finish and see my plan"}</PrimaryButton>
         : <PrimaryButton type="button" className="w-full" onClick={next}>Continue</PrimaryButton>}
     </div>
   );

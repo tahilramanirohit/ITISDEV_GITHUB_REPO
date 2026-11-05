@@ -22,12 +22,12 @@ describe("CapturePanel", () => {
     const session = { id: "session-1", actual_start_at: null } as SessionRow;
 
     render(<CapturePanel sb={sb} session={session} onSessionUpdated={vi.fn()} />);
-    expect(await screen.findByRole("heading", { name: /before play/i })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: /pre-game/i })).toBeTruthy();
     expect(screen.queryByLabelText("Exertion (1–10)")).toBeNull();
     fireEvent.change(screen.getByLabelText("Session focus"), { target: { value: "Serve placement" } });
     fireEvent.click(screen.getByRole("button", { name: /save.*continue/i }));
 
-    expect(await screen.findByRole("heading", { name: /after play/i })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: /post-game/i })).toBeTruthy();
     expect(saveCheckin).toHaveBeenCalledWith(sb, "participant-1", {
       warmup_done: null, sleep_hours: null, readiness: null, focus: "Serve placement",
     });
@@ -35,7 +35,7 @@ describe("CapturePanel", () => {
     fireEvent.click(screen.getByRole("button", { name: /back/i }));
     expect(screen.getByLabelText("Session focus")).toHaveProperty("value", "Serve placement");
     fireEvent.click(screen.getByRole("button", { name: /save.*continue/i }));
-    await screen.findByRole("heading", { name: /after play/i });
+    await screen.findByRole("heading", { name: /post-game/i });
     fireEvent.click(screen.getByRole("button", { name: /save.*continue/i }));
     expect(await screen.findByRole("heading", { name: /reflection/i })).toBeTruthy();
     expect(saveRecovery).toHaveBeenCalledWith(sb, "participant-1", {
@@ -57,8 +57,8 @@ describe("CapturePanel", () => {
     const second = { id: "session-2", actual_start_at: null } as SessionRow;
     const view = render(<CapturePanel sb={sb} session={first} onSessionUpdated={vi.fn()} />);
     fireEvent.click(await screen.findByRole("button", { name: /save.*continue/i }));
-    expect(await screen.findByRole("heading", { name: /after play/i })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: /post-game/i })).toBeTruthy();
     view.rerender(<CapturePanel sb={sb} session={second} onSessionUpdated={vi.fn()} />);
-    expect(await screen.findByRole("heading", { name: /before play/i })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: /pre-game/i })).toBeTruthy();
   });
 });

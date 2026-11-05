@@ -213,12 +213,18 @@ describe("getting to know the player", () => {
     fireEvent.click(await screen.findByRole("button", { name: /Court positioning/ }));
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
     fireEvent.click(await screen.findByRole("radio", { name: /^Dinking 2 of 5/ }));
+    // A baseline needs at least 3 skills.
+    fireEvent.click(screen.getByRole("button", { name: "Finish and see my plan" }));
+    expect(await screen.findByText(/Rate at least 3 skills/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("radio", { name: /^Serve 3 of 5/ }));
+    fireEvent.click(screen.getByRole("radio", { name: /^Consistency 4 of 5/ }));
+    expect(screen.getByText(/Dinking 2 → 3/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Finish and see my plan" }));
 
     expect(await screen.findByRole("navigation", { name: "Main" })).toBeTruthy();
     expect(sb.upserts[0]).toMatchObject({
       id: "guest", display_name: "Sam", years_playing: 1.5, play_frequency: "weekly",
-      self_level: "Intermediate", play_reasons: ["compete"], main_goals: ["positioning"], baseline_ratings: { dinking: 2 },
+      self_level: "Intermediate", play_reasons: ["compete"], main_goals: ["positioning"], baseline_ratings: { dinking: 2, serve: 3, consistency: 4 },
     });
     expect(sb.upserts[0].onboarding_completed_at).toBeTruthy();
   });
