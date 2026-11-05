@@ -1,6 +1,29 @@
 # Adviser feedback: gap analysis (branch `cleanversion`)
 
-Checked against the code on `cleanversion` (commit `5ec59a4`) on 5 November 2026.
+Checked against the code on `cleanversion` (commit `5ec59a4`) on 5 November 2026. The table below this note was the starting point; see **Status after the update** for what is now done.
+
+## Status after the update (5 November 2026)
+
+Built in work packages WP1–WP7 (details in [`ADVISER_FEEDBACK_HANDOFF.md`](ADVISER_FEEDBACK_HANDOFF.md)).
+
+| # | Feedback | Now | What closed the gap |
+|---|---|---|---|
+| 1 | Game performance | **Done** | Progress: Games / Practice / All, win rate, games won, unforced-error trend, games with a buddy (WP2, WP6) |
+| 2 | Buddy for practice and competition | **Done** | "Looking for", purpose filter, suggestions by game rating and strong skills, "Log this session" linked to the buddy session (WP6) |
+| 3 | Pre / in / post-game data | **Done** | Pre-game / In-game / Post-game steps; sleep, readiness and warm-up patterns on Progress; lighter plan after heavy soreness or effort (WP3) |
+| 4a | Peer coaching | **Done** | Owner picks up to 3 skills; partner rates them 1–5 and tags notes; You vs partner view; a lower peer rating sets the first focus; peer column on Progress; ratings-only shares without video (WP5) |
+| 4b | Video for practice or real games | **Partly** | Sessions without a video can be shared for ratings (WP5). Still open: a review-only video for solo drills that skips court analysis |
+| 5 | Baseline metrics | **Done** | Required baseline (3+ skills), 4-week +1 goals, baseline on Progress, re-test reminder (WP1, WP2), measured court tests with targets and history (WP4) |
+
+Suggested improvements from the sections below, one by one:
+
+- §1: 1 ✅, 2 ✅; 3 is proposal text (not code).
+- §2: 1 ✅, 2 ✅ (similar rating; "complementary skills" is used as "strong at your focus skill"), 3 ✅.
+- §3: 1 ✅, 2 ✅, 3 ✅; 4 is proposal text.
+- §4a: 1 ✅, 2 ✅, 3 ✅, 4 ✅.
+- §4b: 1 open (see above); 2 is proposal text.
+- §5: 1 ✅, 2 ✅, 3 ✅, 4 ✅, 5 ✅ (re-test card after 4 weeks).
+- Not planned: a separate baseline for game results or recovery. Progress compares recent games with the ones before instead.
 
 | # | Feedback | Status in the app | Main gap |
 |---|---|---|---|

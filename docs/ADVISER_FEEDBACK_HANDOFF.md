@@ -12,9 +12,16 @@
 | WP4 Measured court tests | ✅ Done (5 Nov 2026) | **Yes**: `20261105090000_baseline_tests.sql` (`pickleproapp_upgrade_8.sql`) |
 | WP5 Peer ratings and targeted feedback | ✅ Done (5 Nov 2026) | **Yes**: `20261105100000_peer_feedback.sql` (`pickleproapp_upgrade_9.sql`) |
 | WP6 Buddy | ✅ Done (5 Nov 2026) | **Yes**: `20261105110000_buddy_match.sql` (`pickleproapp_upgrade_10.sql`) |
-| WP7 Optimise and tidy | 🟡 Partly done (see below) | No |
+| WP7 Optimise and tidy | ✅ Done (5 Nov 2026) | No |
 
-**Next AI: start at WP7.** Everything left needs a new migration, so read rule 6 in section 3 first.
+**All work packages are done.** Still open (not a work package): a review-only video for solo drills (gap analysis §4b.1), and the proposal text changes in section 7. Everything left needs a new migration, so read rule 6 in section 3 first.
+
+### 5 Nov 2026: WP7 optimise and tidy
+
+- **Measured** (vite build, before = `5fdf632`, after = WP4–WP6): main bundle `index` 83.8 → 86.1 kB (27.5 → 28.2 kB gzip); the new screens are lazy chunks (`TestsPage` 0.8 kB + `CourtTests` 6.2 kB, `SharedReportPage` 4.7 kB). Of the growth, the suggestion logic had pulled the skill texts into the main bundle through the Buddy badge; it now lives in `src/lib/coaching/buddyMatch.ts`, loaded only with the Buddy page. What remains is the new API helpers the nav badges import (about 0.7 kB gzip).
+- **Progress with 50 sessions** (React Profiler in a throwaway vitest, 5 renders): about 50 ms first render, then about 10 ms. The same as before WP4–WP6 (58 ms, then 9–14 ms), so the new court-test goals and peer column cost nothing measurable.
+- **Fewer queries:** the session page loaded the player's own ratings twice (phases and peer feedback); it now loads them once. New pages load their parts in parallel (`Promise.all`) and select only the columns they need. `/tests` is lazy-loaded.
+- **Docs:** README (features, migration table, update scripts 8–10) and the gap analysis (status table) are up to date.
 
 ### 5 Nov 2026: WP6 Buddy looking-for, suggestions and linked sessions
 
@@ -280,12 +287,12 @@ Rebuild `ProgressPage.tsx` in this order, top to bottom:
 
 ## 6. Definition of done (whole update)
 
-- [ ] All 7 work packages built; `npm run check` passes.
-- [ ] New migrations added (not applied by you) and listed in the README migration table, with a note telling the person to apply them in order.
-- [ ] Every new screen checked at 390 px in light and dark, with tap targets ≥ 44 px and reduced motion respected.
-- [ ] Privacy rules enforced in SQL: a partner only sees what was shared; buddy listings show only name, level, looking-for and the coarse rating.
-- [ ] No changes to unrelated features; existing tests still pass.
-- [ ] Short summary for the person: what changed, which migrations to apply, anything not finished.
+- [x] All 7 work packages built; `npm run check` passes.
+- [x] New migrations added (not applied by you) and listed in the README migration table, with a note telling the person to apply them in order.
+- [x] Every new screen checked at 390 px in light and dark, with tap targets ≥ 44 px and reduced motion respected.
+- [x] Privacy rules enforced in SQL: a partner only sees what was shared; buddy listings show only name, level, looking-for and the coarse rating.
+- [x] No changes to unrelated features; existing tests still pass.
+- [x] Short summary for the person: what changed, which migrations to apply, anything not finished.
 
 ## 7. Proposal document (not code)
 

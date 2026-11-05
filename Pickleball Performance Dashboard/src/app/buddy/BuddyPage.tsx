@@ -5,11 +5,12 @@ import {
   BUDDY_LEVELS, CANCEL_REASONS, FORMATS, FORMAT_LABELS, LEVEL_LABELS, MAX_CANCEL_REASON, MAX_CITY, MAX_DAYS_AHEAD, MAX_FREE_TIMES,
   MAX_LOCATION, PURPOSES, PURPOSE_LABELS, buddyErrorText, buddyLevel, cancelBuddySession, cancelRequest, formatFreeTime, freeTimeProblem, isoDate, listBuddyPlayers,
   listMyRequests, logBuddySessionHref, meetupProblem, respondToRequest, sendBuddyRequest, setBuddyVisible, sortByLevel, upcomingBuddySessions,
-  LOOKING_FOR, getMyListing, listBuddyDetails, setLookingFor, suggestBuddies,
+  LOOKING_FOR, getMyListing, listBuddyDetails, setLookingFor,
   type BuddyDetails, type BuddyFormat, type BuddyLevel, type BuddyPlayer, type BuddyPurpose, type BuddyRequest, type FreeTime, type Meetup,
   type MyListing,
 } from "../../lib/api/buddy";
 import { goalTargets } from "../../lib/coaching/goals";
+import { suggestBuddies } from "../../lib/coaching/buddyMatch";
 import { getProfile, type PlayerProfile } from "../../lib/api/profile";
 import { inviteBuddyAsPartner, listPartners, partnerErrorText, type PartnerLink } from "../../lib/api/partners";
 import { ACCENT_INK, ACTION, ACTION_SOFT, BORDER, GREEN, GREEN_BG, INK, ON_ACTION, ROSE, WHITE, WHITE_DIM } from "../theme";

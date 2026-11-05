@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
-  buddyErrorText, buddyLevel, freeTimeProblem, logBuddySessionHref, meetupProblem, nextFreeTime, sortByLevel, suggestBuddies, upcomingBuddySessions,
+  buddyErrorText, buddyLevel, freeTimeProblem, logBuddySessionHref, meetupProblem, nextFreeTime, sortByLevel, upcomingBuddySessions,
   type BuddyDetails, type BuddyPlayer, type BuddyRequest,
 } from "./buddy";
+import { suggestBuddies } from "../coaching/buddyMatch";
 
 const player = (name: string, level: BuddyPlayer["level"]): BuddyPlayer => ({
   player_id: name, display_name: name, level, usual_format: null, request_id: null, request_status: null, request_direction: null,

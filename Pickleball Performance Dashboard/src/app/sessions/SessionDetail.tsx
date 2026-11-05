@@ -109,7 +109,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
 
   useEffect(() => { void load(); }, [load]);
 
-  // Peer feedback (WP5): partners' ratings, the player's own ratings to compare, and their goal skills.
+  // Peer feedback (WP5): partners' ratings and the player's goal skills. Their own ratings come with the phases below.
   const [peerRatings, setPeerRatings] = useState<PeerRating[]>([]);
   const [selfRatings, setSelfRatings] = useState<SelfRatings | null>(null);
   const [goalSkills, setGoalSkills] = useState<SelfSkill[]>([]);
@@ -118,11 +118,9 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
     // Each part is optional: before the partner updates, the session page works without them.
     void Promise.all([
       listPeerRatings(sb, sessionId).catch(() => []),
-      getSelfAssessment(sb, sessionId).catch(() => null),
       getProfile(sb, userId).catch(() => null),
-    ]).then(([peer, self, profile]) => {
+    ]).then(([peer, profile]) => {
       setPeerRatings(peer);
-      setSelfRatings(self?.ratings ?? null);
       setGoalSkills(goalTargets(profile?.baseline_ratings, profile?.main_goals ?? []).map((g) => g.skill));
     });
   }, [sb, sessionId, userId]);
@@ -133,8 +131,8 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
   const loadPhases = useCallback(() => {
     void Promise.all([
       loadCapture(sb, sessionId).catch(() => null),
-      getSelfAssessment(sb, sessionId).then((a) => !!a).catch(() => false),
-    ]).then(([c, r]) => { setCapture(c); setRated(r); });
+      getSelfAssessment(sb, sessionId).catch(() => null),
+    ]).then(([c, a]) => { setCapture(c); setRated(!!a); setSelfRatings(a?.ratings ?? null); });
   }, [sb, sessionId]);
   useEffect(loadPhases, [loadPhases]);
   useEffect(() => setJournalStep(0), [sessionId]);
