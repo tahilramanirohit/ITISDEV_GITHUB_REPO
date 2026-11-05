@@ -5,8 +5,11 @@ import {
   BUDDY_LEVELS, CANCEL_REASONS, FORMATS, FORMAT_LABELS, LEVEL_LABELS, MAX_CANCEL_REASON, MAX_CITY, MAX_DAYS_AHEAD, MAX_FREE_TIMES,
   MAX_LOCATION, PURPOSES, PURPOSE_LABELS, buddyErrorText, buddyLevel, cancelBuddySession, cancelRequest, formatFreeTime, freeTimeProblem, isoDate, listBuddyPlayers,
   listMyRequests, logBuddySessionHref, meetupProblem, respondToRequest, sendBuddyRequest, setBuddyVisible, sortByLevel, upcomingBuddySessions,
-  type BuddyFormat, type BuddyLevel, type BuddyPlayer, type BuddyPurpose, type BuddyRequest, type FreeTime, type Meetup,
+  LOOKING_FOR, getMyListing, listBuddyDetails, setLookingFor, suggestBuddies,
+  type BuddyDetails, type BuddyFormat, type BuddyLevel, type BuddyPlayer, type BuddyPurpose, type BuddyRequest, type FreeTime, type Meetup,
+  type MyListing,
 } from "../../lib/api/buddy";
+import { goalTargets } from "../../lib/coaching/goals";
 import { getProfile, type PlayerProfile } from "../../lib/api/profile";
 import { inviteBuddyAsPartner, listPartners, partnerErrorText, type PartnerLink } from "../../lib/api/partners";
 import { ACCENT_INK, ACTION, ACTION_SOFT, BORDER, GREEN, GREEN_BG, INK, ON_ACTION, ROSE, WHITE, WHITE_DIM } from "../theme";
@@ -17,6 +20,15 @@ import { announceBuddyChange } from "./useBuddyBadge";
 
 const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("") || "?";
 const levelText = (l: BuddyLevel | null) => (l ? LEVEL_LABELS[l] : "Level not set");
+const SHORT_PURPOSE: Record<BuddyPurpose, string> = { practice: "Practice", casual_game: "Casual game", competition: "Competition prep" };
+
+/** "Practice · Competition prep" tags under a player's name. */
+function LookingFor({ list }: { list: readonly BuddyPurpose[] }) {
+  if (!list.length) return null;
+  return <span className="mt-1 flex flex-wrap gap-1.5" aria-label={`Looking for ${list.map((l) => SHORT_PURPOSE[l]).join(", ")}`}>
+    {list.map((l) => <span key={l} className="rounded-full px-2 py-0.5 text-xs font-bold" style={{ background: GREEN_BG, color: INK }}>{SHORT_PURPOSE[l]}</span>)}
+  </span>;
+}
 
 function Avatar({ name }: { name: string }) {
   return <span aria-hidden="true" className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-sm font-bold"
@@ -252,6 +264,10 @@ export default function BuddyPage({ sb, userId }: { sb: SupabaseClient; userId: 
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [partnerLinks, setPartnerLinks] = useState<PartnerLink[]>([]);
+  // Matching on performance (buddy-match update); empty before it is applied.
+  const [details, setDetails] = useState<Map<string, BuddyDetails>>(new Map());
+  const [listing, setListing] = useState<MyListing | null>(null);
+  const [purpose, setPurpose] = useState<BuddyPurpose | "all">("all");
   // Until the player picks a tab, open on Requests when someone is waiting for an answer.
   const [tab, setTab] = useState<"available" | "requests" | null>(null);
 
@@ -264,8 +280,12 @@ export default function BuddyPage({ sb, userId }: { sb: SupabaseClient; userId: 
       setPlayers(list);
       setRequests(mine);
       setError("");
-      // Partner links are optional here: before the partners update, Buddy works without them.
-      setPartnerLinks(await listPartners(sb).catch(() => []));
+      // Optional here: before the partners and buddy-match updates, Buddy works without them.
+      const [links, d, l] = await Promise.all([listPartners(sb).catch(() => []), listBuddyDetails(sb).catch(() => new Map<string, BuddyDetails>()),
+        getMyListing(sb).catch(() => null)]);
+      setPartnerLinks(links);
+      setDetails(d);
+      setListing(l);
     } catch (e) {
       setError(buddyErrorText(e));
     }
@@ -281,8 +301,20 @@ export default function BuddyPage({ sb, userId }: { sb: SupabaseClient; userId: 
   const calledOff = requests.filter((r) => r.status === "called_off");
   const upcoming = useMemo(() => upcomingBuddySessions(requests)[0] ?? null, [requests]);
   const activeTab = tab ?? (incoming.length ? "requests" : "available");
-  const shown = useMemo(() => sortByLevel((players ?? []).filter((p) => filter === "all" || p.level === filter), myLevel),
-    [players, filter, myLevel]);
+  const shown = useMemo(() => sortByLevel((players ?? []).filter((p) => (filter === "all" || p.level === filter)
+    && (purpose === "all" || details.get(p.player_id)?.looking_for.includes(purpose))), myLevel), [players, filter, purpose, details, myLevel]);
+  const focusSkills = useMemo(() => goalTargets(profile?.baseline_ratings, profile?.main_goals ?? []).map((g) => g.skill), [profile]);
+  const suggestions = useMemo(() => listing ? suggestBuddies(players ?? [], details, {
+    gameRating: listing.game_rating, lookingFor: listing.looking_for, focusSkills, level: myLevel,
+  }) : [], [players, details, listing, focusSkills, myLevel]);
+
+  function askFromSuggestion(id: string) {
+    setFilter("all");
+    setPurpose("all");
+    setAsking(id);
+    setSentTo(null);
+    window.setTimeout(() => document.getElementById(`player-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  }
 
   async function act(id: string, fn: () => Promise<void>) {
     setBusyId(id);
@@ -341,12 +373,29 @@ export default function BuddyPage({ sb, userId }: { sb: SupabaseClient; userId: 
           <div className="min-w-0">
             <p className="text-base font-bold" style={{ color: INK }}>{visible ? "You are listed in Buddy" : "You are hidden from the Buddy list"}</p>
             <p className="text-sm" style={{ color: WHITE_DIM }}>
-              {visible ? `Others see: ${profile.display_name} · ${levelText(myLevel)}` : "You can still ask others. Turn this on so others can ask you."}
+              {visible ? `Others see: ${[profile.display_name, levelText(myLevel), listing?.game_rating != null ? `game ${listing.game_rating.toFixed(1)}` : null,
+                listing?.looking_for.length ? `looking for ${listing.looking_for.map((l) => SHORT_PURPOSE[l].toLowerCase()).join(", ")}` : null]
+                .filter(Boolean).join(" · ")}` : "You can still ask others. Turn this on so others can ask you."}
             </p>
           </div>
           <PrimaryButton tone="light" disabled={busyId === "visible"}
             onClick={() => act("visible", () => setBuddyVisible(sb, userId, !visible))}>{visible ? "Hide me" : "Show me"}</PrimaryButton>
         </div>
+        {listing && <div className="mt-4">
+          <p className="text-sm font-bold" style={{ color: INK }}>I'm looking for</p>
+          <div className="mt-1.5 flex flex-wrap gap-2" role="group" aria-label="I'm looking for">
+            {LOOKING_FOR.map((l) => {
+              const on = listing.looking_for.includes(l);
+              return <Chip key={l} selected={on} onClick={() => {
+                const next = on ? listing.looking_for.filter((x) => x !== l) : LOOKING_FOR.filter((x) => x === l || listing.looking_for.includes(x));
+                setListing({ ...listing, looking_for: next });
+                void act("looking", () => setLookingFor(sb, userId, next));
+              }}>{SHORT_PURPOSE[l]}</Chip>;
+            })}
+          </div>
+          <p className="mt-2 text-xs" style={{ color: WHITE_DIM }}>Listed players also show a rounded game rating from their last 5 rated games and up to 2 strong
+            skills, so Buddy can suggest a good match. Never your individual ratings.</p>
+        </div>}
         {!myLevel && <p className="mt-3 text-sm" style={{ color: INK }}>
           Your level is not set. <a href="#/profile/edit" className="font-bold underline" style={{ color: GREEN }}>Add it in Edit profile</a> so
           players can find a buddy at their level.</p>}
@@ -358,28 +407,55 @@ export default function BuddyPage({ sb, userId }: { sb: SupabaseClient; userId: 
       ]} />
 
       {activeTab === "available" && <div {...tabPanelProps("buddy", "available")} className="space-y-3 outline-none">
+        {listing && (listing.looking_for.length === 0
+          ? <p className="rounded-[14px] px-3 py-2.5 text-sm" style={{ background: GREEN_BG, color: INK }}>
+              Pick what you're looking for above to see suggested buddies.</p>
+          : suggestions.length > 0 && <section aria-labelledby="suggested-heading" className="space-y-2">
+              <SectionTitle><span id="suggested-heading">Suggested for you</span></SectionTitle>
+              <ul className="space-y-2">
+                {suggestions.map((s) => <li key={s.player.player_id}><Card>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Avatar name={s.player.display_name} />
+                    <div className="min-w-[9rem] flex-1">
+                      <p className="text-base font-bold" style={{ color: INK }}>{s.player.display_name}</p>
+                      <p className="text-sm font-bold" style={{ color: ACCENT_INK }}>{s.reason}</p>
+                      <p className="text-xs" style={{ color: WHITE_DIM }}>{levelText(s.player.level)}{s.details.game_rating != null ? ` · game ${s.details.game_rating.toFixed(1)}` : ""}</p>
+                      <LookingFor list={s.details.looking_for} />
+                    </div>
+                    <PrimaryButton onClick={() => askFromSuggestion(s.player.player_id)} aria-label={`Ask ${s.player.display_name}`}>Ask</PrimaryButton>
+                  </div>
+                </Card></li>)}
+              </ul>
+            </section>)}
         <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by level">
           <Chip selected={filter === "all"} onClick={() => setFilter("all")}>All levels</Chip>
           {BUDDY_LEVELS.map((l) => <Chip key={l} selected={filter === l} onClick={() => setFilter(l)}>{LEVEL_LABELS[l]}</Chip>)}
         </div>
+        {details.size > 0 && <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by purpose">
+          <Chip selected={purpose === "all"} onClick={() => setPurpose("all")}>All purposes</Chip>
+          <Chip selected={purpose === "practice"} onClick={() => setPurpose("practice")}>Practice</Chip>
+          <Chip selected={purpose === "competition"} onClick={() => setPurpose("competition")}>Competition prep</Chip>
+        </div>}
         {sentTo && <Notice>Request sent to {sentTo}. Follow it under Requests.</Notice>}
         {players === null ? <p className="text-sm" style={{ color: WHITE_DIM }}>Loading players…</p>
           : shown.length === 0 ? <Card><p className="text-sm" style={{ color: WHITE_DIM }}>
-              {filter === "all" ? "No other players are listed yet. Ask your playing partners to open Buddy and show themselves."
-                : `No ${LEVEL_LABELS[filter].toLowerCase()} players are listed right now.`}</p></Card>
+              {filter === "all" && purpose === "all" ? "No other players are listed yet. Ask your playing partners to open Buddy and show themselves."
+                : "No listed players match these filters right now."}</p></Card>
           : <ul className="space-y-3" aria-label="Available players">
               {shown.map((p) => {
                 const status = p.request_status === "accepted" ? "Buddies"
                   : p.request_status === "pending" && p.request_direction === "outgoing" ? "Request sent"
                   : p.request_status === "pending" ? "Wants to buddy up with you" : null;
-                return <li key={p.player_id}><Card>
+                const d = details.get(p.player_id);
+                return <li key={p.player_id} id={`player-${p.player_id}`} className="scroll-mt-6"><Card>
                   <div className="flex flex-wrap items-center gap-3">
                     <Avatar name={p.display_name} />
                     <div className="min-w-[9rem] flex-1">
                       <p className="text-base font-bold" style={{ color: INK }}>{p.display_name}</p>
                       <p className="text-sm" style={{ color: WHITE_DIM }}>
-                        {levelText(p.level)}{p.usual_format ? ` · usually ${p.usual_format === "both" ? "singles and doubles" : p.usual_format}` : ""}
+                        {levelText(p.level)}{d?.game_rating != null ? ` · game ${d.game_rating.toFixed(1)}` : ""}{p.usual_format ? ` · usually ${p.usual_format === "both" ? "singles and doubles" : p.usual_format}` : ""}
                       </p>
+                      <LookingFor list={d?.looking_for ?? []} />
                     </div>
                     {status
                       ? <span className="rounded-full px-3 py-1 text-sm font-bold" style={{ background: GREEN_BG, color: INK }}>{status}</span>

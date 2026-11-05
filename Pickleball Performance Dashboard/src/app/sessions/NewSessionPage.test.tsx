@@ -80,7 +80,10 @@ describe("logging a buddy session", () => {
 
   it("puts a singles buddy in as the opponent and ignores bad values", () => {
     expect(buddyPreset(new URLSearchParams("with=Mia&format=singles&date=nope&context=tournament")))
-      .toEqual({ name: "Mia", format: "singles", date: undefined, context: undefined });
+      .toEqual({ name: "Mia", format: "singles", date: undefined, context: undefined, requestId: undefined });
+    // The buddy session's id links the logged session; anything else is ignored.
+    expect(buddyPreset(new URLSearchParams("with=Mia&buddy=3f2b6c1e-8a4d-4b7e-9c1a-2d3e4f5a6b7c"))?.requestId).toBe("3f2b6c1e-8a4d-4b7e-9c1a-2d3e4f5a6b7c");
+    expect(buddyPreset(new URLSearchParams("with=Mia&buddy=drop table"))?.requestId).toBeUndefined();
     expect(buddyPreset(new URLSearchParams("mode=self"))).toBeNull();
   });
 });

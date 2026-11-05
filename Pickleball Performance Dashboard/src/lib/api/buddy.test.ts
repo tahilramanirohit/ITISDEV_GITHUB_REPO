@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  buddyErrorText, buddyLevel, freeTimeProblem, logBuddySessionHref, meetupProblem, nextFreeTime, sortByLevel, upcomingBuddySessions,
-  type BuddyPlayer, type BuddyRequest,
+  buddyErrorText, buddyLevel, freeTimeProblem, logBuddySessionHref, meetupProblem, nextFreeTime, sortByLevel, suggestBuddies, upcomingBuddySessions,
+  type BuddyDetails, type BuddyPlayer, type BuddyRequest,
 } from "./buddy";
 
 const player = (name: string, level: BuddyPlayer["level"]): BuddyPlayer => ({
@@ -91,9 +91,40 @@ describe("logging a buddy session", () => {
     const href = logBuddySessionHref(request, today);
     const params = new URLSearchParams(href.split("?")[1]);
     expect(href.startsWith("#/new?")).toBe(true);
-    expect(Object.fromEntries(params)).toEqual({ mode: "self", with: "Kyle", date: "2026-11-06", context: "casual_match", format: "doubles" });
+    expect(Object.fromEntries(params)).toEqual({ mode: "self", with: "Kyle", date: "2026-11-06", context: "casual_match", format: "doubles", buddy: "r1" });
     // After every free time has passed, use the latest one; "either" leaves the format alone.
     const past = new URLSearchParams(logBuddySessionHref({ ...request, purpose: "practice", play_format: "either" }, new Date(2026, 11, 1)).split("?")[1]);
-    expect(Object.fromEntries(past)).toEqual({ mode: "self", with: "Kyle", date: "2026-11-08", context: "practice" });
+    expect(Object.fromEntries(past)).toEqual({ mode: "self", with: "Kyle", date: "2026-11-08", context: "practice", buddy: "r1" });
+  });
+});
+
+describe("buddy suggestions", () => {
+  const p = (name: string, level: BuddyPlayer["level"], extra: Partial<BuddyPlayer> = {}): BuddyPlayer => ({
+    player_id: name, display_name: name, level, usual_format: null, request_id: null, request_status: null, request_direction: null, ...extra,
+  });
+  const d = (id: string, game_rating: number | null, looking_for: BuddyDetails["looking_for"], strong_skills: BuddyDetails["strong_skills"] = []) =>
+    [id, { player_id: id, game_rating, looking_for, strong_skills }] as const;
+  const players = [p("Ana", "intermediate"), p("Ben", "intermediate"), p("Cy", "advanced"), p("Dee", "intermediate"), p("Eve", "intermediate", { request_status: "pending" }), p("Fin", "intermediate")];
+  const details = new Map<string, BuddyDetails>([
+    d("Ana", 3.5, ["practice"]), d("Ben", 3, ["practice", "competition"], ["dinking"]), d("Cy", 4.5, ["practice"]),
+    d("Dee", 3.5, ["casual_game"]), d("Eve", 3.5, ["practice"]), d("Fin", null, ["practice"]),
+  ]);
+  const me = { gameRating: 3.5, lookingFor: ["practice"] as BuddyDetails["looking_for"], focusSkills: ["dinking"] as BuddyDetails["strong_skills"], level: "intermediate" as const };
+
+  it("suggests similar-rated players who want the same thing, strongest at your focus first", () => {
+    expect(suggestBuddies(players, details, me).map((s) => [s.player.display_name, s.reason])).toEqual([
+      ["Ben", "Strong at dinking, your focus"],
+      ["Ana", "Similar game rating"],
+      ["Fin", "Same level"],
+    ]);
+  });
+  it("leaves out players too far apart, looking for something else, or already asked", () => {
+    const names = suggestBuddies(players, details, me, 10).map((s) => s.player.display_name);
+    expect(names).not.toContain("Cy");
+    expect(names).not.toContain("Dee");
+    expect(names).not.toContain("Eve");
+  });
+  it("suggests nobody until you say what you are looking for", () => {
+    expect(suggestBuddies(players, details, { ...me, lookingFor: [] })).toEqual([]);
   });
 });

@@ -17,13 +17,15 @@ import { GoalFields } from "./GoalFields";
 const today = () => new Date().toISOString().slice(0, 10);
 
 /** Values from a Buddy "Log this session" link; anything malformed is ignored. */
-export function buddyPreset(params: URLSearchParams): { name: string; date?: string; context?: SessionContext; format?: PlayFormat } | null {
+export function buddyPreset(params: URLSearchParams): { name: string; date?: string; context?: SessionContext; format?: PlayFormat; requestId?: string } | null {
   const name = params.get("with")?.trim().slice(0, 80);
   if (!name) return null;
   const date = params.get("date");
   const context = params.get("context");
   const format = params.get("format");
+  const requestId = params.get("buddy");
   return {
+    requestId: requestId && /^[0-9a-f-]{36}$/i.test(requestId) ? requestId : undefined,
     name,
     date: date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : undefined,
     context: context === "practice" || context === "casual_match" ? context : undefined,
@@ -124,7 +126,9 @@ export default function NewSessionPage({ sb, userId, trialNoWorker = false }: { 
         tournament_name: tournament_name?.trim() || null, tournament_round: tournament_round || null,
         match_result: match_result ?? null, match_score: match_score?.trim() || null,
       } : {};
-      const s = await createSession(sb, { ...base, ...tournament, title, notes: form.notes?.trim() || null });
+      const s = await createSession(sb, { ...base, ...tournament, title, notes: form.notes?.trim() || null,
+        // Logged from a buddy session: link it so Progress can count games with buddies.
+        ...(buddy?.requestId ? { buddy_request_id: buddy.requestId } : {}) });
       const players: OtherPlayer[] = kind === "solo" ? [] : [
         ...(form.play_format === "doubles" ? [{ role: "partner" as const, display_name: partner }] : []),
         ...opponents.slice(0, form.play_format === "doubles" ? 2 : 1).map((name) => ({ role: "opponent" as const, display_name: name })),

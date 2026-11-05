@@ -5,7 +5,7 @@ import BuddyPage from "./BuddyPage";
 
 afterEach(cleanup);
 
-type Fake = { profile: Record<string, unknown>; players: unknown[]; requests: unknown[] };
+type Fake = { profile: Record<string, unknown>; players: unknown[]; requests: unknown[]; details?: unknown[]; listing?: Record<string, unknown> };
 
 function fakeSb(state: Fake) {
   const rpc = vi.fn(async (fn: string, args?: Record<string, unknown>) => {
@@ -14,6 +14,8 @@ function fakeSb(state: Fake) {
     if (fn === "send_buddy_request") return { data: "new-id", error: null };
     if (fn === "respond_buddy_request") return { data: null, error: null };
     if (fn === "invite_buddy_as_partner") return { data: "p1", error: null };
+    if (fn === "buddy_player_details" && state.details) return { data: state.details, error: null };
+    if (fn === "my_buddy_listing" && state.listing) return { data: [{ ...state.listing, looking_for: state.profile.buddy_looking_for ?? [] }], error: null };
     if (fn === "cancel_buddy_session") {
       state.requests = state.requests.map((r) => ((r as { id: string }).id === args?.p_request_id
         ? { ...(r as object), status: "called_off", cancelled_by_me: true, cancel_reason: args?.p_reason, cancelled_at: "2026-10-24T09:00:00Z" } : r));
@@ -34,6 +36,31 @@ function fakeSb(state: Fake) {
 const me = { id: "me", display_name: "Kim", self_level: "Novice", is_adult_confirmed: true, buddy_visible: true };
 
 describe("Buddy", () => {
+  it("lets a player say what they look for, filters by purpose and suggests close matches", async () => {
+    const players = [
+      { player_id: "b", display_name: "Ben", level: "novice", usual_format: null, request_id: null, request_status: null, request_direction: null },
+      { player_id: "c", display_name: "Cy", level: "advanced", usual_format: null, request_id: null, request_status: null, request_direction: null },
+    ];
+    const { sb, update } = fakeSb({ profile: { ...me, buddy_looking_for: [] }, requests: [], players,
+      details: [{ player_id: "b", looking_for: ["practice"], game_rating: 2.5, strong_skills: [] },
+        { player_id: "c", looking_for: ["competition"], game_rating: 4.5, strong_skills: ["dinking"] }],
+      listing: { game_rating: 2.5, strong_skills: [] } });
+    render(<BuddyPage sb={sb} userId="me" />);
+    expect(await screen.findByText(/Pick what you're looking for above/)).toBeTruthy();
+    fireEvent.click(within(screen.getByRole("group", { name: "I'm looking for" })).getByRole("button", { name: "Practice" }));
+    await waitFor(() => expect(update).toHaveBeenCalledWith({ buddy_looking_for: ["practice"] }));
+    const suggested = await screen.findByRole("region", { name: "Suggested for you" });
+    expect(within(suggested).getByText("Ben")).toBeTruthy();
+    expect(within(suggested).getByText("Similar game rating")).toBeTruthy();
+    expect(within(suggested).queryByText("Cy")).toBeNull(); // too far apart, and looking for something else
+    fireEvent.click(within(screen.getByRole("group", { name: "Filter by purpose" })).getByRole("button", { name: "Competition prep" }));
+    const list = screen.getByRole("list", { name: "Available players" });
+    expect(within(list).queryByText("Ben")).toBeNull();
+    expect(within(list).getByText("Cy")).toBeTruthy();
+    fireEvent.click(within(suggested).getByRole("button", { name: "Ask Ben" }));
+    expect(await screen.findByRole("form", { name: "Buddy up with Ben" })).toBeTruthy(); // filters reset so the form shows
+  });
+
   it("asks first-time users to confirm 18+ and whether to be listed", async () => {
     const { sb, update } = fakeSb({ profile: { ...me, is_adult_confirmed: false, buddy_visible: false }, players: [], requests: [] });
     render(<BuddyPage sb={sb} userId="me" />);

@@ -62,6 +62,8 @@ export type SessionRow = {
   tournament_round?: string | null;
   match_result?: MatchResult | null;
   match_score?: string | null;
+  /** The accepted buddy session this was logged from (buddy-match update). */
+  buddy_request_id?: string | null;
   notes: string | null;
   improvement_goals: ImprovementGoal[];
   positioning_rating: SelfRating | null;

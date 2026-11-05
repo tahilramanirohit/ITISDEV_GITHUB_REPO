@@ -126,10 +126,19 @@ export type NewSession = {
   positioning_rating: SelfRating | null;
   shot_outcomes_rating: SelfRating | null;
   shot_technique_rating: SelfRating | null;
+  /** The accepted buddy session this was logged from (buddy-match update). */
+  buddy_request_id?: string | null;
 };
 
 export async function createSession(sb: SupabaseClient, input: NewSession): Promise<SessionRow> {
-  return check<SessionRow>(await sb.from("sessions").insert(input).select("*").single());
+  const first = await sb.from("sessions").insert(input).select("*").single();
+  // Before the buddy-match update (or for a buddy session that is no longer linkable),
+  // save the session without the link rather than lose it.
+  if (first.error && input.buddy_request_id && /buddy_request_id|buddy session/.test(first.error.message)) {
+    const { buddy_request_id: _link, ...rest } = input;
+    return check<SessionRow>(await sb.from("sessions").insert(rest).select("*").single());
+  }
+  return check<SessionRow>(first);
 }
 
 export async function updateSessionGoals(sb: SupabaseClient, sessionId: string, goals: GoalValues): Promise<SessionRow> {

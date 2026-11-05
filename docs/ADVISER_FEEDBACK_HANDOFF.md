@@ -11,10 +11,17 @@
 | WP3 Pre-game / In-game / Post-game | ✅ Done | No |
 | WP4 Measured court tests | ✅ Done (5 Nov 2026) | **Yes**: `20261105090000_baseline_tests.sql` (`pickleproapp_upgrade_8.sql`) |
 | WP5 Peer ratings and targeted feedback | ✅ Done (5 Nov 2026) | **Yes**: `20261105100000_peer_feedback.sql` (`pickleproapp_upgrade_9.sql`) |
-| WP6 Buddy | 🟡 Partly done: "Coming up" card and "Log this session". Not done: "looking for", purpose filter, suggested buddies | **Yes** for the rest: `profiles.buddy_looking_for`, `buddy_players()` update |
+| WP6 Buddy | ✅ Done (5 Nov 2026) | **Yes**: `20261105110000_buddy_match.sql` (`pickleproapp_upgrade_10.sql`) |
 | WP7 Optimise and tidy | 🟡 Partly done (see below) | No |
 
-**Next AI: start at WP6.** Everything left needs a new migration, so read rule 6 in section 3 first.
+**Next AI: start at WP7.** Everything left needs a new migration, so read rule 6 in section 3 first.
+
+### 5 Nov 2026: WP6 Buddy looking-for, suggestions and linked sessions
+
+- **DB:** `20261105110000_buddy_match.sql` (also `pickleproapp_upgrade_10.sql`). `profiles.buddy_looking_for` (practice / casual_game / competition); internal `buddy_game_summary()` (average self-rating over the last 5 rated singles/doubles sessions, rounded to 0.5, and up to 2 skills averaging 4+); `buddy_player_details()` returns those for the same players `buddy_players()` lists; `my_buddy_listing()` for the caller. `buddy_players()` is **not** changed (changing its columns would break re-running update 4). `sessions.buddy_request_id` with a trigger that allows only the owner's own accepted (or later called-off) buddy session. Local SQL tests: `95_buddy_match.sql`.
+- **Buddy page:** "I'm looking for" toggles (Practice / Competition prep / Casual game) and "Others see: Sam · Novice · game 2.5 · looking for practice" on the listing card, with a privacy line; "Suggested for you" (up to 3: shares a looking-for value, game rating within 0.5, or the same level when a rating is missing; strong at one of your goal skills first, with the reason line); a purpose filter (All purposes / Practice / Competition prep) under the level filter; looking-for tags and the game rating on each player. "Ask" scrolls to the player's card and opens the request form.
+- **Log this session:** `logBuddySessionHref()` adds `buddy=<request id>`; `NewSessionPage` saves it as `buddy_request_id` (`createSession` retries without it before update 10). Progress shows "N with a buddy" on the Game results card.
+- **Logic:** `suggestBuddies()` in `src/lib/api/buddy.ts` (tested).
 
 ### 5 Nov 2026: WP5 targeted peer feedback and peer ratings
 

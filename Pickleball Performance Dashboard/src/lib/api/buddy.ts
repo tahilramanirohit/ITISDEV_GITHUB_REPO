@@ -2,6 +2,7 @@
 // Every rule is enforced by the database (supabase/migrations/20261022090000_buddy_finder.sql);
 // these helpers call its functions and turn its errors into plain messages.
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { SKILL_INFO, type SelfSkill } from "../coaching/selfAssessment";
 
 export const BUDDY_LEVELS = ["beginner", "novice", "intermediate", "advanced"] as const;
 export type BuddyLevel = (typeof BUDDY_LEVELS)[number];
@@ -117,11 +118,13 @@ export function upcomingBuddySessions(requests: BuddyRequest[], today = new Date
  * The date is the next free time, or the latest one once they have all passed
  * (logging after playing). Competition prep is still a casual game, not a tournament.
  */
-export function logBuddySessionHref(r: Pick<BuddyRequest, "other_name" | "purpose" | "play_format" | "slots">, today = new Date()): string {
+export function logBuddySessionHref(r: Pick<BuddyRequest, "other_name" | "purpose" | "play_format" | "slots"> & { id?: string }, today = new Date()): string {
   const sorted = [...r.slots].sort((a, b) => slotKey(a).localeCompare(slotKey(b)));
   const date = nextFreeTime(r, today)?.date ?? sorted[sorted.length - 1]?.date ?? isoDate(today);
   const params = new URLSearchParams({ mode: "self", with: r.other_name, date, context: r.purpose === "practice" ? "practice" : "casual_match" });
   if (r.play_format !== "either") params.set("format", r.play_format);
+  // Links the logged session to this buddy session, so Progress can count games with buddies.
+  if (r.id) params.set("buddy", r.id);
   return `#/new?${params.toString()}`;
 }
 
@@ -225,3 +228,65 @@ export async function countWaitingRequests(sb: SupabaseClient, userId: string): 
   if (error) return 0; // Before the database update the badge simply stays hidden.
   return count ?? 0;
 }
+
+// ── Matching on performance (buddy-match update) ──────────────────────────
+/** What players can be looking for, in the order shown on the listing. */
+export const LOOKING_FOR: BuddyPurpose[] = ["practice", "competition", "casual_game"];
+
+export type BuddyDetails = {
+  player_id: string;
+  looking_for: BuddyPurpose[];
+  /** Average self-rating over their last 5 rated games, rounded to 0.5; null without rated games. */
+  game_rating: number | null;
+  /** Up to 2 skills they rate 4+ on average. */
+  strong_skills: SelfSkill[];
+};
+export type MyListing = Omit<BuddyDetails, "player_id">;
+
+const numberOrNull = (v: unknown) => (v == null ? null : Number(v));
+
+/** Looking-for, coarse rating and strong skills of listed players. Empty before the buddy-match update. */
+export async function listBuddyDetails(sb: SupabaseClient): Promise<Map<string, BuddyDetails>> {
+  const rows = (await rpc<BuddyDetails[] | null>(sb, "buddy_player_details")) ?? [];
+  return new Map(rows.map((r) => [r.player_id, { ...r, game_rating: numberOrNull(r.game_rating) }]));
+}
+
+/** The caller's own listing as others see it; null before the buddy-match update. */
+export async function getMyListing(sb: SupabaseClient): Promise<MyListing | null> {
+  const rows = await rpc<MyListing[] | null>(sb, "my_buddy_listing");
+  const row = rows?.[0];
+  return row ? { ...row, game_rating: numberOrNull(row.game_rating) } : null;
+}
+
+export async function setLookingFor(sb: SupabaseClient, userId: string, lookingFor: BuddyPurpose[]): Promise<void> {
+  const { error } = await sb.from("profiles").update({ buddy_looking_for: lookingFor }).eq("id", userId);
+  if (error) throw new Error(error.message);
+}
+
+export type BuddySuggestion = { player: BuddyPlayer; details: BuddyDetails; reason: string };
+
+/**
+ * Up to 3 suggested buddies: players with no open request who look for something
+ * you look for, at a similar game rating (within 0.5), or the same level when a
+ * rating is missing. Players strong at one of your focus skills come first.
+ */
+export function suggestBuddies(players: readonly BuddyPlayer[], details: ReadonlyMap<string, BuddyDetails>, me: {
+  gameRating: number | null; lookingFor: readonly BuddyPurpose[]; focusSkills: readonly SelfSkill[]; level: BuddyLevel | null;
+}, max = 3): BuddySuggestion[] {
+  if (!me.lookingFor.length) return [];
+  const scored = players.flatMap((player) => {
+    const d = details.get(player.player_id);
+    if (!d || player.request_status || !d.looking_for.some((l) => me.lookingFor.includes(l))) return [];
+    const bothRated = me.gameRating != null && d.game_rating != null;
+    const gap = bothRated ? Math.abs(me.gameRating! - d.game_rating!) : null;
+    if (gap != null ? gap > 0.5 : !(me.level && player.level === me.level)) return [];
+    const strong = d.strong_skills.find((s) => me.focusSkills.includes(s));
+    const reason = strong ? `Strong at ${SKILL_INFO[strong].label.toLowerCase()}, your focus` : bothRated ? "Similar game rating" : "Same level";
+    return [{ player, details: d, reason, rank: [strong ? 0 : 1, gap ?? 0.25] as const }];
+  });
+  return scored
+    .sort((a, b) => a.rank[0] - b.rank[0] || a.rank[1] - b.rank[1] || a.player.display_name.localeCompare(b.player.display_name))
+    .slice(0, max)
+    .map(({ player, details: d, reason }) => ({ player, details: d, reason }));
+}
+

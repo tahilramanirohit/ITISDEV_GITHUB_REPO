@@ -20,6 +20,7 @@ import {
 } from "../theme";
 import { Notice, cardStyle, mascotUrl, numStyle, pressable } from "../shell/primitives";
 import { useSessionsData } from "../sessions/sessionUi";
+import { sessionKind } from "../../lib/api/types";
 
 const MODE_KEY = "picklepro.progress.mode";
 
@@ -117,6 +118,8 @@ export default function ProgressPage({ sb, userId }: { sb: SupabaseClient; userI
   const measured = useMemo(() => courtTestGoals(courtTests ?? []), [courtTests]);
   const peer = useMemo(() => latestPeerBySkill(peerRows), [peerRows]);
   const hasPeer = Object.keys(peer).length > 0;
+  // Games logged from an accepted buddy session (buddy-match update).
+  const withBuddies = useMemo(() => (items ?? []).filter((i) => i.session.buddy_request_id && sessionKind(i.session) !== "solo").length, [items]);
   const cols = hasPeer ? "grid-cols-[1fr_40px_44px_44px]" : "grid-cols-[1fr_48px_52px]";
 
   if (items === null && !error) return <p className="text-sm" style={{ color: WHITE_SUB }}>Loading…</p>;
@@ -176,7 +179,8 @@ export default function ProgressPage({ sb, userId }: { sb: SupabaseClient; userI
           {showResults && <section aria-label="Game results" className="rounded-[18px] p-4" style={cardStyle}>
             <div className="flex items-baseline justify-between gap-2">
               <h2 className="text-[15px] font-extrabold">Game results</h2>
-              <span className="text-xs" style={{ color: INK_3 }}>last {Math.min(8, points.filter((p) => p.kind !== "solo").length)} games</span>
+              <span className="text-xs" style={{ color: INK_3 }}>last {Math.min(8, points.filter((p) => p.kind !== "solo").length)} games
+                {withBuddies > 0 ? ` · ${withBuddies} with a buddy` : ""}</span>
             </div>
             <div className="mt-3 grid grid-cols-3 gap-2">
               <Stat label="Win rate" value={results.record ? `${results.record.rate}%` : "—"}
