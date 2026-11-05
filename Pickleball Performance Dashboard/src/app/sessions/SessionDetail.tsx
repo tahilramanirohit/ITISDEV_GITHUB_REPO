@@ -35,6 +35,7 @@ import { GoalFields } from "./GoalFields";
 import { CapturePanel } from "./CapturePanel";
 import { PeerFeedback } from "../partners/PeerFeedback";
 import { listPeerRatings } from "../../lib/api/partners";
+import { listMyRequests } from "../../lib/api/buddy";
 import { getProfile } from "../../lib/api/profile";
 import { goalTargets } from "../../lib/coaching/goals";
 import type { PeerRating } from "../../lib/coaching/peerFeedback";
@@ -129,6 +130,18 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
     });
   }, [sb, sessionId, userId]);
   useEffect(loadFeedback, [loadFeedback]);
+  // Played from a buddy session: who with, so the plan can offer "Ask them for feedback?".
+  const buddyRequestId = bundle?.session?.buddy_request_id ?? null;
+  const [playedWith, setPlayedWith] = useState<{ id: string; name: string } | null>(null);
+  useEffect(() => {
+    if (!buddyRequestId) return setPlayedWith(null);
+    let active = true;
+    listMyRequests(sb).then((list) => {
+      const r = list.find((x) => x.id === buddyRequestId);
+      if (active) setPlayedWith(r ? { id: r.other_player_id, name: r.other_name } : null);
+    }).catch(() => { if (active) setPlayedWith(null); });
+    return () => { active = false; };
+  }, [sb, buddyRequestId]);
   useEffect(() => { void getUploadLimits(sb).then(setLimits); }, [sb]);
   useEffect(() => { getUploadUsage(sb).then(setUsage).catch(() => setUsage(null)); }, [sb, bundle?.video?.id]);
   useEffect(() => { listOtherPlayers(sb, sessionId).then(setPlayers).catch(() => setPlayers([])); }, [sb, sessionId]);
@@ -409,7 +422,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
           className={`flex min-h-[52px] w-full items-center justify-center rounded-full px-4 text-base font-extrabold ${pressable}`}
           style={{ background: "var(--pp-action)", color: "var(--pp-on-action)" }}>Next: post-game recovery</button>}
         <PeerFeedback sb={sb} sessionId={session.id} hasVideo={!!uploadedPath} selfRatings={selfRatings} peerRatings={peerRatings}
-          goalSkills={goalSkills} onChanged={loadFeedback}
+          goalSkills={goalSkills} onChanged={loadFeedback} askFor={searchParams.get("ask")} playedWith={playedWith}
           onWatch={uploadedPath ? (time) => { setTab("video"); setVideoSeek({ time, id: Date.now() }); } : undefined} />
       </div>}
       {activeTab === "journal" && <div {...tabPanelProps("session", "journal")} className="outline-none"><CapturePanel key={session.id} sb={sb} session={session}

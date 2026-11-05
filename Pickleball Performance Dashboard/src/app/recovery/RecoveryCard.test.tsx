@@ -15,7 +15,7 @@ describe("RecoveryCard", () => {
     expect(screen.getByRole("heading", { name: "Recovery mode" })).toBeTruthy();
     expect(screen.getByText(/Knee/)).toBeTruthy();
     expect(screen.getByText(/goal deadlines are paused/i)).toBeTruthy();
-    expect(screen.getByText(/hidden from Buddy/i)).toBeTruthy();
+    expect(screen.getByText(/hidden from the Buddy list/i)).toBeTruthy();
     expect(screen.getByRole("list", { name: "Rest plan" })).toBeTruthy();
     expect(screen.getByText(/not medical advice/i)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /i'm back to playing/i }));

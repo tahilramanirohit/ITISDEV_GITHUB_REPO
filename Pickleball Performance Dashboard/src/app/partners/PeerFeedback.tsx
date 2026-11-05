@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Clock, MessageSquareText, Send } from "lucide-react";
 import {
-  formatVideoTime, listNotes, listPartners, listSessionShares, partnerErrorText, shareSession, unshareSession,
+  formatVideoTime, inviteBuddyAsPartner, listNotes, listPartners, listSessionShares, partnerErrorText, shareSession, unshareSession,
   type PartnerLink, type PeerNote, type SessionShare,
 } from "../../lib/api/partners";
 import { initials } from "../../lib/api/players";
@@ -113,14 +113,21 @@ function AskSheet({ partners, shares, goalSkills, hasVideo, initialPartner, onSe
  * Peer coaching on the owner's session (WP5): ask partners for feedback on chosen
  * skills, then see "You vs Kyle" per skill and their notes grouped by skill.
  */
-export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings, goalSkills, onWatch, onChanged }: {
+export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings, goalSkills, onWatch, onChanged, askFor = null, playedWith = null }: {
   sb: SupabaseClient; sessionId: string; hasVideo: boolean;
   selfRatings: SelfRatings | null; peerRatings: PeerRating[]; goalSkills: SelfSkill[];
+  /** Open the Ask sheet for this partner straight away (from their card under Players). */
+  askFor?: string | null;
+  /** The buddy this session was played with: "Ask Jun for feedback?", or invite them as a partner first. */
+  playedWith?: { id: string; name: string } | null;
   /** Jump the video to a note's moment. */
   onWatch?: (timeSeconds: number) => void;
   onChanged?: () => void;
 }) {
   const [partners, setPartners] = useState<PartnerLink[] | null>(null);
+  const [links, setLinks] = useState<PartnerLink[]>([]);
+  const [inviting, setInviting] = useState(false);
+  const [autoAsked, setAutoAsked] = useState(false);
   const [shares, setShares] = useState<SessionShare[]>([]);
   const [notes, setNotes] = useState<PeerNote[]>([]);
   const [error, setError] = useState("");
@@ -130,6 +137,7 @@ export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings
   const load = useCallback(async () => {
     try {
       const [links, s, n] = await Promise.all([listPartners(sb), listSessionShares(sb, sessionId), listNotes(sb, sessionId)]);
+      setLinks(links);
       setPartners(links.filter((l) => l.status === "active" && l.other_id));
       setShares(s);
       setNotes(n);
@@ -141,6 +149,13 @@ export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings
   }, [sb, sessionId]);
   useEffect(() => { void load(); }, [load]);
 
+  // From a partner's card ("Ask for feedback" on a session): open the sheet for them once.
+  useEffect(() => {
+    if (autoAsked || !askFor || !partners) return;
+    setAutoAsked(true);
+    if (partners.some((p) => p.other_id === askFor)) setAsking({ partner: askFor });
+  }, [askFor, partners, autoAsked]);
+
   const authors = useMemo(() => {
     const list = peerAuthors(peerRatings);
     for (const n of notes) if (!list.some((a) => a.id === n.author_id)) list.push({ id: n.author_id, name: n.author_name });
@@ -149,6 +164,25 @@ export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings
 
   if (partners === null) return null;
   const nameOf = (id: string) => partners.find((p) => p.other_id === id)?.other_name ?? "A former partner";
+  const buddyLink = playedWith ? links.find((l) => l.other_id === playedWith.id) : undefined;
+  const buddyIsPartner = buddyLink?.status === "active";
+  const alreadyAsked = !!playedWith && shares.some((s) => s.partner_id === playedWith.id);
+  const focusName = goalSkills[0] ? SKILL_INFO[goalSkills[0]].label.toLowerCase() : null;
+
+  async function inviteBuddy() {
+    if (!playedWith) return;
+    setInviting(true);
+    setError("");
+    try {
+      await inviteBuddyAsPartner(sb, playedWith.id);
+      setNotice(`Partner invite sent to ${playedWith.name}. Once they accept, ask them here.`);
+      await load();
+    } catch (e) {
+      setError(partnerErrorText(e));
+    } finally {
+      setInviting(false);
+    }
+  }
 
   async function stop(partnerId: string) {
     try {
@@ -204,6 +238,29 @@ export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings
         </div>;
       })}
 
+      {playedWith && !alreadyAsked && <div className="rounded-[18px] p-4" style={{ background: ACCENT_SOFT, color: INK }} role="note"
+        aria-label={`Feedback from ${playedWith.name}`}>
+        <p className="text-[15px] font-extrabold">You played with {playedWith.name}. Ask {playedWith.name} for feedback{focusName ? ` on your ${focusName}` : ""}?</p>
+        {buddyIsPartner
+          ? <button type="button" onClick={() => setAsking({ partner: playedWith.id })}
+              className={`mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-[15px] font-extrabold ${pressable}`}
+              style={{ background: ACTION, color: ON_ACTION, border: `1px solid ${ACTION_EDGE}` }}>
+              <Send size={17} aria-hidden="true" /> Ask {playedWith.name}</button>
+          : buddyLink?.status === "pending" && buddyLink.direction === "sent"
+            ? <p className="mt-1 text-sm" style={{ color: INK_2 }}>Partner invite sent. Once {playedWith.name} accepts, you can ask here.</p>
+            : buddyLink?.status === "pending"
+              ? <p className="mt-1 text-sm" style={{ color: INK_2 }}>{playedWith.name} invited you as a partner. <a href="#/players?section=inbox"
+                  className="font-bold underline" style={{ color: ACCENT_INK }}>Answer in Players → Inbox</a>, then ask here.</p>
+              : <>
+                  <p className="mt-1 text-sm" style={{ color: INK_2 }}>{playedWith.name} needs to be your partner first. You played together, so no
+                    code is needed: they accept once, then you can ask about any session you share.</p>
+                  <button type="button" disabled={inviting} onClick={() => void inviteBuddy()}
+                    className={`mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-[15px] font-extrabold ${pressable}`}
+                    style={{ background: ACTION, color: ON_ACTION, border: `1px solid ${ACTION_EDGE}` }}>
+                    {inviting ? "Sending…" : `Invite ${playedWith.name} as a partner`}</button>
+                </>}
+      </div>}
+
       <div className="rounded-[18px] p-4" style={cardStyle}>
         <div className="flex items-start gap-3">
           <img src={mascotUrl} alt="" aria-hidden="true" className="h-12 w-9 shrink-0 object-contain" />
@@ -226,7 +283,7 @@ export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings
           </li>)}
         </ul>}
         {partners.length === 0 && !error
-          ? <p className="mt-3 text-sm" style={{ color: INK_2 }}>No partners yet. <a href="#/partners" className="font-bold underline" style={{ color: ACCENT_INK }}>Link with a partner</a> first.</p>
+          ? <p className="mt-3 text-sm" style={{ color: INK_2 }}>No partners yet. <a href="#/players?section=people" className="font-bold underline" style={{ color: ACCENT_INK }}>Add a partner under Players</a> first.</p>
           : !error && <button type="button" onClick={() => setAsking({ partner: null })}
               className={`mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-[15px] font-extrabold ${pressable}`}
               style={{ background: ACTION, color: ON_ACTION, border: `1px solid ${ACTION_EDGE}` }}>
@@ -238,7 +295,7 @@ export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings
         onSend={async (partnerId, skills, withVideo) => {
           await shareSession(sb, sessionId, partnerId, skills, withVideo);
           setAsking(null);
-          setNotice(`Sent to ${nameOf(partnerId)}. They'll find it under Partners → Shared with you.`);
+          setNotice(`Sent to ${nameOf(partnerId)}. They'll find it under Players → Inbox.`);
           await load();
           onChanged?.();
         }} />}

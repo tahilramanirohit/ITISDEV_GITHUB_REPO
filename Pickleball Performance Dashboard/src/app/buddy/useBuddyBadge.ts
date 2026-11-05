@@ -7,17 +7,17 @@ import { countWaitingInvites } from "../../lib/api/partners";
 const CHANGED = "picklepro:buddy-changed";
 const REFRESH_MS = 60_000;
 
-/** Tell the Buddy and Partners badges to refresh now (after accepting, declining or sending). */
+/** Tell the Players badge to refresh now (after accepting, declining or sending). */
 export function announceBuddyChange() {
   window.dispatchEvent(new Event(CHANGED));
 }
 
-/** Number of buddy requests waiting for this player's answer, for the Buddy tab's badge. */
+/** Number of buddy requests waiting for this player's answer, for the Players tab's badge. */
 export function useBuddyBadge(sb: SupabaseClient, userId: string): number {
   return useWaitingBadge(sb, userId, countWaitingRequests);
 }
 
-/** Number of partner invites waiting for this player's answer, for the Partners tab's badge. */
+/** Number of partner invites waiting for this player's answer, for the Players tab's badge. */
 export function usePartnerBadge(sb: SupabaseClient, userId: string): number {
   return useWaitingBadge(sb, userId, countWaitingInvites);
 }

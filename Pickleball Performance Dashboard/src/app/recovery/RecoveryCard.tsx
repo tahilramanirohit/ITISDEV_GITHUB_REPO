@@ -70,7 +70,7 @@ export function RecoveryCard({ sb, injury, onChanged, showPlan = true }: {
       </div>
       <ul className="mt-3 space-y-1 text-sm" style={{ color: INK_2 }}>
         <li>Your goal deadlines are paused.</li>
-        <li>You're hidden from Buddy.</li>
+        <li>You're hidden from the Buddy list under Players.</li>
       </ul>
       {showPlan && <ol aria-label="Rest plan" className="mt-3 border-b" style={{ borderColor: LINE }}>
         {RECOVERY_PLAN.map((step) => <li key={step.title} className="grid grid-cols-[92px_1fr] gap-2 border-t py-2 text-sm" style={{ borderColor: LINE }}>

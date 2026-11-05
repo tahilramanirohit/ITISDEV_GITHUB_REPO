@@ -72,4 +72,35 @@ describe("Peer feedback (owner)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Stop sharing with Kyle" }));
     expect(await screen.findByText("Stopped sharing with Kyle.")).toBeTruthy();
   });
+
+  it("opens the Ask sheet for the partner picked on their Players card", async () => {
+    const { sb } = fakeSb();
+    render(<PeerFeedback sb={sb} sessionId="s1" hasVideo selfRatings={null} peerRatings={[]} goalSkills={["dinking"]} askFor="k" />);
+    const sheet = await screen.findByRole("dialog", { name: "Ask for feedback" });
+    expect(within(sheet).getByRole("button", { name: "Kyle" }).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("after a buddy session, offers to ask that buddy, or to invite them as a partner first", async () => {
+    const { sb } = fakeSb();
+    const view = render(<PeerFeedback sb={sb} sessionId="s1" hasVideo selfRatings={null} peerRatings={[]} goalSkills={["dinking"]}
+      playedWith={{ id: "k", name: "Kyle" }} />);
+    expect(await screen.findByText("You played with Kyle. Ask Kyle for feedback on your dinking?")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Ask Kyle" }));
+    expect(screen.getByRole("dialog", { name: "Ask for feedback" })).toBeTruthy();
+    view.unmount();
+
+    const rpc = vi.fn(async (fn: string) => {
+      if (fn === "my_partners") return { data: [], error: null };
+      if (fn === "session_peer_notes") return { data: [], error: null };
+      if (fn === "invite_buddy_as_partner") return { data: "l9", error: null };
+      return { data: null, error: { message: `unexpected ${fn}` } };
+    });
+    const from = vi.fn(() => ({ select: () => ({ eq: async () => ({ data: [], error: null }) }) }));
+    render(<PeerFeedback sb={{ rpc, from } as unknown as SupabaseClient} sessionId="s1" hasVideo={false} selfRatings={null} peerRatings={[]}
+      goalSkills={[]} playedWith={{ id: "j", name: "Jun" }} />);
+    expect(await screen.findByText(/Jun needs to be your partner first/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Invite Jun as a partner" }));
+    await waitFor(() => expect(rpc).toHaveBeenCalledWith("invite_buddy_as_partner", { p_player: "j" }));
+    expect(await screen.findByText(/Partner invite sent to Jun/)).toBeTruthy();
+  });
 });

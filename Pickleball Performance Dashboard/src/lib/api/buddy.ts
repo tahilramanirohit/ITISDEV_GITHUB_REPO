@@ -221,7 +221,7 @@ export async function setBuddyVisible(sb: SupabaseClient, userId: string, visibl
   if (error) throw new Error(error.message);
 }
 
-/** Requests waiting for this player's answer: the number on the Buddy tab. */
+/** Requests waiting for this player's answer: part of the number on the Players tab. */
 export async function countWaitingRequests(sb: SupabaseClient, userId: string): Promise<number> {
   const { count, error } = await sb.from("buddy_requests").select("id", { count: "exact", head: true })
     .eq("to_player_id", userId).eq("status", "pending");

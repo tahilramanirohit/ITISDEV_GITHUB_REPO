@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useLocation } from "react-router";
-import { BarChart3, CalendarDays, Handshake, Home, Monitor, Moon, Plus, Sun, UserRound, UsersRound } from "lucide-react";
+import { BarChart3, CalendarDays, Home, Monitor, Moon, Plus, Sun, UserRound, UsersRound } from "lucide-react";
 import {
   ACCENT_INK, ACTION, ACTION_EDGE, BODY_FONT, COURT_LINE, DANGER, INK, INK_2, INK_3, LINE, LINE_STRONG, ON_ACTION, ON_STRONG, PAGE_BG, STRONG, SURFACE, SURFACE_2,
   TABBAR, applyAppearance, readAppearance, type Appearance,
@@ -74,10 +74,9 @@ const TABS = [
   { href: "#/sessions", label: "Sessions", icon: CalendarDays, match: (p: string) => p.startsWith("/sessions") },
   { href: "#/new", label: "Log", icon: Plus, match: (p: string) => p === "/new", primary: true },
   { href: "#/progress", label: "Progress", icon: BarChart3, match: (p: string) => p === "/progress" || p === "/tests" },
-  // On phones, Partners is reached from the Buddy page (seven tabs do not fit), so the Buddy tab also counts partner invites.
-  { href: "#/buddy", label: "Buddy", icon: UsersRound, match: (p: string) => p === "/buddy",
-    phoneMatch: (p: string) => p === "/buddy" || p === "/partners" || p.startsWith("/shared"), phoneAlsoCounts: "#/partners" },
-  { href: "#/partners", label: "Partners", icon: Handshake, match: (p: string) => p === "/partners" || p.startsWith("/shared"), phone: false },
+  // Buddy and Partners in one tab: My people, Find and Inbox.
+  { href: "#/players", label: "Players", icon: UsersRound,
+    match: (p: string) => p === "/players" || p === "/buddy" || p === "/partners" || p.startsWith("/shared") },
   { href: "#/profile", label: "Profile", icon: UserRound, match: (p: string) => p.startsWith("/profile") },
 ] as const;
 
@@ -91,11 +90,11 @@ function BottomTabs({ avatar, badges }: { avatar?: ReactNode; badges?: TabBadges
     <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 border-t desktop:hidden"
       style={{ background: TABBAR, borderColor: LINE, paddingBottom: "max(6px, env(safe-area-inset-bottom))" }}>
       <ul className="mx-auto flex max-w-lg items-stretch justify-between px-1.5 pt-1">
-        {TABS.filter((t) => !("phone" in t && t.phone === false)).map((tab) => {
-          const active = "phoneMatch" in tab ? tab.phoneMatch(pathname) : tab.match(pathname);
+        {TABS.map((tab) => {
+          const active = tab.match(pathname);
           const Icon = tab.icon;
           const isProfile = tab.href === "#/profile";
-          const count = (badges?.[tab.href] ?? 0) + ("phoneAlsoCounts" in tab ? badges?.[tab.phoneAlsoCounts] ?? 0 : 0);
+          const count = badges?.[tab.href] ?? 0;
           return (
             <li key={tab.href} className="flex-1">
               <a href={tab.href} aria-label={count ? `${tab.label}, ${count} waiting` : tab.label}
@@ -184,7 +183,7 @@ function CourtBackdrop() {
 export function AppShell({ children, right, nav, tabs = false, wide = false, avatar, badges }: {
   children: ReactNode; right?: ReactNode; nav?: ReactNode; tabs?: boolean; wide?: boolean;
   /** The player's photo for the Profile button in the phone tab bar. */ avatar?: ReactNode;
-  /** Counts shown on tabs, keyed by the tab's link (e.g. "#/buddy"). */ badges?: TabBadges;
+  /** Counts shown on tabs, keyed by the tab's link (e.g. "#/players"). */ badges?: TabBadges;
 }) {
   // Phones: one column. Tablets: the same layout, wider and with larger type.
   // Desktop: the signed-in app uses the whole screen beside the sidebar.

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
-import { HashRouter, Route, Routes } from "react-router";
+import { HashRouter, Navigate, Route, Routes } from "react-router";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { config as defaultConfig, type AppConfig } from "../lib/config";
 import { supabase as defaultSupabase } from "../lib/supabase";
@@ -21,8 +21,7 @@ const HomePage = lazy(() => import("./home/HomePage"));
 const SessionsPage = lazy(() => import("./sessions/SessionsPage"));
 const NewSessionPage = lazy(() => import("./sessions/NewSessionPage"));
 const ProgressPage = lazy(() => import("./progress/ProgressPage"));
-const BuddyPage = lazy(() => import("./buddy/BuddyPage"));
-const PartnersPage = lazy(() => import("./partners/PartnersPage"));
+const PlayersPage = lazy(() => import("./players/PlayersPage"));
 const SharedReportPage = lazy(() => import("./partners/SharedReportPage"));
 const SessionDetail = lazy(() => import("./sessions/SessionDetail"));
 const ProfilePage = lazy(() => import("./profile/ProfilePage"));
@@ -172,8 +171,10 @@ function SignedInApp({ sb, cfg }: { sb: SupabaseClient; cfg: AppConfig }) {
           <Route path="/progress" element={<ProgressPage sb={sb} userId={user.id} />} />
           <Route path="/example" element={<ExamplePage />} />
           <Route path="/tests" element={<TestsPage sb={sb} />} />
-          <Route path="/buddy" element={<BuddyPage sb={sb} userId={user.id} />} />
-          <Route path="/partners" element={<PartnersPage sb={sb} userId={user.id} />} />
+          <Route path="/players" element={<PlayersPage sb={sb} userId={user.id} />} />
+          {/* Buddy and Partners are one Players tab now; old links still land in the right section. */}
+          <Route path="/buddy" element={<Navigate to="/players?section=find" replace />} />
+          <Route path="/partners" element={<Navigate to="/players?section=people" replace />} />
           <Route path="/shared/:sessionId" element={<SharedReportPage sb={sb} userId={user.id} />} />
           <Route path="/settings" element={<SettingsPage sb={sb} userId={user.id} account={account} devLinks={<DevLinks cfg={cfg} />} />} />
           <Route path="/profile" element={<ProfilePage sb={sb} userId={user.id} account={account}
@@ -189,11 +190,11 @@ function SignedInApp({ sb, cfg }: { sb: SupabaseClient; cfg: AppConfig }) {
   );
 }
 
-/** The app frame for signed-in players: tabs, their photo, and the Buddy request badge. */
+/** The app frame for signed-in players: tabs, their photo, and the Players badge (buddy requests and partner invites). */
 function SignedInShell({ sb, userId, right, children }: { sb: SupabaseClient; userId: string; right: ReactNode; children: ReactNode }) {
   const buddyWaiting = useBuddyBadge(sb, userId);
   const partnerWaiting = usePartnerBadge(sb, userId);
-  return <AppShell tabs avatar={<NavAvatar sb={sb} userId={userId} />} badges={{ "#/buddy": buddyWaiting, "#/partners": partnerWaiting }}
+  return <AppShell tabs avatar={<NavAvatar sb={sb} userId={userId} />} badges={{ "#/players": buddyWaiting + partnerWaiting }}
     right={right}>{children}</AppShell>;
 }
 

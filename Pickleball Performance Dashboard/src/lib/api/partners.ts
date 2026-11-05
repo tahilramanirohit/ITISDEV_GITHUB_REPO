@@ -207,7 +207,7 @@ export async function deleteNote(sb: SupabaseClient, id: string): Promise<void> 
   await rpc<null>(sb, "delete_peer_note", { p_id: id });
 }
 
-/** Partner invites waiting for this player's answer: the number on the Partners tab. */
+/** Partner invites waiting for this player's answer: part of the number on the Players tab. */
 export async function countWaitingInvites(sb: SupabaseClient, userId: string): Promise<number> {
   const { count, error } = await sb.from("partners").select("id", { count: "exact", head: true })
     .eq("invitee_id", userId).eq("status", "pending").gt("expires_at", new Date().toISOString());

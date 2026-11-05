@@ -192,7 +192,7 @@ export function CapturePanel({ sb, session, onSessionUpdated, step: requestedSte
               <span><b className="text-sm">I'm injured right now</b>
                 <span className="block text-sm" style={{ color: WHITE_DIM }}>
                   {injury && !injured ? "Unticking this ends recovery mode when you save, as if you tapped \"I'm back\"."
-                    : "Your plan switches to rest, your goal deadlines pause and you're hidden from Buddy until you tap \"I'm back\"."}</span></span>
+                    : "Your plan switches to rest, your goal deadlines pause and you're hidden from the Buddy list until you tap \"I'm back\"."}</span></span>
             </label>
             {injured && <>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
