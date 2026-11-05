@@ -73,7 +73,7 @@ const TABS = [
   { href: "#/", label: "Home", icon: Home, match: (p: string) => p === "/" },
   { href: "#/sessions", label: "Sessions", icon: CalendarDays, match: (p: string) => p.startsWith("/sessions") },
   { href: "#/new", label: "Log", icon: Plus, match: (p: string) => p === "/new", primary: true },
-  { href: "#/progress", label: "Progress", icon: BarChart3, match: (p: string) => p === "/progress" },
+  { href: "#/progress", label: "Progress", icon: BarChart3, match: (p: string) => p === "/progress" || p === "/tests" },
   // On phones, Partners is reached from the Buddy page (seven tabs do not fit), so the Buddy tab also counts partner invites.
   { href: "#/buddy", label: "Buddy", icon: UsersRound, match: (p: string) => p === "/buddy",
     phoneMatch: (p: string) => p === "/buddy" || p === "/partners" || p.startsWith("/shared"), phoneAlsoCounts: "#/partners" },

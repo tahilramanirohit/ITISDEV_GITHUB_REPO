@@ -13,6 +13,7 @@ import { BORDER, CHECK, CREAM, DISPLAY_FONT, GREEN, INK, NAVY, ON_CHECK, ON_CREA
 import { Chip, Notice, PrimaryButton, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
 import { SkillRater } from "../selfAssessment/SkillRater";
 import { LevelHint } from "../buddy/LevelHint";
+import { CourtTests } from "../tests/CourtTests";
 import { PROFILE_LEVELS } from "../../lib/api/buddy";
 
 export const EXPERIENCE = [
@@ -33,7 +34,9 @@ const GOAL_HINTS: Record<ImprovementGoal, string> = {
 };
 const HANDS = [["right", "Right"], ["left", "Left"], ["ambidextrous", "Both"]] as const;
 const FORMATS = [["doubles", "Doubles"], ["singles", "Singles"], ["both", "Both"]] as const;
-const STEPS = ["About you", "Your game", "Why you play", "Your goals", "Your skills"] as const;
+const STEPS = ["About you", "Your game", "Why you play", "Your goals", "Your skills", "Court tests"] as const;
+/** The profile is saved after "Your skills"; the court tests that follow are optional. */
+const SKILLS_STEP = 4;
 
 function nearestExperience(years: number | null | undefined) {
   if (years == null) return null;
@@ -83,7 +86,9 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
     setError("");
     try {
       await completeOnboarding(sb, userId, { ...form, display_name: form.display_name.trim() });
-      onDone();
+      setBusy(false);
+      setStep(SKILLS_STEP + 1);
+      window.scrollTo({ top: 0 });
     } catch (e) {
       setError(friendlyDbError(e instanceof Error ? e.message : String((e as { message?: string })?.message ?? e)));
       setBusy(false);
@@ -91,7 +96,8 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
   }
 
   const ratedCount = Object.keys(form.baseline_ratings).length;
-  const last = step === STEPS.length - 1;
+  const last = step === SKILLS_STEP;
+  const testsStep = step === SKILLS_STEP + 1;
   const enough = ratedCount >= MIN_RATED_SKILLS;
   const goals = enough ? goalTargets(form.baseline_ratings, form.main_goals) : [];
 
@@ -100,9 +106,9 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
       {step === 0 ? (
         <section className="relative overflow-hidden rounded-[14px] p-5" style={{ background: NAVY, color: "var(--pp-on-hero)" }}>
           <h1 className="text-2xl font-extrabold leading-tight" style={{ fontFamily: DISPLAY_FONT }}>Let's get to know your game</h1>
-          <p className="mt-2 text-sm" style={{ color: "#c9dccf" }}>Five quick steps, about two minutes. Your answers stay private and shape your first practice plan. <a href="#/privacy" className="font-semibold underline" style={{ color: OPTIC }}>How we handle your data</a></p>
+          <p className="mt-2 text-sm" style={{ color: "#c9dccf" }}>Five quick steps, about two minutes, then optional court tests. Your answers stay private and shape your first practice plan. <a href="#/privacy" className="font-semibold underline" style={{ color: OPTIC }}>How we handle your data</a></p>
         </section>
-      ) : (
+      ) : testsStep ? null : (
         <button type="button" onClick={() => { setError(""); setStep(step - 1); }} className="inline-flex items-center gap-1 text-sm font-semibold" style={{ color: GREEN }}>
           <ArrowLeft size={16} /> Back
         </button>
@@ -198,9 +204,19 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
         </section>}
       </div>}
 
+      {testsStep && <div className="space-y-3">
+        <div>
+          <h2 className="text-2xl font-extrabold leading-tight" style={{ color: INK, fontFamily: DISPLAY_FONT }}>Quick court tests</h2>
+          <p className="mt-1.5 text-sm leading-relaxed" style={{ color: WHITE_DIM }}>
+            Your profile is saved. These counted drills give Pickle a <strong style={{ color: INK }}>measured baseline</strong> next to your ratings.
+            Do them now at the court, or later from Progress.</p>
+        </div>
+        <CourtTests sb={sb} onSkip={onDone} onSaved={onDone} />
+      </div>}
+
       {error && <Notice tone="error">{error}</Notice>}
-      {last
-        ? <PrimaryButton type="button" className="w-full" disabled={busy} onClick={() => void finish()}>{busy ? "Saving…" : "Finish and see my plan"}</PrimaryButton>
+      {testsStep ? null : last
+        ? <PrimaryButton type="button" className="w-full" disabled={busy} onClick={() => void finish()}>{busy ? "Saving…" : "Save · next: quick court tests"}</PrimaryButton>
         : <PrimaryButton type="button" className="w-full" onClick={next}>Continue</PrimaryButton>}
     </div>
   );

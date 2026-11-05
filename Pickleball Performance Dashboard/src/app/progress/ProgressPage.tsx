@@ -10,6 +10,8 @@ import {
   type ProgressMode,
 } from "../../lib/coaching/progressStats";
 import { readinessInsights, type JournalEntry } from "../../lib/coaching/readinessInsights";
+import { courtTestGoals, formatResult, lastTestedOn, type CourtTestRow } from "../../lib/coaching/baselineTests";
+import { listCourtTests } from "../../lib/api/courtTests";
 import {
   ACCENT, ACCENT_INK, ACTION, ACTION_SOFT, BORDER, CHECK, CREAM, INK, INK_2, INK_3, LINE_STRONG, ON_ACTION, ON_CREAM, STRONG,
   ON_STRONG, SURFACE, SURFACE_2, WARN, WHITE_SUB,
@@ -76,6 +78,7 @@ export default function ProgressPage({ sb, userId }: { sb: SupabaseClient; userI
   const { items, assessments, error } = useSessionsData(sb);
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [journal, setJournal] = useState<Map<string, JournalEntry>>(new Map());
+  const [courtTests, setCourtTests] = useState<CourtTestRow[] | null>(null);
   const [mode, setModeState] = useState<ProgressMode>(readMode);
 
   useEffect(() => {
@@ -83,6 +86,8 @@ export default function ProgressPage({ sb, userId }: { sb: SupabaseClient; userI
     if (userId) getProfile(sb, userId).then((p) => { if (active) setProfile(p); }).catch(() => {});
     // Optional: before the capture migration, Progress simply has no before/after card.
     listJournalSummaries(sb).then((j) => { if (active) setJournal(j); }).catch(() => {});
+    // Optional too: before the court-tests update, Progress shows no measured goals.
+    listCourtTests(sb).then((t) => { if (active) setCourtTests(t); }).catch(() => { if (active) setCourtTests(null); });
     return () => { active = false; };
   }, [sb, userId]);
 
@@ -104,6 +109,8 @@ export default function ProgressPage({ sb, userId }: { sb: SupabaseClient; userI
       return { ...g, now, ...goalProgress(g, now) };
     }), [profile, allPoints]);
 
+  const measured = useMemo(() => courtTestGoals(courtTests ?? []), [courtTests]);
+
   if (items === null && !error) return <p className="text-sm" style={{ color: WHITE_SUB }}>Loading…</p>;
 
   const last = rated.at(-1);
@@ -113,6 +120,11 @@ export default function ProgressPage({ sb, userId }: { sb: SupabaseClient; userI
   const trend = rated.slice(-10).map((p) => p.overall!);
   const unrated = allPoints.filter((p) => p.overall == null).reverse();
   const baselineAge = daysSince(baseline?.setAt);
+  const lastTest = courtTests ? lastTestedOn(courtTests) : null;
+  const testAge = daysSince(lastTest);
+  const rerate = baselineAge != null && baselineAge >= GOAL_WINDOW_DAYS;
+  const retest = testAge != null && testAge >= GOAL_WINDOW_DAYS;
+  const oldest = Math.max(rerate ? baselineAge! : 0, retest ? testAge! : 0);
   const kindWord = mode === "games" ? "game" : mode === "practice" ? "practice" : "session";
   const showResults = mode !== "practice" && (results.record || results.gamesWon || results.errors);
 
@@ -184,10 +196,10 @@ export default function ProgressPage({ sb, userId }: { sb: SupabaseClient; userI
           {mode !== "practice" && !showResults && rated.length > 0 && <p className="rounded-[14px] px-3 py-2.5 text-[13px]" style={{ background: SURFACE_2, color: INK_2 }}>
             Log Won/Lost, games won or unforced errors on 2 games to see your game results.</p>}
 
-          {goals.length > 0 && <section aria-label="Your goals" className="rounded-[18px] p-4" style={cardStyle}>
+          {(goals.length > 0 || measured.length > 0) && <section aria-label="Your goals" className="rounded-[18px] p-4" style={cardStyle}>
             <div className="flex items-baseline justify-between gap-2">
               <h2 className="text-[15px] font-extrabold">Your goals</h2>
-              <span className="text-xs" style={{ color: INK_3 }}>from your baseline{goals[0].due ? ` · due ${shortDate(goals[0].due)}` : ""}</span>
+              <span className="text-xs" style={{ color: INK_3 }}>from your baseline{goals[0]?.due ? ` · due ${shortDate(goals[0].due)}` : ""}</span>
             </div>
             <ul className="mt-3 space-y-3.5">
               {goals.map((g) => <li key={g.skill}>
@@ -198,6 +210,19 @@ export default function ProgressPage({ sb, userId }: { sb: SupabaseClient; userI
                   {g.reached ? `✓ Reached: now ${g.now}` : g.now == null ? "Not rated since your baseline" : `Now ${g.now}`}</p>
               </li>)}
             </ul>
+            {measured.length > 0 && <>
+              <p className={`text-xs font-bold ${goals.length ? "mt-4 border-t pt-3" : "mt-3"}`} style={{ color: INK_2, borderColor: BORDER }}>Measured on court</p>
+              <ul className="mt-2 space-y-3.5" aria-label="Court test goals">
+                {measured.map((m) => <li key={m.test.key}>
+                  <div className="flex justify-between text-sm"><b>{m.test.label}</b>
+                    <span className="text-[17px]" style={numStyle}>{formatResult(m.test, m.base)} → <span style={{ color: ACCENT_INK }}>{formatResult(m.test, m.target)}</span></span></div>
+                  <Bar fraction={m.fraction} />
+                  <p className="mt-1 text-xs" style={{ color: m.reached ? ACCENT_INK : INK_3, fontWeight: m.reached ? 700 : 400 }}>
+                    {m.reached ? `✓ Reached${m.best != null ? `: best ${formatResult(m.test, m.best)}` : ""}`
+                      : m.best == null ? `Baseline set ${shortDate(m.baseDate)} · re-test to see progress` : `Best since: ${formatResult(m.test, m.best)}`}</p>
+                </li>)}
+              </ul>
+            </>}
           </section>}
 
           {(insights.lines.length > 0 || insights.recoveryNote) && <section aria-label="Before and after your games" className="rounded-[18px] p-4" style={cardStyle}>
@@ -247,14 +272,21 @@ export default function ProgressPage({ sb, userId }: { sb: SupabaseClient; userI
             <p className="mt-2 text-xs" style={{ color: WHITE_SUB }}>Your own ratings{mode === "all" ? "" : ` in ${mode === "games" ? "games" : "practice"} only`}, not measured scores.</p>
           </section>
 
-          {baselineAge != null && baselineAge >= GOAL_WINDOW_DAYS && <section className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-[18px] p-4" style={{ background: CREAM, color: ON_CREAM }}>
-            <div>
-              <p className="text-[15px] font-extrabold">Time to re-rate your baseline</p>
-              <p className="mt-0.5 text-[13px]" style={{ color: "#36413a" }}>{Math.floor(baselineAge / 7)} weeks since you set it</p>
+          {(rerate || retest) && <section aria-label="Time to re-test" className="rounded-[18px] p-4" style={{ background: CREAM, color: ON_CREAM }}>
+            <p className="text-[15px] font-extrabold">Time to re-test your baseline</p>
+            <p className="mt-0.5 text-[13px]" style={{ color: "#36413a" }}>{Math.floor(oldest / 7)} weeks since you {rerate && retest ? "set it" : rerate ? "rated it" : "tested"}.
+              {" "}Re-test to see how far you have come.</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {rerate && <a href="#/welcome" className={`inline-flex min-h-[48px] items-center rounded-full px-5 text-[15px] font-extrabold ${pressable}`}
+                style={{ background: STRONG, color: ON_STRONG }}>Re-rate skills</a>}
+              <a href="#/tests" className={`inline-flex min-h-[48px] items-center rounded-full px-5 text-[15px] font-extrabold ${pressable}`}
+                style={rerate ? { border: `1px solid ${ON_CREAM}`, color: ON_CREAM } : { background: STRONG, color: ON_STRONG }}>Court tests</a>
             </div>
-            <a href="#/welcome" className={`inline-flex min-h-[48px] items-center rounded-full px-5 text-[15px] font-extrabold ${pressable}`}
-              style={{ background: STRONG, color: ON_STRONG }}>Re-rate</a>
           </section>}
+          {courtTests && courtTests.length === 0 && profile && <a href="#/tests" className={`flex min-h-[56px] items-center justify-between gap-3 rounded-[16px] px-4 py-3 ${pressable}`} style={cardStyle}>
+            <span><b className="block text-sm">Measure your game</b><span className="text-xs" style={{ color: INK_2 }}>5 quick court tests give you a measured baseline</span></span>
+            <span className="inline-flex items-center gap-1 font-bold" style={{ color: ACCENT_INK }}>Start <ChevronRight size={16} aria-hidden="true" /></span>
+          </a>}
           {!baseline && profile && <a href="#/welcome" className={`flex min-h-[56px] items-center justify-between gap-3 rounded-[16px] px-4 py-3 ${pressable}`} style={cardStyle}>
             <span><b className="block text-sm">Set your baseline</b><span className="text-xs" style={{ color: INK_2 }}>Rate 3 skills so Pickle can set your goals</span></span>
             <span className="inline-flex items-center gap-1 font-bold" style={{ color: ACCENT_INK }}>Start <ChevronRight size={16} aria-hidden="true" /></span>

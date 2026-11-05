@@ -214,12 +214,15 @@ describe("getting to know the player", () => {
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
     fireEvent.click(await screen.findByRole("radio", { name: /^Dinking 2 of 5/ }));
     // A baseline needs at least 3 skills.
-    fireEvent.click(screen.getByRole("button", { name: "Finish and see my plan" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save · next: quick court tests" }));
     expect(await screen.findByText(/Rate at least 3 skills/)).toBeTruthy();
     fireEvent.click(screen.getByRole("radio", { name: /^Serve 3 of 5/ }));
     fireEvent.click(screen.getByRole("radio", { name: /^Consistency 4 of 5/ }));
     expect(screen.getByText(/Dinking 2 → 3/)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Finish and see my plan" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save · next: quick court tests" }));
+    // The profile is saved; the court tests are optional.
+    expect(await screen.findByRole("heading", { name: "Quick court tests" })).toBeTruthy();
+    fireEvent.click(await screen.findByRole("button", { name: "Skip for now" }));
 
     expect(await screen.findByRole("navigation", { name: "Main" })).toBeTruthy();
     expect(sb.upserts[0]).toMatchObject({

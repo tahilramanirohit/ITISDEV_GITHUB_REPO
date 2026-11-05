@@ -9,12 +9,20 @@
 | WP1 Baseline as the starting point | ✅ Done (5 Nov 2026) | No |
 | WP2 Progress centred on game performance | ✅ Done, except the "peer" column (needs WP5) | No |
 | WP3 Pre-game / In-game / Post-game | ✅ Done | No |
-| WP4 Measured court tests | ⏳ Not started | **Yes**: new `baseline_tests` table |
+| WP4 Measured court tests | ✅ Done (5 Nov 2026) | **Yes**: `20261105090000_baseline_tests.sql` (`pickleproapp_upgrade_8.sql`) |
 | WP5 Peer ratings and targeted feedback | ⏳ Not started | **Yes**: `report_shares` columns, `peer_ratings` table, function updates |
 | WP6 Buddy | 🟡 Partly done: "Coming up" card and "Log this session". Not done: "looking for", purpose filter, suggested buddies | **Yes** for the rest: `profiles.buddy_looking_for`, `buddy_players()` update |
 | WP7 Optimise and tidy | 🟡 Partly done (see below) | No |
 
-**Next AI: start at WP4.** Everything left needs a new migration, so read rule 6 in section 3 first.
+**Next AI: start at WP5.** Everything left needs a new migration, so read rule 6 in section 3 first.
+
+### 5 Nov 2026: WP4 measured court tests
+
+- **DB:** `20261105090000_baseline_tests.sql` (also `supabase/scripts/pickleproapp_upgrade_8.sql`). Table `baseline_tests`, private to the owner (RLS), test keys and the tries per test fixed by check constraints, no future dates. Local SQL tests: `supabase/tests/local/80_baseline_tests.sql`.
+- **Definitions:** `src/lib/coaching/baselineTests.ts`: the 5 tests (key, label, skill, instructions, tries), `courtTestGoals()` (first result = baseline, best later result = now, target = +50%, at least +1, never above the tries), `latestResults()`, `lastTestedOn()`. `baselineTests.test.ts` checks the keys and tries against the migration.
+- **API:** `src/lib/api/courtTests.ts` (`listCourtTests`, `saveCourtTests`, `courtTestErrorText`).
+- **UI:** `src/app/tests/CourtTests.tsx` (one open test at a time, 52 px −/+ counter with a typed number, "Done · next test", "Leave out", sticky "Save baseline · N of 5 tests"; later saves read "Save results"). Route `#/tests` (`TestsPage.tsx`, lazy-loaded). Onboarding gains an optional step 6 after the profile is saved ("Save · next: quick court tests", with "Skip for now").
+- **Progress:** "Measured on court" goals in the Your goals card; a "Measure your game" link when no tests exist; the re-test card now offers "Re-rate skills" and "Court tests" and also appears 28 days after the last court test.
 
 ### 5 Nov 2026: WP1, WP2, WP3 and part of WP6 (no database changes)
 
