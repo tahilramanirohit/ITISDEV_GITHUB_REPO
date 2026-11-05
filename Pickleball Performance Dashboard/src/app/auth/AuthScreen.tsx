@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ArrowRight, Camera, ClipboardCheck, Dumbbell, FlaskConical, TrendingUp } from "lucide-react";
-import { BORDER, CARD_GLOW, DISPLAY_FONT, GREEN, INK, NAVY, NEON, NEON_D, OPTIC, OPTIC_INK, ORANGE, PAGE_BG, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
+import { ArrowRight, FlaskConical } from "lucide-react";
+import { BORDER, CARD_GLOW, DISPLAY_FONT, GREEN, INK, NEON, NEON_D, OPTIC, OPTIC_INK, ORANGE, PAGE_BG, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Notice, PasswordInput, PickleProLogo, fieldStyle, labelClass, labelStyle, mascot2xUrl, pressable } from "../shell/primitives";
 import { LargeTextToggle } from "../shell/AppShell";
 
@@ -57,92 +57,39 @@ export function AuthScreen({ sb, devMode, guestMode, samplePreviewEnabled = fals
 
   function openForm(next: Mode) {
     setMode(next); setError(""); setInfo("");
-    window.setTimeout(() => {
-      document.getElementById("auth")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      document.getElementById("email")?.focus({ preventScroll: true });
-    }, 50);
   }
 
-  const features = [
-    { icon: ClipboardCheck, title: "Rate a game in about 2 minutes", text: "Ten quick skill ratings after you play, once your account is set up. No video needed." },
-    { icon: Dumbbell, title: "Get a practice plan", text: "Focus areas, drills and targets picked for you, plus a week of practice." },
-    { icon: TrendingUp, title: "See your progress", text: "Track solo practice, matches and tournaments over time." },
-    { icon: Camera, title: "Add a video, if you like", text: trialNoWorker ? "Video analysis is paused on this trial." : "Computer vision maps where you stood on court." },
-  ];
-
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]" style={{ background: PAGE_BG, color: INK, fontFamily: "var(--font-body)" }}>
-      {/* Welcome: the pickle mascot greets new players and explains the app. */}
-      <section aria-labelledby="intro-title" className="relative flex flex-col overflow-hidden px-5 pb-8 md:px-10 md:pb-12 lg:sticky lg:top-0 lg:h-screen lg:justify-center lg:px-14 lg:pb-10 xl:px-20"
-        style={{ background: NAVY, color: "var(--pp-on-hero)", paddingTop: "max(1rem, env(safe-area-inset-top))" }}>
-        <div className="relative flex items-center justify-between gap-3 lg:absolute lg:inset-x-14 lg:top-8 xl:inset-x-20">
-          <PickleProLogo size="sm" tone="dark" />
-          <LargeTextToggle tone="dark" />
-        </div>
-
-        <div className="relative mt-6 flex items-end gap-3 md:mt-10 md:gap-6 lg:mt-12">
-          <img src={mascot2xUrl} alt="Pickle, the PicklePro mascot, holding a paddle" className="pickle-hello h-40 w-auto shrink-0 md:h-56 lg:h-[24vh] lg:max-h-64 lg:min-h-[9rem]" />
-          <div className="relative mb-10 rounded-[14px] rounded-bl-md px-4 py-3 text-sm font-semibold leading-snug md:mb-16 md:px-5 md:py-4 md:text-base lg:mb-[8vh] lg:max-w-md"
-            style={{ background: WHITE, color: INK }}>
-            <span className="block text-base font-extrabold md:text-lg lg:text-xl" style={{ fontFamily: DISPLAY_FONT }}>Hi, I'm Pickle!</span>
-            Tell me how your game went and I'll show you what to practice next.
+    <div className="min-h-dvh px-4 pb-6" style={{ background: PAGE_BG, color: INK, fontFamily: "var(--font-body)", paddingTop: "max(1rem, env(safe-area-inset-top))" }}>
+      <header className="mx-auto flex w-full max-w-md items-center justify-between gap-3">
+        <PickleProLogo size="sm" tone="light" />
+        <LargeTextToggle tone="light" />
+      </header>
+      <main className="mx-auto w-full max-w-md pt-5 sm:pt-8">
+        <div className="mb-5 flex items-center gap-4">
+          <img src={mascot2xUrl} alt="Pickle, your coach" className="h-20 w-auto shrink-0" />
+          <div>
+            <h1 className="text-2xl font-extrabold leading-tight" style={{ fontFamily: DISPLAY_FONT }}>Your next better game.</h1>
+            <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Rate your game. Get a plan. See your progress.</p>
           </div>
         </div>
-
-        <div className="relative mt-6 md:mt-8 lg:mt-6">
-          <h1 id="intro-title" className=" text-[2rem] font-extrabold leading-[1.05] md:text-5xl lg:text-[clamp(2.25rem,4.2vh,3.5rem)]" style={{ fontFamily: DISPLAY_FONT }}>
-            Your pickleball coach, in your pocket.
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-relaxed md:text-base" style={{ color: "#c9dccf" }}>
-            {trialNoWorker
-              ? "Rate your own game for an instant practice plan, or explore the sample dashboard. Video analysis is not running on this public trial."
-              : "PicklePro turns a quick look back at your game into a clear plan: what is working, what to work on, and the drills to get there. Your sessions stay private to you."}
-          </p>
-        </div>
-
-        <ol className="relative mt-6 border-t sm:grid sm:grid-cols-2 sm:gap-x-8" style={{ borderColor: "rgba(255,255,255,0.14)" }} aria-label="What PicklePro does">
-          {features.map(({ title, text }, i) => (
-            <li key={title} className="grid grid-cols-[2rem_1fr] gap-2 border-b py-3.5" style={{ borderColor: "rgba(255,255,255,0.14)" }}>
-              <span className="text-sm font-extrabold tabular-nums" style={{ color: OPTIC, fontFamily: DISPLAY_FONT }}>0{i + 1}</span>
-              <span><strong className="block text-sm md:text-base">{title}</strong><span className="mt-0.5 block text-sm leading-relaxed" style={{ color: "#c9dccf" }}>{text}</span></span>
-            </li>
-          ))}
-        </ol>
-
-        <div className="relative mt-6 grid gap-2 sm:grid-cols-2 lg:hidden">
-          <button type="button" onClick={() => openForm("sign_up")} className={`min-h-[52px] rounded-[12px] text-[0.95rem] font-bold md:text-base ${pressable}`} style={{ background: OPTIC, color: OPTIC_INK }}>
-            Create my account
-          </button>
-          <button type="button" onClick={() => openForm("sign_in")} className={`min-h-[52px] rounded-[12px] text-[0.95rem] font-bold md:text-base ${pressable}`} style={{ border: "1px solid rgba(255,255,255,0.3)", color: "var(--pp-on-hero)" }}>
-            I already have an account
-          </button>
-        </div>
-        {samplePreviewEnabled && <a href="#/design-preview" className="relative mt-4 inline-flex min-h-[44px] items-center self-start rounded-[12px] px-4 text-sm font-bold"
-          style={{ background: "rgba(255,255,255,0.12)", color: "white" }}>Explore sample dashboard</a>}
-      </section>
-
-      <div className="px-4 py-8 md:px-10 md:py-12 lg:flex lg:min-h-screen lg:flex-col lg:justify-center lg:px-14 xl:px-20">
-        <main className="mx-auto w-full max-w-md space-y-6 md:max-w-xl lg:max-w-md">
-        <section id="auth" aria-labelledby="auth-title" className="scroll-mt-4 rounded-[14px] p-6 md:p-8" style={{ background: WHITE, color: INK, border: `1px solid ${BORDER}`, boxShadow: CARD_GLOW }}>
-            {guestMode && <div className="mb-6">
-              <button type="button" onClick={guestMode.onEnter} disabled={guestMode.busy || busy}
-                className={`w-full rounded-[12px] py-3.5 text-[0.95rem] font-bold ${pressable}`}
-                style={{ background: OPTIC, color: OPTIC_INK }}>
-                {guestMode.busy ? "Opening your private session…" : "Try with my own video, no account needed"}
+        <section id="auth" aria-labelledby="auth-title" className="rounded-[18px] p-5 sm:p-6" style={{ background: WHITE, color: INK, border: `1px solid ${BORDER}`, boxShadow: CARD_GLOW }}>
+          <div className="mb-5 grid grid-cols-2 gap-1 rounded-[12px] p-1" style={{ background: PAGE_BG }} role="group" aria-label="Account access">
+            {([["sign_in", "Sign in"], ["sign_up", "Create account"]] as const).map(([value, label]) => (
+              <button key={value} type="button" aria-label={`Switch to ${label.toLowerCase()}`} aria-pressed={mode === value} disabled={busy}
+                onClick={() => openForm(value)} className={`min-h-[44px] rounded-[9px] px-2 text-sm font-bold ${pressable}`}
+                style={mode === value ? { background: OPTIC, color: OPTIC_INK } : { color: WHITE_DIM }}>
+                {label}
               </button>
-              <p className="mt-2 text-sm" style={{ color: WHITE_DIM }}>
-                Your guest sessions stay private in this browser. Keep this browser's data to return to them.
-              </p>
-              {guestMode.error && <div className="mt-2"><Notice tone="error">{guestMode.error}</Notice></div>}
-              <p className="mt-5 border-t pt-4 text-sm" style={{ borderColor: BORDER, color: WHITE_SUB }}>Or use an account</p>
-            </div>}
+            ))}
+          </div>
             <h2 id="auth-title" className="mb-1" style={{ fontFamily: DISPLAY_FONT, fontSize: "1.5rem", fontWeight: 800 }}>
               {mode === "sign_in" ? "Sign in" : mode === "sign_up" ? "Create an account" : "Reset password"}
             </h2>
-            <p className="text-sm mb-5" style={{ color: WHITE_DIM }}>
-              Your sessions, videos and results are private to your account. <a href="#/privacy" className="font-semibold underline" style={{ color: GREEN }}>How we handle your data</a>
+            <p className="text-sm mb-4" style={{ color: WHITE_DIM }}>
+              {mode === "reset" ? "We’ll email you a link to choose a new password." : "Your game, your plan. Your sessions stay private."}
             </p>
-            <form onSubmit={submit} className="space-y-4" noValidate>
+            <form onSubmit={submit} className="space-y-3" noValidate>
               <div>
                 <label className={labelClass} style={labelStyle} htmlFor="email">Email address</label>
                 <input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)}
@@ -153,15 +100,27 @@ export function AuthScreen({ sb, devMode, guestMode, samplePreviewEnabled = fals
                 <PasswordInput id="password" value={password} onChange={(e) => setPassword(e.target.value)}
                   autoComplete={mode === "sign_in" ? "current-password" : "new-password"}
                   className="rounded-[14px] px-4 py-3 text-base outline-none" />
+                {mode === "sign_up" && <p className="mt-1 text-xs" style={{ color: WHITE_DIM }}>Use at least 8 characters.</p>}
               </div>}
               {error && <Notice tone="error">{error}</Notice>}
               {info && <Notice>{info}</Notice>}
               <button type="submit" disabled={busy}
                 className={`w-full flex items-center justify-center gap-2 rounded-[12px] py-3.5 font-bold text-[0.95rem] ${pressable}`}
-                style={{ background: NEON, color: NEON_D }}>
+                style={{ background: OPTIC, color: OPTIC_INK }}>
                 {busy ? "Please wait…" : mode === "sign_in" ? "Sign in" : mode === "sign_up" ? "Create account" : "Send reset link"} {!busy && <ArrowRight size={16} aria-hidden="true" />}
               </button>
             </form>
+            {guestMode && <div className="mt-5 border-t pt-4" style={{ borderColor: BORDER }}>
+              <button type="button" onClick={guestMode.onEnter} disabled={guestMode.busy || busy}
+                className={`w-full rounded-[12px] py-3.5 text-[0.95rem] font-bold ${pressable}`}
+                style={{ background: OPTIC, color: OPTIC_INK }}>
+                {guestMode.busy ? "Opening your private session…" : "Try with my own video, no account needed"}
+              </button>
+              <p className="mt-2 text-sm" style={{ color: WHITE_DIM }}>
+                Your guest sessions stay private in this browser. Keep this browser's data to return to them.
+              </p>
+              {guestMode.error && <div className="mt-2"><Notice tone="error">{guestMode.error}</Notice></div>}
+            </div>}
             {devMode && (
               <div className="mt-3">
                 <button type="button" onClick={devMode.onEnter} disabled={devMode.busy || busy}
@@ -176,50 +135,24 @@ export function AuthScreen({ sb, devMode, guestMode, samplePreviewEnabled = fals
                 {devMode.error && <div className="mt-2"><Notice tone="error">{devMode.error}</Notice></div>}
               </div>
             )}
-            {mode === "sign_in" && <button type="button" className="mt-4 text-sm underline" style={{ color: GREEN }}
+            {mode === "sign_in" && <button type="button" className="mt-3 min-h-[44px] text-sm underline" style={{ color: GREEN }}
               onClick={() => { setMode("reset"); setError(""); setInfo(""); }}>Forgot password?</button>}
-            <p className="text-center text-sm mt-6" style={{ color: WHITE_SUB }}>
-              {mode === "sign_in" ? "No account yet? " : "Already registered? "}
-              <button type="button" className="font-semibold" style={{ color: GREEN }}
-                onClick={() => { setMode(mode === "sign_in" ? "sign_up" : "sign_in"); setError(""); setInfo(""); }}>
-                {mode === "sign_in" ? "Create one" : "Sign in"}
-              </button>
-            </p>
+            {mode === "reset" && <button type="button" onClick={() => openForm("sign_in")} className="mt-4 min-h-[44px] text-sm font-semibold" style={{ color: GREEN }}>Back to sign in</button>}
           </section>
-        <section aria-labelledby="how-it-works-title">
-            <h2 id="how-it-works-title" className="text-xs font-bold" style={{ color: GREEN }}>How it works</h2>
-            <ol className="mt-3 rounded-[14px] px-4" style={{ background: WHITE, border: `1px solid ${BORDER}` }}>
-              {(trialNoWorker ? [
-                ["01", "Explore the sample", "Try the interactive dashboard with clearly labelled example data."],
-                ["02", "Create a session", "Try planning a session and recording a private check-in."],
-                ["03", "Return later for video", "Upload and analysis will open when an online worker is available."],
-              ] : [
-                ["01", "Log a session", "Pick what you want to improve after you play."],
-                ["02", "Rate your game", "Ten quick skill ratings, or add a video for court analysis."],
-                ["03", "Get your plan", "Focus areas, drills and a week of practice."],
-              ]).map(([number, title, detail]) => (
-                <li key={number} className="grid grid-cols-[2.5rem_1fr] gap-3 border-b py-3 last:border-b-0" style={{ borderColor: BORDER }}>
-                  <span className="text-sm font-extrabold" style={{ color: GREEN, fontFamily: DISPLAY_FONT }}>{number}</span>
-                  <span><strong className="block text-sm">{title}</strong><span className="block text-sm mt-0.5" style={{ color: "#5a6471" }}>{detail}</span></span>
-                </li>
-              ))}
+          {samplePreviewEnabled && <a href="#/design-preview" className="mt-3 flex min-h-[44px] items-center justify-center text-sm font-semibold" style={{ color: GREEN }}>Explore sample dashboard</a>}
+          <details className="mt-4 rounded-[14px] border px-4" style={{ borderColor: BORDER }}>
+            <summary className="flex min-h-[44px] cursor-pointer items-center justify-between text-sm font-semibold">How it works <span aria-hidden="true">+</span></summary>
+            <ol className="space-y-3 pb-4 text-sm" style={{ color: WHITE_DIM }}>
+              <li><strong style={{ color: INK }}>1. Log your game.</strong> Record what you played and rate your skills.</li>
+              <li><strong style={{ color: INK }}>2. Get your plan.</strong> Find a focus and drills for your next session.</li>
+              <li><strong style={{ color: INK }}>3. Track your progress.</strong> See how your game changes over time.</li>
             </ol>
-          </section>
-          <section aria-labelledby="example-plan-title" className="rounded-[14px] p-5" style={{ background: WHITE, border: `1px solid ${BORDER}` }}>
-            <p id="example-plan-title" className="text-xs font-bold" style={{ color: GREEN }}>Example from a practice plan</p>
-            <p className="mt-2 text-base font-bold">Build your dinking · rated 2/5</p>
-            <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Low, patient dinks force opponents to hit up, giving you the first chance to attack.</p>
-            <div className="mt-3 rounded-[14px] p-3 text-sm" style={{ background: "var(--pp-accent-soft)" }}>
-              <strong style={{ color: GREEN }}>Drill: Cross-court dink count.</strong> Dink cross-court with a partner and count rallies without a ball going above net height plus 30 cm. Three rounds of two minutes; try to beat your best count.
-            </div>
-            <p className="mt-3 text-sm font-semibold">Next session: aim for 3/5, "Steady when unhurried".</p>
-            <p className="mt-2 text-xs" style={{ color: WHITE_SUB }}>Sample only. Your plan comes from your own ratings.</p>
-          </section>
-          <p className="text-center text-xs" style={{ color: WHITE_SUB }}>
-            PicklePro research prototype · DLSU CAPIT-01 · <a href="#/privacy" className="underline" style={{ color: GREEN }}>Your data and privacy</a>
-          </p>
-        </main>
-      </div>
+          </details>
+          {trialNoWorker && <p className="mt-3 text-center text-xs" style={{ color: WHITE_DIM }}>Video analysis is not running on this public trial. You can still rate your game and get a practice plan.</p>}
+          <footer className="mt-4 text-center text-xs" style={{ color: WHITE_DIM }}>
+            PicklePro research prototype · <a href="#/privacy" className="inline-flex min-h-[44px] items-center underline" style={{ color: GREEN }}>Your data and privacy</a>
+          </footer>
+      </main>
     </div>
   );
 }

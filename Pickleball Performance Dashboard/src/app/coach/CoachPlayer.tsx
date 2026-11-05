@@ -13,7 +13,7 @@ const BALL = "#d9f75a";
 const BALL_INK = "#0f1a14";
 
 const SPEEDS = [0.75, 1, 1.25];
-const REST_MOUTH = 0.42;   // the mascot's usual open smile
+const REST_MOUTH = 0.7;   // the mascot's usual open smile
 const FULL_TEXT_KEY = "picklepro.coach.fullText";
 const reducedMotion = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
@@ -24,10 +24,10 @@ function saveFullText(on: boolean) {
   try { localStorage.setItem(FULL_TEXT_KEY, on ? "1" : "0"); } catch { /* storage blocked: keep the choice for this visit only */ }
 }
 
-/** Mouth drawn over the mascot (whose painted mouth was removed), in the image's own 349 x 640 coordinates. */
+/** Match the smile on the 440 × 570 source asset; all layers share its coordinates. */
 function mouthPath(open: number) {
-  const h = 7 + open * 62, y = 302;
-  return `M155 ${y} C178 ${y - 3} 242 ${y - 3} 265 ${y} C262 ${y + h * 0.9} 238 ${y + h} 210 ${y + h} C182 ${y + h} 158 ${y + h * 0.9} 155 ${y} Z`;
+  const h = 5 + open * 39;
+  return `M130 253 Q166 263 198 242 C200 ${253 + h * 0.8} 181 ${253 + h} 169 ${253 + h} C151 ${253 + h} 137 ${253 + h * 0.65} 130 253 Z`;
 }
 
 type Talk = { id: number; word: string };
@@ -43,16 +43,17 @@ function TalkingPickle({ talk, speaking, rate }: { talk: Talk; speaking: boolean
 
   const draw = useCallback(() => {
     const { open } = anim.current;
-    const d = mouthPath(open), h = 7 + open * 62;
+    const d = mouthPath(open), h = 5 + open * 39;
     mouth.current?.setAttribute("d", d);
     clip.current?.setAttribute("d", d);
-    tongue.current?.setAttribute("cy", String(302 + h - 4));
-    tongue.current?.setAttribute("ry", String(Math.max(3, h * 0.42)));
+    tongue.current?.setAttribute("cy", String(253 + h - 3));
+    tongue.current?.setAttribute("ry", String(Math.max(2, h * 0.28)));
     if (glow.current) glow.current.style.transform = `scale(${1 + (open - 0.1) * 0.12})`;
   }, []);
   const moveTo = useCallback((target: number) => {
     const a = anim.current;
     a.target = target;
+    if (reducedMotion()) { a.open = target; draw(); return; }
     const tick = () => {
       a.open += (a.target - a.open) * 0.42;
       draw();
@@ -69,33 +70,34 @@ function TalkingPickle({ talk, speaking, rate }: { talk: Talk; speaking: boolean
   }, [draw]);
 
   useEffect(() => {
-    if (talk.id === 0 || reducedMotion()) return;
+    if (!speaking || talk.id === 0 || reducedMotion()) return;
     clearTimers();
     if (!talk.word) return moveTo(0.12);
     const syllables = Math.min(3, Math.max(1, Math.round(talk.word.replace(/[^a-z]/gi, "").length / 4)));
     const step = 150 / rate;
     for (let i = 0; i < syllables; i++) {
-      anim.current.timers.push(setTimeout(() => moveTo(0.55 + Math.random() * 0.45), i * step));
+      anim.current.timers.push(setTimeout(() => moveTo(0.6 + (i % 2) * 0.25), i * step));
       anim.current.timers.push(setTimeout(() => moveTo(0.12), i * step + step * 0.55));
     }
-  }, [talk, rate, moveTo]);
+  }, [talk, speaking, rate, moveTo]);
 
-  useEffect(() => { if (!speaking) { clearTimers(); moveTo(REST_MOUTH); } }, [speaking, moveTo]);
+  useEffect(() => { if (!speaking || reducedMotion()) { clearTimers(); moveTo(REST_MOUTH); } }, [speaking, moveTo]);
 
   return (
-    <div className="relative grid h-[clamp(120px,19vh,180px)] shrink-0 place-items-center lg:h-[min(48vh,440px)]" style={{ aspectRatio: "349 / 640" }} aria-hidden="true">
+    <div className="relative grid h-[clamp(120px,19vh,180px)] shrink-0 place-items-center lg:h-[min(48vh,440px)]" style={{ aspectRatio: "440 / 570" }} aria-hidden="true">
       <div ref={glow} className="absolute aspect-square w-[190%] rounded-full transition-transform duration-100"
         style={{ background: "radial-gradient(circle, rgba(254,188,23,0.32) 0%, rgba(254,188,23,0) 65%)", opacity: speaking ? 1 : 0.5 }} />
       <div className="coach-pickle relative h-full w-full" style={{ transformOrigin: "50% 100%" }}>
         <img src={talkingMascotUrl} alt="" className="absolute inset-0 h-full w-full" />
-        <svg viewBox="0 0 349 640" className="absolute inset-0 h-full w-full">
+        <svg viewBox="0 0 440 570" className="absolute inset-0 h-full w-full">
           <defs><clipPath id={clipId}><path ref={clip} /></clipPath></defs>
+          {/* Replace the painted smile once, on the face, before drawing the animated one. */}
+          <path d="M126 249 Q166 261 201 236 Q211 283 179 293 Q146 300 126 249Z" fill="#80c739" stroke="#80c739" strokeWidth="5" />
           <g clipPath={`url(#${clipId})`}>
-            <rect x="140" y="280" width="140" height="110" fill="#5a1923" />
-            <rect x="140" y="296" width="140" height="17" fill="#f6f6f6" />
-            <ellipse ref={tongue} cx="214" cy="350" rx="44" ry="20" fill="#f25274" />
+            <rect x="120" y="230" width="90" height="75" fill="#083e24" />
+            <ellipse ref={tongue} cx="167" cy="280" rx="18" ry="8" fill="#f25274" />
           </g>
-          <path ref={mouth} fill="none" stroke="#050505" strokeWidth="6" strokeLinejoin="round" strokeLinecap="round" />
+          <path ref={mouth} fill="none" stroke="#083e24" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
         </svg>
       </div>
     </div>
@@ -230,7 +232,7 @@ export function CoachPlayer({ script, isShort, onFull, onClose }: {
 
         <div className="grid min-h-0 grid-rows-[auto_1fr] lg:grid-cols-[minmax(280px,36%)_1fr] lg:grid-rows-1 lg:gap-12">
           <div className="flex items-center gap-4 border-b py-3 lg:flex-col lg:justify-center lg:border-b-0 lg:pb-[4vh] lg:text-center" style={{ borderColor: "rgba(255,255,255,0.09)" }}>
-            <TalkingPickle talk={talk} speaking={playing} rate={rate} />
+            <TalkingPickle talk={talk} speaking={playing && timing !== null && timing !== "text"} rate={rate} />
             <div className="grid min-w-0 gap-1 lg:mt-4 lg:justify-items-center">
               <span className="flex items-center text-xs font-extrabold tracking-[0.1em]" style={{ color: PICKLE }}>
                 {done ? "All done" : section?.eyebrow ?? `Part ${sectionIndex + 1} of ${script.sections.length}`}
