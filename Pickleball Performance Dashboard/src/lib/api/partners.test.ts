@@ -27,4 +27,8 @@ describe("error messages", () => {
     expect(partnerErrorText(new Error("Could not find the function public.my_partners without parameters in the schema cache")))
       .toMatch(/pickleproapp_upgrade_7\.sql/);
   });
+  it("names the peer-feedback update when share_session does not take skills yet", () => {
+    expect(partnerErrorText(new Error("Could not find the function public.share_session(p_focus_skills, p_partner_id, p_session_id, p_with_video) in the schema cache")))
+      .toMatch(/pickleproapp_upgrade_9\.sql/);
+  });
 });

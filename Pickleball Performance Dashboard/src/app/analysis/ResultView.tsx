@@ -96,7 +96,9 @@ function Row({ k, v }: { k: string; v: React.ReactNode }) {
 export type VideoControls = { video: HTMLVideoElement | null; seek: (timeSeconds: number) => void };
 
 export function ResultView({ result, videoUrl, previous, session, onSelectTrack, onRateSession, experimentalReview = false, sharedBy,
-  notes }: {
+  notes, seekTo = null }: {
+  /** A jump requested from outside the report, e.g. a partner note's time. */
+  seekTo?: JumpRequest;
   onRateSession?: () => void;
   /** A partner viewing a shared report: the owner's name. Hides the owner's practice plan and audio (spec M02). */
   sharedBy?: string;
@@ -116,6 +118,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
   const [jump, setJump] = useState<JumpRequest>(null);
   const [videoEl, setVideoEl] = useState<HTMLVideoElement | null>(null);
   const seek = useCallback((time: number) => setJump({ time, id: Date.now() }), []);
+  useEffect(() => { if (seekTo) setJump(seekTo); }, [seekTo]);
   const shotMetric = result.metrics.shot_classification;
   const shotDisplayResult = experimentalReview ? result : publicShotResult(result);
   const shotsValidated = result.data_origin === "measured" && shotMetric.validation === "evaluated_on_real_footage";

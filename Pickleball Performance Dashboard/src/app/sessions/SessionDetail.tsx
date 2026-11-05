@@ -33,7 +33,13 @@ import { ResultView } from "../analysis/ResultView";
 import type { PreviousSession } from "../analysis/CoachingPanel";
 import { GoalFields } from "./GoalFields";
 import { CapturePanel } from "./CapturePanel";
-import { ShareCard } from "../partners/ShareCard";
+import { PeerFeedback } from "../partners/PeerFeedback";
+import { listPeerRatings } from "../../lib/api/partners";
+import { getProfile } from "../../lib/api/profile";
+import { goalTargets } from "../../lib/coaching/goals";
+import type { PeerRating } from "../../lib/coaching/peerFeedback";
+import type { SelfRatings, SelfSkill } from "../../lib/coaching/selfAssessment";
+import type { JumpRequest } from "../analysis/VideoOverlayPlayer";
 import { PeerNotes } from "../partners/PeerNotes";
 
 const POLL_MS = 3000;
@@ -102,6 +108,25 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
   }, [bundle]);
 
   useEffect(() => { void load(); }, [load]);
+
+  // Peer feedback (WP5): partners' ratings, the player's own ratings to compare, and their goal skills.
+  const [peerRatings, setPeerRatings] = useState<PeerRating[]>([]);
+  const [selfRatings, setSelfRatings] = useState<SelfRatings | null>(null);
+  const [goalSkills, setGoalSkills] = useState<SelfSkill[]>([]);
+  const [videoSeek, setVideoSeek] = useState<JumpRequest>(null);
+  const loadFeedback = useCallback(() => {
+    // Each part is optional: before the partner updates, the session page works without them.
+    void Promise.all([
+      listPeerRatings(sb, sessionId).catch(() => []),
+      getSelfAssessment(sb, sessionId).catch(() => null),
+      getProfile(sb, userId).catch(() => null),
+    ]).then(([peer, self, profile]) => {
+      setPeerRatings(peer);
+      setSelfRatings(self?.ratings ?? null);
+      setGoalSkills(goalTargets(profile?.baseline_ratings, profile?.main_goals ?? []).map((g) => g.skill));
+    });
+  }, [sb, sessionId, userId]);
+  useEffect(loadFeedback, [loadFeedback]);
   useEffect(() => { void getUploadLimits(sb).then(setLimits); }, [sb]);
   useEffect(() => { getUploadUsage(sb).then(setUsage).catch(() => setUsage(null)); }, [sb, bundle?.video?.id]);
   useEffect(() => { listOtherPlayers(sb, sessionId).then(setPlayers).catch(() => setPlayers([])); }, [sb, sessionId]);
@@ -371,10 +396,14 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
 
       {activeTab === "plan" && <div {...tabPanelProps("session", "plan")} className="space-y-4 outline-none">
         <PreGameSummary checkin={capture?.checkin ?? null} onOpen={() => openPhase("pre")} />
-        <SelfAssessmentPanel sb={sb} session={session} recovery={recovery} onSaved={() => { loadPhases(); void load(); }} />
+        <SelfAssessmentPanel sb={sb} session={session} recovery={recovery} peerRatings={peerRatings}
+          onSaved={() => { loadPhases(); void load(); loadFeedback(); }} />
         {rated && !(capture?.recovery || capture?.reflection) && <button type="button" onClick={() => openPhase("post")}
           className={`flex min-h-[52px] w-full items-center justify-center rounded-full px-4 text-base font-extrabold ${pressable}`}
           style={{ background: "var(--pp-action)", color: "var(--pp-on-action)" }}>Next: post-game recovery</button>}
+        <PeerFeedback sb={sb} sessionId={session.id} hasVideo={!!uploadedPath} selfRatings={selfRatings} peerRatings={peerRatings}
+          goalSkills={goalSkills} onChanged={loadFeedback}
+          onWatch={uploadedPath ? (time) => { setTab("video"); setVideoSeek({ time, id: Date.now() }); } : undefined} />
       </div>}
       {activeTab === "journal" && <div {...tabPanelProps("session", "journal")} className="outline-none"><CapturePanel key={session.id} sb={sb} session={session}
         step={journalStep} onStepChange={setJournalStep} onSaved={loadPhases} onSessionUpdated={() => void load()} /></div>}
@@ -683,13 +712,15 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
 
       {parsed?.ok && job?.status === "failed" && <Notice tone="warn">The reanalysis failed. The report below is from the last completed run.</Notice>}
       {parsed?.ok && (job?.status === "queued" || job?.status === "processing") && <Notice tone="info">A new analysis is in progress. The report below is the last published run.</Notice>}
-      {parsed?.ok && <ResultView result={parsed.result} videoUrl={videoUrl} previous={previous} session={session}
+      {parsed?.ok && <ResultView result={parsed.result} videoUrl={videoUrl} previous={previous} session={session} seekTo={videoSeek}
         notes={(controls) => <PeerNotes sb={sb} sessionId={session.id} mode="owner" controls={controls} />}
         onRateSession={() => { setTab("plan"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
         onSelectTrack={job && finished && !video?.raw_video_deleted_at && !video?.raw_video_deleting_at && !config.trialNoWorker ? (trackId, timeSeconds) => void run(() => requestReanalysis(sb, job.id, {
           ...job.params, selection: { method: "track_id", track_id: trackId }, selection_time_s: timeSeconds,
         })) : undefined} />}
-      {parsed?.ok && <ShareCard sb={sb} sessionId={session.id} />}
+      {parsed?.ok && <button type="button" onClick={() => { setTab("plan"); window.setTimeout(() => document.getElementById("peer-feedback")?.scrollIntoView({ behavior: "smooth" }), 50); }}
+        className={`flex min-h-[52px] w-full items-center justify-center rounded-full px-4 text-[15px] font-extrabold ${pressable}`}
+        style={{ border: "1px solid var(--pp-line-strong)", color: "var(--pp-ink)" }}>Ask a partner for feedback on this video</button>}
       {parsed && !parsed.ok && (
         <Notice tone="error">The stored result could not be read ({parsed.error}). It is not shown to avoid presenting it incorrectly.</Notice>
       )}

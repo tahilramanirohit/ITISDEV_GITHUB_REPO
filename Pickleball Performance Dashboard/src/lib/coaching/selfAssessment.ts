@@ -169,6 +169,8 @@ export type SelfAssessmentInput = {
   playFormat?: string | null;
   /** Post-game recovery for this session; high soreness or effort makes the plan lighter. */
   recovery?: RecoveryLevels | null;
+  /** Skills a partner rated at least 1 lower than the player (peer feedback): they become the first focus. */
+  peerLower?: { skill: SelfSkill; by: string; peer: number }[];
 };
 
 export type RecoveryLevels = { soreness: number | null; exertion: number | null };
@@ -202,6 +204,8 @@ export type SelfReport = {
   focus: SelfFocusItem[];
   plan: { day: string; title: string; detail: string }[];
   limitation: string;
+  /** Pickle's line when a partner's lower rating set the first focus. */
+  peerNote?: string | null;
 };
 
 export type SelfProgressRow = { skill: SelfSkill; label: string; before: SkillRating; after: SkillRating; change: "better" | "worse" | "same" };
@@ -252,6 +256,9 @@ export function buildSelfReport(input: SelfAssessmentInput): SelfReport {
     if (input.goals.includes(i.goal)) { score += 1; reasons.push("it matches a focus you chose"); }
     if (mentioned.has(skill)) { score += 1.5; reasons.push("you mentioned it as a struggle"); }
     if (skill === "consistency" && input.unforcedErrors === "many") { score += 1.5; reasons.push("you made many unforced errors"); }
+    const peer = input.peerLower?.find((p) => p.skill === skill);
+    // A partner's lower rating outranks everything else: the outside view is the point of peer coaching.
+    if (peer) { score += 100 - (input.peerLower?.indexOf(peer) ?? 0); reasons.unshift(`${peer.by} rated it ${peer.peer}/5, lower than you did`); }
     return { skill, score, reasons };
   });
 
@@ -295,7 +302,12 @@ export function buildSelfReport(input: SelfAssessmentInput): SelfReport {
     ? `${focus.length} thing${focus.length === 1 ? "" : "s"} to practice before your next session, picked from your ratings and goals.${record}${lighter}${coverage}`
     : `You rated every skill 5/5. Keep the same habits and rate yourself again after your next session.${record}`;
 
-  return { available: true, introduction, overall, level: levelLabel(overall), strengths, focus, plan, limitation: LIMITATION };
+  const pinned = focus[0] && input.peerLower?.find((p) => p.skill === focus[0].skill);
+  const peerNote = pinned
+    ? `${pinned.by} rated your ${focus[0].label.toLowerCase()} ${pinned.peer}/5, lower than your ${focus[0].rating}/5, so it stays your first focus.`
+    : null;
+
+  return { available: true, introduction, overall, level: levelLabel(overall), strengths, focus, plan, limitation: LIMITATION, peerNote };
 }
 
 function buildPlan(focus: SelfFocusItem[], light = false): SelfReport["plan"] {

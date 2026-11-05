@@ -5,8 +5,9 @@ import {
   MAX_NOTE, addNote, deleteNote, editNote, formatVideoTime, listNotes, partnerErrorText, type PeerNote,
 } from "../../lib/api/partners";
 import type { VideoControls } from "../analysis/ResultView";
-import { BORDER, GREEN, GREEN_BG, INK, ROSE, WHITE_DIM } from "../theme";
-import { Card, Notice, PrimaryButton, WidgetHeader, fieldStyle } from "../shell/primitives";
+import { BORDER, GREEN, GREEN_BG, INK, ROSE, SURFACE_2, WHITE_DIM } from "../theme";
+import { Card, Chip, Notice, PrimaryButton, WidgetHeader, fieldStyle } from "../shell/primitives";
+import { SKILL_INFO, type SelfSkill } from "../../lib/coaching/selfAssessment";
 
 /** The video's current time, kept up to date while it plays or is moved. */
 function useVideoTime(video: HTMLVideoElement | null): number {
@@ -41,9 +42,12 @@ function NoteText({ value, onChange, label }: { value: string; onChange: (v: str
  * session is shared with writes and edits their own notes; the owner reads every
  * note and can delete any of them.
  */
-export function PeerNotes({ sb, sessionId, mode, ownerName, controls }: {
+export function PeerNotes({ sb, sessionId, mode, ownerName, controls, skills = [] }: {
   sb: SupabaseClient; sessionId: string; mode: "owner" | "partner"; ownerName?: string; controls: VideoControls;
+  /** Skills the owner asked about: a partner can tag a note with one. */
+  skills?: SelfSkill[];
 }) {
+  const [tag, setTag] = useState<SelfSkill | null>(null);
   const [notes, setNotes] = useState<PeerNote[] | null>(null);
   const [error, setError] = useState("");
   const [draft, setDraft] = useState("");
@@ -84,7 +88,7 @@ export function PeerNotes({ sb, sessionId, mode, ownerName, controls }: {
     setSaving(true);
     setError("");
     try {
-      await addNote(sb, sessionId, canPin && pin ? now : null, draft);
+      await addNote(sb, sessionId, canPin && pin ? now : null, draft, tag);
       setDraft("");
       await load();
     } catch (err) {
@@ -104,6 +108,9 @@ export function PeerNotes({ sb, sessionId, mode, ownerName, controls }: {
           : `Pause the video at a moment and write what you noticed. ${ownerName ?? "The player"} sees your notes in their report.`} />
       {mode === "partner" && <form onSubmit={submit} className="mb-4 space-y-3" aria-label="Add a note">
         <NoteText label="Note" value={draft} onChange={setDraft} />
+        {skills.length > 0 && <div className="flex flex-wrap gap-2" role="group" aria-label="About which skill">
+          {skills.map((s) => <Chip key={s} selected={tag === s} onClick={() => setTag(tag === s ? null : s)}>{SKILL_INFO[s].label}</Chip>)}
+        </div>}
         {canPin && <label className="flex items-center gap-2 text-sm" style={{ color: INK }}>
           <input type="checkbox" className="h-5 w-5" checked={pin} onChange={(e) => setPin(e.target.checked)} />
           Pin to the video at {formatVideoTime(now)}
@@ -124,6 +131,7 @@ export function PeerNotes({ sb, sessionId, mode, ownerName, controls }: {
                     <Clock size={14} aria-hidden="true" />{formatVideoTime(n.video_time_s)}</button>
                 : <span className="rounded-full px-3 py-1 text-sm font-bold" style={{ background: GREEN_BG, color: INK }}>Whole session</span>}
               <span className="text-sm font-bold" style={{ color: INK }}>{n.mine ? "You" : n.author_name}</span>
+              {n.skill && <span className="rounded-full px-2 py-0.5 text-xs font-bold" style={{ background: SURFACE_2, color: INK }}>{SKILL_INFO[n.skill].label}</span>}
               <span className="text-xs" style={{ color: WHITE_DIM }}>
                 {new Date(n.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
                 {n.updated_at !== n.created_at ? " · edited" : ""}</span>
@@ -133,7 +141,7 @@ export function PeerNotes({ sb, sessionId, mode, ownerName, controls }: {
                   <NoteText label="Edit note" value={editing.body} onChange={(body) => setEditing({ id: n.id, body })} />
                   <div className="flex flex-wrap gap-2">
                     <PrimaryButton disabled={busyId === n.id} onClick={() => void run(n.id, async () => {
-                      await editNote(sb, n.id, editing.body);
+                      await editNote(sb, n.id, editing.body, n.skill ?? null);
                       setEditing(null);
                     })}>Save</PrimaryButton>
                     <PrimaryButton tone="light" onClick={() => setEditing(null)}>Cancel</PrimaryButton>

@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { ChevronDown, Dumbbell, Target, TrendingDown, TrendingUp, Minus } from "lucide-react";
 import type { SelfProgressRow, SelfReport } from "../../lib/coaching/selfAssessment";
-import { BORDER, DISPLAY_FONT, GREEN, GREEN_BG, INK, OPTIC, ORANGE, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
-import { Card, RingTile, SectionTitle, cardStyle, mascot2xUrl } from "../shell/primitives";
+import { ACCENT_INK, ACTION_SOFT, BORDER, DISPLAY_FONT, GREEN, GREEN_BG, INK, OPTIC, ORANGE, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
+import { Card, RingTile, SectionTitle, cardStyle, mascot2xUrl, mascotUrl } from "../shell/primitives";
 import { selfCoachScript } from "../../lib/coaching/coachScript";
 import { CoachLauncher } from "../coach/CoachPlayer";
 
@@ -80,6 +80,10 @@ export function SelfReportView({ report, progress, previousLabel, onEdit, sessio
           {coach && <div className="relative mt-3"><CoachLauncher shortScript={coach.short} fullScript={coach.full} /></div>}
         </section>
       )}
+      {report.peerNote && <p role="note" className="flex items-start gap-2.5 rounded-[14px] px-3 py-2.5 text-[13px] leading-snug"
+        style={{ background: ACTION_SOFT, color: INK }}>
+        <img src={mascotUrl} alt="" aria-hidden="true" className="h-10 w-7 shrink-0 object-contain" />
+        <span><b style={{ color: ACCENT_INK }}>Pickle:</b> {report.peerNote}</span></p>}
       <div className="grid grid-cols-2 gap-3">
         <RingTile label="Self rating" value={report.overall.toFixed(1)} fraction={(report.overall - 1) / 4} />
         <RingTile label="Level" value={report.level ?? "–"} fraction={(report.overall - 1) / 4} />

@@ -14,6 +14,7 @@ import { BORDER, GREEN, INK, PICKLE, WHITE, WHITE_DIM, WHITE_SUB } from "../them
 import { Chip, Notice, PrimaryButton, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
 import { SelfReportView } from "./SelfReportView";
 import { SkillRater } from "./SkillRater";
+import { peerLowerSkills, type PeerRating } from "../../lib/coaching/peerFeedback";
 
 export { SkillRater };
 
@@ -49,8 +50,10 @@ function Stepper({ label, value, onChange, max }: { label: string; value: number
  * The In-game step: rate the session's skills and record the result.
  * `recovery` (from the post-game step) makes the plan lighter after a hard session.
  */
-export function SelfAssessmentPanel({ sb, session, recovery, onSaved }: {
+export function SelfAssessmentPanel({ sb, session, recovery, onSaved, peerRatings = [] }: {
   sb: SupabaseClient; session: SessionRow; recovery?: RecoveryLevels | null; onSaved?: () => void;
+  /** Partners' ratings of this session; a skill they rated lower becomes the first focus. */
+  peerRatings?: PeerRating[];
 }) {
   const [saved, setSaved] = useState<SelfAssessment | null | undefined>(undefined);
   const resultDraft = { match_result: session.match_result ?? null, match_score: session.match_score ?? "" };
@@ -87,8 +90,8 @@ export function SelfAssessmentPanel({ sb, session, recovery, onSaved }: {
   const report = useMemo(() => saved ? buildSelfReport({
     ratings: saved.ratings, goals: session.improvement_goals ?? [], biggestStruggle: saved.biggest_struggle,
     unforcedErrors: saved.unforced_errors, gamesPlayed: saved.games_played, gamesWon: saved.games_won, playFormat: session.play_format,
-    recovery,
-  }) : null, [saved, session.improvement_goals, session.play_format, recovery]);
+    recovery, peerLower: peerLowerSkills(saved.ratings, peerRatings),
+  }) : null, [saved, session.improvement_goals, session.play_format, recovery, peerRatings]);
 
   const progress = useMemo(() => saved && previous ? compareSelfRatings(saved.ratings, previous.ratings, session.play_format) : null,
     [saved, previous, session.play_format]);

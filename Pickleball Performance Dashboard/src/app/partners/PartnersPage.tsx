@@ -8,6 +8,7 @@ import {
   unlinkPartner, type PartnerLink, type SharedSession,
 } from "../../lib/api/partners";
 import { CONTEXT_LABELS, FORMAT_LABELS } from "../../lib/api/types";
+import { SKILL_INFO } from "../../lib/coaching/selfAssessment";
 import { BORDER, GREEN, GREEN_BG, INK, ROSE, WHITE_DIM } from "../theme";
 import {
   Card, Notice, PageHero, PrimaryButton, SectionTitle, SegmentedTabs, Sheet, fieldStyle, tabPanelProps,
@@ -204,7 +205,7 @@ export default function PartnersPage({ sb }: { sb: SupabaseClient; userId: strin
               </div>}
             </Card></li>)}</ul>}
           {partners.length > 0 && <p className="text-sm" style={{ color: WHITE_DIM }}>
-            To share a session, open it from Sessions and use <strong>Share with a partner</strong> under its video report.</p>}
+            To get feedback, open a session and use <strong>Ask for feedback</strong> under Rate &amp; plan.</p>}
         </section>
 
         {waiting.length > 0 && <section aria-labelledby="waiting-heading" className="space-y-3">
@@ -245,9 +246,14 @@ export default function PartnersPage({ sb }: { sb: SupabaseClient; userId: strin
                   <p className="text-base font-bold truncate" style={{ color: INK }}>{s.title}</p>
                   <p className="text-sm" style={{ color: WHITE_DIM }}>
                     {shortDate(s.session_date)} · {CONTEXT_LABELS[s.session_context]} · {FORMAT_LABELS[s.play_format]}</p>
-                  <p className="mt-1 flex items-center gap-1.5 text-sm font-bold" style={{ color: s.has_report ? GREEN : ROSE }}>
-                    {s.has_report ? <><MessageSquareText size={14} aria-hidden="true" />
-                      {s.my_notes ? `${s.my_notes} note${s.my_notes === 1 ? "" : "s"} from you` : "Watch and leave notes"}</>
+                  {s.focus_skills?.length ? <p className="mt-1 text-sm" style={{ color: INK }}>
+                    Asked: <b>{s.focus_skills.map((k) => SKILL_INFO[k].label).join(", ")}</b>{s.with_video === false ? " · ratings only" : ""}</p> : null}
+                  <p className="mt-1 flex items-center gap-1.5 text-sm font-bold"
+                    style={{ color: s.has_report || s.focus_skills?.length ? GREEN : ROSE }}>
+                    {s.focus_skills?.length
+                      ? (s.my_ratings ?? 0) >= s.focus_skills.length ? "✓ Feedback sent" : "Rate and send feedback"
+                      : s.has_report ? <><MessageSquareText size={14} aria-hidden="true" />
+                        {s.my_notes ? `${s.my_notes} note${s.my_notes === 1 ? "" : "s"} from you` : "Watch and leave notes"}</>
                       : "No video report yet"}</p>
                 </div>
                 <ChevronRight size={20} aria-hidden="true" style={{ color: WHITE_DIM }} />

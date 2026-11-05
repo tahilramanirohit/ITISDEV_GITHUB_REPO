@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import SharedReportPage from "./SharedReportPage";
@@ -27,6 +27,25 @@ describe("Shared report", () => {
     expect(screen.getByText(/Their goals, ratings and practice plan stay private/)).toBeTruthy();
     expect(screen.getByText(/There is no video report for this session yet/)).toBeTruthy();
     expect(await screen.findByRole("button", { name: "Add note" })).toBeTruthy();
+  });
+
+  it("shows what the owner asked about and sends ratings for those skills only", async () => {
+    const rpc = vi.fn(async (fn: string) => {
+      if (fn === "shared_report") return { data: { session: { id: "s1", title: "Wall drills", session_date: "2026-10-18",
+        session_context: "practice", play_format: "wall_practice", owner_id: "p", owner_name: "Pia" }, result: null, video_path: null,
+        focus_skills: ["dinking", "serve"], with_video: false, my_ratings: {} }, error: null };
+      if (fn === "session_peer_notes" || fn === "rate_shared_skill") return { data: fn === "rate_shared_skill" ? null : [], error: null };
+      return { data: null, error: { message: `unexpected ${fn}` } };
+    });
+    renderAt(rpc);
+    expect(await screen.findByText(/Pia asked you to look at/)).toBeTruthy();
+    expect(screen.getByText(/rate from what you saw when you played/)).toBeTruthy();
+    expect(screen.getByText("How reliable and deep were Pia's serves?")).toBeTruthy();
+    expect(screen.queryByText(/There is no video report/)).toBeNull(); // ratings only: no video promised
+    fireEvent.click(screen.getByRole("radio", { name: /^Dinking 2 of 5/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Send feedback to Pia" }));
+    await waitFor(() => expect(rpc).toHaveBeenCalledWith("rate_shared_skill", { p_session_id: "s1", p_skill: "dinking", p_rating: 2 }));
+    expect(rpc).not.toHaveBeenCalledWith("rate_shared_skill", expect.objectContaining({ p_skill: "serve" }));
   });
 
   it("explains when the session is no longer shared", async () => {

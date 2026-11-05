@@ -7,14 +7,25 @@
 | Work package | Status | Database change needed? |
 |---|---|---|
 | WP1 Baseline as the starting point | ✅ Done (5 Nov 2026) | No |
-| WP2 Progress centred on game performance | ✅ Done, except the "peer" column (needs WP5) | No |
+| WP2 Progress centred on game performance | ✅ Done (peer column added with WP5) | No |
 | WP3 Pre-game / In-game / Post-game | ✅ Done | No |
 | WP4 Measured court tests | ✅ Done (5 Nov 2026) | **Yes**: `20261105090000_baseline_tests.sql` (`pickleproapp_upgrade_8.sql`) |
-| WP5 Peer ratings and targeted feedback | ⏳ Not started | **Yes**: `report_shares` columns, `peer_ratings` table, function updates |
+| WP5 Peer ratings and targeted feedback | ✅ Done (5 Nov 2026) | **Yes**: `20261105100000_peer_feedback.sql` (`pickleproapp_upgrade_9.sql`) |
 | WP6 Buddy | 🟡 Partly done: "Coming up" card and "Log this session". Not done: "looking for", purpose filter, suggested buddies | **Yes** for the rest: `profiles.buddy_looking_for`, `buddy_players()` update |
 | WP7 Optimise and tidy | 🟡 Partly done (see below) | No |
 
-**Next AI: start at WP5.** Everything left needs a new migration, so read rule 6 in section 3 first.
+**Next AI: start at WP6.** Everything left needs a new migration, so read rule 6 in section 3 first.
+
+### 5 Nov 2026: WP5 targeted peer feedback and peer ratings
+
+- **DB:** `20261105100000_peer_feedback.sql` (also `pickleproapp_upgrade_9.sql`). `report_shares.focus_skills` (≤ 3 valid skill keys, owner's order kept) and `with_video`; new `peer_ratings` (written only by `rate_shared_skill`, which checks a live share that asks about that skill); `peer_notes.skill`; `share_session` takes `p_focus_skills`/`p_with_video` and updates an existing share; `shared_report` returns `focus_skills`, `with_video`, `my_ratings`, and the video report and video only when `with_video`; `partner_can_view_video` requires `with_video`; `session_peer_ratings()` for names; `self_skill_keys()` lists the 10 skills. A partner can read their own ratings only for skills still asked about, while the share lasts. Local SQL tests: `90_peer_feedback.sql` (28 checks).
+- **Owner:** `src/app/partners/PeerFeedback.tsx` in the Rate & plan tab (replaces `ShareCard`): "Get a partner's view" card, current shares with Change / Stop sharing, and the "Ask for feedback" bottom sheet (Who, up to 3 skills with goal skills first, With video / Ratings only, privacy line, "Send to Kyle"; rendered in a portal so the tab bar never covers it). "Feedback from Kyle": You vs Kyle bars per skill with "You agree" / "Kyle rated this 2 lower than you", and notes grouped by skill; tapping a time opens the Video tab at that moment (`ResultView` `seekTo`). The Video tab links to it ("Ask a partner for feedback on this video").
+- **Plan:** `buildSelfReport({ peerLower })` makes a skill a partner rated ≥ 1 lower the first focus; `report.peerNote` shows as a Pickle line in `SelfReportView`.
+- **Partner:** `SharedReportPage.tsx`: "Sam asked you to look at Dinking and Third-shot drop", one `SkillRater` per asked skill with the question worded about the owner (`aboutPlayer()`), "Send feedback to Sam", then the video report (only with video) and notes with skill tag chips (`PeerNotes` `skills` prop). Ratings-only shares show no video or report.
+- **Partners page:** "Shared with you" shows what was asked and "✓ Feedback sent" / "Rate and send feedback".
+- **Progress:** "peer" column (latest peer rating per skill) when any peer rating exists.
+- **Logic:** `src/lib/coaching/peerFeedback.ts` (tested): `aboutPlayer`, `askSkillOrder`, `comparePeer`, `peerAuthors`, `peerLowerSkills`, `latestPeerBySkill`.
+- **Changed from the plan:** the raters sit above the video on the partner's page (the report is long on a phone, so rating it first is easier to find); the peer column appears only once there is a peer rating.
 
 ### 5 Nov 2026: WP4 measured court tests
 

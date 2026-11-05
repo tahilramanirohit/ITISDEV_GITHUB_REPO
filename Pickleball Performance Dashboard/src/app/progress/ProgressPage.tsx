@@ -12,6 +12,8 @@ import {
 import { readinessInsights, type JournalEntry } from "../../lib/coaching/readinessInsights";
 import { courtTestGoals, formatResult, lastTestedOn, type CourtTestRow } from "../../lib/coaching/baselineTests";
 import { listCourtTests } from "../../lib/api/courtTests";
+import { listMyPeerRatings } from "../../lib/api/partners";
+import { latestPeerBySkill } from "../../lib/coaching/peerFeedback";
 import {
   ACCENT, ACCENT_INK, ACTION, ACTION_SOFT, BORDER, CHECK, CREAM, INK, INK_2, INK_3, LINE_STRONG, ON_ACTION, ON_CREAM, STRONG,
   ON_STRONG, SURFACE, SURFACE_2, WARN, WHITE_SUB,
@@ -79,6 +81,7 @@ export default function ProgressPage({ sb, userId }: { sb: SupabaseClient; userI
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [journal, setJournal] = useState<Map<string, JournalEntry>>(new Map());
   const [courtTests, setCourtTests] = useState<CourtTestRow[] | null>(null);
+  const [peerRows, setPeerRows] = useState<{ skill: string; rating: number; updated_at: string }[]>([]);
   const [mode, setModeState] = useState<ProgressMode>(readMode);
 
   useEffect(() => {
@@ -88,6 +91,8 @@ export default function ProgressPage({ sb, userId }: { sb: SupabaseClient; userI
     listJournalSummaries(sb).then((j) => { if (active) setJournal(j); }).catch(() => {});
     // Optional too: before the court-tests update, Progress shows no measured goals.
     listCourtTests(sb).then((t) => { if (active) setCourtTests(t); }).catch(() => { if (active) setCourtTests(null); });
+    // And peer ratings from partners (peer-feedback update): the "peer" column.
+    if (userId) listMyPeerRatings(sb, userId).then((r) => { if (active) setPeerRows(r); }).catch(() => {});
     return () => { active = false; };
   }, [sb, userId]);
 
@@ -110,6 +115,9 @@ export default function ProgressPage({ sb, userId }: { sb: SupabaseClient; userI
     }), [profile, allPoints]);
 
   const measured = useMemo(() => courtTestGoals(courtTests ?? []), [courtTests]);
+  const peer = useMemo(() => latestPeerBySkill(peerRows), [peerRows]);
+  const hasPeer = Object.keys(peer).length > 0;
+  const cols = hasPeer ? "grid-cols-[1fr_40px_44px_44px]" : "grid-cols-[1fr_48px_52px]";
 
   if (items === null && !error) return <p className="text-sm" style={{ color: WHITE_SUB }}>Loading…</p>;
 
@@ -256,20 +264,23 @@ export default function ProgressPage({ sb, userId }: { sb: SupabaseClient; userI
 
         <div className="space-y-4">
           <section aria-label="By skill">
-            <div className="grid grid-cols-[1fr_48px_52px] gap-2 pb-1.5 text-xs" style={{ color: INK_3 }}>
+            <div className={`grid ${cols} gap-2 pb-1.5 text-xs`} style={{ color: INK_3 }}>
               <span className="font-bold" style={{ color: INK_2 }}>By skill</span>
-              {skills.length ? <><span className="text-right">{baseline ? "base" : "first"}</span><span className="text-right">now</span></>
-                : <span className="col-span-2 whitespace-nowrap text-right">fills in after a rated {kindWord}</span>}
+              {skills.length ? <><span className="text-right">{baseline ? "base" : "first"}</span><span className="text-right">now</span>
+                {hasPeer && <span className="text-right">peer</span>}</>
+                : <span className={`${hasPeer ? "col-span-3" : "col-span-2"} whitespace-nowrap text-right`}>fills in after a rated {kindWord}</span>}
             </div>
             <ul className="border-b" style={{ borderColor: BORDER }}>
-              {skills.map((row) => <li key={row.skill} className="grid min-h-[44px] grid-cols-[1fr_48px_52px] items-center gap-2 border-t text-sm" style={{ borderColor: BORDER }}>
+              {skills.map((row) => <li key={row.skill} className={`grid min-h-[44px] ${cols} items-center gap-2 border-t text-sm`} style={{ borderColor: BORDER }}>
                 <span className="truncate">{SKILL_INFO[row.skill].label}
                   <span className="sr-only">{row.change > 0 ? ", improved" : row.change < 0 ? ", lower" : ", no change"}</span></span>
                 <span className="text-right text-[15px]" style={{ ...numStyle, fontWeight: 700, color: INK_3 }}>{row.base}</span>
                 <span className="text-right text-base" style={{ ...numStyle, color: row.change > 0 ? ACCENT_INK : row.change < 0 ? WARN : INK }}>{row.now}</span>
+                {hasPeer && <span className="text-right text-[15px]" style={{ ...numStyle, color: INK_2 }}
+                  aria-label={peer[row.skill] != null ? `peer ${peer[row.skill]}` : "no peer rating"}>{peer[row.skill] ?? "—"}</span>}
               </li>)}
             </ul>
-            <p className="mt-2 text-xs" style={{ color: WHITE_SUB }}>Your own ratings{mode === "all" ? "" : ` in ${mode === "games" ? "games" : "practice"} only`}, not measured scores.</p>
+            <p className="mt-2 text-xs" style={{ color: WHITE_SUB }}>Your own ratings{mode === "all" ? "" : ` in ${mode === "games" ? "games" : "practice"} only`}, not measured scores.{hasPeer ? " Peer: your partners' latest rating." : ""}</p>
           </section>
 
           {(rerate || retest) && <section aria-label="Time to re-test" className="rounded-[18px] p-4" style={{ background: CREAM, color: ON_CREAM }}>

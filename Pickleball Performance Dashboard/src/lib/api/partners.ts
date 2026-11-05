@@ -5,6 +5,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { BuddyLevel } from "./buddy";
 import type { PlayFormat, SessionContext } from "./types";
+import type { SelfSkill } from "../coaching/selfAssessment";
+import type { PeerRating } from "../coaching/peerFeedback";
 
 export type PartnerLink = {
   id: string;
@@ -33,6 +35,11 @@ export type SharedSession = {
   has_report: boolean;
   my_notes: number;
   shared_at: string;
+  /** Skills the owner asked about (peer-feedback update; empty before it). */
+  focus_skills?: SelfSkill[];
+  /** False for a "ratings only" share: no video or video report. */
+  with_video?: boolean;
+  my_ratings?: number;
 };
 
 export type SharedReport = {
@@ -40,7 +47,14 @@ export type SharedReport = {
     owner_id: string; owner_name: string };
   result: unknown | null;
   video_path: string | null;
+  focus_skills?: SelfSkill[];
+  with_video?: boolean;
+  /** The caller's own ratings of the asked skills. */
+  my_ratings?: Partial<Record<SelfSkill, number>>;
 };
+
+/** One partner's share of a session, as the owner sees it. */
+export type SessionShare = { partner_id: string; focus_skills: SelfSkill[]; with_video: boolean };
 
 export type PeerNote = {
   id: string;
@@ -52,6 +66,8 @@ export type PeerNote = {
   body: string;
   created_at: string;
   updated_at: string;
+  /** One of the skills the owner asked about, or null. */
+  skill?: SelfSkill | null;
 };
 
 export const MAX_NOTE = 500;
@@ -80,6 +96,10 @@ export function formatVideoTime(seconds: number | null): string {
 /** Turns database errors into the messages shown on screen. */
 export function partnerErrorText(e: unknown): string {
   const message = e instanceof Error ? e.message : String((e as { message?: string })?.message ?? e);
+  if (/p_focus_skills|p_with_video|rate_shared_skill|session_peer_ratings|peer_ratings|focus_skills|with_video|p_skill/i.test(message)
+      && !/^partners:/.test(message)) {
+    return "Peer feedback needs a database update. Run supabase/scripts/pickleproapp_upgrade_9.sql in the Supabase SQL Editor, then reload.";
+  }
   if (/my_partners|shared_with_me|shared_report|session_peer_notes|create_partner_invite|redeem_partner_code|share_session|peer_note|partners|report_shares|schema cache|PGRST20[02]/i.test(message)
       && !/^partners:/.test(message)) {
     return "Partners needs a database update. Run supabase/scripts/pickleproapp_upgrade_7.sql in the Supabase SQL Editor, then reload.";
@@ -123,15 +143,38 @@ export async function unlinkPartner(sb: SupabaseClient, id: string): Promise<voi
   await rpc<null>(sb, "end_partnership", { p_id: id });
 }
 
-/** Partner ids this session is shared with (the owner's view). */
-export async function listSessionShares(sb: SupabaseClient, sessionId: string): Promise<string[]> {
-  const { data, error } = await sb.from("report_shares").select("partner_id").eq("session_id", sessionId);
+/** Who this session is shared with, and what each was asked about (the owner's view). */
+export async function listSessionShares(sb: SupabaseClient, sessionId: string): Promise<SessionShare[]> {
+  const { data, error } = await sb.from("report_shares").select("partner_id, focus_skills, with_video").eq("session_id", sessionId);
   if (error) throw new Error(error.message);
-  return (data ?? []).map((r: { partner_id: string }) => r.partner_id);
+  return (data ?? []) as SessionShare[];
 }
 
-export async function setSessionShared(sb: SupabaseClient, sessionId: string, partnerId: string, shared: boolean): Promise<void> {
-  await rpc<null>(sb, shared ? "share_session" : "unshare_session", { p_session_id: sessionId, p_partner_id: partnerId });
+/** Share a session with a partner, asking about up to 3 skills, with or without the video. Sharing again updates the ask. */
+export async function shareSession(sb: SupabaseClient, sessionId: string, partnerId: string, focusSkills: SelfSkill[], withVideo: boolean): Promise<void> {
+  await rpc<null>(sb, "share_session", { p_session_id: sessionId, p_partner_id: partnerId, p_focus_skills: focusSkills, p_with_video: withVideo });
+}
+
+export async function unshareSession(sb: SupabaseClient, sessionId: string, partnerId: string): Promise<void> {
+  await rpc<null>(sb, "unshare_session", { p_session_id: sessionId, p_partner_id: partnerId });
+}
+
+/** Ratings of this session by partners (owner: everyone's; partner: their own). */
+export async function listPeerRatings(sb: SupabaseClient, sessionId: string): Promise<PeerRating[]> {
+  return (await rpc<PeerRating[] | null>(sb, "session_peer_ratings", { p_session_id: sessionId })) ?? [];
+}
+
+/** A partner rates one asked skill; null removes the rating. */
+export async function rateSharedSkill(sb: SupabaseClient, sessionId: string, skill: SelfSkill, rating: number | null): Promise<void> {
+  await rpc<null>(sb, "rate_shared_skill", { p_session_id: sessionId, p_skill: skill, p_rating: rating });
+}
+
+/** Every peer rating of the player's sessions, for Progress (read straight from the table: owners can). */
+export async function listMyPeerRatings(sb: SupabaseClient, userId: string): Promise<{ skill: string; rating: number; updated_at: string }[]> {
+  const { data, error } = await sb.from("peer_ratings").select("skill, rating, updated_at").eq("owner_id", userId)
+    .order("updated_at", { ascending: false }).limit(500);
+  if (error) throw new Error(error.message);
+  return data ?? [];
 }
 
 export async function listSharedWithMe(sb: SupabaseClient): Promise<SharedSession[]> {
@@ -148,13 +191,16 @@ export async function listNotes(sb: SupabaseClient, sessionId: string): Promise<
   return rows.map((n) => ({ ...n, video_time_s: n.video_time_s == null ? null : Number(n.video_time_s) }));
 }
 
-export async function addNote(sb: SupabaseClient, sessionId: string, timeSeconds: number | null, body: string): Promise<void> {
+export async function addNote(sb: SupabaseClient, sessionId: string, timeSeconds: number | null, body: string,
+  skill: SelfSkill | null = null): Promise<void> {
   await rpc<string>(sb, "add_peer_note", { p_session_id: sessionId,
-    p_video_time_s: timeSeconds == null ? null : Math.round(timeSeconds * 100) / 100, p_body: body.trim() });
+    p_video_time_s: timeSeconds == null ? null : Math.round(timeSeconds * 100) / 100, p_body: body.trim(),
+    // Sent only when set, so notes still work before the peer-feedback update.
+    ...(skill ? { p_skill: skill } : {}) });
 }
 
-export async function editNote(sb: SupabaseClient, id: string, body: string): Promise<void> {
-  await rpc<null>(sb, "edit_peer_note", { p_id: id, p_body: body.trim() });
+export async function editNote(sb: SupabaseClient, id: string, body: string, skill: SelfSkill | null = null): Promise<void> {
+  await rpc<null>(sb, "edit_peer_note", { p_id: id, p_body: body.trim(), ...(skill ? { p_skill: skill } : {}) });
 }
 
 export async function deleteNote(sb: SupabaseClient, id: string): Promise<void> {

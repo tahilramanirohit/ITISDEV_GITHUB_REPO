@@ -1,0 +1,247 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { Clock, MessageSquareText, Send } from "lucide-react";
+import {
+  formatVideoTime, listNotes, listPartners, listSessionShares, partnerErrorText, shareSession, unshareSession,
+  type PartnerLink, type PeerNote, type SessionShare,
+} from "../../lib/api/partners";
+import { initials } from "../../lib/api/players";
+import { SKILL_INFO, type SelfRatings, type SelfSkill } from "../../lib/coaching/selfAssessment";
+import { askSkillOrder, comparePeer, MAX_FOCUS_SKILLS, peerAuthors, type PeerRating } from "../../lib/coaching/peerFeedback";
+import {
+  ACCENT, ACCENT_INK, ACCENT_SOFT, ACTION, ACTION_EDGE, CHECK, INK, INK_2, INK_3, LINE, LINE_STRONG, ON_ACTION, SURFACE, SURFACE_2, WARN,
+} from "../theme";
+import { Chip, Notice, cardStyle, mascotUrl, numStyle, pressable } from "../shell/primitives";
+
+function Avatar({ name }: { name: string }) {
+  return <span aria-hidden="true" className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-bold"
+    style={{ background: ACCENT_SOFT, color: INK }}>{initials(name) || "?"}</span>;
+}
+
+/** A 1-5 rating as a short bar, so "You 4" and "Kyle 2" read at a glance. */
+function RatingBar({ who, value, color }: { who: string; value: number | null; color: string }) {
+  return <div className="grid grid-cols-[3.5rem_1fr_1.5rem] items-center gap-2 text-xs" style={{ color: INK_2 }}>
+    <span className="truncate">{who}</span>
+    <span className="h-2.5 overflow-hidden rounded-full" style={{ background: SURFACE_2 }}>
+      <span className="block h-full rounded-full" style={{ width: `${((value ?? 0) / 5) * 100}%`, background: color }} /></span>
+    <span className="text-right text-sm" style={{ ...numStyle, color: INK }}>{value ?? "–"}</span>
+  </div>;
+}
+
+/** The bottom sheet for asking a partner to look at up to 3 skills. */
+function AskSheet({ partners, shares, goalSkills, hasVideo, initialPartner, onSend, onClose }: {
+  partners: PartnerLink[]; shares: SessionShare[]; goalSkills: SelfSkill[]; hasVideo: boolean; initialPartner: string | null;
+  onSend: (partnerId: string, skills: SelfSkill[], withVideo: boolean) => Promise<void>; onClose: () => void;
+}) {
+  const existing = (id: string | null) => shares.find((s) => s.partner_id === id);
+  const [partnerId, setPartnerId] = useState<string | null>(initialPartner ?? (partners.length === 1 ? partners[0].other_id : null));
+  const [skills, setSkills] = useState<SelfSkill[]>(existing(partnerId)?.focus_skills ?? goalSkills.slice(0, 2));
+  const [withVideo, setWithVideo] = useState(hasVideo && (existing(partnerId)?.with_video ?? true));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const name = partners.find((p) => p.other_id === partnerId)?.other_name ?? "Your partner";
+  const order = useMemo(() => askSkillOrder(goalSkills), [goalSkills]);
+
+  function pickPartner(id: string) {
+    setPartnerId(id);
+    const share = existing(id);
+    if (share) { setSkills(share.focus_skills); setWithVideo(hasVideo && share.with_video); }
+  }
+  const toggle = (skill: SelfSkill) => setSkills((list) => list.includes(skill) ? list.filter((s) => s !== skill)
+    : list.length < MAX_FOCUS_SKILLS ? [...list, skill] : list);
+  const nothingToDo = !withVideo && skills.length === 0;
+
+  async function send() {
+    if (!partnerId) return setError("Pick who to ask.");
+    if (nothingToDo) return setError("Pick at least one skill for a ratings-only request.");
+    setBusy(true);
+    setError("");
+    try {
+      await onSend(partnerId, skills, withVideo);
+    } catch (e) {
+      setError(partnerErrorText(e));
+      setBusy(false);
+    }
+  }
+
+  const skillNames = skills.map((s) => SKILL_INFO[s].label.toLowerCase());
+  const privacy = `${name} sees ${withVideo ? "the video" : "the session's name and date"}${skills.length ? ` and ${skills.length === 1 ? "this skill" : `these ${skills.length} skills`}` : ""}. Not your ratings, journal or plan.`;
+
+  // Rendered on <body> so the phone tab bar and page layers never cover it.
+  return createPortal(
+    <div className="fixed inset-0 z-[60] flex items-end justify-center">
+      <button type="button" aria-label="Close" className="pp-fade absolute inset-0 cursor-default" style={{ background: "rgba(5,10,7,.6)" }} onClick={onClose} />
+      <div role="dialog" aria-modal="true" aria-label="Ask for feedback" className="pp-sheet relative max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-[22px] px-4 pt-4"
+        style={{ background: SURFACE, borderTop: `1px solid ${LINE_STRONG}`, paddingBottom: "max(16px, env(safe-area-inset-bottom))" }}>
+        <div className="mx-auto mb-3 h-1 w-10 rounded-full" style={{ background: LINE_STRONG }} aria-hidden="true" />
+        <p className="text-[19px] font-extrabold" style={{ color: INK }}>Ask for feedback</p>
+        <p className="mt-0.5 text-[13px]" style={{ color: INK_2 }}>Your partner rates only what you pick, on the same 1–5 scale you use.</p>
+
+        <p className="mt-4 text-xs font-bold uppercase tracking-wide" style={{ color: INK_3 }}>Who</p>
+        <div className="mt-1.5 flex flex-wrap gap-2" role="group" aria-label="Who">
+          {partners.map((p) => <Chip key={p.id} selected={partnerId === p.other_id} onClick={() => pickPartner(p.other_id!)}>{p.other_name}</Chip>)}
+        </div>
+
+        <p className="mt-4 text-xs font-bold uppercase tracking-wide" style={{ color: INK_3 }}>What should they look at? Up to {MAX_FOCUS_SKILLS}</p>
+        <div className="mt-1.5 flex flex-wrap gap-2" role="group" aria-label="Skills to look at">
+          {order.map((s) => <Chip key={s} selected={skills.includes(s)} onClick={() => toggle(s)}>
+            {SKILL_INFO[s].label}{goalSkills.includes(s) ? " · your goal" : ""}</Chip>)}
+        </div>
+
+        <p className="mt-4 text-xs font-bold uppercase tracking-wide" style={{ color: INK_3 }}>Share</p>
+        <div role="group" aria-label="Share" className="mt-1.5 grid grid-cols-2 gap-1 rounded-full p-1" style={{ background: SURFACE_2 }}>
+          {([[true, "With video"], [false, "Ratings only"]] as const).map(([v, label]) =>
+            <button key={label} type="button" aria-pressed={withVideo === v} disabled={v && !hasVideo} onClick={() => setWithVideo(v)}
+              className={`min-h-[44px] rounded-full text-sm font-bold ${pressable}`}
+              style={withVideo === v ? { background: ACTION, color: ON_ACTION } : { color: INK_2 }}>{label}</button>)}
+        </div>
+        {!hasVideo && <p className="mt-1 text-xs" style={{ color: INK_3 }}>No video on this session, so your partner rates from memory, for example after playing with you.</p>}
+
+        <p className="mt-4 rounded-[14px] px-3 py-2.5 text-[13px] leading-snug" style={{ background: SURFACE_2, color: INK }} aria-live="polite">{privacy}</p>
+        {error && <div className="mt-2"><Notice tone="error">{error}</Notice></div>}
+        <button type="button" disabled={busy || !partnerId || nothingToDo} onClick={() => void send()}
+          className={`mt-3 inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full text-base font-extrabold ${pressable}`}
+          style={{ background: ACTION, color: ON_ACTION, border: `1px solid ${ACTION_EDGE}` }}>
+          <Send size={18} aria-hidden="true" />{busy ? "Sending…" : `Send to ${name}`}</button>
+        {skillNames.length > 0 && <span className="sr-only">Asking about {skillNames.join(", ")}</span>}
+      </div>
+    </div>, document.body);
+}
+
+/**
+ * Peer coaching on the owner's session (WP5): ask partners for feedback on chosen
+ * skills, then see "You vs Kyle" per skill and their notes grouped by skill.
+ */
+export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings, goalSkills, onWatch, onChanged }: {
+  sb: SupabaseClient; sessionId: string; hasVideo: boolean;
+  selfRatings: SelfRatings | null; peerRatings: PeerRating[]; goalSkills: SelfSkill[];
+  /** Jump the video to a note's moment. */
+  onWatch?: (timeSeconds: number) => void;
+  onChanged?: () => void;
+}) {
+  const [partners, setPartners] = useState<PartnerLink[] | null>(null);
+  const [shares, setShares] = useState<SessionShare[]>([]);
+  const [notes, setNotes] = useState<PeerNote[]>([]);
+  const [error, setError] = useState("");
+  const [asking, setAsking] = useState<{ partner: string | null } | null>(null);
+  const [notice, setNotice] = useState("");
+
+  const load = useCallback(async () => {
+    try {
+      const [links, s, n] = await Promise.all([listPartners(sb), listSessionShares(sb, sessionId), listNotes(sb, sessionId)]);
+      setPartners(links.filter((l) => l.status === "active" && l.other_id));
+      setShares(s);
+      setNotes(n);
+      setError("");
+    } catch (e) {
+      setPartners([]);
+      setError(partnerErrorText(e));
+    }
+  }, [sb, sessionId]);
+  useEffect(() => { void load(); }, [load]);
+
+  const authors = useMemo(() => {
+    const list = peerAuthors(peerRatings);
+    for (const n of notes) if (!list.some((a) => a.id === n.author_id)) list.push({ id: n.author_id, name: n.author_name });
+    return list;
+  }, [peerRatings, notes]);
+
+  if (partners === null) return null;
+  const nameOf = (id: string) => partners.find((p) => p.other_id === id)?.other_name ?? "A former partner";
+
+  async function stop(partnerId: string) {
+    try {
+      await unshareSession(sb, sessionId, partnerId);
+      setNotice(`Stopped sharing with ${nameOf(partnerId)}.`);
+      await load();
+      onChanged?.();
+    } catch (e) {
+      setError(partnerErrorText(e));
+    }
+  }
+
+  return (
+    <section id="peer-feedback" aria-label="Peer feedback" className="space-y-4 scroll-mt-6">
+      {authors.map((a) => {
+        const rows = comparePeer(selfRatings, peerRatings, a.id);
+        const theirNotes = notes.filter((n) => n.author_id === a.id);
+        const groups = [...new Set(theirNotes.map((n) => n.skill ?? null))];
+        return <div key={a.id} className="rounded-[18px] p-4" style={cardStyle}>
+          <div className="flex items-center gap-3">
+            <Avatar name={a.name} />
+            <div className="min-w-0">
+              <h3 className="text-[15px] font-extrabold" style={{ color: INK }}>Feedback from {a.name}</h3>
+              <p className="text-xs" style={{ color: INK_3 }}>Your partner's view, next to your own rating</p>
+            </div>
+          </div>
+          {rows.length > 0 && <ul className="mt-3 space-y-3" aria-label={`You vs ${a.name}`}>
+            {rows.map((r) => <li key={r.skill}>
+              <p className="text-sm font-bold" style={{ color: INK }}>{r.label}</p>
+              <div className="mt-1 space-y-1">
+                <RatingBar who="You" value={r.self} color={INK_3} />
+                <RatingBar who={a.name} value={r.peer} color={ACCENT} />
+              </div>
+              <p className="mt-1 text-xs font-bold" style={{ color: r.tone === "lower" ? WARN : r.tone === "agree" ? CHECK : INK_2 }}>{r.line}</p>
+            </li>)}
+          </ul>}
+          {theirNotes.length > 0 && <div className="mt-3 space-y-3 border-t pt-3" style={{ borderColor: LINE }}>
+            {groups.map((g) => <div key={g ?? "general"}>
+              <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide" style={{ color: INK_3 }}>
+                <MessageSquareText size={13} aria-hidden="true" />{g ? SKILL_INFO[g].label : "General"}</p>
+              <ul className="mt-1.5 space-y-1.5">
+                {theirNotes.filter((n) => (n.skill ?? null) === g).map((n) => <li key={n.id} className="flex items-start gap-2 text-sm" style={{ color: INK }}>
+                  {n.video_time_s != null && (onWatch
+                    ? <button type="button" onClick={() => onWatch(n.video_time_s!)} aria-label={`Watch at ${formatVideoTime(n.video_time_s)}`}
+                        className={`inline-flex min-h-[36px] shrink-0 items-center gap-1 rounded-full px-2.5 text-xs font-bold ${pressable}`}
+                        style={{ background: ACCENT_SOFT, color: ACCENT_INK }}><Clock size={12} aria-hidden="true" />{formatVideoTime(n.video_time_s)}</button>
+                    : <span className="shrink-0 pt-0.5 text-xs font-bold" style={{ color: ACCENT_INK }}>{formatVideoTime(n.video_time_s)}</span>)}
+                  <span className="pt-1.5">{n.body}</span>
+                </li>)}
+              </ul>
+            </div>)}
+          </div>}
+        </div>;
+      })}
+
+      <div className="rounded-[18px] p-4" style={cardStyle}>
+        <div className="flex items-start gap-3">
+          <img src={mascotUrl} alt="" aria-hidden="true" className="h-12 w-9 shrink-0 object-contain" />
+          <div className="min-w-0 flex-1">
+            <h3 className="text-[15px] font-extrabold" style={{ color: INK }}>Get a partner's view</h3>
+            <p className="mt-0.5 text-[13px]" style={{ color: INK_2 }}>Ask someone you trust to rate up to 3 skills{hasVideo ? " and leave notes on the video" : ""}. Your own ratings, journal and plan stay private.</p>
+          </div>
+        </div>
+        {error && <div className="mt-3"><Notice tone="warn">{error}</Notice></div>}
+        {notice && <div className="mt-3"><Notice>{notice}</Notice></div>}
+        {shares.length > 0 && <ul className="mt-3 space-y-2" aria-label="Shared with">
+          {shares.map((s) => <li key={s.partner_id} className="flex flex-wrap items-center gap-2 rounded-[14px] p-3" style={{ background: SURFACE_2 }}>
+            <span className="min-w-[8rem] flex-1 text-sm" style={{ color: INK }}><b>{nameOf(s.partner_id)}</b>
+              <span className="block text-xs" style={{ color: INK_2 }}>
+                {s.focus_skills.length ? s.focus_skills.map((k) => SKILL_INFO[k].label).join(" · ") : "No skills picked"} · {s.with_video ? "with video" : "ratings only"}</span></span>
+            <button type="button" onClick={() => setAsking({ partner: s.partner_id })} className={`min-h-[44px] rounded-full px-3 text-sm font-bold ${pressable}`}
+              style={{ color: ACCENT_INK }}>Change</button>
+            <button type="button" onClick={() => void stop(s.partner_id)} className={`min-h-[44px] rounded-full px-3 text-sm font-bold ${pressable}`}
+              style={{ color: INK_2 }} aria-label={`Stop sharing with ${nameOf(s.partner_id)}`}>Stop sharing</button>
+          </li>)}
+        </ul>}
+        {partners.length === 0 && !error
+          ? <p className="mt-3 text-sm" style={{ color: INK_2 }}>No partners yet. <a href="#/partners" className="font-bold underline" style={{ color: ACCENT_INK }}>Link with a partner</a> first.</p>
+          : !error && <button type="button" onClick={() => setAsking({ partner: null })}
+              className={`mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-[15px] font-extrabold ${pressable}`}
+              style={{ background: ACTION, color: ON_ACTION, border: `1px solid ${ACTION_EDGE}` }}>
+              <Send size={17} aria-hidden="true" /> Ask for feedback</button>}
+      </div>
+
+      {asking && partners.length > 0 && <AskSheet partners={partners} shares={shares} goalSkills={goalSkills} hasVideo={hasVideo}
+        initialPartner={asking.partner} onClose={() => setAsking(null)}
+        onSend={async (partnerId, skills, withVideo) => {
+          await shareSession(sb, sessionId, partnerId, skills, withVideo);
+          setAsking(null);
+          setNotice(`Sent to ${nameOf(partnerId)}. They'll find it under Partners → Shared with you.`);
+          await load();
+          onChanged?.();
+        }} />}
+    </section>
+  );
+}

@@ -75,7 +75,7 @@ On Windows, `start_website.bat` in the dashboard folder is the website launcher.
 
 ### Database requirements
 
-A Git checkout does not apply database changes. Follow [Supabase setup](docs/SUPABASE_SETUP.md) for the base schema and project configuration, and apply the repository's migrations in timestamp order through **`20261105090000_baseline_tests.sql`** for this branch. Do not reset an existing hosted database.
+A Git checkout does not apply database changes. Follow [Supabase setup](docs/SUPABASE_SETUP.md) for the base schema and project configuration, and apply the repository's migrations in timestamp order through **`20261105100000_peer_feedback.sql`** for this branch. Do not reset an existing hosted database.
 
 | Branch migration | Adds |
 | --- | --- |
@@ -88,8 +88,9 @@ A Git checkout does not apply database changes. Follow [Supabase setup](docs/SUP
 | `20261023100000_buddy_cancel.sql` | Cancel an accepted buddy session with a reason |
 | `20261024090000_partners.sql` | Partners, shared sessions and timestamped peer notes |
 | `20261105090000_baseline_tests.sql` | Measured court tests (private to each player) |
+| `20261105100000_peer_feedback.sql` | Ask partners about up to 3 skills, with video or ratings only; peer ratings and skill-tagged notes |
 
-For an existing project with the earlier schema already applied, the equivalent branch upgrade scripts are [pickleproapp_upgrade.sql](supabase/scripts/pickleproapp_upgrade.sql), [pickleproapp_upgrade_2.sql](supabase/scripts/pickleproapp_upgrade_2.sql) and [pickleproapp_upgrade_3.sql](supabase/scripts/pickleproapp_upgrade_3.sql), in that order. The `coaching` branch adds [pickleproapp_upgrade_4.sql](supabase/scripts/pickleproapp_upgrade_4.sql) (Buddy) [pickleproapp_upgrade_5.sql](supabase/scripts/pickleproapp_upgrade_5.sql) (Buddy city and meetup location) [pickleproapp_upgrade_6.sql](supabase/scripts/pickleproapp_upgrade_6.sql) (cancel a buddy session with a reason) [pickleproapp_upgrade_7.sql](supabase/scripts/pickleproapp_upgrade_7.sql) (Partners and peer coaching) and, on `cleanversion`, [pickleproapp_upgrade_8.sql](supabase/scripts/pickleproapp_upgrade_8.sql) (measured court tests): paste each into the Supabase SQL Editor and run them, in that order, after the first three. Until then, the Buddy page says which file is missing. They are not a replacement for the base schema.
+For an existing project with the earlier schema already applied, the equivalent branch upgrade scripts are [pickleproapp_upgrade.sql](supabase/scripts/pickleproapp_upgrade.sql), [pickleproapp_upgrade_2.sql](supabase/scripts/pickleproapp_upgrade_2.sql) and [pickleproapp_upgrade_3.sql](supabase/scripts/pickleproapp_upgrade_3.sql), in that order. The `coaching` branch adds [pickleproapp_upgrade_4.sql](supabase/scripts/pickleproapp_upgrade_4.sql) (Buddy) [pickleproapp_upgrade_5.sql](supabase/scripts/pickleproapp_upgrade_5.sql) (Buddy city and meetup location) [pickleproapp_upgrade_6.sql](supabase/scripts/pickleproapp_upgrade_6.sql) (cancel a buddy session with a reason) [pickleproapp_upgrade_7.sql](supabase/scripts/pickleproapp_upgrade_7.sql) (Partners and peer coaching) and, on `cleanversion`, [pickleproapp_upgrade_8.sql](supabase/scripts/pickleproapp_upgrade_8.sql) (measured court tests) and [pickleproapp_upgrade_9.sql](supabase/scripts/pickleproapp_upgrade_9.sql) (targeted peer feedback): paste each into the Supabase SQL Editor and run them, in that order, after the first three. Until then, the Buddy page says which file is missing. They are not a replacement for the base schema.
 
 ### Development and guest modes
 

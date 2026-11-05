@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { PeerNotes } from "./PeerNotes";
-import { ShareCard } from "./ShareCard";
 
 afterEach(cleanup);
 
@@ -51,29 +50,19 @@ describe("Peer notes", () => {
     await waitFor(() => expect(rpc).toHaveBeenCalledWith("delete_peer_note", { p_id: "n1" }));
   });
 
+  it("lets a partner tag a note with a skill the owner asked about", async () => {
+    const { sb, rpc } = fakeSb([]);
+    render(<PeerNotes sb={sb} sessionId="s1" mode="partner" ownerName="Pia" controls={{ video: null, seek: vi.fn() }} skills={["dinking"]} />);
+    fireEvent.change(await screen.findByLabelText("Note"), { target: { value: "Paddle up" } });
+    fireEvent.click(screen.getByRole("button", { name: "Dinking" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add note" }));
+    await waitFor(() => expect(rpc).toHaveBeenCalledWith("add_peer_note", { p_session_id: "s1", p_video_time_s: null, p_body: "Paddle up", p_skill: "dinking" }));
+  });
+
   it("stays hidden on the owner's report when there are no notes", async () => {
     const { sb, rpc } = fakeSb([]);
     const { container } = render(<PeerNotes sb={sb} sessionId="s1" mode="owner" controls={{ video: null, seek: vi.fn() }} />);
     await waitFor(() => expect(rpc).toHaveBeenCalled());
     expect(container.textContent).toBe("");
-  });
-});
-
-describe("Share card", () => {
-  it("shares a session with a chosen partner and can stop sharing", async () => {
-    const shares: string[] = [];
-    const rpc = vi.fn(async (fn: string, args?: Record<string, unknown>) => {
-      if (fn === "my_partners") return { data: [{ id: "l1", status: "active", direction: "sent", other_id: "q", other_name: "Quinn" }], error: null };
-      if (fn === "share_session") { shares.push(String(args?.p_partner_id)); return { data: null, error: null }; }
-      if (fn === "unshare_session") { shares.splice(0); return { data: null, error: null }; }
-      return { data: null, error: { message: `unexpected ${fn}` } };
-    });
-    const from = vi.fn(() => ({ select: () => ({ eq: async () => ({ data: shares.map((partner_id) => ({ partner_id })), error: null }) }) }));
-    render(<ShareCard sb={{ rpc, from } as unknown as SupabaseClient} sessionId="s1" />);
-    fireEvent.click(await screen.findByRole("button", { name: "Share with Quinn" }));
-    await waitFor(() => expect(rpc).toHaveBeenCalledWith("share_session", { p_session_id: "s1", p_partner_id: "q" }));
-    expect(await screen.findByText(/Shared with 1 partner/)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Stop sharing with Quinn" }));
-    await waitFor(() => expect(rpc).toHaveBeenCalledWith("unshare_session", { p_session_id: "s1", p_partner_id: "q" }));
   });
 });
