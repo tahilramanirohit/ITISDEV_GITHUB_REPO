@@ -31,11 +31,13 @@ Sign in as **Marco**.
 1. **Progress:** Games / Practice / All; average rating vs the baseline; game results (win rate, games won, unforced errors game by game, games with a buddy); goals from the baseline and from the court tests; "Before and after your games" (better ratings after 7+ hours of sleep; a recovery note after two sore games); the skill table with base / now / peer; the re-test reminder.
 2. **Sessions → League night (latest):** the Pre-game / In-game / Post-game steps; Rate & plan shows Pickle's line "Lia rated your dinking 3/5, lower than your 4/5, so it stays your first focus", then **Feedback from Lia** (You vs Lia bars and her notes by skill).
 3. **Ask for feedback** on another session: pick Lia, up to 3 skills, With video or Ratings only, and read the privacy line.
-4. **Players → My people:** the "Coming up" card with Jun → **Log this session** (fills in New session and links it). Lia's card: games together, last played, feedback both ways, **Ask for feedback** → pick a session (the Ask sheet opens for Lia). Jun's card: **Invite as partner**. Read **Who sees what** at the bottom. **Find:** "I'm looking for", Suggested for you, purpose filter.
+4. **Players → My partners:** the "Coming up" card with Jun → **Log this session** (fills in New session and links it). Lia's card (Video partner): games together, last played, feedback both ways, **Ask for feedback** → pick a session (the Ask sheet opens for Lia). Jun's card (Buddy): **Partner for video feedback**. Read **How it works, and who sees what** at the bottom. **Shared:** "You shared" shows Marco's game shared with Lia and that she sent feedback. **Find:** "I'm looking for", Suggested for you, purpose filter.
 5. **Court tests** from Progress: re-test one drill and watch the goal bar move.
 
 6. **What if I'm injured?** Open any session → Journal → Post-game → tick **I'm injured right now** (pick Knee) → Save. Home now shows **Recovery mode** with a rest plan, Progress says the goals are paused, Players → Find says you're hidden, and the session plan is a rest plan. Tap **I'm back to playing** to undo it (Marco is listed again on the Buddy list).
 
-Then sign in as **Lia** → Players → **Inbox** → "Feedback asked of you" → Marco's game → rate the asked skills → Send feedback. Sign in as **Bea** → Players → **Inbox** → accept Jun's request.
+Then sign in as **Lia** → Players → **Shared** → Marco's game → rate the asked skills → Send feedback. Sign in as **Bea** → Players → **My partners** → accept Jun's request.
+
+**Your own accounts (Rohit and Carla):** run [`supabase/scripts/link_rohit_carla.sql`](../supabase/scripts/link_rohit_carla.sql) (set the emails at the top if the names match more than one account). Carla becomes Rohit's buddy and video partner and his "videotest" session is shared with her, with the video. Both see it under Players → Shared.
 
 **Video (live):** with the analyzer running, open any session → Video → upload a clip → the report with the court overlay, player boxes, heatmap and shots appears when the analysis finishes. Then Ask for feedback "With video" so the partner can leave notes at moments in the video.

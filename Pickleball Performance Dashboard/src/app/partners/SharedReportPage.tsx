@@ -93,7 +93,7 @@ export default function SharedReportPage({ sb }: { sb: SupabaseClient; userId: s
     }
   }, [report]);
 
-  const back = <a href="#/players?section=inbox" className="mb-3 inline-flex min-h-[44px] items-center gap-1.5 text-sm font-bold" style={{ color: GREEN }}>
+  const back = <a href="#/players?section=shared" className="mb-3 inline-flex min-h-[44px] items-center gap-1.5 text-sm font-bold" style={{ color: GREEN }}>
     <ArrowLeft size={16} aria-hidden="true" /> Players</a>;
   if (error) return <>{back}<Notice tone="warn">{error}</Notice></>;
   if (!report) return <>{back}<p className="text-sm" style={{ color: WHITE_DIM }}>Loading…</p></>;

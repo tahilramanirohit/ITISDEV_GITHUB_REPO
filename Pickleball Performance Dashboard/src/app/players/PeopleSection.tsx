@@ -4,16 +4,15 @@ import { CalendarX, Check, ClipboardCheck, Handshake, MessageSquareText, Send, U
 import {
   FORMAT_LABELS, PURPOSE_LABELS, cancelBuddySession, formatFreeTime, logBuddySessionHref, nextFreeTime, sendBuddyRequest, upcomingBuddySessions,
 } from "../../lib/api/buddy";
-import {
-  cancelInvite, createInviteCode, inviteBuddyAsPartner, partnerErrorText, redeemCode, respondToInvite, unlinkPartner,
-} from "../../lib/api/partners";
+import { inviteBuddyAsPartner, partnerErrorText, respondToInvite, unlinkPartner } from "../../lib/api/partners";
 import { recentSessions, type Person } from "../../lib/coaching/people";
 import {
-  ACCENT_INK, ACTION, ACTION_SOFT, BORDER, GREEN, GREEN_BG, INK, INK_3, ON_ACTION, SURFACE_2, WHITE_DIM,
+  ACCENT_INK, ACTION, ACTION_SOFT, BORDER, GREEN_BG, INK, INK_3, ON_ACTION, SURFACE_2, WHITE_DIM,
 } from "../theme";
 import { Card, PrimaryButton, SectionTitle, numStyle, pressable } from "../shell/primitives";
 import { announceBuddyChange } from "../buddy/useBuddyBadge";
-import { AddPartnerCard, Avatar, CancelSessionForm, RequestDetails, RequestForm, levelText, shortDate } from "./parts";
+import { Avatar, CancelSessionForm, RequestDetails, RequestForm, levelText, shortDate } from "./parts";
+import { NeedsAnswer, SentAndCancelled } from "./RequestsBlock";
 import type { Act, PlayersData, Section } from "./PlayersPage";
 
 function Stat({ label, value }: { label: string; value: string }) {
@@ -44,7 +43,7 @@ function PersonCard({ sb, person: p, data, act, busyId, reload, onOpen }: {
           {partner?.linked_at ? ` · partners since ${shortDate(partner.linked_at)}` : ""}{p.next ? ` · next ${formatFreeTime(p.next)}` : ""}</p>
       </div>
       <span className="rounded-full px-3 py-1 text-xs font-extrabold" style={partner ? { background: ACTION_SOFT, color: ACCENT_INK } : { background: GREEN_BG, color: INK }}>
-        {partner ? "Partner" : "Buddy"}</span>
+        {partner ? "Video partner" : "Buddy"}</span>
     </div>
 
     <dl className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label={`You and ${p.name}`}>
@@ -56,7 +55,7 @@ function PersonCard({ sb, person: p, data, act, busyId, reload, onOpen }: {
 
     <p className="mt-2 text-xs leading-snug" style={{ color: WHITE_DIM }}>
       {partner ? `${p.name} sees only the sessions you share, and only what you ask about.`
-        : `${p.name} sees your Buddy listing only. Make them a partner to share sessions and ask for feedback.`}</p>
+        : `${p.name} sees your Buddy listing only. Partner for video feedback to share sessions with them.`}</p>
 
     {p.waitingOnYou.length > 0 && <a href={`#/shared/${p.waitingOnYou[0].session_id}`}
       className={`mt-3 flex min-h-[44px] items-center gap-2 rounded-[12px] px-3 text-sm font-bold ${pressable}`} style={{ background: ACTION_SOFT, color: INK }}>
@@ -71,19 +70,19 @@ function PersonCard({ sb, person: p, data, act, busyId, reload, onOpen }: {
         ? <PrimaryButton tone={panel === "feedback" ? "dark" : "light"} onClick={() => toggle("feedback")}>
             <Send size={18} aria-hidden="true" /> Ask for feedback</PrimaryButton>
         : p.invite?.direction === "sent"
-          ? <span className="inline-flex min-h-[44px] items-center rounded-full px-3 text-sm font-bold" style={{ background: GREEN_BG, color: INK }}>Partner invite sent</span>
+          ? <span className="inline-flex min-h-[44px] items-center rounded-full px-3 text-sm font-bold" style={{ background: GREEN_BG, color: INK }}>Video partner invite sent</span>
           : p.invite
             ? <>
                 <PrimaryButton disabled={busyId === p.invite.id} onClick={() => void act(p.invite!.id, () => respondToInvite(sb, p.invite!.id, true),
-                  `You and ${p.name} are now partners.`)}><Check size={18} aria-hidden="true" /> Accept partner invite</PrimaryButton>
+                  `You and ${p.name} are now video partners.`)}><Check size={18} aria-hidden="true" /> Accept video partner invite</PrimaryButton>
                 <PrimaryButton tone="light" disabled={busyId === p.invite.id} onClick={() => void act(p.invite!.id, () => respondToInvite(sb, p.invite!.id, false))}>
                   <X size={18} aria-hidden="true" /> Decline</PrimaryButton>
               </>
             : <PrimaryButton tone="light" disabled={busyId === `partner-${p.id}`} title="Share chosen sessions and get feedback on your game"
                 onClick={() => void act(`partner-${p.id}`, () => inviteBuddyAsPartner(sb, p.id).catch((e) => { throw new Error(partnerErrorText(e)); }),
-                  `Partner invite sent to ${p.name}. Once they accept, you can ask them for feedback.`)}>
-                <Handshake size={18} aria-hidden="true" /> Invite as partner</PrimaryButton>}
-      {p.theyShared.length > 0 && <PrimaryButton tone="light" onClick={() => onOpen("inbox")}>
+                  `Video partner invite sent to ${p.name}. Once they accept, you can ask them for feedback.`)}>
+                <Handshake size={18} aria-hidden="true" /> Partner for video feedback</PrimaryButton>}
+      {p.theyShared.length > 0 && <PrimaryButton tone="light" onClick={() => onOpen("shared")}>
         <MessageSquareText size={18} aria-hidden="true" /> Their sessions ({p.theyShared.length})</PrimaryButton>}
     </div>
 
@@ -141,8 +140,8 @@ function PersonCard({ sb, person: p, data, act, busyId, reload, onOpen }: {
 
     {partner && (panel === "unlink"
       ? <div className="mt-3 space-y-3 rounded-[var(--radius-md)] p-4" style={{ border: `1px solid ${BORDER}` }} role="group" aria-label={`Unlink ${p.name}`}>
-          <p className="text-sm" style={{ color: INK }}>Unlink {p.name}? Sessions you shared with each other are hidden from both
-            of you right away. Notes already left on your sessions stay with you. You stay buddies if you were.</p>
+          <p className="text-sm" style={{ color: INK }}>Stop being video partners with {p.name}? Sessions you shared with each other are hidden from both
+            of you right away. Notes already left on your sessions stay with you. You stay buddies.</p>
           <div className="flex flex-wrap gap-2">
             <PrimaryButton disabled={busyId === partner.id} onClick={() => void act(partner.id, async () => { await unlinkPartner(sb, partner.id); setPanel(null); },
               `You unlinked ${p.name}.`)}>{busyId === partner.id ? "Unlinking…" : "Unlink"}</PrimaryButton>
@@ -150,32 +149,34 @@ function PersonCard({ sb, person: p, data, act, busyId, reload, onOpen }: {
           </div>
         </div>
       : <button type="button" onClick={() => setPanel("unlink")} className="mt-2 min-h-[44px] text-sm font-semibold underline" style={{ color: WHITE_DIM }}>
-          Unlink partner</button>)}
+          Stop video partnership</button>)}
   </Card>;
 }
 
 /** Who sees what: the two levels of trust, said plainly. */
 function PrivacyNote() {
   return <section aria-label="Who sees what" className="rounded-[18px] p-4" style={{ background: SURFACE_2, color: INK }}>
-    <h2 className="text-[15px] font-extrabold">Who sees what</h2>
+    <h2 className="text-[15px] font-extrabold">How it works, and who sees what</h2>
     <dl className="mt-2 space-y-2 text-sm">
-      <div><dt className="font-bold">Buddy list (anyone 18+ who opens Find)</dt>
-        <dd style={{ color: WHITE_DIM }}>Your name, level, a rounded game rating and what you're looking for, only while you're listed.</dd></div>
-      <div><dt className="font-bold">Partner (only people you accepted)</dt>
-        <dd style={{ color: WHITE_DIM }}>Only the sessions you choose to share, and only the skills you ask about, with or without the video. Never your
-          journal, plan or other sessions. Unlink at any time.</dd></div>
+      <div><dt className="font-bold">1. Buddy (Find → Buddy up, they accept)</dt>
+        <dd style={{ color: WHITE_DIM }}>You can ask each other to play again. While you're listed, players 18+ see only your name, level, a rounded
+          game rating and what you're looking for.</dd></div>
+      <div><dt className="font-bold">2. Video partner (a buddy you partner with)</dt>
+        <dd style={{ color: WHITE_DIM }}>Sees only the sessions you choose to share, and only the skills you ask about, with or without the video.
+          Never your journal, plan or other sessions. Stop at any time; you stay buddies.</dd></div>
     </dl>
   </section>;
 }
 
-/** My people: buddies and partners together, the next buddy session, and adding a partner by code. */
+/** My partners: requests waiting for you, buddies and video partners, the next buddy session, and how it works. */
 export function PeopleSection({ sb, data, people, act, busyId, reload, onOpen }: {
   sb: SupabaseClient; data: PlayersData; people: Person[]; act: Act; busyId: string | null; reload: () => Promise<void>; onOpen: (s: Section) => void;
 }) {
   const coming = upcomingBuddySessions(data.requests)[0] ?? null;
-  const codes = data.links.filter((l) => l.status === "pending" && l.direction === "sent" && !l.other_id);
 
   return <>
+    <NeedsAnswer sb={sb} data={data} act={act} busyId={busyId} />
+
     {coming && <section aria-label="Coming up" className="rounded-[18px] p-4" style={{ background: ACTION_SOFT, color: INK }}>
       <p className="text-xs font-extrabold tracking-wide" style={{ color: ACCENT_INK }}>COMING UP · {formatFreeTime(coming.when).toUpperCase()}</p>
       <p className="mt-1.5 text-base font-extrabold">{PURPOSE_LABELS[coming.request.purpose]} with {coming.request.other_name}</p>
@@ -186,28 +187,18 @@ export function PeopleSection({ sb, data, people, act, busyId, reload, onOpen }:
     </section>}
 
     <section aria-labelledby="people-heading" className="space-y-3">
-      <SectionTitle><span id="people-heading">My people</span></SectionTitle>
+      <SectionTitle><span id="people-heading">My partners</span></SectionTitle>
       {people.length === 0
-        ? <Card><p className="text-sm" style={{ color: WHITE_DIM }}>No one yet. Find someone to play with, or add a partner you already
-            know with a code below. Buddies you play with can become partners who give you feedback.</p>
+        ? <Card><p className="text-sm" style={{ color: WHITE_DIM }}>No one yet. Buddy up with someone under Find. Once they accept, you're buddies:
+            ask them to play again, or partner for video feedback on your sessions.</p>
             {data.buddyReady && <PrimaryButton className="mt-3" onClick={() => onOpen("find")}><UserRoundPlus size={18} aria-hidden="true" /> Find players</PrimaryButton>}</Card>
-        : <ul className="space-y-3" aria-label="My people">
+        : <ul className="space-y-3" aria-label="My partners">
             {people.map((p) => <li key={p.id}>
               <PersonCard sb={sb} person={p} data={data} act={act} busyId={busyId} reload={reload} onOpen={onOpen} /></li>)}
           </ul>}
     </section>
 
-    <AddPartnerCard codes={codes} busyId={busyId}
-      onCreate={() => act("create", async () => { await createInviteCode(sb); })}
-      onCancel={(id) => void act(id, () => cancelInvite(sb, id))}
-      onRedeem={async (code) => {
-        await redeemCode(sb, code);
-        announceBuddyChange();
-        await act("redeemed", async () => {}, "Linked. You are now partners.");
-      }} />
+    <SentAndCancelled sb={sb} data={data} act={act} busyId={busyId} />
     <PrivacyNote />
-    <p className="text-center text-sm" style={{ color: WHITE_DIM }}>
-      <span className="inline-flex items-center gap-1"><Handshake size={14} aria-hidden="true" style={{ color: GREEN }} /> Played with a buddy?</span>{" "}
-      Invite them as a partner from their card, then ask for feedback on that game.</p>
   </>;
 }

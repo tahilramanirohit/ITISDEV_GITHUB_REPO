@@ -74,7 +74,7 @@ const TABS = [
   { href: "#/sessions", label: "Sessions", icon: CalendarDays, match: (p: string) => p.startsWith("/sessions") },
   { href: "#/new", label: "Log", icon: Plus, match: (p: string) => p === "/new", primary: true },
   { href: "#/progress", label: "Progress", icon: BarChart3, match: (p: string) => p === "/progress" || p === "/tests" },
-  // Buddy and Partners in one tab: My people, Find and Inbox.
+  // Buddy and Partners in one tab: My partners, Find and Shared.
   { href: "#/players", label: "Players", icon: UsersRound,
     match: (p: string) => p === "/players" || p === "/buddy" || p === "/partners" || p.startsWith("/shared") },
   { href: "#/profile", label: "Profile", icon: UserRound, match: (p: string) => p.startsWith("/profile") },

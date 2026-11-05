@@ -98,9 +98,9 @@ describe("Peer feedback (owner)", () => {
     const from = vi.fn(() => ({ select: () => ({ eq: async () => ({ data: [], error: null }) }) }));
     render(<PeerFeedback sb={{ rpc, from } as unknown as SupabaseClient} sessionId="s1" hasVideo={false} selfRatings={null} peerRatings={[]}
       goalSkills={[]} playedWith={{ id: "j", name: "Jun" }} />);
-    expect(await screen.findByText(/Jun needs to be your partner first/)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Invite Jun as a partner" }));
+    expect(await screen.findByText(/You and Jun are buddies. Partner for video feedback first/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Partner with Jun for video feedback" }));
     await waitFor(() => expect(rpc).toHaveBeenCalledWith("invite_buddy_as_partner", { p_player: "j" }));
-    expect(await screen.findByText(/Partner invite sent to Jun/)).toBeTruthy();
+    expect(await screen.findByText(/Video partner invite sent to Jun/)).toBeTruthy();
   });
 });

@@ -108,7 +108,7 @@ export function FindSection({ sb, userId, data, injured, act, busyId, reload }: 
       <Chip selected={purpose === "practice"} onClick={() => setPurpose("practice")}>Practice</Chip>
       <Chip selected={purpose === "competition"} onClick={() => setPurpose("competition")}>Competition prep</Chip>
     </div>}
-    {sentTo && <Notice>Request sent to {sentTo}. Follow it in Inbox.</Notice>}
+    {sentTo && <Notice>Request sent to {sentTo}. Follow it under My partners.</Notice>}
     {shown.length === 0 ? <Card><p className="text-sm" style={{ color: WHITE_DIM }}>
         {filter === "all" && purpose === "all" ? "No other players are listed yet. Ask your playing partners to open Players and show themselves."
           : "No listed players match these filters right now."}</p></Card>

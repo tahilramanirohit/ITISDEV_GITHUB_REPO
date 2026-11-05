@@ -6,8 +6,10 @@ import type { PartnerLink, SharedSession } from "../api/partners";
 
 /** The player's own sessions, as far as the people list needs them. */
 export type MySessionLite = { id: string; title: string; session_date: string; created_at?: string; buddy_request_id?: string | null };
-/** One of the player's sessions shared with a partner. */
-export type MyShare = { session_id: string; partner_id: string };
+/** One of the player's sessions shared with a partner (what was asked is missing before the peer-feedback update). */
+export type MyShare = { session_id: string; partner_id: string; focus_skills?: string[] | null; with_video?: boolean | null };
+/** Who rated which of the player's sessions (peer ratings, owner's view). */
+export type PeerRatingRef = { session_id: string; author_id: string };
 
 export type Person = {
   id: string;

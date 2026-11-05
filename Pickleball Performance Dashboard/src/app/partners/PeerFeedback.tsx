@@ -175,7 +175,7 @@ export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings
     setError("");
     try {
       await inviteBuddyAsPartner(sb, playedWith.id);
-      setNotice(`Partner invite sent to ${playedWith.name}. Once they accept, ask them here.`);
+      setNotice(`Video partner invite sent to ${playedWith.name}. Once they accept, ask them here.`);
       await load();
     } catch (e) {
       setError(partnerErrorText(e));
@@ -247,17 +247,17 @@ export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings
               style={{ background: ACTION, color: ON_ACTION, border: `1px solid ${ACTION_EDGE}` }}>
               <Send size={17} aria-hidden="true" /> Ask {playedWith.name}</button>
           : buddyLink?.status === "pending" && buddyLink.direction === "sent"
-            ? <p className="mt-1 text-sm" style={{ color: INK_2 }}>Partner invite sent. Once {playedWith.name} accepts, you can ask here.</p>
+            ? <p className="mt-1 text-sm" style={{ color: INK_2 }}>Video partner invite sent. Once {playedWith.name} accepts, you can ask here.</p>
             : buddyLink?.status === "pending"
-              ? <p className="mt-1 text-sm" style={{ color: INK_2 }}>{playedWith.name} invited you as a partner. <a href="#/players?section=inbox"
-                  className="font-bold underline" style={{ color: ACCENT_INK }}>Answer in Players → Inbox</a>, then ask here.</p>
+              ? <p className="mt-1 text-sm" style={{ color: INK_2 }}>{playedWith.name} invited you to be video partners. <a href="#/players?section=partners"
+                  className="font-bold underline" style={{ color: ACCENT_INK }}>Answer in Players → My partners</a>, then ask here.</p>
               : <>
-                  <p className="mt-1 text-sm" style={{ color: INK_2 }}>{playedWith.name} needs to be your partner first. You played together, so no
-                    code is needed: they accept once, then you can ask about any session you share.</p>
+                  <p className="mt-1 text-sm" style={{ color: INK_2 }}>You and {playedWith.name} are buddies. Partner for video feedback first: they
+                    accept once, then you can ask about any session you share.</p>
                   <button type="button" disabled={inviting} onClick={() => void inviteBuddy()}
                     className={`mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-[15px] font-extrabold ${pressable}`}
                     style={{ background: ACTION, color: ON_ACTION, border: `1px solid ${ACTION_EDGE}` }}>
-                    {inviting ? "Sending…" : `Invite ${playedWith.name} as a partner`}</button>
+                    {inviting ? "Sending…" : `Partner with ${playedWith.name} for video feedback`}</button>
                 </>}
       </div>}
 
@@ -283,7 +283,7 @@ export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings
           </li>)}
         </ul>}
         {partners.length === 0 && !error
-          ? <p className="mt-3 text-sm" style={{ color: INK_2 }}>No partners yet. <a href="#/players?section=people" className="font-bold underline" style={{ color: ACCENT_INK }}>Add a partner under Players</a> first.</p>
+          ? <p className="mt-3 text-sm" style={{ color: INK_2 }}>No video partners yet. <a href="#/players?section=partners" className="font-bold underline" style={{ color: ACCENT_INK }}>Partner with a buddy under Players</a> first.</p>
           : !error && <button type="button" onClick={() => setAsking({ partner: null })}
               className={`mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-[15px] font-extrabold ${pressable}`}
               style={{ background: ACTION, color: ON_ACTION, border: `1px solid ${ACTION_EDGE}` }}>
@@ -295,7 +295,7 @@ export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings
         onSend={async (partnerId, skills, withVideo) => {
           await shareSession(sb, sessionId, partnerId, skills, withVideo);
           setAsking(null);
-          setNotice(`Sent to ${nameOf(partnerId)}. They'll find it under Players → Inbox.`);
+          setNotice(`Sent to ${nameOf(partnerId)}. You both find it under Players → Shared.`);
           await load();
           onChanged?.();
         }} />}

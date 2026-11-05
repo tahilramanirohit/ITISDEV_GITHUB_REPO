@@ -1,13 +1,12 @@
 // Pieces shared by the Players tab's sections: forms and cards moved from the
 // former Buddy and Partners pages, unchanged in behaviour.
 import { useMemo, useState, type FormEvent } from "react";
-import { CalendarPlus, Check, Clock, Copy, KeyRound, Link2, MapPin, Trash2 } from "lucide-react";
+import { CalendarPlus, Clock, MapPin, Trash2 } from "lucide-react";
 import {
   CANCEL_REASONS, FORMATS, FORMAT_LABELS, LEVEL_LABELS, MAX_CANCEL_REASON, MAX_CITY, MAX_DAYS_AHEAD, MAX_FREE_TIMES,
   MAX_LOCATION, PURPOSES, PURPOSE_LABELS, buddyErrorText, formatFreeTime, freeTimeProblem, isoDate, meetupProblem,
   type BuddyFormat, type BuddyLevel, type BuddyPurpose, type BuddyRequest, type FreeTime, type Meetup,
 } from "../../lib/api/buddy";
-import { formatCode, partnerErrorText, type PartnerLink } from "../../lib/api/partners";
 import { BORDER, GREEN, GREEN_BG, INK, WHITE, WHITE_DIM } from "../theme";
 import { Card, Chip, Notice, PrimaryButton, SectionTitle, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
 
@@ -232,79 +231,6 @@ export function JoinCard({ onJoin }: { onJoin: (listed: boolean) => Promise<void
           setBusy(false);
         }
       }}>{busy ? "Saving…" : "Continue"}</PrimaryButton>
-    </Card>
-  );
-}
-
-/** Make a one-time code, or link with someone else's code. */
-export function AddPartnerCard({ codes, onCreate, onRedeem, onCancel, busyId }: {
-  codes: PartnerLink[]; busyId: string | null;
-  onCreate: () => Promise<void>; onRedeem: (code: string) => Promise<void>; onCancel: (id: string) => void;
-}) {
-  const [code, setCode] = useState("");
-  const [problem, setProblem] = useState<string | null>(null);
-  const [linking, setLinking] = useState(false);
-  const [copied, setCopied] = useState<string | null>(null);
-
-  async function redeem(e: FormEvent) {
-    e.preventDefault();
-    if (!code.trim()) return setProblem("Enter the code your partner sent you.");
-    setLinking(true);
-    setProblem(null);
-    try {
-      await onRedeem(code);
-      setCode("");
-    } catch (err) {
-      setProblem(partnerErrorText(err));
-    } finally {
-      setLinking(false);
-    }
-  }
-
-  async function copy(c: string) {
-    try {
-      await navigator.clipboard.writeText(formatCode(c));
-      setCopied(c);
-    } catch {
-      setCopied(null); // The code is on screen to copy by hand.
-    }
-  }
-
-  return (
-    <Card>
-      <SectionTitle>Add a partner</SectionTitle>
-      <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>
-        Send a code to someone you trust, such as your doubles partner. A code works once and lasts 7 days.
-      </p>
-      <PrimaryButton className="mt-3" disabled={busyId === "create"} onClick={() => void onCreate()}>
-        <KeyRound size={18} aria-hidden="true" /> {busyId === "create" ? "Creating…" : "Create an invite code"}</PrimaryButton>
-      {codes.length > 0 && <ul className="mt-3 space-y-2" aria-label="Your unused invite codes">
-        {codes.map((c) => <li key={c.id} className="flex flex-wrap items-center gap-3 rounded-[var(--radius-md)] p-3"
-          style={{ border: `1px solid ${BORDER}` }}>
-          <div className="min-w-[9rem] flex-1">
-            <p className="font-mono text-xl font-bold tracking-wider" style={{ color: INK }}>{formatCode(c.invite_code ?? "")}</p>
-            <p className="text-sm" style={{ color: WHITE_DIM }}>Valid until {shortDate(c.expires_at)} · works once</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <PrimaryButton tone="light" onClick={() => void copy(c.invite_code ?? "")}>
-              {copied === c.invite_code ? <><Check size={18} aria-hidden="true" /> Copied</> : <><Copy size={18} aria-hidden="true" /> Copy</>}
-            </PrimaryButton>
-            <PrimaryButton tone="light" disabled={busyId === c.id} onClick={() => onCancel(c.id)}
-              aria-label={`Cancel code ${formatCode(c.invite_code ?? "")}`}>Cancel</PrimaryButton>
-          </div>
-        </li>)}
-      </ul>}
-      <form onSubmit={redeem} className="mt-5 border-t pt-4" style={{ borderColor: BORDER }}>
-        <label className="grid gap-1 text-sm font-bold" style={{ color: INK }}>Have a code?
-          <div className="flex flex-wrap gap-2">
-            <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="e.g. K7P4-QX9M" autoComplete="off"
-              autoCapitalize="characters" spellCheck={false} maxLength={20}
-              className="min-w-0 flex-1 px-3 py-2 font-mono text-base font-normal" style={fieldStyle} />
-            <PrimaryButton type="submit" disabled={linking}><Link2 size={18} aria-hidden="true" /> {linking ? "Linking…" : "Link"}</PrimaryButton>
-          </div>
-        </label>
-        {problem && <div className="mt-2"><Notice tone="error">{problem}</Notice></div>}
-      </form>
     </Card>
   );
 }

@@ -174,7 +174,7 @@ function SignedInApp({ sb, cfg }: { sb: SupabaseClient; cfg: AppConfig }) {
           <Route path="/players" element={<PlayersPage sb={sb} userId={user.id} />} />
           {/* Buddy and Partners are one Players tab now; old links still land in the right section. */}
           <Route path="/buddy" element={<Navigate to="/players?section=find" replace />} />
-          <Route path="/partners" element={<Navigate to="/players?section=people" replace />} />
+          <Route path="/partners" element={<Navigate to="/players?section=partners" replace />} />
           <Route path="/shared/:sessionId" element={<SharedReportPage sb={sb} userId={user.id} />} />
           <Route path="/settings" element={<SettingsPage sb={sb} userId={user.id} account={account} devLinks={<DevLinks cfg={cfg} />} />} />
           <Route path="/profile" element={<ProfilePage sb={sb} userId={user.id} account={account}
