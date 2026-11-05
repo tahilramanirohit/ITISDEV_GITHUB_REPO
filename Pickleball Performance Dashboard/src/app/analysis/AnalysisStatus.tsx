@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { STATE_LABELS, type AnalysisUiState } from "../../lib/analysis/state";
 import { BLUE_SKY, NEON, ORANGE, ROSE, WHITE_DIM, WHITE_SUB } from "../theme";
-import { Pill, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
+import { Pill, fieldStyle, labelClass, labelStyle, pressable } from "../shell/primitives";
 
 const STATE_COLORS: Record<AnalysisUiState, string> = {
   not_uploaded: WHITE_SUB,
@@ -37,7 +37,32 @@ export const FRAME_MODES = [
 ] as const;
 export type FrameMode = (typeof FRAME_MODES)[number]["value"];
 
+export type PlayersOnCourt = 2 | 4;
+
+/** Singles sessions start at 2 players, everything else at 4. */
+export const defaultPlayersOnCourt = (playFormat?: string | null): PlayersOnCourt => (playFormat === "singles" ? 2 : 4);
+
+/**
+ * How many players are on the court: told to the analyzer before it runs, so a
+ * singles video never gets four players (a spectator or a player on the next court).
+ */
+export function PlayersOnCourtToggle({ value, onChange, idBase = "players-on-court" }: {
+  value: PlayersOnCourt; onChange: (v: PlayersOnCourt) => void; idBase?: string;
+}) {
+  return <div>
+    <p className={labelClass} style={labelStyle} id={`${idBase}-label`}>Players on court</p>
+    <div role="group" aria-labelledby={`${idBase}-label`} className="grid grid-cols-2 gap-1 rounded-full p-1" style={{ background: "var(--pp-surface-2)" }}>
+      {([[2, "2 · Singles"], [4, "4 · Doubles"]] as const).map(([v, label]) => <button key={v} type="button" aria-pressed={value === v}
+        onClick={() => onChange(v)} className={`min-h-[44px] rounded-full text-sm font-bold ${pressable}`}
+        style={value === v ? { background: "var(--pp-action)", color: "var(--pp-on-action)" } : { color: "var(--pp-ink-2)" }}>{label}</button>)}
+    </div>
+    <p className="mt-1 text-xs" style={{ color: WHITE_DIM }}>The analyzer keeps at most {value === 2 ? "one player" : "two players"} on each side of the net, so people off court are not counted.</p>
+  </div>;
+}
+
 export type AnalysisParams = {
+  /** 2 (singles) or 4 (doubles). */
+  players_on_court?: PlayersOnCourt;
   selection?: { method: "court_half"; court_half: "near" | "far" } | { method: "track_id"; track_id: number };
   experimental_zones?: boolean;
   /** Left out for "standard", so saved jobs keep their old form. */
@@ -49,21 +74,26 @@ export type AnalysisParams = {
  * when an optional court model is configured. Court correction is handled by
  * the visible review step before upload.
  */
-export function AnalysisParamsForm({ onChange, playFormat }: {
+export function AnalysisParamsForm({ onChange, playFormat, showPlayers = true, initialPlayers }: {
   onChange: (params: AnalysisParams | null, error: string | null) => void; playFormat?: string;
+  /** Off where the players toggle is shown separately (the upload card). */
+  showPlayers?: boolean;
+  initialPlayers?: PlayersOnCourt;
 }) {
-  const doubles = playFormat === "doubles";
+  const [players, setPlayers] = useState<PlayersOnCourt>(initialPlayers ?? defaultPlayersOnCourt(playFormat));
+  const doubles = players === 4;
   const [mode, setMode] = useState<"none" | "near" | "far" | "track">("near");
   const [trackId, setTrackId] = useState("");
   const [zones, setZones] = useState(false);
   const [frameMode, setFrameMode] = useState<FrameMode>("standard");
 
-  function emit(next: { mode?: typeof mode; trackId?: string; zones?: boolean; frameMode?: FrameMode }) {
+  function emit(next: { mode?: typeof mode; trackId?: string; zones?: boolean; frameMode?: FrameMode; players?: PlayersOnCourt }) {
+    const p = next.players ?? players;
     const m = next.mode ?? mode;
     const t = next.trackId ?? trackId;
     const z = next.zones ?? zones;
     const f = next.frameMode ?? frameMode;
-    const params: AnalysisParams = {};
+    const params: AnalysisParams = showPlayers ? { players_on_court: p } : {};
     if (m === "near" || m === "far") params.selection = { method: "court_half", court_half: m };
     if (m === "track") {
       const n = Number.parseInt(t, 10);
@@ -75,8 +105,14 @@ export function AnalysisParamsForm({ onChange, playFormat }: {
     onChange(params, null);
   }
 
+  // Send the starting choice too, so an untouched form still tells the analyzer the player count.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on mount
+  useEffect(() => { emit({}); }, []);
+
   return (
     <div className="grid gap-3 sm:grid-cols-2">
+      {showPlayers && <div className="sm:col-span-2"><PlayersOnCourtToggle value={players} idBase="form-players"
+        onChange={(v) => { setPlayers(v); emit({ players: v }); }} /></div>}
       <div>
         <label className={labelClass} style={labelStyle} htmlFor="player-selection">Choose the player for positioning analysis</label>
         <select id="player-selection" value={mode} className="w-full rounded-xl px-3 py-2 text-sm" style={fieldStyle}

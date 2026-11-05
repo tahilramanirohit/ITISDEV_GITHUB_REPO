@@ -6,7 +6,10 @@ export const RESULT_STATUSES = ["ok", "insufficient_data"] as const;
 export const DATA_ORIGINS = ["measured", "test_fixture"] as const;
 export const METRIC_STATUSES = ["measured", "insufficient_data", "not_computed", "experimental"] as const;
 export const VALIDATION_LEVELS = ["not_evaluated", "synthetic_only", "evaluated_on_real_footage"] as const;
-export const METRIC_KEYS = ["court_heatmap", "zone_occupancy", "positioning", "rally_segmentation", "shot_classification", "zone_time"] as const;
+export const METRIC_KEYS = ["court_heatmap", "zone_occupancy", "positioning", "rally_segmentation", "shot_classification", "zone_time", "error_counts"] as const;
+/** Errors counted from the video (server/picklepro/errors.py). */
+export const ERROR_KINDS = ["serve_fault", "out", "kitchen_fault", "no_mans_land", "stayed_back"] as const;
+export type ErrorKind = (typeof ERROR_KINDS)[number];
 export const RESULT_KEYS = [
   "schema_version", "status", "data_origin", "message", "provenance", "video", "coverage", "calibration",
   "player_selection", "players", "tracks", "player_positions", "ball_positions", "court_lines", "metrics", "warnings",
@@ -68,6 +71,21 @@ export type PlayerZoneTime = {
   zone_seconds: Record<ZoneName, number>;
   zone_share: Record<ZoneName, number>;
   kitchen_line_share: number;
+};
+
+export type ErrorEvent = {
+  time_seconds: number;
+  kind: ErrorKind;
+  player_id: number | null;
+  side: "near" | "far" | null;
+  rally_index: number | null;
+  detail: string;
+};
+export type ErrorCountsValue = {
+  definitions: Record<string, string>;
+  counts: Record<ErrorKind, number>;
+  players: { player_id: number; side: "near" | "far"; counts: Record<ErrorKind, number> }[];
+  events: ErrorEvent[];
 };
 
 export type ZoneTimeValue = {
@@ -228,6 +246,7 @@ export type AnalysisResultV1 = {
     rally_segmentation: Metric & { value?: RallyValue | null };
     shot_classification: Metric & { value?: ShotsValue | null };
     zone_time: Metric & { value?: ZoneTimeValue | null };
+    error_counts: Metric & { value?: ErrorCountsValue | null };
   };
   warnings: string[];
 };
@@ -255,6 +274,11 @@ function num(v: unknown, path: string): number {
 const POSITIONING_NOT_COMPUTED = {
   status: "not_computed", validation: "not_evaluated", scope: "whole_clip",
   reason: "Positioning patterns were not computed for this result. Re-run analysis to add them.", value: null,
+};
+
+const ERRORS_NOT_COMPUTED = {
+  status: "not_computed", validation: "not_evaluated", scope: "whole_clip",
+  reason: "Errors were not counted for this result. Re-run analysis to add them.", value: null,
 };
 
 const ZONE_TIME_NOT_COMPUTED = {
@@ -293,6 +317,7 @@ export function parseAnalysisResult(input: unknown): AnalysisResultV1 {
     ...input.metrics,
     ...(input.metrics.positioning === undefined ? { positioning: POSITIONING_NOT_COMPUTED } : {}),
     ...(input.metrics.zone_time === undefined ? { zone_time: ZONE_TIME_NOT_COMPUTED } : {}),
+    ...(input.metrics.error_counts === undefined ? { error_counts: ERRORS_NOT_COMPUTED } : {}),
   };
   for (const key of METRIC_KEYS) {
     const m = (metrics as Record<string, unknown>)[key];
@@ -332,6 +357,19 @@ export function parseAnalysisResult(input: unknown): AnalysisResultV1 {
         num(row[key], `metrics.zone_time.value.players.${key}`);
       }
       for (const zone of ZONES) num((row.zone_share as Record<string, unknown>)[zone], `metrics.zone_time.value.players.zone_share.${zone}`);
+    }
+  }
+  const errorCounts = (metrics as Record<string, Record<string, unknown>>).error_counts;
+  if (errorCounts.status === "measured" || errorCounts.status === "experimental") {
+    const v = errorCounts.value;
+    if (!isObj(v) || !isObj(v.counts) || !Array.isArray(v.players) || !Array.isArray(v.events)) {
+      throw new ContractError("metrics.error_counts: expected counts, players and events");
+    }
+    for (const kind of ERROR_KINDS) num((v.counts as Record<string, unknown>)[kind], `metrics.error_counts.value.counts.${kind}`);
+    for (const e of v.events) {
+      if (!isObj(e)) throw new ContractError("metrics.error_counts.value.events: invalid event");
+      num(e.time_seconds, "metrics.error_counts.value.events.time_seconds");
+      oneOf(e.kind, ERROR_KINDS, "metrics.error_counts.value.events.kind");
     }
   }
   if (!Array.isArray(input.player_positions) || !Array.isArray(input.tracks) || !Array.isArray(input.warnings)) {
@@ -405,6 +443,7 @@ export const METRIC_LABELS: Record<MetricKey, string> = {
   rally_segmentation: "Rallies (estimated)",
   shot_classification: "Shot types (estimated)",
   zone_time: "Zone time (where each player stood)",
+  error_counts: "Errors (estimated)",
 };
 
 export const VALIDATION_LABELS: Record<ValidationLevel, string> = {

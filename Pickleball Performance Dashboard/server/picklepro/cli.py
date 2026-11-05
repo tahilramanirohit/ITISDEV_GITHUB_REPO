@@ -78,6 +78,7 @@ def _cmd_analyze(args) -> int:
         target_fps=args.target_fps,
         max_seconds=args.max_seconds, calibration=calibration, selection=selection,
         experimental_zones=args.experimental_zones, include_positions=not args.no_positions,
+        players_on_court=args.players,
         min_tracked_seconds=args.min_tracked_seconds, min_tracked_fraction=args.min_tracked_fraction,
     )
     try:
@@ -168,6 +169,7 @@ def build_parser() -> argparse.ArgumentParser:
     an.add_argument("--min-tracked-seconds", type=float, default=10.0)
     an.add_argument("--min-tracked-fraction", type=float, default=0.25)
     an.add_argument("--experimental-zones", action="store_true", help="Also compute unvalidated zone occupancy")
+    an.add_argument("--players", type=int, choices=(2, 4), help="Players on court: 2 for singles, 4 for doubles")
     an.add_argument("--no-positions", action="store_true", help="Omit per-frame boxes from the output")
     an.add_argument("--progress", action="store_true")
     an.add_argument("--out", type=Path, help="Write result JSON here (default: stdout)")

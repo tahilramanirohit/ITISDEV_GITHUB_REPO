@@ -27,6 +27,8 @@ from .contract import (
     CourtLinesSnapshot,
     Coverage,
     DetectorInfo,
+    ErrorCountsMetric,
+    ErrorCountsValue,
     HeatmapValue,
     Metrics,
     PositioningMetric,
@@ -57,7 +59,8 @@ from .positioning import positioning_patterns
 from .shots import BALL_DIAMETER_M, CORE_TYPES, FrameObs, analyze_shots, court_line_segments
 from .spatial import Selection, dwell_heatmap, select_player, zone_occupancy
 from .video_io import ReadStats, iter_frames, probe, sha256_of
-from .zones import HOLD_S, MAX_FILL_GAP_S, ZONE_DEFINITIONS, zone_time
+from .errors import count_errors, positioning_errors, shot_errors
+from .zones import HOLD_S, MAX_FILL_GAP_S, ZONE_DEFINITIONS, _positions, zone_time
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +102,8 @@ class AnalysisOptions:
     selection: Optional[Selection] = None
     selection_time_s: Optional[float] = None
     experimental_zones: bool = False
+    # Players on the court: 2 (singles) or 4 (doubles). None keeps up to 2 per side.
+    players_on_court: Optional[int] = None
     min_tracked_seconds: float = 10.0
     min_tracked_fraction: float = 0.25
     include_positions: bool = True
@@ -142,7 +147,9 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
     extra_ball_frames = 0
     last_people: List[dict] = []
     last_people_cal: Optional[CourtCalibration] = None
-    collector = PlayerCollector()
+    if opts.players_on_court not in (None, 2, 4):
+        raise ValueError("players_on_court must be 2 or 4")
+    collector = PlayerCollector(per_side=opts.players_on_court // 2 if opts.players_on_court else None)
     if not tracker.confidence_is_model_score:
         warnings.append(
             "Motion-based detection finds moving objects, not specifically people: stationary players can be "
@@ -328,6 +335,8 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
         props.height, frame_interval_s, "selected_view" if segment > 0 else "whole_clip")
     zone_time_metric = _zone_time_metric(times, per_frame, per_frame_calibration, props.height, frame_interval_s,
                                          players, rally_metric, "selected_view" if segment > 0 else "whole_clip")
+    error_metric = _error_metric(times, per_frame, per_frame_calibration, props.height, frame_interval_s,
+                                 players, shot_metric, rally_metric, "selected_view" if segment > 0 else "whole_clip")
 
     if frames_analyzed == 0:
         status, message = "insufficient_data", "No frames could be decoded from this video."
@@ -384,6 +393,7 @@ def analyze_video(path: str | Path, options: AnalysisOptions | None = None,
             rally_segmentation=rally_metric,
             shot_classification=shot_metric,
             zone_time=zone_time_metric,
+            error_counts=error_metric,
         ),
         warnings=warnings,
     )
@@ -397,6 +407,26 @@ FLOOR_SIZE_RATIO = (0.5, 1.8)   # observed / expected size of a ball lying at th
 PLAYER_REACH_GAP_S = 0.15
 RALLY_PAD_S = (1.0, 1.5)     # zone time starts a little before the first detected hit and ends after the last
 MIN_RALLY_HITS_FOR_ZONES = 2
+
+
+def _error_metric(times, per_frame, calibrations, frame_h, frame_interval_s, players, shot_metric, rally_metric, scope):
+    """Serve faults, shots out, kitchen faults and court positioning errors (see errors.py)."""
+    if shot_metric.value is None:
+        return ErrorCountsMetric(status="not_computed", scope=scope,
+                                 reason="Errors are counted from detected shots, which need a ball model and a mapped court.")
+    shots = shot_metric.value.shots
+    on_court = [(p.player_id, p.side) for p in players if getattr(p, "on_court", False) and p.side in ("near", "far")]
+    windows = [(r.start_s - RALLY_PAD_S[0], r.end_s + RALLY_PAD_S[1], r.rally_index)
+               for r in (rally_metric.value.rallies if rally_metric.value else []) if r.shots >= MIN_RALLY_HITS_FOR_ZONES]
+    positions = {pid: [(t, xy) for t, xy, how in samples if how == "observed"]
+                 for pid, samples in _positions(times, per_frame, calibrations, frame_h).items()}
+    events = shot_errors(shots) + positioning_errors(positions, dict(on_court), windows, shots, frame_interval_s)
+    value = count_errors(events, on_court)
+    return ErrorCountsMetric(
+        status="experimental", scope=scope, validation="not_evaluated",
+        reason=("Counted from the detected shots, bounces and player positions. Not yet checked against hand-counted "
+                "errors; shots without an observed bounce are not counted."),
+        value=ErrorCountsValue(**value))
 
 
 def _zone_time_metric(times, per_frame, calibrations, frame_h, frame_interval_s, players, rally_metric, scope):

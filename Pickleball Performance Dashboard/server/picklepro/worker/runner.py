@@ -122,12 +122,17 @@ def options_from_params(params: dict, cfg: WorkerConfig, filename: Optional[str]
     frame_mode = params.get("frame_mode", "standard")
     if frame_mode not in FRAME_MODES:
         raise ValueError(f"Unsupported frame_mode: {str(frame_mode)[:40]}")
+    # 2 = singles, 4 = doubles, chosen before upload; missing keeps the old "up to 2 per side".
+    players_on_court = params.get("players_on_court")
+    if players_on_court is not None and (isinstance(players_on_court, bool) or players_on_court not in (2, 4)):
+        raise ValueError("players_on_court must be 2 or 4")
     return AnalysisOptions(detector=cfg.detector, yolo_weights=cfg.yolo_weights, frame_mode=frame_mode,
                            court_weights=cfg.court_weights, ball_weights=cfg.ball_weights,
                            pose_weights=cfg.pose_weights, target_fps=cfg.target_fps,
                            calibration=calibration, selection=selection, selection_time_s=selection_time_s,
                            calibration_source=source, calibration_frame_s=frame_s,
-                           experimental_zones=bool(params.get("experimental_zones")), source_filename=filename)
+                           experimental_zones=bool(params.get("experimental_zones")), players_on_court=players_on_court,
+                           source_filename=filename)
 
 
 def test_fixture_result(job: Job) -> AnalysisResultV1:

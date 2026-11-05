@@ -361,6 +361,191 @@
       "title": "DetectorInfo",
       "type": "object"
     },
+    "ErrorCountsMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "measured",
+            "insufficient_data",
+            "not_computed",
+            "experimental"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "validation": {
+          "default": "not_evaluated",
+          "enum": [
+            "not_evaluated",
+            "synthetic_only",
+            "evaluated_on_real_footage"
+          ],
+          "title": "Validation",
+          "type": "string"
+        },
+        "scope": {
+          "default": "whole_clip",
+          "enum": [
+            "whole_clip",
+            "selected_view"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Why the metric is missing, partial, or experimental.",
+          "title": "Reason"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ErrorCountsValue"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "ErrorCountsMetric",
+      "type": "object"
+    },
+    "ErrorCountsValue": {
+      "additionalProperties": false,
+      "properties": {
+        "definitions": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Definitions",
+          "type": "object"
+        },
+        "counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "propertyNames": {
+            "enum": [
+              "serve_fault",
+              "out",
+              "kitchen_fault",
+              "no_mans_land",
+              "stayed_back"
+            ]
+          },
+          "title": "Counts",
+          "type": "object"
+        },
+        "players": {
+          "items": {
+            "$ref": "#/$defs/PlayerErrorCounts"
+          },
+          "title": "Players",
+          "type": "array"
+        },
+        "events": {
+          "items": {
+            "$ref": "#/$defs/ErrorEvent"
+          },
+          "title": "Events",
+          "type": "array"
+        }
+      },
+      "required": [
+        "definitions",
+        "counts",
+        "players",
+        "events"
+      ],
+      "title": "ErrorCountsValue",
+      "type": "object"
+    },
+    "ErrorEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "time_seconds": {
+          "title": "Time Seconds",
+          "type": "number"
+        },
+        "kind": {
+          "enum": [
+            "serve_fault",
+            "out",
+            "kitchen_fault",
+            "no_mans_land",
+            "stayed_back"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "player_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Matches players[].player_id.",
+          "title": "Player Id"
+        },
+        "side": {
+          "anyOf": [
+            {
+              "enum": [
+                "near",
+                "far"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Side"
+        },
+        "rally_index": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rally Index"
+        },
+        "detail": {
+          "title": "Detail",
+          "type": "string"
+        }
+      },
+      "required": [
+        "time_seconds",
+        "kind",
+        "detail"
+      ],
+      "title": "ErrorEvent",
+      "type": "object"
+    },
     "HeatmapValue": {
       "additionalProperties": false,
       "properties": {
@@ -444,6 +629,9 @@
         },
         "zone_time": {
           "$ref": "#/$defs/ZoneTimeMetric"
+        },
+        "error_counts": {
+          "$ref": "#/$defs/ErrorCountsMetric"
         }
       },
       "required": [
@@ -502,6 +690,46 @@
         "bbox"
       ],
       "title": "PlayerBox",
+      "type": "object"
+    },
+    "PlayerErrorCounts": {
+      "additionalProperties": false,
+      "properties": {
+        "player_id": {
+          "title": "Player Id",
+          "type": "integer"
+        },
+        "side": {
+          "enum": [
+            "near",
+            "far"
+          ],
+          "title": "Side",
+          "type": "string"
+        },
+        "counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "propertyNames": {
+            "enum": [
+              "serve_fault",
+              "out",
+              "kitchen_fault",
+              "no_mans_land",
+              "stayed_back"
+            ]
+          },
+          "title": "Counts",
+          "type": "object"
+        }
+      },
+      "required": [
+        "player_id",
+        "side",
+        "counts"
+      ],
+      "title": "PlayerErrorCounts",
       "type": "object"
     },
     "PlayerSelectionSummary": {

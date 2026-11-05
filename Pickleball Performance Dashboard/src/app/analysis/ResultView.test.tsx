@@ -32,7 +32,7 @@ describe("ResultView", () => {
     expect(screen.getByText("Player track IDs")).toBeTruthy();
     expect(screen.getByText("not available")).toBeTruthy(); // motion detector: no confidence
     expect(screen.getAllByText("Accuracy not yet evaluated").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("NOT COMPUTED").length).toBe(3); // rallies, shots, and zone time (fixture predates it)
+    expect(screen.getAllByText("NOT COMPUTED").length).toBe(4); // rallies, shots, zone time and errors (fixture predates the last two)
     expect(screen.getByText("WHOLE-CLIP METRICS")).toBeTruthy();
     expect(screen.queryByRole("img", { name: /Court heatmap/ })).toBeNull();
     expect(screen.getByText(/Hidden until positional accuracy passes evaluation/)).toBeTruthy();
@@ -64,6 +64,35 @@ describe("ResultView", () => {
     expect(screen.getByText("Practice plan from this video: not available.")).toBeTruthy();
     expect(screen.getByRole("button", { name: /^Play video review/ })).toBeTruthy();
     expect(screen.queryByRole("button", { name: /^Hear full plan/ })).toBeNull();
+  });
+
+  it("counts errors from the video for you or everyone, each one a tap from the video", () => {
+    const result = structuredClone(testFixture) as Record<string, any>;
+    result.data_origin = "measured";
+    const zero = { serve_fault: 0, out: 0, kitchen_fault: 0, no_mans_land: 0, stayed_back: 0 };
+    result.players = [
+      { player_id: 1, label: "Near left", on_court: true, side: "near", first_seen_s: 0, last_seen_s: 20, observed_frames: 100 },
+      { player_id: 2, label: "Far right", on_court: true, side: "far", first_seen_s: 0, last_seen_s: 20, observed_frames: 100 },
+    ];
+    result.player_selection = { method: "track_id", track_id: 1, court_half: null, tracked_time_s: 18, tracked_fraction: 0.9, ambiguous_frames: 0 };
+    result.metrics.error_counts = { status: "experimental", validation: "not_evaluated", scope: "whole_clip", reason: null, value: {
+      definitions: {}, counts: { ...zero, serve_fault: 1, out: 2, no_mans_land: 1 },
+      players: [{ player_id: 1, side: "near", counts: { ...zero, serve_fault: 1, no_mans_land: 1 } },
+        { player_id: 2, side: "far", counts: { ...zero, out: 2 } }],
+      events: [
+        { time_seconds: 4.2, kind: "serve_fault", player_id: 1, side: "near", rally_index: 0, detail: "The serve landed outside the service court." },
+        { time_seconds: 9.5, kind: "no_mans_land", player_id: 1, side: "near", rally_index: 1, detail: "2.4 s in the transition zone." },
+        { time_seconds: 11.0, kind: "out", player_id: 2, side: "far", rally_index: 1, detail: "The ball landed outside the court." },
+        { time_seconds: 15.0, kind: "out", player_id: 2, side: "far", rally_index: 2, detail: "The ball landed outside the court." },
+      ] } };
+    render(<ResultView result={parseAnalysisResult(result)} videoUrl={null} />);
+    const card = screen.getByRole("region", { name: "Errors from the video" });
+    const tile = (label: string) => within(card).getAllByText(label).find((el) => el.tagName === "DT")?.nextElementSibling?.textContent;
+    expect(tile("Serve faults")).toBe("1");
+    expect(tile("Shots out")).toBe("0"); // "You" (player 1) by default
+    fireEvent.click(within(card).getByRole("button", { name: "Everyone" }));
+    expect(tile("Shots out")).toBe("2");
+    expect(within(card).getByText("Watch each error (4)")).toBeTruthy();
   });
 
   it("shows a partner the shared report without the owner's plan or audio, with notes under the video", () => {

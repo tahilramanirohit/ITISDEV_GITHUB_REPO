@@ -15,6 +15,8 @@ import { CoachingPanel, type PreviousSession } from "./CoachingPanel";
 import { PlayerPicker } from "./PlayerPicker";
 import { ShotsPanel } from "./ShotsPanel";
 import { ZoneTimePanel } from "./ZoneTimePanel";
+import { ErrorsPanel } from "./ErrorsPanel";
+import { PlayersOnCourtToggle, type PlayersOnCourt } from "./AnalysisStatus";
 import { VideoOverlayPlayer, type JumpRequest } from "./VideoOverlayPlayer";
 import { courtPlayers, focusShots } from "../../lib/analysis/shotLabels";
 
@@ -96,7 +98,10 @@ function Row({ k, v }: { k: string; v: React.ReactNode }) {
 export type VideoControls = { video: HTMLVideoElement | null; seek: (timeSeconds: number) => void };
 
 export function ResultView({ result, videoUrl, previous, session, onSelectTrack, onRateSession, experimentalReview = false, sharedBy,
-  notes, seekTo = null }: {
+  notes, seekTo = null, playersOnCourt, onChangePlayersOnCourt }: {
+  /** The player count this report was analysed for, and a way to re-run it with the other count. */
+  playersOnCourt?: PlayersOnCourt;
+  onChangePlayersOnCourt?: (n: PlayersOnCourt) => void;
   /** A jump requested from outside the report, e.g. a partner note's time. */
   seekTo?: JumpRequest;
   onRateSession?: () => void;
@@ -117,6 +122,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
   const [selectingPlayer, setSelectingPlayer] = useState(false);
   const [jump, setJump] = useState<JumpRequest>(null);
   const [videoEl, setVideoEl] = useState<HTMLVideoElement | null>(null);
+  const [recount, setRecount] = useState<PlayersOnCourt | null>(null);
   const seek = useCallback((time: number) => setJump({ time, id: Date.now() }), []);
   useEffect(() => { if (seekTo) setJump(seekTo); }, [seekTo]);
   const shotMetric = result.metrics.shot_classification;
@@ -275,6 +281,18 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
       {!sharedBy && (!session?.improvement_goals?.length || session.improvement_goals.includes("positioning")) &&
         <CoachingPanel result={result} previous={previous} onRateSession={onRateSession} />}
 
+      {playersOnCourt && onChangePlayersOnCourt && result.data_origin === "measured" && !devMock && !sharedBy && (
+        <Card>
+          <PlayersOnCourtToggle idBase="report-players" value={recount ?? playersOnCourt} onChange={(n) => setRecount(n === playersOnCourt ? null : n)} />
+          {recount && <div className="mt-3 flex flex-wrap items-center gap-2">
+            <p className="min-w-[10rem] flex-1 text-sm text-ink">Analyse this video again for {recount} players? It takes a few minutes; this report stays until the new one is ready.</p>
+            <button type="button" onClick={() => { onChangePlayersOnCourt(recount); setRecount(null); }}
+              className="min-h-[44px] rounded-full px-4 text-sm font-bold" style={{ background: "var(--pp-action)", color: "var(--pp-on-action)" }}>Re-run for {recount} players</button>
+            <button type="button" onClick={() => setRecount(null)} className="min-h-[44px] rounded-full px-3 text-sm font-bold text-ink">Keep {playersOnCourt}</button>
+          </div>}
+        </Card>
+      )}
+
       {result.data_origin === "measured" && !devMock && hasPlayers && !sharedBy && (
         <PlayerPicker result={shotDisplayResult} myPlayerId={myPlayerId} onPick={setMyPlayerId} showShotCounts={allowShotDisplay}
           onUpdateCourt={onSelectTrack && myPlayerId != null ? () => {
@@ -312,6 +330,9 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
         <ShotsPanel result={shotDisplayResult} myPlayerId={myPlayerId} research={experimentalReview} teamsKey={`picklepro:teams:${reportKey}`}
           onWatch={videoUrl ? (time) => setJump({ time, id: Date.now() }) : undefined} />
       )}
+
+      {result.data_origin === "measured" && !devMock && <ErrorsPanel result={result} myPlayerId={myPlayerId}
+        onWatch={videoUrl ? (time) => setJump({ time, id: Date.now() }) : undefined} />}
 
       {result.data_origin === "measured" && !devMock && <ZoneTimePanel result={result} myPlayerId={myPlayerId} />}
 

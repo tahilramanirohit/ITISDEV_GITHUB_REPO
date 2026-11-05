@@ -301,6 +301,35 @@ class RallySegmentationMetric(Metric):
     value: Optional[RallyValue] = None
 
 
+ErrorKind = Literal["serve_fault", "out", "kitchen_fault", "no_mans_land", "stayed_back"]
+
+
+class ErrorEvent(_Model):
+    time_seconds: float
+    kind: ErrorKind
+    player_id: Optional[int] = Field(None, description="Matches players[].player_id.")
+    side: Optional[Literal["near", "far"]] = None
+    rally_index: Optional[int] = None
+    detail: str
+
+
+class PlayerErrorCounts(_Model):
+    player_id: int
+    side: Literal["near", "far"]
+    counts: Dict[ErrorKind, int]
+
+
+class ErrorCountsValue(_Model):
+    definitions: Dict[str, str]
+    counts: Dict[ErrorKind, int]
+    players: List[PlayerErrorCounts]
+    events: List[ErrorEvent]
+
+
+class ErrorCountsMetric(Metric):
+    value: Optional[ErrorCountsValue] = None
+
+
 class Metrics(_Model):
     court_heatmap: CourtHeatmapMetric
     zone_occupancy: ZoneOccupancyMetric
@@ -312,6 +341,9 @@ class Metrics(_Model):
     # Defaulted so results stored before this metric existed still validate.
     zone_time: ZoneTimeMetric = Field(default_factory=lambda: ZoneTimeMetric(
         status="not_computed", reason=ZONE_TIME_NOT_COMPUTED))
+    # Defaulted so results stored before this metric existed still validate.
+    error_counts: ErrorCountsMetric = Field(default_factory=lambda: ErrorCountsMetric(
+        status="not_computed", reason=ERRORS_NOT_COMPUTED))
 
 
 class AnalysisResultV1(_Model):
@@ -344,6 +376,7 @@ def not_computed(reason: str) -> Metric:
 # Reasons for metrics this pipeline deliberately does not produce yet.
 POSITIONING_NOT_COMPUTED = "Positioning patterns were not computed for this result."
 ZONE_TIME_NOT_COMPUTED = "Zone time was not computed for this result."
+ERRORS_NOT_COMPUTED = "Errors were not counted for this result."
 RALLY_NOT_COMPUTED = (
     "Rallies are found from detected ball hits, which needs a ball model. All other metrics are whole-clip metrics."
 )

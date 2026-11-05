@@ -124,8 +124,10 @@ def _overlap_share(box: Sequence[int], others: Sequence[Sequence[int]]) -> float
 class PlayerCollector:
     """Collect per-ID evidence while frames are analyzed, then group it."""
 
-    def __init__(self):
+    def __init__(self, per_side: Optional[int] = None):
         self.pieces: Dict[int, _Piece] = {}
+        # 1 for singles, 2 for doubles; None means the doubles limit (a singles game simply has one).
+        self.per_side = per_side or MAX_PLAYERS_PER_SIDE
 
     def observe(self, frame_index: int, time_s: float, frame: np.ndarray, detections: Sequence[dict],
                 calibration: Optional[CourtCalibration], segment: int = 0) -> None:
@@ -176,7 +178,7 @@ class PlayerCollector:
             del groups[j]
         groups = _absorb_slivers(groups)
 
-        summaries = _limit_per_side([_summary(g) for g in groups])
+        summaries = _limit_per_side([_summary(g) for g in groups], self.per_side)
         # Stable, readable numbering: players on court by side and position, then everyone else.
         def order(s):
             on, side, pos, g = s
@@ -254,8 +256,8 @@ def _colour_distance(a: List[_Piece], b: List[_Piece]) -> float:
                                  cv2.HISTCMP_BHATTACHARYYA))
 
 
-def _limit_per_side(summaries):
-    """At most MAX_PLAYERS_PER_SIDE players on each side of the net, per camera view.
+def _limit_per_side(summaries, per_side: int = MAX_PLAYERS_PER_SIDE):
+    """At most ``per_side`` players on each side of the net, per camera view (2 doubles, 1 singles).
 
     A doubles court holds four players. The two most-seen on each side are
     kept; any other on-court piece is the same person seen again (the tracker
@@ -271,10 +273,10 @@ def _limit_per_side(summaries):
             buckets.setdefault((frozenset(p.segment for p in g), side), []).append(i)
     dropped: set = set()
     for idx in buckets.values():
-        if len(idx) <= MAX_PLAYERS_PER_SIDE:
+        if len(idx) <= per_side:
             continue
         idx.sort(key=lambda i: -sum(len(p.frames) for p in out[i][3]))
-        kept, extra = idx[:MAX_PLAYERS_PER_SIDE], idx[MAX_PLAYERS_PER_SIDE:]
+        kept, extra = idx[:per_side], idx[per_side:]
         for e in extra:
             e_frames = {f for p in out[e][3] for f in p.frames}
             options = []

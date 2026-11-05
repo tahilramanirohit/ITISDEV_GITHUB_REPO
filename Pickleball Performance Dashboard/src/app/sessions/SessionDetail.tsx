@@ -26,7 +26,7 @@ import { BaselineNotice } from "./BaselineNotice";
 import { ACCENT_INK, BLUE_SKY, BORDER, DISPLAY_FONT, INK, ORANGE, WHITE_DIM, WHITE_SUB, alpha } from "../theme";
 import { Card, Chip, Notice, SegmentedTabs, Sheet, fieldStyle, pressable, tabPanelProps } from "../shell/primitives";
 import { SelfAssessmentPanel } from "../selfAssessment/SelfAssessmentPanel";
-import { AnalysisParamsForm, ProgressBar, type AnalysisParams } from "../analysis/AnalysisStatus";
+import { AnalysisParamsForm, PlayersOnCourtToggle, ProgressBar, defaultPlayersOnCourt, type AnalysisParams, type PlayersOnCourt } from "../analysis/AnalysisStatus";
 import { CourtCorrection } from "../analysis/CourtCorrection";
 import { analysisJobParams, updatedJobParams, type CourtConfirmation } from "../../lib/analysis/courtReview";
 import { ResultView } from "../analysis/ResultView";
@@ -55,6 +55,8 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
   const [error, setError] = useState("");
   const [localUpload, setLocalUpload] = useState<LocalUpload>(null);
   const [params, setParams] = useState<AnalysisParams | null>({});
+  // How many players the analyzer should look for; preset from the session's format once it loads.
+  const [playersOnCourt, setPlayersOnCourt] = useState<PlayersOnCourt | null>(null);
   const [paramsError, setParamsError] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   // "auto" = upload without court points; the analyzer finds the court itself.
@@ -233,7 +235,8 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
       });
       await uploadRef.current.done;
       setLocalUpload({ phase: "finalizing", progress: 1 });
-      await finalizeUpload(sb, video.id, analysisJobParams(params, court));
+      const courtCount = playersOnCourt ?? defaultPlayersOnCourt(bundle.session.play_format);
+      await finalizeUpload(sb, video.id, analysisJobParams({ ...params, players_on_court: courtCount }, court));
     } catch (e) {
       const message = e instanceof Error ? e.message : String((e as { message?: string })?.message ?? e);
       setError(limitErrorText(message) ?? `Upload failed: ${message}. Select the same file again to resume.`);
@@ -288,6 +291,9 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
     return <Notice tone="error">Session not found. It may have been deleted, or it belongs to another account.</Notice>;
   }
   const { session, video, job } = bundle;
+  const savedPlayers = job?.params?.players_on_court;
+  const jobPlayers: PlayersOnCourt | null = savedPlayers === 2 || savedPlayers === 4 ? savedPlayers : null;
+  const courtCount: PlayersOnCourt = playersOnCourt ?? jobPlayers ?? defaultPlayersOnCourt(session.play_format);
   const selfMode = (session.review_mode ?? "video") === "self";
   const activeTab: DetailTab = tab ?? (selfMode && !video ? "plan" : "video");
   const phase: Phase | null = activeTab === "plan" ? "in" : activeTab === "journal" ? (journalStep === 0 ? "pre" : "post") : null;
@@ -599,6 +605,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
               <span>I confirm that every person visible in this recording agreed to be recorded and uploaded for PicklePro analysis.
                 Raw video is automatically removed 30 days after analysis unless I choose to keep it. The report remains saved. <a href="#/privacy" className="underline" style={{ color: BLUE_SKY }}>Data and privacy</a></span>
             </label>}
+            {state !== "upload_incomplete" && <PlayersOnCourtToggle value={courtCount} onChange={setPlayersOnCourt} />}
             <label className={`flex min-h-[52px] w-full cursor-pointer items-center justify-center gap-2 rounded-full px-5 text-base font-extrabold ${pressable}`}
               style={{ background: "var(--pp-action)", color: "var(--pp-on-action)", opacity: params ? 1 : 0.45 }}>
               <Upload size={18} aria-hidden="true" /> {state === "upload_incomplete" ? "Resume upload (select the same file)" : markCourtMyself ? "Choose video & review court" : "Choose video & upload"}
@@ -649,11 +656,11 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
                 <input type="checkbox" className="mt-0.5 h-5 w-5" checked={markCourtMyself} onChange={(e) => setMarkCourtMyself(e.target.checked)} />
                 <span>Mark the court points myself before uploading (for unusual camera angles)</span>
               </label>
-              <div className="mt-3"><AnalysisParamsForm playFormat={session.play_format} onChange={(p, err) => { setParams(p); setParamsError(err); }} /></div>
+              <div className="mt-3"><AnalysisParamsForm playFormat={session.play_format} showPlayers={false} onChange={(p, err) => { setParams(p); setParamsError(err); }} /></div>
             </details>
             {state === "upload_incomplete" && video && (
               <div className="flex flex-wrap gap-2">
-                <button type="button" disabled={busy || !confirmedCourt} onClick={() => void run(() => finalizeUpload(sb, video.id, analysisJobParams(params ?? {}, confirmedCourt === "auto" ? null : confirmedCourt)))}
+                <button type="button" disabled={busy || !confirmedCourt} onClick={() => void run(() => finalizeUpload(sb, video.id, analysisJobParams({ ...(params ?? {}), players_on_court: courtCount }, confirmedCourt === "auto" ? null : confirmedCourt)))}
                   className="rounded-xl px-3 py-1.5 text-sm font-semibold disabled:opacity-40" style={{ color: BLUE_SKY, border: `1px solid ${alpha(BLUE_SKY, 38)}` }}>
                   Check if the upload finished{!confirmedCourt ? " (review the court first)" : ""}
                 </button>
@@ -670,7 +677,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
           <details className="mt-2">
             <summary className="text-sm font-semibold cursor-pointer" style={{ color: BLUE_SKY }}>Re-run analysis with different inputs</summary>
             <div className="mt-3 space-y-3">
-              <AnalysisParamsForm playFormat={session.play_format} onChange={(p, err) => { setParams(p); setParamsError(err); }} />
+              <AnalysisParamsForm playFormat={session.play_format} initialPlayers={jobPlayers ?? undefined} onChange={(p, err) => { setParams(p); setParamsError(err); }} />
               <p className="text-sm" style={{ color: WHITE_SUB }}>The saved court setup is kept unless you choose a new correction or automatic mapping.</p>
               <label className="flex items-center gap-2 text-sm" style={{ color: WHITE_DIM }}>
                 <input type="checkbox" checked={useAutomaticCourt} onChange={(e) => { setUseAutomaticCourt(e.target.checked); setReanalysisCourt(null); setReanalysisFile(null); }} />
@@ -711,6 +718,9 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
       {parsed?.ok && job?.status === "failed" && <Notice tone="warn">The reanalysis failed. The report below is from the last completed run.</Notice>}
       {parsed?.ok && (job?.status === "queued" || job?.status === "processing") && <Notice tone="info">A new analysis is in progress. The report below is the last published run.</Notice>}
       {parsed?.ok && <ResultView result={parsed.result} videoUrl={videoUrl} previous={previous} session={session} seekTo={videoSeek}
+        playersOnCourt={courtCount}
+        onChangePlayersOnCourt={job && finished && !video?.raw_video_deleted_at && !video?.raw_video_deleting_at && !config.trialNoWorker
+          ? (n) => { setPlayersOnCourt(n); void run(() => requestReanalysis(sb, job.id, { ...job.params, players_on_court: n })); } : undefined}
         notes={(controls) => <PeerNotes sb={sb} sessionId={session.id} mode="owner" controls={controls} />}
         onRateSession={() => { setTab("plan"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
         onSelectTrack={job && finished && !video?.raw_video_deleted_at && !video?.raw_video_deleting_at && !config.trialNoWorker ? (trackId, timeSeconds) => void run(() => requestReanalysis(sb, job.id, {
