@@ -45,6 +45,16 @@ export function AuthScreen({ sb, devMode, guestMode, samplePreviewEnabled = fals
           password,
           options: { emailRedirectTo: window.location.origin },
         });
+        // With email confirmation on, Supabase hides taken emails: no error, but a user with no identities.
+        // With it off, it returns a "user_already_exists" error. Either way, send them to sign in.
+        const taken = (error && (error.code === "user_already_exists" || /already registered/i.test(error.message)))
+          || (!error && data.user && data.user.identities?.length === 0);
+        if (taken) {
+          setMode("sign_in");
+          setPassword("");
+          setError("An account with this email already exists. Sign in instead, or use Forgot password.");
+          return;
+        }
         if (error) throw error;
         if (!data.session) setInfo("Check your email to confirm your account, then sign in.");
       }
