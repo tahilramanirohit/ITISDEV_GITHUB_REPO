@@ -1,11 +1,12 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ChevronRight, Play } from "lucide-react";
+import { ChevronRight, Play, Video } from "lucide-react";
 import { getSessionBundle, signedVideoUrl, type SessionListItem } from "../../lib/api/sessions";
 import type { OtherPlayer } from "../../lib/api/players";
 import { parseAnalysisResult } from "../../lib/analysis/contract";
 import { formatClock } from "../../lib/analysis/shotLabels";
 import { chosenPlayer, lastGameReview, type LastGameReview } from "../../lib/coaching/lastGameReview";
+import { deriveAnalysisState } from "../../lib/analysis/state";
 import { TopCourtHeatmap } from "../analysis/TopCourtHeatmap";
 import { ACTION, HERO, INK, LINE, ON_ACTION, ON_HERO, PAGE_BG, SURFACE } from "../theme";
 import { numStyle, pressable } from "../shell/primitives";
@@ -74,26 +75,46 @@ const savedPlayer = (sessionId: string): number | null => {
   try { const v = window.localStorage.getItem(`picklepro:me:${sessionId}`); return v != null && /^\d+$/.test(v) ? Number(v) : null; } catch { return null; }
 };
 
-/** Loads the last game's measured video analysis, or null when there is none to show. */
+/**
+ * Loads the last game's video and, when it has been analyzed (measured results only), the review.
+ * Null when the game has no uploaded video, so Home keeps the drawn court.
+ */
 function useReview(sb: SupabaseClient, item: SessionListItem) {
-  const [state, setState] = useState<{ review: LastGameReview; videoPath: string | null } | null>(null);
+  const [state, setState] = useState<{ review: LastGameReview | null; videoPath: string | null } | null>(null);
   const id = item.session.id;
-  const eligible = !!item.video && item.result?.data_origin === "measured" && item.result.result_status === "ok";
+  const uploaded = item.video?.upload_status === "uploaded";
+  const measured = item.result?.data_origin === "measured" && item.result.result_status === "ok";
   useEffect(() => {
     setState(null);
-    if (!eligible) return;
+    if (!uploaded) return;
     let active = true;
     getSessionBundle(sb, id).then((bundle) => {
-      if (!active || !bundle?.result?.result) return;
-      const result = parseAnalysisResult(bundle.result.result);
-      const review = lastGameReview(result, chosenPlayer(result, savedPlayer(id)));
+      if (!active || !bundle) return;
+      let review: LastGameReview | null = null;
+      if (measured && bundle.result?.result) {
+        try {
+          const result = parseAnalysisResult(bundle.result.result);
+          review = lastGameReview(result, chosenPlayer(result, savedPlayer(id)));
+        } catch { /* An unreadable result: show the video without a heatmap. */ }
+      }
       const v = bundle.video;
       const videoPath = v && v.upload_status === "uploaded" && !v.raw_video_deleted_at && !v.raw_video_deleting_at ? v.storage_path : null;
-      if (review) setState({ review, videoPath });
-    }).catch(() => { /* No review: Home keeps the drawn court. */ });
+      if (review || videoPath) setState({ review, videoPath });
+    }).catch(() => { /* Keep the drawn court. */ });
     return () => { active = false; };
-  }, [sb, id, eligible]);
+  }, [sb, id, uploaded, measured]);
   return state;
+}
+
+/** Why there's no heatmap yet, in plain words. */
+function heatmapWaiting(item: SessionListItem): string {
+  switch (deriveAnalysisState({ video: item.video, job: item.job, result: item.result })) {
+    case "queued": return "Your video is waiting for the analyzer. Your heatmap appears here once it's analyzed.";
+    case "processing": return "Analyzing your video… Your heatmap appears here when it's done.";
+    case "failed": return "We couldn't analyze this video. Open the full review to try again.";
+    case "insufficient_data": return "The video didn't show enough of the court to map where you stood.";
+    default: return "No heatmap for this video yet.";
+  }
 }
 
 /**
@@ -103,7 +124,11 @@ function useReview(sb: SupabaseClient, item: SessionListItem) {
  */
 export function LastGameCard({ sb, ...props }: Props & { sb: SupabaseClient }) {
   const data = useReview(sb, props.item);
-  const [view, setView] = useState<View>(readView);
+  const [saved, setSaved] = useState<View>(readView);
+  const [picked, setPicked] = useState<View | null>(null);
+  // Until there's a heatmap, open on the video (it works as soon as it's uploaded); a tap always wins.
+  const view: View = picked ?? (data && !data.review ? "replay" : saved);
+  const setView = (next: View) => { setPicked(next); setSaved(next); };
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const videoPath = data?.videoPath ?? null;
   useEffect(() => {
@@ -112,15 +137,23 @@ export function LastGameCard({ sb, ...props }: Props & { sb: SupabaseClient }) {
     signedVideoUrl(sb, videoPath).then((url) => { if (active) setVideoUrl(url); }).catch(() => { if (active) setVideoUrl(null); });
     return () => { active = false; };
   }, [sb, view, videoPath]);
-  if (!data) return <LastGame {...props} />;
+  if (!data) return <div className="space-y-3"><LastGame {...props} />
+    {!props.item.video && <a href={`#/sessions/${props.item.session.id}?tab=video`} className={`flex min-h-[56px] items-center gap-3 rounded-[18px] px-3.5 py-3 ${pressable}`}
+      style={{ background: "var(--pp-action-soft)", border: "1px solid color-mix(in srgb, var(--pp-action) 35%, var(--pp-line))", color: INK }}>
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px]" style={{ background: ACTION, color: ON_ACTION }}><Video size={20} aria-hidden="true" /></span>
+      <span className="min-w-0 flex-1"><b className="block text-[15px]">Add a video of this game</b>
+        <span className="block text-sm" style={{ color: "var(--pp-ink-2)" }}>Unlocks Shot replay and Heatmap here.</span></span>
+      <ChevronRight size={18} aria-hidden="true" style={{ color: "var(--pp-line-strong)" }} />
+    </a>}
+  </div>;
 
   const { review } = data;
   const { session } = props.item;
   const choose = (next: View) => { setView(next); try { window.localStorage.setItem(VIEW_KEY, next); } catch { /* this visit only */ } };
   const videoHref = (t?: number) => `#/sessions/${session.id}?tab=video${t != null ? `&t=${Math.floor(t)}` : ""}`;
-  const share = review.kitchenLineShare != null ? Math.round(review.kitchenLineShare * 100) : null;
+  const share = review?.kitchenLineShare != null ? Math.round(review.kitchenLineShare * 100) : null;
   const where = share != null
-    ? `You spent ${share}% of ${review.window === "rallies" ? "rallies" : "the video"} at the kitchen line`
+    ? `You spent ${share}% of ${review?.window === "rallies" ? "rallies" : "the video"} at the kitchen line`
     : "Where you stood during the game";
   const tabs: [View, string, ReactNode][] = [
     ["replay", "Shot replay", <Play key="p" size={16} fill="currentColor" aria-hidden="true" />],
@@ -144,7 +177,9 @@ export function LastGameCard({ sb, ...props }: Props & { sb: SupabaseClient }) {
         ))}
       </div>
 
-      {view === "heat" ? <div role="tabpanel" aria-label="Heatmap" className="flex flex-col gap-2.5">
+      {view === "heat" && !review ? <div role="tabpanel" aria-label="Heatmap" className="grid aspect-[2/1] w-full place-items-center rounded-[16px] px-6 text-center text-[15px]"
+        style={{ background: PAGE_BG, color: "#c6d3ca" }}>{heatmapWaiting(props.item)}</div>
+      : view === "heat" && review ? <div role="tabpanel" aria-label="Heatmap" className="flex flex-col gap-2.5">
         <a href={videoHref()} className="block overflow-hidden rounded-[16px]" aria-label={`${where}. Open the full review.`}>
           <TopCourtHeatmap value={review.heatmap} nearSide={review.nearSide} label={`Court from above. ${where}.`} />
         </a>
@@ -164,7 +199,7 @@ export function LastGameCard({ sb, ...props }: Props & { sb: SupabaseClient }) {
             : <div className="grid aspect-video w-full place-items-center rounded-[16px] text-sm" style={{ background: PAGE_BG, color: "#c6d3ca" }}>Loading your video…</div>
           : <a href={videoHref()} className="grid aspect-video w-full place-items-center rounded-[16px] px-6 text-center text-sm" style={{ background: PAGE_BG, color: "#c6d3ca" }}>
               The video file was removed after its storage period. Your results are still in the full review.</a>}
-        {review.moments.length > 0 && <>
+        {review && review.moments.length > 0 && <>
           <p className="text-sm font-bold" style={{ color: "#c6d3ca" }}>Jump to a moment</p>
           <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5">
             {review.moments.map((m) => (
