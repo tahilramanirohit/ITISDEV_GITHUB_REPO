@@ -6,7 +6,7 @@ import {
   deleteSession, finalizeUpload, findPreviousCoachableResult, getSessionBundle, listAnalysisRuns, registerVideo, removeVideo, requestReanalysis, setRawVideoKeep, signedVideoUrl,
   updateSessionDetails, updateSessionGoals, type SessionBundle,
 } from "../../lib/api/sessions";
-import { FORMAT_LABELS, GOAL_LABELS, KIND_LABELS, sessionKind, type AnalysisRunSummary, type GoalValues, type ImprovementGoal } from "../../lib/api/types";
+import { CONTEXT_LABELS, FORMAT_LABELS, GOAL_LABELS, KIND_LABELS, sessionKind, type AnalysisRunSummary, type GoalValues, type ImprovementGoal, type SessionRow } from "../../lib/api/types";
 import { ContractError, parseAnalysisResult } from "../../lib/analysis/contract";
 import { analysisProgress, deriveAnalysisState, failureHelp, shouldPoll, stateDescription, STATE_LABELS, type LocalUpload } from "../../lib/analysis/state";
 import { config } from "../../lib/config";
@@ -23,7 +23,7 @@ import { getSelfAssessment } from "../../lib/api/selfAssessment";
 import { GamePhases, PreGameSummary, type Phase } from "./GamePhases";
 import type { CaptureStep } from "./CapturePanel";
 import { BaselineNotice } from "./BaselineNotice";
-import { ACCENT_INK, BLUE_SKY, BORDER, DISPLAY_FONT, INK, ORANGE, WHITE_DIM, WHITE_SUB, alpha } from "../theme";
+import { ACCENT_INK, BLUE_SKY, BORDER, DISPLAY_FONT, INK, NUM_FONT, ORANGE, WHITE_DIM, WHITE_SUB, alpha } from "../theme";
 import { Card, Chip, Notice, SegmentedTabs, Sheet, fieldStyle, pressable, tabPanelProps } from "../shell/primitives";
 import { SelfAssessmentPanel } from "../selfAssessment/SelfAssessmentPanel";
 import { AnalysisParamsForm, PlayersOnCourtToggle, ProgressBar, defaultPlayersOnCourt, type AnalysisParams, type PlayersOnCourt } from "../analysis/AnalysisStatus";
@@ -36,6 +36,7 @@ import { CapturePanel } from "./CapturePanel";
 import { PeerFeedback } from "../partners/PeerFeedback";
 import { listPeerRatings } from "../../lib/api/partners";
 import { listMyRequests } from "../../lib/api/buddy";
+import { useDataUse } from "../onboarding/DataUse";
 import { getProfile } from "../../lib/api/profile";
 import { goalTargets } from "../../lib/coaching/goals";
 import type { PeerRating } from "../../lib/coaching/peerFeedback";
@@ -49,6 +50,7 @@ const POLL_MS = 3000;
 type DetailTab = "plan" | "players" | "video" | "journal";
 
 export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; userId: string }) {
+  const { analytics } = useDataUse();
   const { sessionId = "" } = useParams();
   const [searchParams] = useSearchParams();
   const requestedTab = searchParams.get("tab");
@@ -118,7 +120,11 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
   const [peerRatings, setPeerRatings] = useState<PeerRating[]>([]);
   const [selfRatings, setSelfRatings] = useState<SelfRatings | null>(null);
   const [goalSkills, setGoalSkills] = useState<SelfSkill[]>([]);
-  const [videoSeek, setVideoSeek] = useState<JumpRequest>(null);
+  // "?t=15" (from a Home moment chip) opens the video at that second.
+  const [videoSeek, setVideoSeek] = useState<JumpRequest>(() => {
+    const t = Number(searchParams.get("t"));
+    return searchParams.has("t") && Number.isFinite(t) && t >= 0 ? { time: t, id: Date.now() } : null;
+  });
   const loadFeedback = useCallback(() => {
     // Each part is optional: before the partner updates, the session page works without them.
     void Promise.all([
@@ -206,7 +212,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
   const hasResult = parsed?.ok === true;
   const sessionKey = currentSession ? `${currentSession.id}|${currentSession.session_date}` : "";
   useEffect(() => {
-    if (!currentSession || !hasResult) return setPrevious(null);
+    if (!analytics || !currentSession || !hasResult) return setPrevious(null);
     let cancelled = false;
     findPreviousCoachableResult(sb, currentSession)
       .then((found) => {
@@ -215,7 +221,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
       .catch(() => { if (!cancelled) setPrevious(null); });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sessionKey tracks the fields used
-  }, [sb, sessionKey, hasResult]);
+  }, [sb, sessionKey, hasResult, analytics]);
 
   async function onFileSelected(file: File, court: CourtConfirmation | null) {
     if (!bundle || inFlight.current || !config.supabase || !params) return;
@@ -346,7 +352,8 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
             <Trash2 size={16} aria-hidden="true" />
           </button>
         </div>
-        {(session.tournament_name || session.tournament_round || session.match_result || session.match_score) && (
+        {scoreGames(session.match_score).length > 0 ? <Scoreboard session={session} players={players} />
+        : (session.tournament_name || session.tournament_round || session.match_result || session.match_score) && (
           <p className="mt-2 text-base font-bold tabular-nums">
             {[session.tournament_name, session.tournament_round, session.match_result === "win" ? "Won" : session.match_result === "loss" ? "Lost" : null, session.match_score].filter(Boolean).join(" · ")}
           </p>
@@ -421,7 +428,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
         {rated && !(capture?.recovery || capture?.reflection) && <button type="button" onClick={() => openPhase("post")}
           className={`flex min-h-[52px] w-full items-center justify-center rounded-full px-4 text-base font-extrabold ${pressable}`}
           style={{ background: "var(--pp-action)", color: "var(--pp-on-action)" }}>Next: post-game recovery</button>}
-        <PeerFeedback sb={sb} sessionId={session.id} hasVideo={!!uploadedPath} selfRatings={selfRatings} peerRatings={peerRatings}
+        <PeerFeedback sb={sb} sessionTitle={session.title} sessionId={session.id} hasVideo={!!uploadedPath} selfRatings={selfRatings} peerRatings={peerRatings}
           goalSkills={goalSkills} onChanged={loadFeedback} askFor={searchParams.get("ask")} playedWith={playedWith}
           onWatch={uploadedPath ? (time) => { setTab("video"); setVideoSeek({ time, id: Date.now() }); } : undefined} />
       </div>}
@@ -762,6 +769,40 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
       </div>}
       </div>
       </Sheet>
+    </div>
+  );
+}
+
+
+/** Every game in a score like "11-7, 9-11", our points first. */
+function scoreGames(score?: string | null): [number, number][] {
+  return [...(score ?? "").matchAll(/(\d{1,2})\s*[-–:]\s*(\d{1,2})/g)].map((m) => [Number(m[1]), Number(m[2])] as [number, number]);
+}
+
+/** Design B scoreboard: a yellow strip with event and date, then one row per side with its points. */
+function Scoreboard({ session, players }: { session: SessionRow; players: { role: string; display_name: string }[] }) {
+  const games = scoreGames(session.match_score);
+  const first = (name: string) => name.trim().split(/\s+/)[0] ?? "";
+  const us = ["You", ...players.filter((p) => p.role === "partner").map((p) => first(p.display_name))].join(" / ");
+  const them = players.filter((p) => p.role === "opponent").map((p) => first(p.display_name)).join(" / ") || "Opponents";
+  const wonGames = games.filter(([a, b]) => a > b).length;
+  const won = session.match_result ? session.match_result === "win" : wonGames > games.length - wonGames;
+  const event = session.tournament_name || CONTEXT_LABELS[session.session_context];
+  const row = (name: string, points: number[], winner: boolean) => (
+    <div className="grid grid-cols-[1fr_auto] items-stretch border-t first:border-t-0" style={{ borderColor: "var(--pp-line)" }}>
+      <span className="truncate px-3.5 py-2.5 text-2xl uppercase" style={{ fontFamily: NUM_FONT, fontWeight: 700, color: winner ? INK : WHITE_SUB }}>{name}</span>
+      <span className="flex">{points.map((p, i) => <b key={i} className="grid min-w-[56px] place-items-center px-2 text-[32px] leading-none"
+        style={{ fontFamily: NUM_FONT, ...(winner ? { background: "var(--pp-hero)", color: "var(--pp-action)" } : { background: "var(--pp-surface-2)", color: INK }) }}>{p}</b>)}</span>
+    </div>
+  );
+  return (
+    <div role="group" aria-label={`${won ? "Won" : "Lost"} ${session.match_score}`} className="mt-3 overflow-hidden rounded-[18px]" style={{ border: "1px solid var(--pp-line)", background: "var(--pp-surface)" }}>
+      <div className="flex justify-between gap-2 px-3 py-1.5 text-sm uppercase tracking-[0.05em]" style={{ background: "var(--pp-action)", color: "var(--pp-on-action)", fontFamily: NUM_FONT, fontWeight: 700 }}>
+        <span className="truncate">{event}{session.tournament_round ? ` · ${session.tournament_round}` : ""} · {FORMAT_LABELS[session.play_format]}</span>
+        <span className="shrink-0">{new Date(`${session.session_date}T12:00:00`).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })} · Final</span>
+      </div>
+      {row(us, games.map(([a]) => a), won)}
+      {row(them, games.map(([, b]) => b), !won)}
     </div>
   );
 }

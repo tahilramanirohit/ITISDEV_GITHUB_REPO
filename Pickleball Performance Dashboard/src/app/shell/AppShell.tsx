@@ -2,8 +2,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useLocation } from "react-router";
 import { BarChart3, CalendarDays, Home, Monitor, Moon, Plus, Sun, UserRound, UsersRound } from "lucide-react";
 import {
-  ACCENT_INK, ACTION, ACTION_EDGE, BODY_FONT, COURT_LINE, DANGER, INK, INK_2, INK_3, LINE, LINE_STRONG, ON_ACTION, ON_STRONG, PAGE_BG, STRONG, SURFACE, SURFACE_2,
-  TABBAR, applyAppearance, readAppearance, type Appearance,
+  ACCENT_INK, ACTION, ACTION_EDGE, BODY_FONT, COURT_LINE, DANGER, HERO, INK, INK_2, INK_3, LINE, ON_ACTION, ON_HERO, ON_STRONG, PAGE_BG, STRONG, SURFACE, SURFACE_2,
+  applyAppearance, readAppearance, type Appearance,
 } from "../theme";
 import { PickleProLogo, PickleProMark, pressable } from "./primitives";
 
@@ -71,43 +71,50 @@ export type TabBadges = Partial<Record<string, number>>;
 
 const TABS = [
   { href: "#/", label: "Home", icon: Home, match: (p: string) => p === "/" },
-  { href: "#/sessions", label: "Sessions", icon: CalendarDays, match: (p: string) => p.startsWith("/sessions") },
+  { href: "#/sessions", label: "Sessions", icon: CalendarDays, match: (p: string) => p.startsWith("/sessions") || p.startsWith("/shared-game/") },
   { href: "#/new", label: "Log", icon: Plus, match: (p: string) => p === "/new", primary: true },
   { href: "#/progress", label: "Progress", icon: BarChart3, match: (p: string) => p === "/progress" || p === "/tests" },
   // Buddy and Partners in one tab: My partners, Find and Shared.
   { href: "#/players", label: "Players", icon: UsersRound,
-    match: (p: string) => p === "/players" || p === "/buddy" || p === "/partners" || p.startsWith("/shared") },
+    match: (p: string) => p === "/players" || p === "/buddy" || p === "/partners" || p.startsWith("/shared/") },
   { href: "#/profile", label: "Profile", icon: UserRound, match: (p: string) => p.startsWith("/profile") },
 ] as const;
 
 /**
- * Phone tab bar: a solid bar along the bottom with an icon and a label per tab.
- * Logging a game is the one lime action; the player's photo is the Profile tab.
+ * Phone tab bar (Design B): a floating dark bar with four tabs and the raised yellow
+ * "+" for logging a game in the middle. Profile is the avatar in the top bar.
  */
-function BottomTabs({ avatar, badges }: { avatar?: ReactNode; badges?: TabBadges }) {
+function BottomTabs({ badges }: { badges?: TabBadges }) {
   const { pathname } = useLocation();
+  const tabs = TABS.filter((t) => t.href !== "#/profile");
   return (
-    <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 border-t desktop:hidden"
-      style={{ background: TABBAR, borderColor: LINE, paddingBottom: "max(6px, env(safe-area-inset-bottom))" }}>
-      <ul className="mx-auto flex max-w-lg items-stretch justify-between px-1.5 pt-1">
-        {TABS.map((tab) => {
+    <nav aria-label="Main" className="fixed z-30 desktop:hidden"
+      style={{ left: "max(14px, env(safe-area-inset-left))", right: "max(14px, env(safe-area-inset-right))",
+        bottom: "calc(14px + env(safe-area-inset-bottom))" }}>
+      <ul className="mx-auto grid h-[66px] max-w-lg items-center rounded-[24px]"
+        style={{ background: HERO, gridTemplateColumns: "1fr 1fr 76px 1fr 1fr", boxShadow: "0 10px 28px rgba(11,26,19,.35)" }}>
+        {tabs.map((tab) => {
           const active = tab.match(pathname);
           const Icon = tab.icon;
-          const isProfile = tab.href === "#/profile";
           const count = badges?.[tab.href] ?? 0;
+          if ("primary" in tab) return (
+            <li key={tab.href} className="justify-self-center">
+              <a href={tab.href} aria-label="Log a game" aria-current={active ? "page" : undefined}
+                className="-mt-[34px] grid h-[62px] w-[62px] place-items-center rounded-full transition-transform duration-150 active:scale-[0.94] motion-reduce:transition-none"
+                style={{ background: ACTION, color: ON_ACTION, boxShadow: `0 0 0 6px ${PAGE_BG}, 0 8px 18px rgba(240,173,0,.45)` }}>
+                <Icon size={28} strokeWidth={2.6} aria-hidden="true" />
+              </a>
+            </li>
+          );
           return (
-            <li key={tab.href} className="flex-1">
+            <li key={tab.href}>
               <a href={tab.href} aria-label={count ? `${tab.label}, ${count} waiting` : tab.label}
                 aria-current={active ? "page" : undefined}
-                className={`mx-auto flex h-14 max-w-[68px] flex-col items-center justify-center gap-0.5 text-[11px] ${active ? "font-bold" : "font-semibold"} transition-[color,transform] duration-150 active:scale-[0.94] motion-reduce:transition-none`}
-                style={{ color: active ? ACCENT_INK : INK_2 }}>
-                {"primary" in tab
-                  ? <span className="flex h-11 w-[52px] items-center justify-center rounded-full" style={{ background: ACTION, color: ON_ACTION, border: `1px solid ${ACTION_EDGE}` }}><Icon size={22} strokeWidth={2.6} aria-hidden="true" /></span>
-                  : isProfile && avatar
-                    ? <span className="rounded-full" style={{ boxShadow: active ? `0 0 0 2px ${ACCENT_INK}` : `0 0 0 1px ${LINE_STRONG}` }}>{avatar}</span>
-                    : <span className="relative"><Icon size={22} strokeWidth={active ? 2.4 : 1.9} aria-hidden="true" />
-                      <Badge count={count} label="waiting" /></span>}
-                {!("primary" in tab) && <span aria-hidden="true">{tab.label}</span>}
+                className={`flex min-h-[58px] flex-col items-center justify-center gap-[3px] text-xs ${active ? "font-bold" : "font-semibold"} transition-[color,transform] duration-150 active:scale-[0.94] motion-reduce:transition-none`}
+                style={{ color: active ? ACTION : "#9fb3a6" }}>
+                <span className="relative"><Icon size={24} strokeWidth={active ? 2.4 : 1.9} aria-hidden="true" />
+                  <Badge count={count} label="waiting" /></span>
+                <span aria-hidden="true">{tab.label}</span>
               </a>
             </li>
           );
@@ -197,11 +204,15 @@ export function AppShell({ children, right, nav, tabs = false, wide = false, ava
       <CourtBackdrop />
       {tabs && <SideNav account={right} badges={badges} />}
       <div className={`relative z-[1] ${tabs ? "desktop:pl-20 desktop:lg:pl-64" : ""}`}>
-        <header className={`sticky top-0 z-20 border-b ${tabs ? "desktop:hidden" : ""}`} style={{ background: PAGE_BG,
-          color: INK, borderColor: LINE, paddingTop: "env(safe-area-inset-top)" }}>
+        {/* Signed in on a phone, the top bar is the start of each screen's dark band (Design B). */}
+        <header className={`sticky top-0 z-20 ${tabs ? "desktop:hidden" : "border-b"}`} style={{ background: tabs ? HERO : PAGE_BG,
+          color: tabs ? ON_HERO : INK, borderColor: LINE, paddingTop: "env(safe-area-inset-top)" }}>
           <div className={`${width} mx-auto flex min-h-[60px] items-center justify-between gap-3 px-4 md:px-6`}>
-            <a href="#/" aria-label="PicklePro home"><PickleProLogo size="sm" /></a>
-            <div className="flex min-w-0 items-center gap-1">{tabs && <AppearanceToggle />}{right}</div>
+            <a href="#/" aria-label="PicklePro home"><PickleProLogo size="sm" tone={tabs ? "dark" : "light"} /></a>
+            {tabs
+              ? <a href="#/profile" aria-label="Your profile" className={`grid h-11 w-11 place-items-center rounded-full ${pressable}`}>
+                  <span className="rounded-full" style={{ boxShadow: `0 0 0 2px ${ACTION}` }}>{avatar}</span></a>
+              : <div className="flex min-w-0 items-center gap-1">{right}</div>}
           </div>
           {nav && <nav className={`${width} mx-auto flex flex-wrap gap-x-4 gap-y-1 px-4 pb-2 text-sm font-semibold`}>{nav}</nav>}
         </header>
@@ -210,7 +221,7 @@ export function AppShell({ children, right, nav, tabs = false, wide = false, ava
           PicklePro research prototype. Video findings depend on visibility and have not yet been validated on real footage.
         </footer>}
       </div>
-      {tabs && <BottomTabs avatar={avatar} badges={badges} />}
+      {tabs && <BottomTabs badges={badges} />}
     </div>
   );
 }

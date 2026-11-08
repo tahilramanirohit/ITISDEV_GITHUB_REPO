@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { Check, X } from "lucide-react";
 import { cancelBuddyAdd, cancelRequest, respondBuddy, respondToRequest } from "../../lib/api/buddy";
 import { cancelInvite, respondToInvite } from "../../lib/api/partners";
-import { INK, ROSE, WHITE_DIM } from "../theme";
+import { ACTION_SOFT, INK, ROSE, WHITE_DIM } from "../theme";
 import { Card, PrimaryButton, SectionTitle } from "../shell/primitives";
 import { Avatar, RequestDetails, levelText, shortDate } from "./parts";
 import type { Act, PlayersData } from "./PlayersPage";
@@ -17,7 +17,8 @@ export function NeedsAnswer({ sb, data, act, busyId }: { sb: SupabaseClient; dat
     {adds.length > 0 && <section aria-labelledby="adds-heading" className="space-y-3">
       <SectionTitle><span id="adds-heading">Wants to be your buddy ({adds.length})</span></SectionTitle>
       <ul className="space-y-3">
-        {adds.map((b) => <li key={b.id}><Card>
+        {adds.map((b) => <li key={b.id}><div className="rounded-[20px] p-4"
+          style={{ background: ACTION_SOFT, border: "1px solid color-mix(in srgb, var(--pp-action) 35%, var(--pp-line))", color: INK }}>
           <div className="flex flex-wrap items-center gap-3">
             <Avatar name={b.other_name} />
             <div className="min-w-[9rem] flex-1">
@@ -27,13 +28,13 @@ export function NeedsAnswer({ sb, data, act, busyId }: { sb: SupabaseClient; dat
           </div>
           <p className="mt-2 text-sm" style={{ color: WHITE_DIM }}>Buddies can ask each other to play and partner for video feedback.
             Nothing else is shared.</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <PrimaryButton disabled={busyId === b.id} onClick={() => void act(b.id, () => respondBuddy(sb, b.id, true), `You and ${b.other_name} are buddies.`)}>
-              <Check size={18} aria-hidden="true" /> Accept</PrimaryButton>
+          <div className="mt-3 grid grid-cols-2 gap-2">
             <PrimaryButton tone="light" disabled={busyId === b.id} onClick={() => void act(b.id, () => respondBuddy(sb, b.id, false))}>
               <X size={18} aria-hidden="true" /> Decline</PrimaryButton>
+            <PrimaryButton disabled={busyId === b.id} onClick={() => void act(b.id, () => respondBuddy(sb, b.id, true), `You and ${b.other_name} are buddies.`)}>
+              <Check size={18} aria-hidden="true" /> Accept</PrimaryButton>
           </div>
-        </Card></li>)}
+        </div></li>)}
       </ul>
     </section>}
 

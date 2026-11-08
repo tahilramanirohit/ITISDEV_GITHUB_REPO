@@ -3,6 +3,7 @@ import { useLocation } from "react-router";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { countWaitingRequests } from "../../lib/api/buddy";
 import { countWaitingInvites } from "../../lib/api/partners";
+import { countPendingGameShares } from "../../lib/api/gameShares";
 
 const CHANGED = "picklepro:buddy-changed";
 const REFRESH_MS = 60_000;
@@ -20,6 +21,15 @@ export function useBuddyBadge(sb: SupabaseClient, userId: string): number {
 /** Number of partner invites waiting for this player's answer, for the Players tab's badge. */
 export function usePartnerBadge(sb: SupabaseClient, userId: string): number {
   return useWaitingBadge(sb, userId, countWaitingInvites);
+}
+
+/** Number of games buddies shared that wait for this player's answer, for the Sessions tab's badge. */
+export function useGameShareBadge(sb: SupabaseClient, userId: string): number {
+  return useWaitingBadge(sb, userId, countWaitingGameShares);
+}
+
+async function countWaitingGameShares(sb: SupabaseClient, userId: string): Promise<number> {
+  return countPendingGameShares(sb, userId);
 }
 
 function useWaitingBadge(sb: SupabaseClient, userId: string,

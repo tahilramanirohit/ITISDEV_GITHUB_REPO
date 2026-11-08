@@ -5,6 +5,11 @@ import { BORDER, DISPLAY_FONT, GREEN, INK, WHITE, WHITE_DIM, WHITE_SUB } from ".
 import { PickleProLogo } from "../shell/primitives";
 
 const SECTIONS: { title: string; items: string[] }[] = [
+  { title: "Your data choices", items: [
+    "Keeping your profile, games and ratings is required to use PicklePro. Your consent version, date and optional choices are saved with your profile.",
+    "Performance analytics is optional and starts off. Enable it in Settings for cross-game trends, win rate and progress comparisons. Logging games, rating skills and your session practice plan stay available.",
+    "Helping our research is optional and starts off. Only players who opt in may have their data used without their name in the PicklePro study. You can change both optional choices in Settings.",
+  ] },
   {
     title: "What PicklePro stores",
     items: [
@@ -18,7 +23,7 @@ const SECTIONS: { title: string; items: string[] }[] = [
   {
     title: "Who can see it",
     items: [
-      "Inside the app, only you. Database rules limit every record to the account that created it; other players cannot see your sessions, ratings, names you entered or videos.",
+      "Your sessions are private unless you choose to ask a partner for feedback. They see the session name and date, the skill you chose, and the video only if you share it. Your own ratings, journal and plan stay private.",
       "The PicklePro project team runs the database and the computer that analyzes videos, so team members with administrator access can reach stored data to operate and fix the prototype.",
       "PicklePro is a research prototype from a DLSU capstone project (CAPIT-01). Ask the project team how data is used in the study before you take part.",
     ],

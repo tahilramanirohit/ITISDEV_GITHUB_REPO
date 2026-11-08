@@ -105,7 +105,7 @@ function fakeSupabase({ rpcError = null as { message: string } | null, profile =
   return sb;
 }
 
-const onboarded = { id: "guest", display_name: "Sam", onboarding_completed_at: "2026-10-06T00:00:00Z", baseline_ratings: {} };
+const onboarded = { id: "guest", display_name: "Sam", onboarding_completed_at: "2026-10-06T00:00:00Z", baseline_ratings: {}, data_consent_version: "2026-11-08-v1", data_consent_at: "2026-11-08T00:00:00Z" };
 
 describe("dev mode entry", () => {
   it("lets a public trial visitor enter a private guest session without seeding mock data", async () => {
@@ -113,12 +113,12 @@ describe("dev mode entry", () => {
     const cfg = getConfig({ DEV: false, VITE_ENABLE_GUEST_MODE: "true" });
     render(<App cfg={cfg} sb={sb as unknown as SupabaseClient} />);
     fireEvent.click(await screen.findByRole("button", { name: /Try with my own video/ }));
-    // Shown in both the phone top bar and the desktop sidebar.
+    // Shown in the desktop sidebar (and on the Profile card on phones).
     expect((await screen.findAllByText("Private guest")).length).toBeGreaterThan(0);
     expect(sb.auth.signInAnonymously).toHaveBeenCalledOnce();
     expect(sb.rpc).not.toHaveBeenCalled();
-    // Sign-out lives on the Profile tab of the mobile layout.
-    fireEvent.click(within(screen.getByRole("navigation", { name: "Main" })).getByRole("link", { name: "Profile" }));
+    // Sign-out lives on Profile; on phones the avatar in the top bar opens it (Design B).
+    fireEvent.click(screen.getByRole("link", { name: "Your profile" }));
     expect(await screen.findByRole("button", { name: "Leave guest session" })).toBeTruthy();
   });
 
@@ -157,7 +157,7 @@ describe("dev mode entry", () => {
     const [fn, args] = sb.rpc.mock.calls[0] as unknown as [string, { p_sessions: unknown[] }];
     expect(fn).toBe("seed_dev_mock_data");
     expect(args.p_sessions.length).toBeGreaterThan(0);
-    fireEvent.click(within(screen.getByRole("navigation", { name: "Main" })).getByRole("link", { name: "Profile" }));
+    fireEvent.click(screen.getByRole("link", { name: "Your profile" }));
     expect(await screen.findByRole("button", { name: "Exit dev mode" })).toBeTruthy();
   });
 
@@ -177,10 +177,13 @@ describe("mobile app layout", () => {
     render(<App cfg={cfg} sb={sb as unknown as SupabaseClient} />);
     fireEvent.click(await screen.findByRole("button", { name: /Try with my own video/ }));
     const nav = await screen.findByRole("navigation", { name: "Main" });
-    for (const name of ["Home", "Sessions", "Log", "Progress", "Profile"]) {
+    // Design B floating bar: four tabs and the raised "+"; Profile is the avatar in the top bar.
+    for (const name of ["Home", "Sessions", "Log a game", "Progress", "Players"]) {
       expect(within(nav).getByRole("link", { name })).toBeTruthy();
     }
-    fireEvent.click(within(nav).getByRole("link", { name: "Log" }));
+    expect(within(nav).queryByRole("link", { name: "Profile" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Your profile" })).toBeTruthy();
+    fireEvent.click(within(nav).getByRole("link", { name: "Log a game" }));
     // Desktop sidebar offers the same destinations.
     const sidebar = screen.getByRole("navigation", { name: "Sidebar" });
     for (const name of ["Home", "Sessions", "Progress", "Profile"]) expect(within(sidebar).getByRole("link", { name })).toBeTruthy();
@@ -195,6 +198,8 @@ describe("getting to know the player", () => {
     const cfg = getConfig({ DEV: false, VITE_ENABLE_GUEST_MODE: "true" });
     render(<App cfg={cfg} sb={sb as unknown as SupabaseClient} />);
     fireEvent.click(await screen.findByRole("button", { name: /Try with my own video/ }));
+    expect(await screen.findByText("Before we start, your data.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Agree and continue" }));
     expect(await screen.findByText("Let's get to know your game")).toBeTruthy();
     expect(screen.queryByRole("navigation", { name: "Main" })).toBeNull();
 
@@ -203,8 +208,8 @@ describe("getting to know the player", () => {
     fireEvent.change(screen.getByLabelText("What should we call you?"), { target: { value: "Sam" } });
     // No age gate: younger players can use PicklePro too.
     expect(screen.queryByRole("checkbox")).toBeNull();
+    fireEvent.click(screen.getByRole("radio", { name: "1 to 2 years" }));
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-    fireEvent.click(await screen.findByRole("button", { name: "1–2 years" }));
     fireEvent.click(screen.getByRole("button", { name: "About once a week" }));
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
     fireEvent.click(await screen.findByRole("button", { name: "Intermediate" }));
@@ -225,11 +230,11 @@ describe("getting to know the player", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Skip for now" }));
 
     expect(await screen.findByRole("navigation", { name: "Main" })).toBeTruthy();
-    expect(sb.upserts[0]).toMatchObject({
+    expect(sb.upserts[1]).toMatchObject({
       id: "guest", display_name: "Sam", years_playing: 1.5, play_frequency: "weekly",
       self_level: "Intermediate", play_reasons: ["compete"], main_goals: ["positioning"], baseline_ratings: { dinking: 2, serve: 3, consistency: 4 },
     });
-    expect(sb.upserts[0].onboarding_completed_at).toBeTruthy();
+    expect(sb.upserts[1].onboarding_completed_at).toBeTruthy();
   });
 
   it("is skipped in dev mode with sample sessions", async () => {

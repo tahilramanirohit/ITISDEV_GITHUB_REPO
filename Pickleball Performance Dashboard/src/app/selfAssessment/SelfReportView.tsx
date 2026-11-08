@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { ChevronDown, Dumbbell, Target, TrendingDown, TrendingUp, Minus } from "lucide-react";
 import type { SelfProgressRow, SelfReport } from "../../lib/coaching/selfAssessment";
-import { ACCENT_INK, ACTION_SOFT, BORDER, DISPLAY_FONT, GREEN, GREEN_BG, INK, OPTIC, ORANGE, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
-import { Card, RingTile, SectionTitle, cardStyle, mascot2xUrl, mascotUrl } from "../shell/primitives";
+import { ACCENT_INK, ACTION, ACTION_SOFT, BORDER, DISPLAY_FONT, GREEN, GREEN_BG, HERO, INK, ON_HERO, OPTIC, ORANGE, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
+import { Card, RingTile, SectionTitle, mascot2xUrl, mascotUrl } from "../shell/primitives";
 import { selfCoachScript } from "../../lib/coaching/coachScript";
 import { CoachLauncher } from "../coach/CoachPlayer";
 
@@ -72,11 +72,11 @@ export function SelfReportView({ report, progress, previousLabel, onEdit, sessio
   return (
     <div className="space-y-5">
       {report.focus[0] && (
-        <section className="relative overflow-hidden rounded-[14px] p-5 pr-28" style={cardStyle} aria-label="This week's drill">
+        <section className="relative overflow-hidden rounded-[22px] p-5 pr-28" style={{ background: HERO, color: ON_HERO, borderTop: `4px solid ${ACTION}` }} aria-label="This week's drill">
           <img src={mascot2xUrl} alt="" aria-hidden="true" className="pointer-events-none absolute bottom-2 right-3 h-28 w-auto" />
-          <p className="text-sm" style={{ color: WHITE_SUB }}>This week's drill</p>
-          <p className="mt-0.5 text-[1.35rem] font-extrabold leading-tight" style={{ fontFamily: DISPLAY_FONT }}>{report.focus[0].drill.name}</p>
-          <p className="mt-1 text-sm leading-relaxed" style={{ color: WHITE_DIM }}>For your {report.focus[0].label.toLowerCase()}. 15 minutes, 3 times this week.</p>
+          <p className="text-sm font-bold" style={{ color: ACTION }}>This week's drill</p>
+          <p className="mt-0.5 text-[1.5rem] font-extrabold leading-tight" style={{ fontFamily: DISPLAY_FONT }}>{report.focus[0].drill.name}</p>
+          <p className="mt-1 text-base leading-relaxed" style={{ color: "#c6d3ca" }}>For your {report.focus[0].label.toLowerCase()}. 15 minutes, 3 times this week.</p>
           {coach && <div className="relative mt-3"><CoachLauncher shortScript={coach.short} fullScript={coach.full} /></div>}
         </section>
       )}

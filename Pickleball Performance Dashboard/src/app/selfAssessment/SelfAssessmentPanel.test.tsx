@@ -81,3 +81,33 @@ describe("SelfAssessmentPanel", () => {
     expect(upserts).toHaveLength(0);
   });
 });
+
+it("derives result counts from score while preserving individual manual overrides", async () => {
+  const { sb } = fakeSupabase();
+  render(<SelfAssessmentPanel sb={sb} session={session} />);
+  await screen.findByRole("radio", { name: /^Serve 1 of 5/ });
+  fireEvent.change(screen.getByLabelText("Score (optional)"), { target: { value: "11-7, 9-11, 11-5" } });
+  expect(screen.getAllByText("AUTO")).toHaveLength(3);
+  expect(screen.getByRole("button", { name: "Won" }).getAttribute("aria-pressed")).toBe("true");
+  fireEvent.click(screen.getByRole("button", { name: "Fewer games won" }));
+  expect(screen.getAllByText("AUTO")).toHaveLength(2);
+  fireEvent.change(screen.getByLabelText("Score (optional)"), { target: { value: "7-11" } });
+  expect(screen.getByRole("button", { name: "Lost" }).getAttribute("aria-pressed")).toBe("true");
+  expect(screen.getAllByText("AUTO")).toHaveLength(2);
+  fireEvent.change(screen.getByLabelText("Score (optional)"), { target: { value: "unreadable" } });
+  expect(screen.queryByText("AUTO")).toBeNull();
+  expect(screen.getAllByText("YOUR RATING").length).toBeGreaterThan(0);
+  expect(screen.getAllByText("1 = Lowest").length).toBeGreaterThan(0);
+});
+
+it("lets a player clear accidental optional counts and keep zero wins", async () => {
+  const { sb } = fakeSupabase();
+  render(<SelfAssessmentPanel sb={sb} session={session} />);
+  await screen.findByRole("radio", { name: /^Serve 1 of 5/ });
+  fireEvent.click(screen.getByRole("button", { name: "More games played" }));
+  fireEvent.click(screen.getByRole("button", { name: "More games won" }));
+  fireEvent.click(screen.getByRole("button", { name: "Fewer games won" }));
+  expect(screen.getByRole("button", { name: "Fewer games won" }).getAttribute("disabled")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Fewer games played" }));
+  expect(screen.queryByRole("button", { name: "More games won" })).toBeNull();
+});

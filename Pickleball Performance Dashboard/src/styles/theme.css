@@ -46,7 +46,7 @@
     --pp-line: #31463a;
     --pp-line-strong: #5b7263;
     --pp-accent: #febc17;
-    --pp-accent-ink: #febc17;
+    --pp-accent-ink: #7fd796;
     --pp-accent-soft: #33361f;
     --pp-action: #febc17;
     --pp-on-action: #1f1a05;
@@ -58,7 +58,7 @@
     --pp-on-hero: #f2f5f1;
     --pp-green: #3fbf63;
     --pp-on-green: #0c1611;
-    --pp-cream: #efe9d6;
+    --pp-cream: #f6efd9;
     --pp-on-cream: #121a15;
     --pp-court-line: #1c3125;
     --pp-tabbar: #12211a;
@@ -80,7 +80,7 @@
   --pp-line: #31463a;
   --pp-line-strong: #5b7263;
   --pp-accent: #febc17;
-  --pp-accent-ink: #febc17;
+  --pp-accent-ink: #7fd796;
   --pp-accent-soft: #33361f;
   --pp-action: #febc17;
   --pp-on-action: #1f1a05;
@@ -92,7 +92,7 @@
   --pp-on-hero: #f2f5f1;
   --pp-green: #3fbf63;
   --pp-on-green: #0c1611;
-  --pp-cream: #efe9d6;
+  --pp-cream: #f6efd9;
   --pp-on-cream: #121a15;
   --pp-court-line: #1c3125;
   --pp-tabbar: #12211a;
@@ -271,4 +271,17 @@
     font-weight: var(--font-weight-normal);
     line-height: 1.5;
   }
+}
+
+/* Provider branding is stable in both appearances. Components still use tokens. */
+:root {
+  --pp-court-blue: #2f5d8a;
+  --pp-court-green: #3f7a4a;
+  --pp-google-bg: #ffffff;
+  --pp-google-ink: #1f1f1f;
+  --pp-google-blue: #4285f4;
+  --pp-google-green: #34a853;
+  --pp-google-yellow: #fbbc05;
+  --pp-google-red: #ea4335;
+  --pp-switch-thumb: #ffffff;
 }

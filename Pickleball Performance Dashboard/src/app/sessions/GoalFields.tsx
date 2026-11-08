@@ -4,10 +4,10 @@ import {
   type GoalValues, type ImprovementGoal, type SelfRating,
 } from "../../lib/api/types";
 import { BORDER, INK, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
-import { fieldStyle, labelClass, labelStyle } from "../shell/primitives";
+import { ScaleLabels, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
 
 const GOAL_DETAILS: Record<ImprovementGoal, string> = {
-  positioning: "Getting to the kitchen line, transition, footwork.",
+  positioning: "Moving up to the net and footwork.",
   shot_outcomes: "Returns, consistency, shot choice.",
   shot_technique: "Serve, drops, dinks and volleys.",
 };
@@ -21,7 +21,7 @@ export function GoalFields({ value, onChange }: { value: GoalValues; onChange: (
           const ratingKey = `${goal}_rating` as const;
           const selected = value.improvement_goals.includes(goal);
           return (
-            <div key={goal} className="rounded-[14px] p-3 focus-within:ring-2 focus-within:ring-[#15803d]" style={{ border: `${selected ? 2 : 1}px solid ${selected ? INK : BORDER}`, background: WHITE }}>
+            <div key={goal} className="rounded-[14px] p-3 focus-within:ring-2 focus-within:ring-[var(--pp-focus)]" style={{ border: `${selected ? 2 : 1}px solid ${selected ? INK : BORDER}`, background: WHITE }}>
               <label className="flex cursor-pointer items-center gap-3 text-sm" style={{ color: INK }}>
                 <input type="checkbox" aria-label={GOAL_LABELS[goal]} checked={selected} className="sr-only" onChange={() => onChange({
                   ...value,
@@ -38,7 +38,7 @@ export function GoalFields({ value, onChange }: { value: GoalValues; onChange: (
                 </span>
               </label>
               {selected && (
-                <label className="mt-2 flex items-center justify-between gap-3 text-xs" style={{ color: WHITE_DIM }}>
+                <div><label className="mt-2 flex items-center justify-between gap-3 text-xs" style={{ color: WHITE_DIM }}>
                   Your current level (optional)
                   <select aria-label={`${GOAL_LABELS[goal]} self rating`} value={value[ratingKey] ?? ""}
                     onChange={(e) => onChange({ ...value, [ratingKey]: e.target.value ? Number(e.target.value) as SelfRating : null })}
@@ -46,7 +46,7 @@ export function GoalFields({ value, onChange }: { value: GoalValues; onChange: (
                     <option value="">Not sure</option>
                     {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n} / 5</option>)}
                   </select>
-                </label>
+                </label><ScaleLabels /></div>
               )}
             </div>
           );

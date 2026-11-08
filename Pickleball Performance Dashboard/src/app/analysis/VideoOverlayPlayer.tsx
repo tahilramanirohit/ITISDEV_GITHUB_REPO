@@ -79,14 +79,23 @@ export function VideoOverlayPlayer({
   const [showLabels, setShowLabels] = useState(true);
   const hasSelected = positions.some((s) => s.players.some((p) => p.selected)) || selectedTrackId != null;
 
+  // Each jump is applied once. A jump that arrives before the video has loaded (for example
+  // a Home moment chip opening this page at "?t=47") waits for the video's metadata.
+  const appliedJump = useRef<number | null>(null);
   useEffect(() => {
     const video = videoRef.current;
-    if (!jump || !video) return;
-    // Start a moment early so the shot can be seen developing.
-    video.currentTime = Math.max(0, jump.time - 1.0);
-    void video.play().catch(() => undefined);
-    video.scrollIntoView?.({ behavior: "smooth", block: "center" });
-  }, [jump]);
+    if (!jump || !video || appliedJump.current === jump.id) return;
+    const go = () => {
+      appliedJump.current = jump.id;
+      // Start a moment early so the shot can be seen developing.
+      video.currentTime = Math.max(0, jump.time - 1.0);
+      void video.play().catch(() => undefined);
+      video.scrollIntoView?.({ behavior: "smooth", block: "center" });
+    };
+    if (video.readyState >= 1) { go(); return; }
+    video.addEventListener("loadedmetadata", go, { once: true });
+    return () => video.removeEventListener("loadedmetadata", go);
+  }, [jump, src]);
 
   function selectPlayer(event: React.MouseEvent<HTMLCanvasElement>) {
     const video = videoRef.current;

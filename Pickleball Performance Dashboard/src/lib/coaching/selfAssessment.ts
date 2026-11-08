@@ -69,7 +69,7 @@ export const SKILL_INFO: Record<SelfSkill, SkillInfo> = {
     keywords: ["volley", "hands", "speed-up", "speed up", "block", "reaction"],
   },
   kitchen_line: {
-    label: "Getting to the kitchen line", group: "Court", question: "How often were you set at the kitchen line during rallies?",
+    label: "Moving up to the net", group: "Court", question: "Did you move up close to the net during rallies?",
     anchors: ["Rarely got there", "Got there late", "About half the time", "Most rallies", "Every rally, set and early"],
     goal: "positioning",
     why: "At the kitchen line you can volley and keep opponents hitting upward. Teams that get there first win most points.",

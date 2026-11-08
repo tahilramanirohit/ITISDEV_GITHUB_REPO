@@ -10,10 +10,12 @@ import {
   buildSelfReport, compareSelfRatings, MIN_RATED_SKILLS, ratedSkills, SELF_SKILLS, SKILL_GROUPS, SKILL_INFO,
   type ErrorLevel, type RecoveryLevels, type SelfRatings, type SelfSkill, type SkillRating,
 } from "../../lib/coaching/selfAssessment";
-import { BORDER, GREEN, INK, PICKLE, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
-import { Chip, Notice, PrimaryButton, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
+import { ACCENT_SOFT, ACCENT_INK, CHECK, BORDER, GREEN, INK, PICKLE, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
+import { Chip, Notice, PrimaryButton, cardStyle, numStyle, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
 import { SelfReportView } from "./SelfReportView";
 import { SkillRater } from "./SkillRater";
+import { useDataUse } from "../onboarding/DataUse";
+import { parseGameScore } from "../../lib/coaching/scoreParse";
 import { peerLowerSkills, type PeerRating } from "../../lib/coaching/peerFeedback";
 
 export { SkillRater };
@@ -31,19 +33,23 @@ type Draft = {
 const emptyDraft: Draft = { ratings: {}, games_played: null, games_won: null, unforced_errors: null, biggest_struggle: "", match_result: null, match_score: "" };
 const STEPS = [...SKILL_GROUPS, "Wrap-up"] as const;
 
-function Stepper({ label, value, onChange, max }: { label: string; value: number | null; onChange: (v: number | null) => void; max: number }) {
+function Stepper({ label, value, onChange, max, auto = false, min = 1 }: { label: string; value: number | null; onChange: (v: number | null) => void; max: number; auto?: boolean; min?: number }) {
   return (
     <div className="flex items-center justify-between gap-3 rounded-[14px] px-4 py-3" style={{ background: WHITE, border: `1px solid ${BORDER}` }}>
-      <span className="text-sm font-semibold" style={{ color: INK }}>{label}</span>
+      <span className="text-sm font-semibold" style={{ color: INK }}>{label} {auto && <AutoTag />}</span>
       <span className="flex items-center gap-3">
-        <button type="button" aria-label={`Fewer ${label.toLowerCase()}`} disabled={!value} onClick={() => onChange(value && value > 1 ? value - 1 : null)}
-          className="flex h-9 w-9 items-center justify-center rounded-full disabled:opacity-30" style={{ border: `1px solid ${BORDER}` }}><Minus size={16} /></button>
-        <span className="w-6 text-center text-lg font-bold" aria-live="polite">{value ?? "–"}</span>
+        <button type="button" aria-label={`Fewer ${label.toLowerCase()}`} disabled={value == null} onClick={() => onChange(value != null && value > min ? value - 1 : null)}
+          className="flex h-11 w-11 items-center justify-center rounded-full disabled:opacity-30" style={{ border: `1px solid ${BORDER}` }}><Minus size={16} /></button>
+        <span style={numStyle} className="w-6 text-center text-2xl font-bold" aria-live="polite">{value ?? "–"}</span>
         <button type="button" aria-label={`More ${label.toLowerCase()}`} disabled={(value ?? 0) >= max} onClick={() => onChange((value ?? 0) + 1)}
-          className="flex h-9 w-9 items-center justify-center rounded-full disabled:opacity-30" style={{ border: `1px solid ${BORDER}` }}><Plus size={16} /></button>
+          className="flex h-11 w-11 items-center justify-center rounded-full disabled:opacity-30" style={{ border: `1px solid ${BORDER}` }}><Plus size={16} /></button>
       </span>
     </div>
   );
+}
+
+function AutoTag() {
+  return <span className="pp-tag inline-flex rounded-full px-2 py-1 text-xs font-extrabold" style={{ background: ACCENT_SOFT, color: ACCENT_INK }}>AUTO</span>;
 }
 
 /**
@@ -56,9 +62,18 @@ export function SelfAssessmentPanel({ sb, session, recovery, onSaved, peerRating
   /** Partners' ratings of this session; a skill they rated lower becomes the first focus. */
   peerRatings?: PeerRating[];
 }) {
+  const { analytics } = useDataUse();
   const [saved, setSaved] = useState<SelfAssessment | null | undefined>(undefined);
   const resultDraft = { match_result: session.match_result ?? null, match_score: session.match_score ?? "" };
   const [draft, setDraft] = useState<Draft>({ ...emptyDraft, ...resultDraft });
+  const [manual, setManual] = useState({ match_result: session.match_result != null, games_played: false, games_won: false });
+  const parsedScore = parseGameScore(draft.match_score);
+  const effective = {
+    match_result: !manual.match_result && parsedScore ? parsedScore.match_result : draft.match_result,
+    games_played: !manual.games_played && parsedScore ? parsedScore.games_played : draft.games_played,
+    games_won: !manual.games_won && parsedScore ? parsedScore.games_won : draft.games_won,
+  };
+  const isAuto = (key: keyof typeof manual) => !manual[key] && parsedScore?.[key] != null;
   const [editing, setEditing] = useState(false);
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -66,6 +81,7 @@ export function SelfAssessmentPanel({ sb, session, recovery, onSaved, peerRating
   const [previous, setPrevious] = useState<{ label: string; ratings: SelfRatings } | null>(null);
 
   const loadPrevious = useCallback(async () => {
+    if (!analytics) { setPrevious(null); return; }
     try {
       const [items, all] = await Promise.all([listSessions(sb), listSelfAssessments(sb)]);
       const found = previousAssessment(session, items.map((i) => i.session), all);
@@ -73,7 +89,7 @@ export function SelfAssessmentPanel({ sb, session, recovery, onSaved, peerRating
     } catch {
       setPrevious(null);
     }
-  }, [sb, session]);
+  }, [sb, session, analytics]);
 
   useEffect(() => {
     let active = true;
@@ -81,6 +97,7 @@ export function SelfAssessmentPanel({ sb, session, recovery, onSaved, peerRating
       if (!active) return;
       setSaved(row);
       setEditing(!row);
+      if (row) setManual({ match_result: session.match_result != null, games_played: row.games_played != null, games_won: row.games_won != null });
       if (row) setDraft((d) => ({ ...d, ratings: row.ratings, games_played: row.games_played, games_won: row.games_won,
         unforced_errors: row.unforced_errors, biggest_struggle: row.biggest_struggle ?? "" }));
     }).catch((e) => { if (active) { setSaved(null); setEditing(true); setError(friendlyDbError(e instanceof Error ? e.message : String(e))); } });
@@ -108,19 +125,19 @@ export function SelfAssessmentPanel({ sb, session, recovery, onSaved, peerRating
     setError("");
     try {
       const row = await saveSelfAssessment(sb, session.id, {
-        ratings: draft.ratings, games_played: draft.games_played,
-        games_won: draft.games_played == null ? null : Math.min(draft.games_won ?? 0, draft.games_played),
+        ratings: draft.ratings, games_played: effective.games_played,
+        games_won: effective.games_played == null ? null : Math.min(effective.games_won ?? 0, effective.games_played),
         unforced_errors: draft.unforced_errors, biggest_struggle: draft.biggest_struggle.trim() || null,
       });
       const score = draft.match_score.trim() || null;
-      if (!solo && (draft.match_result !== (session.match_result ?? null) || score !== (session.match_score ?? null))) {
-        await updateMatchResult(sb, session.id, { match_result: draft.match_result, match_score: score });
+      if (!solo && (effective.match_result !== (session.match_result ?? null) || score !== (session.match_score ?? null))) {
+        await updateMatchResult(sb, session.id, { match_result: effective.match_result, match_score: score });
       }
       setSaved(row);
       onSaved?.();
       setEditing(false);
       setStep(0);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      window.scrollTo({ top: 0 });
     } catch (e) {
       setError(friendlyDbError(e instanceof Error ? e.message : String(e)));
     } finally {
@@ -140,6 +157,21 @@ export function SelfAssessmentPanel({ sb, session, recovery, onSaved, peerRating
   const skills = SELF_SKILLS.filter((s) => SKILL_INFO[s].group === group);
   const last = step === STEPS.length - 1;
 
+  const resultFields = !solo && <section aria-label="Game result" className="space-y-3 rounded-[20px] border-t-4 p-4" style={{ ...cardStyle, borderTop: `4px solid ${CHECK}` }}>
+    <h3 className="text-sm font-extrabold uppercase tracking-wide" style={{ color: ACCENT_INK }}>Result</h3>
+    <div><label className={labelClass} style={labelStyle} htmlFor="match-score">Score (optional)</label>
+      <input id="match-score" maxLength={40} value={draft.match_score} inputMode="text" placeholder="11-7, 9-11, 11-5"
+        onChange={(e) => setDraft((d) => ({ ...d, match_score: e.target.value }))} className="w-full rounded-[14px] px-4 py-3 text-base" style={fieldStyle} /></div>
+    <div><p className={`${labelClass} flex items-center justify-between`} style={labelStyle}>Result {isAuto("match_result") && <AutoTag />}</p>
+      <div className="flex gap-2" role="group" aria-label="Result">{(["win", "loss"] as MatchResult[]).map((r) => <Chip key={r} selected={effective.match_result === r}
+        onClick={() => { setManual((m) => ({ ...m, match_result: true })); setDraft((d) => ({ ...d, match_result: effective.match_result === r ? null : r })); }}>{r === "win" ? "Won" : "Lost"}</Chip>)}</div></div>
+    <Stepper label="Games played" value={effective.games_played} max={50} auto={isAuto("games_played")}
+      onChange={(v) => { setManual((m) => ({ ...m, games_played: true })); setDraft((d) => ({ ...d, games_played: v })); }} />
+    {effective.games_played != null && <Stepper label="Games won" value={effective.games_won == null ? null : Math.min(effective.games_won, effective.games_played)} max={effective.games_played} min={0} auto={isAuto("games_won")}
+      onChange={(v) => { setManual((m) => ({ ...m, games_won: true })); setDraft((d) => ({ ...d, games_won: v })); }} />}
+    {parsedScore && <p className="text-sm" style={{ color: WHITE_DIM }}>Worked out from your score. Use the controls to edit.</p>}
+  </section>;
+
   return (
     <div className="space-y-4">
       <div>
@@ -156,25 +188,8 @@ export function SelfAssessmentPanel({ sb, session, recovery, onSaved, peerRating
         {step === 0 && <p className="mt-3 text-sm" style={{ color: WHITE_DIM }}>Think about this session only. 3 means "okay for my level". Skip anything that didn't come up.</p>}
       </div>
 
+      {(step === 0 || last) && resultFields}
       {group !== "Wrap-up" ? <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">{skills.map((skill) => <SkillRater key={skill} skill={skill} playFormat={session.play_format} value={draft.ratings[skill]} onChange={(v) => rate(skill, v)} />)}</div> : <div className="space-y-4 lg:max-w-xl">
-        {!solo && <>
-        <div>
-          <p className={labelClass} style={labelStyle}>Result</p>
-          <div className="flex gap-2" role="group" aria-label="Result">
-            {(["win", "loss"] as MatchResult[]).map((r) => <Chip key={r} selected={draft.match_result === r}
-              onClick={() => setDraft((d) => ({ ...d, match_result: d.match_result === r ? null : r }))}>{r === "win" ? "Won" : "Lost"}</Chip>)}
-          </div>
-        </div>
-        <div>
-          <label className={labelClass} style={labelStyle} htmlFor="match-score">Score (optional)</label>
-          <input id="match-score" maxLength={40} value={draft.match_score} inputMode="text" placeholder="11-7, 9-11, 11-5"
-            onChange={(e) => setDraft((d) => ({ ...d, match_score: e.target.value }))} className="w-full rounded-[14px] px-4 py-3 text-base" style={fieldStyle} />
-        </div>
-        <Stepper label="Games played" value={draft.games_played} max={50}
-          onChange={(v) => setDraft((d) => ({ ...d, games_played: v, games_won: v == null ? null : Math.min(d.games_won ?? 0, v) }))} />
-        {draft.games_played != null && <Stepper label="Games won" value={draft.games_won} max={draft.games_played}
-          onChange={(v) => setDraft((d) => ({ ...d, games_won: v }))} />}
-        </>}
         <div>
           <p className={labelClass} style={labelStyle}>Unforced errors</p>
           <div className="flex gap-2">

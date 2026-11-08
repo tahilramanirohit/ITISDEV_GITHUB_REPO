@@ -8,8 +8,8 @@ import { AuthScreen, PasswordRecoveryScreen } from "./auth/AuthScreen";
 import { useAuth } from "./auth/useAuth";
 import { AppShell } from "./shell/AppShell";
 import { NavAvatar } from "./profile/NavAvatar";
-import { useBuddyBadge, usePartnerBadge } from "./buddy/useBuddyBadge";
-import { OnboardingAgain, OnboardingGate } from "./onboarding/OnboardingGate";
+import { useBuddyBadge, useGameShareBadge, usePartnerBadge } from "./buddy/useBuddyBadge";
+import { AnalyticsGate, OnboardingAgain, OnboardingGate } from "./onboarding/OnboardingGate";
 import { Card, Notice, WidgetHeader } from "./shell/primitives";
 import { GREEN, ORANGE, WHITE_DIM, WHITE_SUB } from "./theme";
 
@@ -19,6 +19,7 @@ const DesignPreview = lazy(() => import("./design-preview/DesignPreview"));
 const LocalPrototype = lazy(() => import("./local/LocalPrototype"));
 const HomePage = lazy(() => import("./home/HomePage"));
 const SessionsPage = lazy(() => import("./sessions/SessionsPage"));
+const SharedGamePage = lazy(() => import("./sessions/SharedGamePage"));
 const NewSessionPage = lazy(() => import("./sessions/NewSessionPage"));
 const ProgressPage = lazy(() => import("./progress/ProgressPage"));
 const PlayersPage = lazy(() => import("./players/PlayersPage"));
@@ -168,7 +169,7 @@ function SignedInApp({ sb, cfg }: { sb: SupabaseClient; cfg: AppConfig }) {
           <Route path="/sessions" element={<SessionsPage sb={sb} userId={user.id} />} />
           <Route path="/new" element={<NewSessionPage sb={sb} userId={user.id} trialNoWorker={cfg.trialNoWorker} />} />
           <Route path="/sessions/:sessionId" element={<SessionDetail sb={sb} userId={user.id} />} />
-          <Route path="/progress" element={<ProgressPage sb={sb} userId={user.id} />} />
+          <Route path="/progress" element={<AnalyticsGate sb={sb} userId={user.id}><ProgressPage sb={sb} userId={user.id} /></AnalyticsGate>} />
           <Route path="/example" element={<ExamplePage />} />
           <Route path="/tests" element={<TestsPage sb={sb} />} />
           <Route path="/players" element={<PlayersPage sb={sb} userId={user.id} />} />
@@ -176,6 +177,7 @@ function SignedInApp({ sb, cfg }: { sb: SupabaseClient; cfg: AppConfig }) {
           <Route path="/buddy" element={<Navigate to="/players?section=find" replace />} />
           <Route path="/partners" element={<Navigate to="/players?section=partners" replace />} />
           <Route path="/shared/:sessionId" element={<SharedReportPage sb={sb} userId={user.id} />} />
+          <Route path="/shared-game/:sessionId" element={<SharedGamePage sb={sb} />} />
           <Route path="/settings" element={<SettingsPage sb={sb} userId={user.id} account={account} devLinks={<DevLinks cfg={cfg} />} />} />
           <Route path="/profile" element={<ProfilePage sb={sb} userId={user.id} account={account}
             signOut={{ label: signOutLabel, onClick: () => void sb.auth.signOut(),
@@ -194,7 +196,8 @@ function SignedInApp({ sb, cfg }: { sb: SupabaseClient; cfg: AppConfig }) {
 function SignedInShell({ sb, userId, right, children }: { sb: SupabaseClient; userId: string; right: ReactNode; children: ReactNode }) {
   const buddyWaiting = useBuddyBadge(sb, userId);
   const partnerWaiting = usePartnerBadge(sb, userId);
-  return <AppShell tabs avatar={<NavAvatar sb={sb} userId={userId} />} badges={{ "#/players": buddyWaiting + partnerWaiting }}
+  const gamesWaiting = useGameShareBadge(sb, userId);
+  return <AppShell tabs avatar={<NavAvatar sb={sb} userId={userId} />} badges={{ "#/players": buddyWaiting + partnerWaiting, "#/sessions": gamesWaiting }}
     right={right}>{children}</AppShell>;
 }
 

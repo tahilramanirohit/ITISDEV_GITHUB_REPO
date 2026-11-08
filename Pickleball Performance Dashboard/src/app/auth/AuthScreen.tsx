@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ArrowRight, FlaskConical } from "lucide-react";
-import { BORDER, CARD_GLOW, DISPLAY_FONT, GREEN, INK, NEON, NEON_D, OPTIC, OPTIC_INK, ORANGE, PAGE_BG, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
+import { CHECK, BORDER, CARD_GLOW, DISPLAY_FONT, GREEN, INK, NEON, NEON_D, OPTIC, OPTIC_INK, ORANGE, PAGE_BG, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Notice, PasswordInput, PickleProLogo, fieldStyle, labelClass, labelStyle, mascot2xUrl, pressable } from "../shell/primitives";
 import { LargeTextToggle } from "../shell/AppShell";
 
@@ -65,6 +65,16 @@ export function AuthScreen({ sb, devMode, guestMode, samplePreviewEnabled = fals
     }
   }
 
+  async function google() {
+    setBusy(true); setError(""); setInfo("");
+    try {
+      const { error } = await sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: window.location.origin + window.location.pathname } });
+      if (error) throw error;
+    } catch {
+      setError("Google sign-in couldn't start. Please try again or use your email.");
+    } finally { setBusy(false); }
+  }
+
   function openForm(next: Mode) {
     setMode(next); setError(""); setInfo("");
   }
@@ -76,29 +86,31 @@ export function AuthScreen({ sb, devMode, guestMode, samplePreviewEnabled = fals
         <LargeTextToggle tone="light" />
       </header>
       <main className="mx-auto w-full max-w-md pt-5 sm:pt-8">
-        <div className="mb-5 flex items-center gap-4">
-          <img src={mascot2xUrl} alt="Pickle, your coach" className="h-20 w-auto shrink-0" />
+        <div className="mb-5 flex flex-col items-center gap-3 text-center">
+          <img src={mascot2xUrl} alt="Pickle, your coach" className="h-28 w-auto shrink-0" />
           <div>
             <h1 className="text-2xl font-extrabold leading-tight" style={{ fontFamily: DISPLAY_FONT }}>Your next better game.</h1>
             <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Rate your game. Get a plan. See your progress.</p>
           </div>
         </div>
-        <section id="auth" aria-labelledby="auth-title" className="rounded-[18px] p-5 sm:p-6" style={{ background: WHITE, color: INK, border: `1px solid ${BORDER}`, boxShadow: CARD_GLOW }}>
-          <div className="mb-5 grid grid-cols-2 gap-1 rounded-[12px] p-1" style={{ background: PAGE_BG }} role="group" aria-label="Account access">
+        <section id="auth" aria-labelledby="auth-title" className="rounded-[20px] border-t-4 p-4 sm:p-6" style={{ background: WHITE, color: INK, border: `1px solid ${BORDER}`, boxShadow: CARD_GLOW, borderTop: `4px solid ${CHECK}` }}>
+          <div className="mb-5 grid grid-cols-2 gap-1 rounded-full p-1" style={{ background: PAGE_BG }} role="group" aria-label="Account access">
             {([["sign_in", "Sign in"], ["sign_up", "Create account"]] as const).map(([value, label]) => (
               <button key={value} type="button" aria-label={`Switch to ${label.toLowerCase()}`} aria-pressed={mode === value} disabled={busy}
-                onClick={() => openForm(value)} className={`min-h-[44px] rounded-[9px] px-2 text-sm font-bold ${pressable}`}
+                onClick={() => openForm(value)} className={`min-h-[44px] rounded-full px-2 text-sm font-bold ${pressable}`}
                 style={mode === value ? { background: OPTIC, color: OPTIC_INK } : { color: WHITE_DIM }}>
                 {label}
               </button>
             ))}
           </div>
-            <h2 id="auth-title" className="mb-1" style={{ fontFamily: DISPLAY_FONT, fontSize: "1.5rem", fontWeight: 800 }}>
-              {mode === "sign_in" ? "Sign in" : mode === "sign_up" ? "Create an account" : "Reset password"}
-            </h2>
-            <p className="text-sm mb-4" style={{ color: WHITE_DIM }}>
-              {mode === "reset" ? "We’ll email you a link to choose a new password." : "Your game, your plan. Your sessions stay private."}
-            </p>
+            <h2 id="auth-title" className="sr-only">{mode === "reset" ? "Reset password" : mode === "sign_up" ? "Create an account" : "Sign in"}</h2>
+            {mode !== "reset" ? <>
+              <button type="button" disabled={busy} onClick={() => void google()} className={`flex min-h-[52px] w-full items-center justify-center gap-3 rounded-full text-base font-extrabold ${pressable}`} style={{ background: "var(--pp-google-bg)", color: "var(--pp-google-ink)" }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="var(--pp-google-blue)" d="M21.6 12.2c0-.7-.1-1.4-.2-2.1H12v4h5.4a4.7 4.7 0 0 1-2 3.1v2.6h3.3c1.9-1.8 2.9-4.3 2.9-7.6Z"/><path fill="var(--pp-google-green)" d="M12 22c2.7 0 5-.9 6.7-2.4l-3.3-2.6c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H3v2.7A10 10 0 0 0 12 22Z"/><path fill="var(--pp-google-yellow)" d="M6.4 13.9a6 6 0 0 1 0-3.8V7.4H3a10 10 0 0 0 0 9.2Z"/><path fill="var(--pp-google-red)" d="M12 6c1.5 0 2.8.5 3.8 1.5l2.9-2.9A9.6 9.6 0 0 0 12 2a10 10 0 0 0-9 5.4l3.4 2.7C7.2 7.8 9.4 6 12 6Z"/></svg>
+                Continue with Google
+              </button>
+              <div className="my-4 flex items-center gap-3 text-sm" style={{ color: WHITE_DIM }}><span className="h-px flex-1" style={{ background: BORDER }} />or use your email<span className="h-px flex-1" style={{ background: BORDER }} /></div>
+            </> : <p className="mb-4 text-base">We’ll email you a link to choose a new password.</p>}
             <form onSubmit={submit} className="space-y-3" noValidate>
               <div>
                 <label className={labelClass} style={labelStyle} htmlFor="email">Email address</label>
@@ -115,14 +127,14 @@ export function AuthScreen({ sb, devMode, guestMode, samplePreviewEnabled = fals
               {error && <Notice tone="error">{error}</Notice>}
               {info && <Notice>{info}</Notice>}
               <button type="submit" disabled={busy}
-                className={`w-full flex items-center justify-center gap-2 rounded-[12px] py-3.5 font-bold text-[0.95rem] ${pressable}`}
+                className={`w-full flex items-center justify-center gap-2 min-h-[52px] rounded-full py-3.5 font-bold text-[0.95rem] ${pressable}`}
                 style={{ background: OPTIC, color: OPTIC_INK }}>
                 {busy ? "Please wait…" : mode === "sign_in" ? "Sign in" : mode === "sign_up" ? "Create account" : "Send reset link"} {!busy && <ArrowRight size={16} aria-hidden="true" />}
               </button>
             </form>
             {guestMode && <div className="mt-5 border-t pt-4" style={{ borderColor: BORDER }}>
               <button type="button" onClick={guestMode.onEnter} disabled={guestMode.busy || busy}
-                className={`w-full rounded-[12px] py-3.5 text-[0.95rem] font-bold ${pressable}`}
+                className={`w-full min-h-[52px] rounded-full py-3.5 text-[0.95rem] font-bold ${pressable}`}
                 style={{ background: OPTIC, color: OPTIC_INK }}>
                 {guestMode.busy ? "Opening your private session…" : "Try with my own video, no account needed"}
               </button>
@@ -149,6 +161,7 @@ export function AuthScreen({ sb, devMode, guestMode, samplePreviewEnabled = fals
               onClick={() => { setMode("reset"); setError(""); setInfo(""); }}>Forgot password?</button>}
             {mode === "reset" && <button type="button" onClick={() => openForm("sign_in")} className="mt-4 min-h-[44px] text-sm font-semibold" style={{ color: GREEN }}>Back to sign in</button>}
           </section>
+          {mode !== "reset" && <p className="mt-4 text-center text-sm" style={{ color: WHITE_DIM }}>Next, Pickle shows what data PicklePro keeps and asks for your OK.</p>}
           {samplePreviewEnabled && <a href="#/design-preview" className="mt-3 flex min-h-[44px] items-center justify-center text-sm font-semibold" style={{ color: GREEN }}>Explore sample dashboard</a>}
           <details className="mt-4 rounded-[14px] border px-4" style={{ borderColor: BORDER }}>
             <summary className="flex min-h-[44px] cursor-pointer items-center justify-between text-sm font-semibold">How it works <span aria-hidden="true">+</span></summary>

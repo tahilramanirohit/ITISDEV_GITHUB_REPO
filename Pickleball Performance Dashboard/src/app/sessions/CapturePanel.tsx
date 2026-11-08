@@ -5,7 +5,7 @@ import { loadCapture, saveCheckin, saveRecovery, saveReflection, type Capture } 
 import { endInjury, injuryErrorText, startInjury } from "../../lib/api/injury";
 import { INJURY_AREAS, INJURY_AREA_LABELS, INJURY_DISCLAIMER, type InjuryArea, type InjuryPeriod } from "../../lib/coaching/injury";
 import { BLUE_SKY, BORDER, WHITE_DIM } from "../theme";
-import { Card, Notice, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
+import { Card, Notice, ScaleLabels, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
 
 function localDateTime(iso: string | null): string {
   if (!iso) return "";
@@ -137,6 +137,7 @@ export function CapturePanel({ sb, session, onSessionUpdated, step: requestedSte
         <option value="">Not recorded</option>
         {values.map(([v, name]) => <option key={v} value={v}>{name}</option>)}
       </select>
+      {values.length === 5 && values[0][0] === "1" && <ScaleLabels />}
     </div>;
 
   const stepNames = ["Pre-game", "Post-game", "Reflection"];
@@ -201,7 +202,8 @@ export function CapturePanel({ sb, session, onSessionUpdated, step: requestedSte
                     className="w-full rounded-xl px-3 py-2" style={fieldStyle}>
                     <option value="">Not saying</option>
                     {INJURY_AREAS.map((a) => <option key={a} value={a}>{INJURY_AREA_LABELS[a]}</option>)}
-                  </select></div>
+                  </select>
+                </div>
                 <div><label className={labelClass} style={labelStyle} htmlFor="injury-note">Private note (optional)</label>
                   <input id="injury-note" maxLength={500} value={injuryNote} onChange={(e) => setInjuryNote(e.target.value)}
                     placeholder="What happened" className="w-full rounded-xl px-3 py-2" style={fieldStyle} /></div>

@@ -15,12 +15,13 @@ const base = {
 } as SessionListItem["session"];
 
 describe("SessionCard", () => {
-  it("shows a tournament match like an activity: result, players and status", () => {
+  it("shows a tournament match as a list row: result, score, players and status", () => {
     render(<SessionCard item={{ session: base, video: null, job: null, result: null }} you="Kirk"
       players={[{ role: "partner", display_name: "Ana Reyes" }, { role: "opponent", display_name: "Ben Cruz" }]} />);
     expect(screen.getByText("Tournament · Semifinal")).toBeTruthy();
     expect(screen.getByText("Won")).toBeTruthy();
-    expect(screen.getByText("11-7, 11-9")).toBeTruthy();
+    expect(screen.getByTitle("11-7, 11-9").textContent).toBe("11–7");
+    expect(screen.getByText(/with Ana$/)).toBeTruthy();
     expect(screen.getByLabelText("Kirk, Ana Reyes, Ben Cruz")).toBeTruthy();
     expect(screen.getByText("Rate yourself")).toBeTruthy();
   });

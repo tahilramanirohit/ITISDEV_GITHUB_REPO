@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ChevronRight } from "lucide-react";
 import { getProfile, type PlayerProfile } from "../../lib/api/profile";
@@ -17,10 +17,10 @@ import { listCourtTests } from "../../lib/api/courtTests";
 import { listMyPeerRatings } from "../../lib/api/partners";
 import { latestPeerBySkill } from "../../lib/coaching/peerFeedback";
 import {
-  ACCENT, ACCENT_INK, ACTION, ACTION_SOFT, BORDER, CHECK, CREAM, INK, INK_2, INK_3, LINE_STRONG, ON_ACTION, ON_CREAM, STRONG,
-  ON_STRONG, SURFACE, SURFACE_2, WARN, WHITE_SUB,
+  ACCENT_INK, ACTION, ACTION_SOFT, BORDER, CHECK, CREAM, HERO, INK, INK_2, INK_3, ON_ACTION, ON_CHECK, ON_CREAM, ON_HERO, STRONG,
+  ON_STRONG, SURFACE_2, WARN, WHITE_SUB,
 } from "../theme";
-import { Notice, cardStyle, mascotUrl, numStyle, pressable } from "../shell/primitives";
+import { Notice, PageHero, cardStyle, mascotUrl, numStyle, pressable } from "../shell/primitives";
 import { useSessionsData } from "../sessions/sessionUi";
 import { sessionKind } from "../../lib/api/types";
 
@@ -46,30 +46,33 @@ const ERROR_STYLE: Record<ErrorLevel, { height: number; color: string; label: st
 
 /** The average rating over recent sessions, with the baseline as a dashed line when there is one. */
 function Trend({ values, baseline }: { values: number[]; baseline: number | null }) {
-  const w = 150, h = 70;
-  if (values.length < 2) return <svg viewBox="0 0 120 70" width="110" height="64" aria-hidden="true"><polyline points="4,60 30,52 56,44 82,32 116,18" fill="none" stroke={LINE_STRONG} strokeWidth="3" strokeDasharray="6 6" strokeLinecap="round" /></svg>;
+  const w = 300, h = 84;
+  if (values.length < 2) return <svg viewBox="0 0 300 84" className="block h-auto w-full" aria-hidden="true"><polyline points="6,74 80,62 150,50 220,34 294,18" fill="none" stroke="#5b7263" strokeWidth="3" strokeDasharray="6 6" strokeLinecap="round" /></svg>;
   const all = baseline == null ? values : [...values, baseline];
   const lo = Math.min(...all) - 0.2, hi = Math.max(...all) + 0.2;
   const y = (v: number) => h - ((v - lo) / (hi - lo)) * h;
   const pts = values.map((v, i) => [(i / (values.length - 1)) * w, y(v)] as const);
   const lastPt = pts[pts.length - 1];
-  return <svg width={w} height={h + 16} viewBox={`-6 -6 ${w + 12} ${h + 22}`} role="img"
+  return <svg className="block h-auto w-full" viewBox={`-6 -6 ${w + 12} ${h + 22}`} role="img"
     aria-label={`Average rating went from ${values[0].toFixed(1)} to ${values[values.length - 1].toFixed(1)}${baseline != null ? `, baseline ${baseline.toFixed(1)}` : ""}`}>
     {baseline != null && <>
-      <line x1={0} x2={w} y1={y(baseline)} y2={y(baseline)} stroke={LINE_STRONG} strokeWidth={2} strokeDasharray="5 5" />
-      <text x={0} y={Math.min(h + 14, y(baseline) + 14)} fill={INK_3} fontSize={10}>baseline</text>
+      <line x1={0} x2={w} y1={y(baseline)} y2={y(baseline)} stroke="#c6d3ca" strokeOpacity={0.6} strokeWidth={1.5} strokeDasharray="5 5" />
+      <text x={w} y={Math.max(10, y(baseline) - 6)} textAnchor="end" fill="#c6d3ca" fontSize={11}>baseline {baseline.toFixed(1)}</text>
     </>}
-    <polyline points={pts.map((p) => p.join(",")).join(" ")} fill="none" stroke={ACCENT} strokeWidth={3} strokeLinejoin="round" strokeLinecap="round" />
-    <circle cx={lastPt[0]} cy={lastPt[1]} r={5} fill={ACCENT} stroke={SURFACE} strokeWidth={2} />
+    <polygon points={`0,${h} ${pts.map((p) => p.join(",")).join(" ")} ${w},${h}`} fill={ACTION} fillOpacity={0.14} />
+    <polyline points={pts.map((p) => p.join(",")).join(" ")} fill="none" stroke={ACTION} strokeWidth={3} strokeLinejoin="round" strokeLinecap="round" />
+    <circle cx={lastPt[0]} cy={lastPt[1]} r={6} fill={ACTION} stroke={HERO} strokeWidth={2.5} />
   </svg>;
 }
 
-function Stat({ label, value, sub, good }: { label: string; value: ReactNode; sub?: string; good?: boolean }) {
-  return <div className="min-w-0 rounded-[14px] p-2.5" style={{ background: SURFACE_2 }}>
-    <p className="text-xs" style={{ color: INK_3 }}>{label}</p>
-    <p className="mt-0.5 text-[30px] leading-none" style={numStyle}>{value}</p>
-    {sub && <p className="mt-1 text-xs font-bold" style={{ color: good ? ACCENT_INK : INK_2 }}>{sub}</p>}
-  </div>;
+/** Win rate as a ring, like Design B's win-rate tile. */
+function Ring({ percent }: { percent: number }) {
+  const r = 20, c = 2 * Math.PI * r;
+  return <svg width="52" height="52" viewBox="0 0 52 52" aria-hidden="true" className="shrink-0">
+    <circle cx="26" cy="26" r={r} fill="none" stroke="rgba(12,22,17,.18)" strokeWidth="7" />
+    <circle cx="26" cy="26" r={r} fill="none" stroke={ACTION} strokeWidth="7" strokeLinecap="round"
+      strokeDasharray={`${(percent / 100) * c} ${c}`} transform="rotate(-90 26 26)" />
+  </svg>;
 }
 
 function Bar({ fraction }: { fraction: number }) {
@@ -147,77 +150,76 @@ export default function ProgressPage({ sb, userId }: { sb: SupabaseClient; userI
 
   return (
     <div className="space-y-4">
-      <div className="flex items-end justify-between gap-3">
-        <h1 className="text-[1.75rem] font-extrabold leading-tight tracking-[-0.015em]">Progress</h1>
-        {items && <span className="pb-1 text-[13px] font-semibold" style={{ color: INK_3 }}>
-          {rated.length ? `${rated.length} rated · ${weeks} week${weeks === 1 ? "" : "s"}` : `${items.length ? `${items.length} logged · ` : ""}0 rated yet`}</span>}
-      </div>
+      <PageHero band title="Progress"
+        action={items && <span className="pb-1.5 text-[15px] font-semibold" style={{ color: "#c6d3ca" }}>
+          {rated.length ? `${rated.length} rated · ${weeks} week${weeks === 1 ? "" : "s"}` : `${items.length ? `${items.length} logged · ` : ""}0 rated yet`}</span>} />
 
-      <div role="group" aria-label="Show" className="grid grid-cols-3 gap-1 rounded-full p-1" style={{ background: SURFACE_2 }}>
+      <div role="group" aria-label="Show" className="grid grid-cols-3 gap-1 rounded-full p-1" style={{ background: HERO }}>
         {PROGRESS_MODES.map((m) => <button key={m} type="button" aria-pressed={mode === m} onClick={() => setMode(m)}
           className={`min-h-[44px] rounded-full text-sm font-bold ${pressable}`}
-          style={mode === m ? { background: ACTION, color: ON_ACTION } : { color: INK_2 }}>{MODE_LABELS[m]}</button>)}
+          style={mode === m ? { background: ACTION, color: ON_ACTION } : { color: "#c6d3ca" }}>{MODE_LABELS[m]}</button>)}
       </div>
 
       {error && <Notice tone="error">{error}</Notice>}
       {injury.open && <RecoveryCard sb={sb} injury={injury.open} onChanged={() => void injury.reload()} showPlan={false} />}
       <div className="space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
         <div className="space-y-4">
-          <section aria-label={`Average ${kindWord} rating`} className="grid grid-cols-[1fr_auto] items-end gap-2 rounded-[18px] p-4" style={cardStyle}>
+          <section aria-label={`Average ${kindWord} rating`} className="rounded-[22px] p-4" style={{ background: HERO, color: ON_HERO, borderTop: `4px solid ${ACTION}` }}>
             <div>
-              <p className="text-xs" style={{ color: INK_3 }}>Average {kindWord} rating</p>
+              <p className="text-sm font-bold" style={{ color: "#c6d3ca" }}>Average {kindWord} rating</p>
               {last ? <>
-                <p className="text-[56px] leading-[0.95]" style={numStyle}>{last.overall!.toFixed(1)}</p>
-                <p className="mt-1 text-[13px] font-bold" style={{ color: change != null && change < 0 ? WARN : ACCENT_INK }}>
+                <p className="mt-1 flex flex-wrap items-baseline gap-x-3"><span className="text-[64px] leading-[0.95]" style={numStyle}>{last.overall!.toFixed(1)}</span>
+                <span className="text-base font-bold" style={{ color: change != null && change < 0 ? "#ff8a65" : ACTION }}>
                   {change == null ? `Your first ${kindWord} rating`
                     : change === 0 ? `Same as your ${baseline ? "baseline" : "first"}`
-                    : `${change > 0 ? "+" : ""}${change.toFixed(1)} since your ${baseline ? "baseline" : "first rating"}`}</p>
-                {baseline && <p className="mt-0.5 text-xs" style={{ color: INK_3 }}>Baseline {baseline.overall.toFixed(1)}{baseline.setAt ? ` · set ${shortDate(baseline.setAt)}` : ""}</p>}
+                    : `${change > 0 ? "+" : ""}${change.toFixed(1)} since your ${baseline ? "baseline" : "first rating"}`}</span></p>
+                {baseline && <p className="mt-1 text-sm" style={{ color: "#c6d3ca" }}>Baseline {baseline.overall.toFixed(1)}{baseline.setAt ? ` · set ${shortDate(baseline.setAt)}` : ""}</p>}
               </> : <>
-                <p className="mt-1.5 text-2xl font-extrabold" style={{ color: INK_3 }}>No rating yet</p>
-                <p className="mt-1 text-[13px]" style={{ color: INK_2 }}>
+                <p className="mt-1.5 text-2xl font-extrabold">No rating yet</p>
+                <p className="mt-1 text-sm" style={{ color: "#c6d3ca" }}>
                   {mode === "games" && allPoints.some((p) => p.overall != null) ? "No rated games yet. Try Practice or All." : `Rate a ${kindWord} to see your trend`}</p>
-                {baseline && <p className="mt-1 text-xs" style={{ color: INK_3 }}>Your baseline is {baseline.overall.toFixed(1)}</p>}
+                {baseline && <p className="mt-1 text-sm" style={{ color: "#c6d3ca" }}>Your baseline is {baseline.overall.toFixed(1)}</p>}
               </>}
             </div>
-            <Trend values={trend} baseline={baseline?.overall ?? null} />
+            <div className="mt-3"><Trend values={trend} baseline={baseline?.overall ?? null} /></div>
           </section>
 
-          {showResults && <section aria-label="Game results" className="rounded-[18px] p-4" style={cardStyle}>
-            <div className="flex items-baseline justify-between gap-2">
-              <h2 className="text-[15px] font-extrabold">Game results</h2>
-              <span className="text-xs" style={{ color: INK_3 }}>last {Math.min(8, points.filter((p) => p.kind !== "solo").length)} games
-                {withBuddies > 0 ? ` · ${withBuddies} with a buddy` : ""}</span>
-            </div>
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              <Stat label="Win rate" value={results.record ? `${results.record.rate}%` : "—"}
-                sub={results.record ? `${results.record.won} won · ${results.record.lost} lost` : "Add results"} good={!!results.record && results.record.rate >= 50} />
-              <Stat label="Games won" value={results.gamesWon ? <>{results.gamesWon.won}<span className="text-lg" style={{ color: INK_3 }}>/{results.gamesWon.played}</span></> : "—"}
-                sub={results.gamesWon?.before ? `Was ${results.gamesWon.before.won}/${results.gamesWon.before.played}` : results.gamesWon ? "Recent games" : "Add game counts"}
-                good={!!results.gamesWon?.before && results.gamesWon.won / results.gamesWon.played > results.gamesWon.before.won / results.gamesWon.before.played} />
-              <Stat label="Errors" value={results.errors ? ERROR_STYLE[results.errors.latest].label : "—"}
-                sub={results.errors && results.errors.first !== results.errors.latest ? `Was "${results.errors.first}"` : results.errors ? "Unforced" : "Rate errors"}
-                good={!!results.errors && ERROR_STYLE[results.errors.latest].height < ERROR_STYLE[results.errors.first].height} />
-            </div>
-            {results.errors && <>
-              <p className="mt-3 text-xs" style={{ color: INK_3 }}>Unforced errors, game by game</p>
-              <div role="img" aria-label={`Unforced errors over the last ${results.errors.levels.length} games: ${results.errors.levels.join(", ")}`}
-                className="mt-1.5 flex h-11 items-end gap-1.5">
-                {results.errors.levels.map((level, i) => <i key={i} className="flex-1 rounded-[5px]"
-                  style={{ height: ERROR_STYLE[level].height, background: ERROR_STYLE[level].color }} />)}
+          {showResults && <section aria-label="Game results" className="grid grid-cols-2 gap-3">
+            <div className="flex min-w-0 flex-col gap-1.5 rounded-[22px] p-3.5" style={{ background: CHECK, color: ON_CHECK }}>
+              <p className="text-sm font-bold">Win rate</p>
+              <div className="flex items-center gap-2.5">
+                {results.record && <Ring percent={results.record.rate} />}
+                <span className="min-w-0"><span className="block text-[34px] leading-none" style={numStyle}>{results.record ? `${results.record.rate}%` : "—"}</span>
+                  <span className="mt-1 block text-sm">{results.record ? `${results.record.won} won · ${results.record.lost} lost` : "Add results"}</span></span>
               </div>
-              <div className="mt-2 flex gap-3.5 text-[11px]" style={{ color: INK_2 }} aria-hidden="true">
-                {(["many", "some", "few"] as ErrorLevel[]).map((l) => <span key={l} className="flex items-center gap-1">
-                  <i className="h-2.5 w-2.5 rounded-sm" style={{ background: ERROR_STYLE[l].color }} />{l}</span>)}
-              </div>
-            </>}
+            </div>
+            <div className="flex min-w-0 flex-col gap-1.5 rounded-[22px] p-3.5" style={{ background: "color-mix(in srgb, var(--pp-green) 16%, var(--pp-surface))", border: "1px solid color-mix(in srgb, var(--pp-green) 30%, var(--pp-line))" }}>
+              <p className="text-sm font-bold" style={{ color: CHECK }}>Unforced errors</p>
+              {results.errors ? <>
+                <div role="img" aria-label={`Unforced errors over the last ${results.errors.levels.length} games: ${results.errors.levels.join(", ")}`}
+                  className="flex h-12 items-end gap-1">
+                  {results.errors.levels.map((level, i) => <i key={i} className="flex-1 rounded-[5px]"
+                    style={{ height: ERROR_STYLE[level].height, background: ERROR_STYLE[level].color }} />)}
+                </div>
+                <p className="text-sm" style={{ color: INK_2 }}>{ERROR_STYLE[results.errors.latest].label} now{results.errors.first !== results.errors.latest ? `, was ${results.errors.first}` : ""} · game by game</p>
+              </> : <p className="text-sm" style={{ color: INK_2 }}>Rate errors after a game to see them here.</p>}
+            </div>
+            <div className="col-span-2 flex items-center gap-3 rounded-[22px] p-3.5" style={{ ...cardStyle, borderTop: `4px solid ${ACTION}` }}>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-bold" style={{ color: CHECK }}>Games won</span>
+                <span className="mt-1 block text-[30px] leading-none" style={numStyle}>{results.gamesWon ? <>{results.gamesWon.won}<span className="text-lg" style={{ color: INK_3 }}>/{results.gamesWon.played}</span></> : "—"}</span>
+              </span>
+              <span className="text-right text-sm" style={{ color: INK_2 }}>
+                {results.gamesWon?.before ? `Was ${results.gamesWon.before.won}/${results.gamesWon.before.played}` : results.gamesWon ? "Recent games" : "Add game counts"}
+                <br />last {Math.min(8, points.filter((p) => p.kind !== "solo").length)} games{withBuddies > 0 ? ` · ${withBuddies} with a buddy` : ""}</span>
+            </div>
           </section>}
           {mode !== "practice" && !showResults && rated.length > 0 && <p className="rounded-[14px] px-3 py-2.5 text-[13px]" style={{ background: SURFACE_2, color: INK_2 }}>
             Log Won/Lost, games won or unforced errors on 2 games to see your game results.</p>}
 
-          {(goals.length > 0 || measured.length > 0) && <section aria-label="Your goals" className="rounded-[18px] p-4" style={cardStyle}>
+          {(goals.length > 0 || measured.length > 0) && <section aria-label="Your goals" className="rounded-[20px] p-4" style={{ ...cardStyle, borderTop: `4px solid ${CHECK}` }}>
             <div className="flex items-baseline justify-between gap-2">
-              <h2 className="text-[15px] font-extrabold">Your goals</h2>
+              <h2 className="text-[17px] font-extrabold">Your goals</h2>
               <span className="text-xs" style={{ color: INK_3 }}>from your baseline{injury.open ? " · paused while you recover"
                 : goals[0]?.due ? ` · due ${shortDate(goals[0].due)}` : ""}</span>
             </div>
@@ -245,8 +247,8 @@ export default function ProgressPage({ sb, userId }: { sb: SupabaseClient; userI
             </>}
           </section>}
 
-          {(insights.lines.length > 0 || insights.recoveryNote) && <section aria-label="Before and after your games" className="rounded-[18px] p-4" style={cardStyle}>
-            <h2 className="text-[15px] font-extrabold">Before and after your {mode === "practice" ? "practice" : "games"}</h2>
+          {(insights.lines.length > 0 || insights.recoveryNote) && <section aria-label="Before and after your games" className="rounded-[20px] p-4" style={{ ...cardStyle, borderTop: `4px solid ${CHECK}` }}>
+            <h2 className="text-[17px] font-extrabold">Before and after your {mode === "practice" ? "practice" : "games"}</h2>
             <p className="mt-0.5 text-xs" style={{ color: INK_3 }}>From your pre-game check-ins and recovery logs</p>
             {insights.lines.length > 0 && <dl className="mt-2.5 text-sm">
               {insights.lines.map((l) => <div key={l.id} className="flex items-center justify-between gap-3 border-t py-2.5" style={{ borderColor: BORDER }}>
@@ -259,7 +261,7 @@ export default function ProgressPage({ sb, userId }: { sb: SupabaseClient; userI
             <p className="mt-2 text-xs" style={{ color: INK_3 }}>Patterns in your own entries, not medical advice.</p>
           </section>}
 
-          {unrated.length > 0 && <section className="rounded-[18px] p-4" style={cardStyle}>
+          {unrated.length > 0 && <section className="rounded-[20px] p-4" style={{ ...cardStyle, borderTop: `4px solid ${CHECK}` }}>
             <p className="text-[15px] font-bold" style={{ color: INK }}>{rated.length === 0 ? "Rate a game you already logged" : "Add ratings to earlier games"}</p>
             <ul className="mt-2">
               {unrated.slice(0, 3).map((s) => <li key={s.sessionId} className="border-t" style={{ borderColor: BORDER }}>

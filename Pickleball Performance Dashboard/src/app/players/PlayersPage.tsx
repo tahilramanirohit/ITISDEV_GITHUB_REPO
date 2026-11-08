@@ -134,7 +134,7 @@ export default function PlayersPage({ sb, userId }: { sb: SupabaseClient; userId
     setParams((p) => { const n = new URLSearchParams(p); n.set("section", next); return n; }, { replace: true });
   };
 
-  const hero = <PageHero eyebrow="Play together, coach each other" title="Players"
+  const hero = <PageHero band eyebrow="Play together, coach each other" title="Players"
     subtitle="Add players as buddies. Then ask a buddy to play, or partner for video feedback on your game." />;
   if (error) return <>{hero}<Notice tone="warn">{error}</Notice></>;
   if (!data) return <>{hero}<p className="text-sm" style={{ color: WHITE_DIM }}>Loading…</p></>;

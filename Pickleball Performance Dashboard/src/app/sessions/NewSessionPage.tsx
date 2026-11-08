@@ -10,8 +10,10 @@ import {
   type MatchResult, type PlayFormat, type ReviewMode, type SessionContext, type SessionKind,
 } from "../../lib/api/types";
 import { saveOtherPlayers, type OtherPlayer } from "../../lib/api/players";
+import { listMyBuddies, type BuddyLink } from "../../lib/api/buddy";
+import { matchBuddy, tagBuddiesInGame } from "../../lib/api/gameShares";
 import { BORDER, CARD_GLOW, GREEN, INK, PICKLE, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
-import { Chip, HeroProgress, Notice, PageHero, PrimaryButton, Sheet, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
+import { Chip, HeroProgress, Notice, PageHero, PreferenceSwitch, PrimaryButton, Sheet, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
 import { GoalFields } from "./GoalFields";
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -51,7 +53,7 @@ function ModeCard({ selected, onSelect, icon, title, detail, tag }: {
   return (
     <button type="button" aria-pressed={selected} onClick={onSelect}
       className="flex w-full items-start gap-3 rounded-[18px] p-4 text-left transition-transform duration-100 active:scale-[0.98] motion-reduce:transition-none"
-      style={{ background: WHITE, boxShadow: CARD_GLOW, border: `2px solid ${selected ? "var(--pp-action)" : BORDER}` }}>
+      style={{ background: selected ? "var(--pp-action-soft)" : WHITE, boxShadow: CARD_GLOW, border: `2px solid ${selected ? "var(--pp-action)" : BORDER}` }}>
       <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full" style={{ background: selected ? "var(--pp-action)" : "var(--pp-surface-2)", color: selected ? "var(--pp-on-action)" : INK }}>{icon}</span>
       <span className="min-w-0 flex-1">
         <span className="flex items-center justify-between gap-2">
@@ -83,6 +85,13 @@ export default function NewSessionPage({ sb, userId, trialNoWorker = false }: { 
   const [opponents, setOpponents] = useState([buddy?.format === "singles" ? buddy.name : "", ""]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // Buddies named as players can see this game on their account (they're asked first).
+  const [buddies, setBuddies] = useState<BuddyLink[]>([]);
+  const [shareOff, setShareOff] = useState<Set<string>>(new Set());
+  useEffect(() => { listMyBuddies(sb).then((b) => setBuddies(b ?? [])).catch(() => {}); }, [sb]);
+  const named = [...(form.play_format === "doubles" ? [partner] : []), ...opponents.slice(0, form.play_format === "doubles" ? 2 : 1)];
+  const buddyMatches = kind === "solo" ? [] : named.map((n) => matchBuddy(n, buddies)).filter((m, i, all): m is { id: string; name: string } =>
+    !!m && all.findIndex((x) => x?.id === m.id) === i);
   const set = <K extends keyof NewSession>(k: K, v: NewSession[K]) => setForm((f) => ({ ...f, [k]: v }));
   const setKind = (next: SessionKind, format?: PlayFormat | null) => {
     setKindState(next);
@@ -137,6 +146,9 @@ export default function NewSessionPage({ sb, userId, trialNoWorker = false }: { 
         // Names are a convenience: the session is already saved, so a failure here does not block it.
         await saveOtherPlayers(sb, s.id, players).catch(() => {});
       }
+      const shareWith = buddyMatches.filter((m) => !shareOff.has(m.id)).map((m) => m.id);
+      // Sharing is a bonus: a failure here never blocks the saved game.
+      if (shareWith.length) await tagBuddiesInGame(sb, s.id, shareWith).catch(() => {});
       navigate(`/sessions/${s.id}`);
     } catch (err) {
       setError(friendlyDbError(err instanceof Error ? err.message : String(err)));
@@ -177,9 +189,9 @@ export default function NewSessionPage({ sb, userId, trialNoWorker = false }: { 
               const meta = KIND_META[k];
               return <button key={k} type="button" aria-pressed={on} onClick={() => setKind(k)}
                 className="grid grid-cols-[2.75rem_1fr_auto] items-center gap-3 rounded-[18px] p-2.5 text-left"
-                style={{ background: WHITE, border: on ? "2px solid var(--pp-action)" : `1.5px solid ${BORDER}`, boxShadow: CARD_GLOW }}>
+                style={{ background: on ? "var(--pp-action-soft)" : WHITE, border: on ? "2px solid var(--pp-action)" : `1.5px solid ${BORDER}`, boxShadow: CARD_GLOW }}>
                 <span className="grid h-11 w-11 place-items-center rounded-full" style={{ background: meta.bg, color: meta.fg }}><meta.Icon size={20} aria-hidden="true" /></span>
-                <span className="min-w-0"><b className="block text-sm" style={{ color: INK }}>{KIND_LABELS[k]}</b><span className="block text-xs" style={{ color: WHITE_SUB }}>{meta.detail}</span></span>
+                <span className="min-w-0"><b className="block text-base" style={{ color: INK }}>{KIND_LABELS[k]}</b><span className="block text-sm" style={{ color: WHITE_SUB }}>{meta.detail}</span></span>
                 <span aria-hidden="true" className="grid h-6 w-6 place-items-center rounded-full text-xs font-extrabold" style={on ? { background: "var(--pp-action)", color: "var(--pp-on-action)" } : { border: `1.5px solid ${BORDER}` }}>{on ? "✓" : ""}</span>
               </button>;
             })}
@@ -238,7 +250,12 @@ export default function NewSessionPage({ sb, userId, trialNoWorker = false }: { 
               onChange={(e) => setOpponents((o) => o.map((v, j) => j === i ? e.target.value : v))}
               placeholder={form.play_format === "doubles" ? `Opponent ${i + 1}` : "Opponent"} className="w-full rounded-[16px] px-4 py-3 text-base" style={fieldStyle} />)}
           </div>
-          <p className="text-xs" style={{ color: WHITE_SUB }}>Names stay private to you and are not linked to other accounts.</p>
+          {buddyMatches.length > 0 && <div className="rounded-[16px] px-4" style={{ background: WHITE, border: `1px solid ${BORDER}` }}>
+            {buddyMatches.map((m) => <PreferenceSwitch key={m.id} label={`Share this game with ${m.name}`}
+              detail={`${m.name.split(" ")[0]} is your buddy. They'll be asked to add it, with any video and analysis, to their Sessions.`}
+              checked={!shareOff.has(m.id)} onChange={() => setShareOff((s) => { const n = new Set(s); if (n.has(m.id)) n.delete(m.id); else n.add(m.id); return n; })} />)}
+          </div>}
+          <p className="text-sm" style={{ color: WHITE_SUB }}>Names stay private to you. Buddies you share with see only this game, never your ratings or journal.</p>
         </section>}
         <GoalFields value={form} onChange={(goals) => setForm((current) => ({ ...current, ...goals }))} />
         <div className="grid grid-cols-2 gap-3">

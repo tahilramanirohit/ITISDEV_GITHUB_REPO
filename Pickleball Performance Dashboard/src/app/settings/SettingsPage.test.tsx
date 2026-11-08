@@ -1,0 +1,20 @@
+import { afterEach, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import SettingsPage from "./SettingsPage";
+afterEach(cleanup);
+it("persists optional choices independently, and leaves failed changes off", async () => {
+  let fail = false;
+  const update = vi.fn(() => ({ eq: async () => ({ error: fail ? new Error("offline") : null }) }));
+  const sb = { from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { analytics_opt_in: false, research_opt_in: false }, error: null }) }) }), update }) } as unknown as SupabaseClient;
+  render(<SettingsPage sb={sb} userId="u1" />);
+  const analytics = screen.getByRole("switch", { name: "Performance analytics · optional" });
+  await waitFor(() => expect((analytics as HTMLButtonElement).disabled).toBe(false));
+  fireEvent.click(analytics);
+  await waitFor(() => expect(analytics.getAttribute("aria-checked")).toBe("true"));
+  expect(update).toHaveBeenCalledWith({ analytics_opt_in: true, research_opt_in: false });
+  fail = true;
+  fireEvent.click(screen.getByRole("switch", { name: "Help our research · optional" }));
+  expect(await screen.findByRole("alert")).toBeTruthy();
+  expect(screen.getByRole("switch", { name: "Help our research · optional" }).getAttribute("aria-checked")).toBe("false");
+});

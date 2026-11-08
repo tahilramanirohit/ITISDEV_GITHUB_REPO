@@ -1,18 +1,18 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { Clock, MessageSquareText, Send } from "lucide-react";
+import { Clock, MessageSquareText, Send, X } from "lucide-react";
 import {
   formatVideoTime, inviteBuddyAsPartner, listNotes, listPartners, listSessionShares, partnerErrorText, shareSession, unshareSession,
   type PartnerLink, type PeerNote, type SessionShare,
 } from "../../lib/api/partners";
 import { initials } from "../../lib/api/players";
 import { SKILL_INFO, type SelfRatings, type SelfSkill } from "../../lib/coaching/selfAssessment";
-import { askSkillOrder, comparePeer, MAX_FOCUS_SKILLS, peerAuthors, type PeerRating } from "../../lib/coaching/peerFeedback";
+import { askSkillOrder, comparePeer, peerAuthors, type PeerRating } from "../../lib/coaching/peerFeedback";
 import {
   ACCENT, ACCENT_INK, ACCENT_SOFT, ACTION, ACTION_EDGE, CHECK, INK, INK_2, INK_3, LINE, LINE_STRONG, ON_ACTION, SURFACE, SURFACE_2, WARN,
 } from "../theme";
-import { Chip, Notice, cardStyle, mascotUrl, numStyle, pressable } from "../shell/primitives";
+import { Chip, Notice, PreferenceSwitch, cardStyle, mascotUrl, numStyle, pressable } from "../shell/primitives";
 
 function Avatar({ name }: { name: string }) {
   return <span aria-hidden="true" className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-bold"
@@ -30,14 +30,16 @@ function RatingBar({ who, value, color }: { who: string; value: number | null; c
 }
 
 /** The bottom sheet for asking a partner to look at up to 3 skills. */
-function AskSheet({ partners, shares, goalSkills, hasVideo, initialPartner, onSend, onClose }: {
-  partners: PartnerLink[]; shares: SessionShare[]; goalSkills: SelfSkill[]; hasVideo: boolean; initialPartner: string | null;
+function AskSheet({ partners, shares, goalSkills, hasVideo, initialPartner, sessionTitle, onSend, onClose }: {
+  sessionTitle: string; partners: PartnerLink[]; shares: SessionShare[]; goalSkills: SelfSkill[]; hasVideo: boolean; initialPartner: string | null;
   onSend: (partnerId: string, skills: SelfSkill[], withVideo: boolean) => Promise<void>; onClose: () => void;
 }) {
   const existing = (id: string | null) => shares.find((s) => s.partner_id === id);
-  const [partnerId, setPartnerId] = useState<string | null>(initialPartner ?? (partners.length === 1 ? partners[0].other_id : null));
-  const [skills, setSkills] = useState<SelfSkill[]>(existing(partnerId)?.focus_skills ?? goalSkills.slice(0, 2));
+  const [partnerId, setPartnerId] = useState<string | null>(initialPartner ?? partners[0]?.other_id ?? null);
+  const [skills, setSkills] = useState<SelfSkill[]>((existing(partnerId)?.focus_skills ?? goalSkills).slice(0, 1));
   const [withVideo, setWithVideo] = useState(hasVideo && (existing(partnerId)?.with_video ?? true));
+  const [changing, setChanging] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const name = partners.find((p) => p.other_id === partnerId)?.other_name ?? "Your partner";
@@ -46,11 +48,10 @@ function AskSheet({ partners, shares, goalSkills, hasVideo, initialPartner, onSe
   function pickPartner(id: string) {
     setPartnerId(id);
     const share = existing(id);
-    if (share) { setSkills(share.focus_skills); setWithVideo(hasVideo && share.with_video); }
+    setSkills((share?.focus_skills ?? goalSkills).slice(0, 1)); setWithVideo(hasVideo && (share?.with_video ?? true)); setChanging(false);
   }
-  const toggle = (skill: SelfSkill) => setSkills((list) => list.includes(skill) ? list.filter((s) => s !== skill)
-    : list.length < MAX_FOCUS_SKILLS ? [...list, skill] : list);
-  const nothingToDo = !withVideo && skills.length === 0;
+  const toggle = (skill: SelfSkill) => setSkills([skill]);
+  const nothingToDo = skills.length === 0;
 
   async function send() {
     if (!partnerId) return setError("Pick who to ask.");
@@ -66,39 +67,40 @@ function AskSheet({ partners, shares, goalSkills, hasVideo, initialPartner, onSe
   }
 
   const skillNames = skills.map((s) => SKILL_INFO[s].label.toLowerCase());
-  const privacy = `${name} sees ${withVideo ? "the video" : "the session's name and date"}${skills.length ? ` and ${skills.length === 1 ? "this skill" : `these ${skills.length} skills`}` : ""}. Not your ratings, journal or plan.`;
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    const root = dialogRef.current;
+    const oldOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    root?.focus();
+    return () => { document.body.style.overflow = oldOverflow; previous?.focus(); };
+  }, []);
 
   // Rendered on <body> so the phone tab bar and page layers never cover it.
   return createPortal(
     <div className="fixed inset-0 z-[60] flex items-end justify-center">
       <button type="button" aria-label="Close" className="pp-fade absolute inset-0 cursor-default" style={{ background: "rgba(5,10,7,.6)" }} onClick={onClose} />
-      <div role="dialog" aria-modal="true" aria-label="Ask for feedback" className="pp-sheet relative max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-[22px] px-4 pt-4"
+      <div ref={dialogRef} tabIndex={-1} onKeyDown={(e) => {
+        if (e.key === "Escape" && !busy) onClose();
+        if (e.key !== "Tab") return;
+        const buttons = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], [tabindex="0"]'));
+        const first = buttons[0], last = buttons[buttons.length - 1];
+        if (e.shiftKey && (document.activeElement === first || document.activeElement === e.currentTarget)) { e.preventDefault(); last?.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
+      }} role="dialog" aria-modal="true" aria-label="Ask for feedback" className="pp-sheet relative max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-[22px] px-4 pt-4"
         style={{ background: SURFACE, borderTop: `1px solid ${LINE_STRONG}`, paddingBottom: "max(16px, env(safe-area-inset-bottom))" }}>
         <div className="mx-auto mb-3 h-1 w-10 rounded-full" style={{ background: LINE_STRONG }} aria-hidden="true" />
-        <p className="text-[19px] font-extrabold" style={{ color: INK }}>Ask for feedback</p>
-        <p className="mt-0.5 text-[13px]" style={{ color: INK_2 }}>Your partner rates only what you pick, on the same 1–5 scale you use.</p>
-
-        <p className="mt-4 text-xs font-bold uppercase tracking-wide" style={{ color: INK_3 }}>Who</p>
-        <div className="mt-1.5 flex flex-wrap gap-2" role="group" aria-label="Who">
-          {partners.map((p) => <Chip key={p.id} selected={partnerId === p.other_id} onClick={() => pickPartner(p.other_id!)}>{p.other_name}</Chip>)}
+        <div className="flex items-start justify-between gap-2"><div><h2 className="text-2xl font-extrabold" style={{ color: INK }}>Ask {name} for feedback</h2><p className="mt-1 text-base" style={{ color: INK_2 }}>On {sessionTitle}</p></div><button type="button" aria-label="Close feedback request" onClick={onClose} disabled={busy} className="grid h-11 w-11 shrink-0 place-items-center"><X size={20} /></button></div>
+        {partners.length > 1 && <button type="button" className="min-h-[44px] text-sm font-bold underline" style={{ color: ACCENT_INK }} onClick={() => setChanging(!changing)}>Change</button>}
+        {changing && <div className="flex flex-wrap gap-2" role="group" aria-label="Who">{partners.map((p) => <Chip key={p.id} selected={partnerId === p.other_id} onClick={() => pickPartner(p.other_id!)}>{p.other_name}</Chip>)}</div>}
+        <h3 className="mt-5 text-xl font-extrabold leading-tight" style={{ color: INK }}>Which shot would you like feedback on?</h3>
+        <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Skills to look at">
+          {order.map((s) => <Chip key={s} selected={skills.includes(s)} onClick={() => toggle(s)}>{SKILL_INFO[s].label}</Chip>)}
         </div>
-
-        <p className="mt-4 text-xs font-bold uppercase tracking-wide" style={{ color: INK_3 }}>What should they look at? Up to {MAX_FOCUS_SKILLS}</p>
-        <div className="mt-1.5 flex flex-wrap gap-2" role="group" aria-label="Skills to look at">
-          {order.map((s) => <Chip key={s} selected={skills.includes(s)} onClick={() => toggle(s)}>
-            {SKILL_INFO[s].label}{goalSkills.includes(s) ? " · your goal" : ""}</Chip>)}
+        <div className="mt-4 rounded-[20px] px-4" style={{ ...cardStyle, background: SURFACE_2 }}>
+          {hasVideo ? <PreferenceSwitch label="Share the video" detail="Your ratings, journal and plan stay private." checked={withVideo} onChange={() => setWithVideo(!withVideo)} disabled={busy} />
+          : <p className="py-4 text-base" style={{ color: INK_2 }}>Ratings only. Your ratings, journal and plan stay private.</p>}
         </div>
-
-        <p className="mt-4 text-xs font-bold uppercase tracking-wide" style={{ color: INK_3 }}>Share</p>
-        <div role="group" aria-label="Share" className="mt-1.5 grid grid-cols-2 gap-1 rounded-full p-1" style={{ background: SURFACE_2 }}>
-          {([[true, "With video"], [false, "Ratings only"]] as const).map(([v, label]) =>
-            <button key={label} type="button" aria-pressed={withVideo === v} disabled={v && !hasVideo} onClick={() => setWithVideo(v)}
-              className={`min-h-[44px] rounded-full text-sm font-bold ${pressable}`}
-              style={withVideo === v ? { background: ACTION, color: ON_ACTION } : { color: INK_2 }}>{label}</button>)}
-        </div>
-        {!hasVideo && <p className="mt-1 text-xs" style={{ color: INK_3 }}>No video on this session, so your partner rates from memory, for example after playing with you.</p>}
-
-        <p className="mt-4 rounded-[14px] px-3 py-2.5 text-[13px] leading-snug" style={{ background: SURFACE_2, color: INK }} aria-live="polite">{privacy}</p>
         {error && <div className="mt-2"><Notice tone="error">{error}</Notice></div>}
         <button type="button" disabled={busy || !partnerId || nothingToDo} onClick={() => void send()}
           className={`mt-3 inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full text-base font-extrabold ${pressable}`}
@@ -113,8 +115,8 @@ function AskSheet({ partners, shares, goalSkills, hasVideo, initialPartner, onSe
  * Peer coaching on the owner's session (WP5): ask partners for feedback on chosen
  * skills, then see "You vs Kyle" per skill and their notes grouped by skill.
  */
-export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings, goalSkills, onWatch, onChanged, askFor = null, playedWith = null }: {
-  sb: SupabaseClient; sessionId: string; hasVideo: boolean;
+export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings, goalSkills, onWatch, onChanged, askFor = null, playedWith = null, sessionTitle = "this session" }: {
+  sb: SupabaseClient; sessionId: string; hasVideo: boolean; sessionTitle?: string;
   selfRatings: SelfRatings | null; peerRatings: PeerRating[]; goalSkills: SelfSkill[];
   /** Open the Ask sheet for this partner straight away (from their card under Players). */
   askFor?: string | null;
@@ -266,7 +268,7 @@ export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings
           <img src={mascotUrl} alt="" aria-hidden="true" className="h-12 w-9 shrink-0 object-contain" />
           <div className="min-w-0 flex-1">
             <h3 className="text-[15px] font-extrabold" style={{ color: INK }}>Get a partner's view</h3>
-            <p className="mt-0.5 text-[13px]" style={{ color: INK_2 }}>Ask someone you trust to rate up to 3 skills{hasVideo ? " and leave notes on the video" : ""}. Your own ratings, journal and plan stay private.</p>
+            <p className="mt-0.5 text-[13px]" style={{ color: INK_2 }}>Ask someone you trust to rate a skill{hasVideo ? " and leave notes on the video" : ""}. Your own ratings, journal and plan stay private.</p>
           </div>
         </div>
         {error && <div className="mt-3"><Notice tone="warn">{error}</Notice></div>}
@@ -291,7 +293,7 @@ export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings
       </div>
 
       {asking && partners.length > 0 && <AskSheet partners={partners} shares={shares} goalSkills={goalSkills} hasVideo={hasVideo}
-        initialPartner={asking.partner} onClose={() => setAsking(null)}
+        sessionTitle={sessionTitle} initialPartner={asking.partner ?? (partners.some((p) => p.other_id === playedWith?.id) ? playedWith!.id : null)} onClose={() => setAsking(null)}
         onSend={async (partnerId, skills, withVideo) => {
           await shareSession(sb, sessionId, partnerId, skills, withVideo);
           setAsking(null);

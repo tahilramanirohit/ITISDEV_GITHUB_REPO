@@ -3,8 +3,8 @@ import { Eye, EyeOff } from "lucide-react";
 import mascotUrl from "../../assets/pickle-mascot.webp";
 import mascot2xUrl from "../../assets/pickle-mascot@2x.webp";
 import {
-  ACCENT, ACCENT_INK, ACCENT_SOFT, ACTION, ACTION_EDGE, CREAM, DANGER, DISPLAY_FONT, INK, INK_2, INK_3, LINE, LINE_STRONG, NUM_FONT, ON_ACTION, ON_CREAM, ON_HERO,
-  ON_STRONG, STRONG, SURFACE, SURFACE_2, TABBAR, VIOLET, WARN, alpha,
+  CHECK, ACCENT, ACCENT_INK, ACCENT_SOFT, ACTION, ACTION_EDGE, CREAM, DANGER, DISPLAY_FONT, HERO, INK, INK_2, INK_3, LINE, LINE_STRONG, NUM_FONT, ON_ACTION, ON_CREAM, ON_HERO,
+  ON_STRONG, STRONG, SURFACE, SURFACE_2, VIOLET, WARN, alpha,
 } from "../theme";
 
 export { mascotUrl, mascot2xUrl };
@@ -24,7 +24,7 @@ export const cardStyle = { background: SURFACE, border: `1px solid ${LINE}`, col
 // ── Card ──────────────────────────────────────────────────────────────────
 export function Card({ children, className = "" }: { children: ReactNode; className?: string; accent?: string }) {
   return (
-    <div className={`rounded-[18px] p-5 ${className}`} style={cardStyle}>
+    <div className={`rounded-[20px] p-5 ${className}`} style={{ ...cardStyle, borderTop: `4px solid ${CHECK}` }}>
       {children}
     </div>
   );
@@ -114,7 +114,7 @@ export function PrimaryButton({ children, className = "", tone = "dark", ...rest
     : { background: ACTION, color: ON_ACTION, border: `1px solid ${ACTION_EDGE}` };
   return (
     <button {...rest}
-      className={`inline-flex min-h-[50px] items-center justify-center gap-2 rounded-full px-6 py-3 text-base font-extrabold ${pressable} ${className}`}
+      className={`inline-flex min-h-[52px] items-center justify-center gap-2 rounded-full px-6 py-3 text-base font-extrabold ${pressable} ${className}`}
       style={{ ...style, ...rest.style }}>
       {children}
     </button>
@@ -150,14 +150,14 @@ export function SegmentedTabs<T extends string>({ tabs, value, onChange, label, 
     document.getElementById(`${idBase}-tab-${tabs[next].value}`)?.focus();
   }
   return (
-    <div role="tablist" aria-label={label} className="flex gap-1 overflow-x-auto rounded-full p-1" style={{ background: TABBAR, border: `1px solid ${LINE}`, scrollbarWidth: "none" }}>
+    <div role="tablist" aria-label={label} className="flex gap-1 overflow-x-auto rounded-full p-1" style={{ background: HERO, scrollbarWidth: "none" }}>
       {tabs.map((tab, index) => {
         const active = tab.value === value;
         return (
           <button key={tab.value} type="button" role="tab" id={`${idBase}-tab-${tab.value}`} aria-controls={`${idBase}-panel-${tab.value}`}
             aria-selected={active} tabIndex={active ? 0 : -1} onClick={() => onChange(tab.value)} onKeyDown={(e) => onKeyDown(e, index)}
-            className={`min-h-[44px] flex-1 shrink-0 whitespace-nowrap rounded-full px-2.5 py-2 text-[13px] font-bold sm:px-3 sm:text-sm ${pressable}`}
-            style={active ? { background: ACTION, color: ON_ACTION } : { color: INK, background: "transparent" }}>
+            className={`min-h-[44px] flex-1 shrink-0 whitespace-nowrap rounded-full px-2.5 py-2 text-sm font-bold sm:px-3 ${pressable}`}
+            style={active ? { background: ACTION, color: ON_ACTION } : { color: "#c6d3ca", background: "transparent" }}>
             {tab.label}
             {tab.badge && <span className="ml-1.5 hidden text-xs font-semibold sm:inline" style={{ color: active ? ON_ACTION : INK_3, opacity: active ? 0.75 : 1 }}>{tab.badge}</span>}
           </button>
@@ -169,11 +169,30 @@ export function SegmentedTabs<T extends string>({ tabs, value, onChange, label, 
 
 /**
  * Screen header: a short context line, the heading, and an optional mascot beside it.
- * Sits directly on the page, with no colored band behind it.
+ * Plain on the page for flows (Log, Settings); `band` gives main tab screens Design B's dark band.
  */
-export function PageHero({ eyebrow, title, subtitle, mascot = false, action, children }: {
+export function PageHero({ eyebrow, title, subtitle, mascot = false, action, children, band = false }: {
   eyebrow?: ReactNode; title: ReactNode; subtitle?: ReactNode; mascot?: boolean; action?: ReactNode; children?: ReactNode;
+  /** Main tab screens: the dark Design B band that continues the phone top bar, with rounded bottom corners. */ band?: boolean;
 }) {
+  if (band) return (
+    <section className="relative mb-5 -mx-4 -mt-5 overflow-hidden rounded-b-[30px] px-4 pb-6 pt-1 md:-mx-6 md:-mt-6 md:px-6 lg:-mx-10 lg:-mt-8 lg:px-10 desktop:mx-0! desktop:mt-0! desktop:rounded-[28px] desktop:px-6! desktop:pt-6"
+      style={{ background: HERO, color: ON_HERO }}>
+      <span aria-hidden="true" className="pointer-events-none absolute -bottom-20 -right-16 h-56 w-56 rounded-full"
+        style={{ background: "radial-gradient(circle, rgba(254,188,23,.28), transparent 68%)" }} />
+      <div className="relative flex items-end justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          {eyebrow && <p className="text-[13px] font-extrabold uppercase tracking-[0.06em]" style={{ color: ACTION }}>{eyebrow}</p>}
+          <h1 className="mt-1 text-[1.875rem] font-extrabold leading-[1.08] tracking-[-0.02em] md:text-4xl" style={{ fontFamily: DISPLAY_FONT }}>{title}</h1>
+          {subtitle && <div className="mt-1.5 text-base leading-relaxed" style={{ color: "#c6d3ca" }}>{subtitle}</div>}
+        </div>
+        {action}
+        {mascot && <img src={mascotUrl} srcSet={`${mascotUrl} 1x, ${mascot2xUrl} 2x`} alt="" aria-hidden="true"
+          className="pointer-events-none h-24 w-auto shrink-0 md:h-28" />}
+      </div>
+      {children && <div className="relative mt-4">{children}</div>}
+    </section>
+  );
   return (
     <section className="pb-5" style={{ color: INK }}>
       <div className="flex items-end justify-between gap-3">
@@ -260,14 +279,14 @@ export function Notice({ tone = "info", onDark = false, children }: { tone?: "in
 }
 
 /** Pickle the coach saying something: the mascot beside a cream speech bubble. */
-export function PickleSays({ title, children, size = "md" }: { title: ReactNode; children?: ReactNode; size?: "sm" | "md" }) {
+export function PickleSays({ title, children, size = "md", tone = "cream" }: { title: ReactNode; children?: ReactNode; size?: "sm" | "md"; tone?: "cream" | "yellow" }) {
   const h = size === "sm" ? "h-14" : "h-[88px]";
   return (
     <div className="flex items-end gap-2">
       <img src={mascotUrl} srcSet={`${mascotUrl} 1x, ${mascot2xUrl} 2x`} alt="" aria-hidden="true" className={`pickle-hello pointer-events-none ${h} w-auto shrink-0`} />
-      <div className="mb-2 min-w-0 rounded-[18px] rounded-bl-[4px] px-3.5 py-2.5" style={{ background: CREAM, color: ON_CREAM }}>
+      <div className="mb-2 min-w-0 rounded-[18px] rounded-bl-[4px] px-3.5 py-2.5" style={{ background: tone === "yellow" ? ACTION : CREAM, color: tone === "yellow" ? ON_ACTION : ON_CREAM }}>
         <p className="text-[15px] font-extrabold leading-snug">{title}</p>
-        {children && <div className="mt-0.5 text-[13px] font-medium leading-snug" style={{ color: "#36413a" }}>{children}</div>}
+        {children && <div className="mt-0.5 text-base font-medium leading-snug" style={{ color: tone === "yellow" ? ON_ACTION : ON_CREAM }}>{children}</div>}
       </div>
     </div>
   );
@@ -290,7 +309,7 @@ export function PickleProLogo({ size = "md", tone = "light" }: { size?: "sm" | "
       <img src={mascotUrl} srcSet={`${mascotUrl} 1x, ${mascot2xUrl} 2x`} alt="" aria-hidden className="flex-shrink-0" style={{ height, width: "auto" }} />
       <span style={{ fontFamily: DISPLAY_FONT, fontWeight: 800, fontSize: size === "lg" ? "1.9rem" : size === "sm" ? "1.25rem" : "1.55rem",
         letterSpacing: "-0.01em", lineHeight: 1, color: onHero ? ON_HERO : INK }}>
-        Pickle<span style={{ color: ACCENT_INK }}>Pro</span>
+        Pickle<span style={{ color: onHero ? ACTION : ACCENT_INK }}>Pro</span>
       </span>
     </div>
   );
@@ -319,4 +338,23 @@ export function PasswordInput({ className = "", style, ...rest }: Omit<InputHTML
       </button>
     </div>
   );
+}
+
+/** Consistent endpoints for every five-point input, including partner ratings. */
+export function ScaleLabels() {
+  return <div className="mt-2 flex justify-between gap-2 text-[14px] font-bold" style={{ color: INK_2 }}><span>1 = Lowest</span><span>5 = Highest</span></div>;
+}
+
+export function PreferenceSwitch({ label, detail, checked, onChange, disabled = false }: {
+  label: string; detail: string; checked: boolean; onChange?: () => void; disabled?: boolean;
+}) {
+  return <div className="flex items-center justify-between gap-3 border-b py-3 last:border-b-0" style={{ borderColor: LINE }}>
+    <div className="min-w-0"><p className="text-base font-bold" style={{ color: INK }}>{label}</p><p className="mt-1 text-sm leading-snug" style={{ color: INK_2 }}>{detail}</p></div>
+    <button type="button" role="switch" aria-label={label} aria-checked={checked} disabled={disabled} onClick={onChange}
+      style={{ opacity: 1 }} className={`flex min-h-[44px] min-w-[52px] shrink-0 items-center justify-center rounded-full ${pressable}`}>
+      <span className="flex h-7 w-12 items-center rounded-full p-1" style={{ background: checked ? "var(--pp-green)" : SURFACE_2 }}>
+        <span className="h-5 w-5 rounded-full" style={{ background: "var(--pp-switch-thumb)", marginLeft: checked ? "auto" : 0 }} />
+      </span>
+    </button>
+  </div>;
 }

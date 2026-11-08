@@ -9,6 +9,12 @@ export type PlayReason = (typeof PLAY_REASONS)[number];
 
 export type PlayerProfile = {
   id: string;
+  data_consent_version?: string | null;
+  data_consent_at?: string | null;
+  analytics_opt_in?: boolean;
+  research_opt_in?: boolean;
+  /** Games buddies share with this player: "ask" each time (default) or "auto". Missing before the game-shares migration. */
+  game_share_mode?: "ask" | "auto";
   display_name: string;
   dominant_hand: "right" | "left" | "ambidextrous" | null;
   years_playing: number | null;
@@ -72,5 +78,25 @@ export function needsOnboarding(profile: PlayerProfile | null): boolean {
 
 export async function saveSessionDefaults(sb: SupabaseClient, userId: string, defaults: SessionDefaults): Promise<void> {
   const { error } = await sb.from("profiles").update(defaults).eq("id", userId);
+  if (error) throw error;
+}
+
+export const DATA_CONSENT_VERSION = "2026-11-08-v1";
+export function needsConsent(profile: PlayerProfile | null): boolean {
+  return profile?.data_consent_version !== DATA_CONSENT_VERSION || !profile.data_consent_at;
+}
+export type DataPreferences = { analytics_opt_in: boolean; research_opt_in: boolean };
+
+export async function saveDataConsent(sb: SupabaseClient, userId: string, preferences: DataPreferences, profile: PlayerProfile | null): Promise<void> {
+  // The original schema requires a nonempty display_name even before onboarding.
+  // Do not resend other profile fields, so onboarding answers remain intact.
+  const { error } = await sb.from("profiles").upsert({ id: userId,
+    display_name: profile?.display_name || "Player", ...preferences,
+    data_consent_version: DATA_CONSENT_VERSION, data_consent_at: new Date().toISOString(),
+  }, { onConflict: "id" });
+  if (error) throw error;
+}
+export async function saveDataPreferences(sb: SupabaseClient, userId: string, preferences: DataPreferences): Promise<void> {
+  const { error } = await sb.from("profiles").update(preferences).eq("id", userId);
   if (error) throw error;
 }

@@ -25,32 +25,33 @@ const kyle = (skill: PeerRating["skill"], rating: number): PeerRating =>
   ({ author_id: "k", author_name: "Kyle", skill, rating, updated_at: "2026-11-05T10:00:00Z" });
 
 describe("Peer feedback (owner)", () => {
-  it("asks a partner to look at up to 3 skills, goal skills first, and says what stays private", async () => {
+  it("asks about one skill, preselects the goal and keeps private fields private", async () => {
     const { sb, rpc } = fakeSb();
-    render(<PeerFeedback sb={sb} sessionId="s1" hasVideo selfRatings={null} peerRatings={[]} goalSkills={["dinking", "third_shot"]} />);
+    render(<PeerFeedback sb={sb} sessionId="s1" sessionTitle="Saturday open play" hasVideo selfRatings={null} peerRatings={[]} goalSkills={["dinking", "third_shot"]} />);
     fireEvent.click(await screen.findByRole("button", { name: "Ask for feedback" }));
     const sheet = screen.getByRole("dialog", { name: "Ask for feedback" });
+    expect(within(sheet).getByText("Ask Kyle for feedback")).toBeTruthy();
+    expect(within(sheet).getByText("On Saturday open play")).toBeTruthy();
     const skills = within(sheet).getByRole("group", { name: "Skills to look at" });
-    expect(within(skills).getAllByRole("button")[0].textContent).toBe("Dinking · your goal");
-    // The two goal skills start selected; a third can be added, a fourth cannot.
+    expect(within(skills).getAllByRole("button")[0].textContent).toBe("Dinking");
+    expect(within(skills).getByRole("button", { name: "Dinking" }).getAttribute("aria-pressed")).toBe("true");
     fireEvent.click(within(skills).getByRole("button", { name: "Serve" }));
-    fireEvent.click(within(skills).getByRole("button", { name: "Volleys & hands" }));
-    expect(within(skills).getByRole("button", { name: "Volleys & hands" }).getAttribute("aria-pressed")).toBe("false");
-    expect(within(sheet).getByText("Kyle sees the video and these 3 skills. Not your ratings, journal or plan.")).toBeTruthy();
+    expect(within(skills).getByRole("button", { name: "Dinking" }).getAttribute("aria-pressed")).toBe("false");
+    expect(within(sheet).getByText("Your ratings, journal and plan stay private.")).toBeTruthy();
+    expect(within(sheet).getByRole("switch", { name: "Share the video" }).getAttribute("aria-checked")).toBe("true");
     fireEvent.click(within(sheet).getByRole("button", { name: "Send to Kyle" }));
     await waitFor(() => expect(rpc).toHaveBeenCalledWith("share_session",
-      { p_session_id: "s1", p_partner_id: "k", p_focus_skills: ["dinking", "third_shot", "serve"], p_with_video: true }));
+      { p_session_id: "s1", p_partner_id: "k", p_focus_skills: ["serve"], p_with_video: true }));
     expect(await screen.findByText(/Sent to Kyle/)).toBeTruthy();
-    expect(screen.getByText(/Dinking · Third-shot drop · Serve · with video/)).toBeTruthy();
+    expect(screen.getByRole("list", { name: "Shared with" })).toBeTruthy();
   });
 
-  it("offers ratings only when the session has no video", async () => {
+  it("sends ratings only and hides the video switch when there is no video", async () => {
     const { sb, rpc } = fakeSb();
     render(<PeerFeedback sb={sb} sessionId="s1" hasVideo={false} selfRatings={null} peerRatings={[]} goalSkills={["consistency"]} />);
     fireEvent.click(await screen.findByRole("button", { name: "Ask for feedback" }));
     const sheet = screen.getByRole("dialog", { name: "Ask for feedback" });
-    expect((within(sheet).getByRole("button", { name: "With video" }) as HTMLButtonElement).disabled).toBe(true);
-    expect(within(sheet).getByText(/Kyle sees the session's name and date and this skill/)).toBeTruthy();
+    expect(within(sheet).queryByRole("switch")).toBeNull();
     fireEvent.click(within(sheet).getByRole("button", { name: "Send to Kyle" }));
     await waitFor(() => expect(rpc).toHaveBeenCalledWith("share_session",
       { p_session_id: "s1", p_partner_id: "k", p_focus_skills: ["consistency"], p_with_video: false }));
@@ -77,7 +78,7 @@ describe("Peer feedback (owner)", () => {
     const { sb } = fakeSb();
     render(<PeerFeedback sb={sb} sessionId="s1" hasVideo selfRatings={null} peerRatings={[]} goalSkills={["dinking"]} askFor="k" />);
     const sheet = await screen.findByRole("dialog", { name: "Ask for feedback" });
-    expect(within(sheet).getByRole("button", { name: "Kyle" }).getAttribute("aria-pressed")).toBe("true");
+    expect(within(sheet).getByText("Ask Kyle for feedback")).toBeTruthy();
   });
 
   it("after a buddy session, offers to ask that buddy, or to invite them as a partner first", async () => {

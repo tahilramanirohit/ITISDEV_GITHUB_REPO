@@ -1,10 +1,12 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ArrowLeft, ChevronRight } from "lucide-react";
-import { getProfile, saveSessionDefaults, type SessionDefaults } from "../../lib/api/profile";
+import { getProfile, saveDataPreferences, saveSessionDefaults, type DataPreferences, type SessionDefaults } from "../../lib/api/profile";
+import { clearGameShareTrust, setGameShareMode, type GameShareMode } from "../../lib/api/gameShares";
 import { friendlyDbError } from "../../lib/api/selfAssessment";
 import { FORMAT_LABELS, KIND_LABELS, SOLO_FORMATS, type PlayFormat, type SessionKind } from "../../lib/api/types";
-import { Card, Chip, Notice, PageHero, PrimaryButton, SectionTitle, Sheet, labelClass, labelStyle } from "../shell/primitives";
+import { Card, Chip, Notice, PreferenceSwitch, PageHero, PrimaryButton, SectionTitle, Sheet, labelClass, labelStyle } from "../shell/primitives";
+import { DATA_PREFERENCES_UPDATED } from "../onboarding/DataUse";
 import { LargeTextToggle } from "../shell/AppShell";
 import { BORDER, INK, WHITE, WHITE_DIM, WHITE_SUB, applyAppearance, readAppearance, type Appearance } from "../theme";
 
@@ -22,20 +24,37 @@ function LinkRow({ href, title, detail }: { href: string; title: string; detail:
 export default function SettingsPage({ sb, userId, account, devLinks }: {
   sb: SupabaseClient; userId: string; account?: string; devLinks?: ReactNode;
 }) {
+  const [preferences, setPreferences] = useState<DataPreferences | null>(null);
+  const [preferenceBusy, setPreferenceBusy] = useState(false);
+  const [preferenceError, setPreferenceError] = useState("");
   const [appearance, setAppearance] = useState<Appearance>(readAppearance);
+  // Null until loaded, and when the database doesn't have game shares yet (the switch then stays hidden).
+  const [shareMode, setShareMode] = useState<GameShareMode | null>(null);
+  const [shareMessage, setShareMessage] = useState("");
   const [defaults, setDefaults] = useState<SessionDefaults>({ default_review_mode: null, default_session_kind: null, default_play_format: null });
   const [savingDefaults, setSavingDefaults] = useState(false);
   const [defaultsMessage, setDefaultsMessage] = useState("");
   useEffect(() => {
     let active = true;
     getProfile(sb, userId).then((profile) => {
+      if (active && profile) setPreferences({ analytics_opt_in: profile.analytics_opt_in === true, research_opt_in: profile.research_opt_in === true });
+      if (active && profile?.game_share_mode) setShareMode(profile.game_share_mode);
       if (active && profile) setDefaults({
         default_review_mode: profile.default_review_mode ?? null, default_session_kind: profile.default_session_kind ?? null,
         default_play_format: profile.default_play_format ?? null,
       });
-    }).catch(() => {});
+    }).catch(() => { if (active) setPreferenceError("Could not load your data choices. Reload to try again."); });
     return () => { active = false; };
   }, [sb, userId]);
+
+  async function changePreference(key: keyof DataPreferences) {
+    if (!preferences) return;
+    const next = { ...preferences, [key]: !preferences[key] };
+    setPreferenceBusy(true); setPreferenceError("");
+    try { await saveDataPreferences(sb, userId, next); setPreferences(next); window.dispatchEvent(new Event(DATA_PREFERENCES_UPDATED)); }
+    catch { setPreferenceError("Your choice wasn't saved. Please try again."); }
+    finally { setPreferenceBusy(false); }
+  }
 
   async function submitDefaults() {
     setSavingDefaults(true); setDefaultsMessage("");
@@ -86,6 +105,26 @@ export default function SettingsPage({ sb, userId, account, devLinks }: {
       </div>
     </Card>
     <div className="space-y-6">
+    <Card>
+      <SectionTitle>Your data choices</SectionTitle>
+      <PreferenceSwitch label="Performance analytics · optional" detail="Trends, win rate and tips from your games and videos." checked={preferences?.analytics_opt_in === true} disabled={!preferences || preferenceBusy} onChange={() => void changePreference("analytics_opt_in")} />
+      <PreferenceSwitch label="Help our research · optional" detail="Use my data, without my name, in the PicklePro study." checked={preferences?.research_opt_in === true} disabled={!preferences || preferenceBusy} onChange={() => void changePreference("research_opt_in")} />
+      {preferenceError && <Notice tone="error">{preferenceError}</Notice>}
+    </Card>
+    {shareMode && <Card>
+      <SectionTitle>Games buddies share with you</SectionTitle>
+      <PreferenceSwitch label="Add buddies' games automatically"
+        detail="Off: you're asked each time a buddy names you in a game. On: their games go straight into your Sessions."
+        checked={shareMode === "auto"} onChange={() => {
+          const next: GameShareMode = shareMode === "auto" ? "ask" : "auto";
+          setShareMode(next); setShareMessage("");
+          void setGameShareMode(sb, userId, next).catch(() => { setShareMode(shareMode); setShareMessage("Couldn't save that. Try again."); });
+        }} />
+      <button type="button" className="mt-2 min-h-[44px] text-sm font-bold underline" style={{ color: "var(--pp-accent-ink)" }}
+        onClick={() => void clearGameShareTrust(sb).then(() => setShareMessage("You'll be asked again for every buddy.")).catch(() => setShareMessage("Couldn't save that. Try again."))}>
+        Ask me again for buddies I always accept</button>
+      {shareMessage && <p className="mt-1 text-sm" role="status" style={{ color: "var(--pp-ink-2)" }}>{shareMessage}</p>}
+    </Card>}
     <Card>
       <SectionTitle>Display</SectionTitle>
       <p className={`mt-3 ${labelClass}`} style={labelStyle} id="appearance-label">Appearance</p>

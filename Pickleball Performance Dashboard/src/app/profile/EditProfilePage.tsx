@@ -9,6 +9,7 @@ import { BORDER, DEEP, INK, ROSE, WHITE, WHITE_DIM, WHITE_SUB, YELLOW, YELLOW_IN
 import { announceProfileUpdate } from "./NavAvatar";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { LevelHint } from "../buddy/LevelHint";
+import { EXPERIENCE, nearestExperience } from "../onboarding/experience";
 import { PROFILE_LEVELS } from "../../lib/api/buddy";
 
 const BIO_MAX = 160;
@@ -171,12 +172,11 @@ export default function EditProfilePage({ sb, userId }: { sb: SupabaseClient; us
               <div className="flex flex-wrap gap-2">{FORMATS.map(([v, l]) => <Chip key={v} selected={form.usual_format === v}
                 onClick={() => setForm({ ...form, usual_format: form.usual_format === v ? null : v })}>{l}</Chip>)}</div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="grid min-w-0 gap-1 text-sm font-semibold">Years playing
-                <input type="number" inputMode="decimal" min="0" max="99" step="0.1" value={form.years_playing ?? ""}
-                  onChange={(e) => setForm({ ...form, years_playing: e.target.value === "" ? null : Number(e.target.value) })}
-                  className="w-full min-w-0 rounded-[14px] px-4 py-3 text-base font-normal" style={fieldStyle} />
-              </label>
+            <div>
+              <p className={labelClass} style={labelStyle}>How long have you been playing pickleball?</p>
+              <div className="flex flex-wrap gap-2" role="group" aria-label="How long have you been playing pickleball?">
+                {EXPERIENCE.map((e) => <Chip key={e.years} selected={nearestExperience(form.years_playing) === e.years}
+                  onClick={() => setForm({ ...form, years_playing: e.years })}>{e.label}</Chip>)}</div>
             </div>
             <div>
               <p className={labelClass} style={labelStyle}>Level</p>

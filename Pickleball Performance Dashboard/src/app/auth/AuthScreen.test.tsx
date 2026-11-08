@@ -34,3 +34,13 @@ describe("AuthScreen sign-up", () => {
     expect(await screen.findByText(/already exists/)).toBeTruthy();
   });
 });
+
+it("offers Google in both account modes and uses the app return URL", async () => {
+  const signInWithOAuth = vi.fn().mockResolvedValue({ error: { message: "not configured" } });
+  render(<AuthScreen sb={{ auth: { signInWithOAuth } } as unknown as SupabaseClient} />);
+  expect(screen.getByRole("button", { name: "Continue with Google" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Switch to create account" }));
+  fireEvent.click(screen.getByRole("button", { name: "Continue with Google" }));
+  expect(await screen.findByText(/Google sign-in couldn't start/)).toBeTruthy();
+  expect(signInWithOAuth).toHaveBeenCalledWith({ provider: "google", options: { redirectTo: window.location.origin + window.location.pathname } });
+});
