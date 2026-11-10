@@ -192,7 +192,7 @@ export function SelfAssessmentPanel({ sb, session, recovery, onSaved, peerRating
         {step === 0 && <p className="mt-3 text-sm" style={{ color: WHITE_DIM }}>Think about this game only. Skip anything that didn't come up.</p>}
       </div>
 
-      {(step === 0 || last) && resultFields}
+      {last && resultFields}
       {group !== "Wrap-up" ? <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">{skills.map((skill) => <SkillRater key={skill} skill={skill} playFormat={session.play_format} value={draft.ratings[skill]} onChange={(v) => rate(skill, v)}
         successes={draft.shot_results[skill]} onSuccesses={(n) => count(skill, n)} />)}</div> : <div className="space-y-4 lg:max-w-xl">
         <div>

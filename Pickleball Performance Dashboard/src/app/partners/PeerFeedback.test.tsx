@@ -6,9 +6,10 @@ import type { PeerRating } from "../../lib/coaching/peerFeedback";
 
 afterEach(cleanup);
 
-function fakeSb(shares: Record<string, unknown>[] = [], notes: Record<string, unknown>[] = []) {
+const KYLE = { id: "l1", status: "active", direction: "sent", other_id: "k", other_name: "Kyle" };
+function fakeSb(shares: Record<string, unknown>[] = [], notes: Record<string, unknown>[] = [], partners: Record<string, unknown>[] = [KYLE]) {
   const rpc = vi.fn(async (fn: string, args?: Record<string, unknown>) => {
-    if (fn === "my_partners") return { data: [{ id: "l1", status: "active", direction: "sent", other_id: "k", other_name: "Kyle" }], error: null };
+    if (fn === "my_partners") return { data: partners, error: null };
     if (fn === "session_peer_notes") return { data: notes, error: null };
     if (fn === "share_session") {
       shares.splice(0, shares.length, { partner_id: args?.p_partner_id, focus_skills: args?.p_focus_skills, with_video: args?.p_with_video });
@@ -44,6 +45,21 @@ describe("Peer feedback (owner)", () => {
       { p_session_id: "s1", p_partner_id: "k", p_focus_skills: ["serve"], p_with_video: true }));
     expect(await screen.findByText(/Sent to Kyle/)).toBeTruthy();
     expect(screen.getByRole("list", { name: "Shared with" })).toBeTruthy();
+  });
+
+  it("lets the player choose who to ask: nobody is picked for them, even the buddy they played with", async () => {
+    const { sb, rpc } = fakeSb([], [], [KYLE, { id: "l2", status: "active", direction: "sent", other_id: "c", other_name: "Carla" }]);
+    render(<PeerFeedback sb={sb} sessionId="s1" hasVideo selfRatings={null} peerRatings={[]} goalSkills={["dinking"]}
+      playedWith={{ id: "k", name: "Kyle" }} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Ask for feedback" }));
+    const sheet = screen.getByRole("dialog", { name: "Ask for feedback" });
+    const who = within(sheet).getByRole("group", { name: "Who" });
+    expect(within(who).getAllByRole("button").map((b) => b.getAttribute("aria-pressed"))).toEqual(["false", "false"]);
+    expect((within(sheet).getByRole("button", { name: "Pick who to ask" }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(within(who).getByRole("button", { name: "Carla" }));
+    expect(within(sheet).getByText("Ask Carla for feedback")).toBeTruthy();
+    fireEvent.click(within(sheet).getByRole("button", { name: "Send to Carla" }));
+    await waitFor(() => expect(rpc).toHaveBeenCalledWith("share_session", expect.objectContaining({ p_partner_id: "c" })));
   });
 
   it("sends ratings only and hides the video switch when there is no video", async () => {

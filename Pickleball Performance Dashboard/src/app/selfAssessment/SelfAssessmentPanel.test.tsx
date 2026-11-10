@@ -122,6 +122,8 @@ it("derives result counts from score while preserving individual manual override
   const { sb } = fakeSupabase();
   render(<SelfAssessmentPanel sb={sb} session={session} />);
   await screen.findByRole("slider", { name: /^Serve:/ });
+  expect(screen.queryByLabelText("Score (optional)")).toBeNull(); // the result is asked in Wrap-up only
+  fireEvent.click(screen.getByRole("button", { name: "Wrap-up" }));
   fireEvent.change(screen.getByLabelText("Score (optional)"), { target: { value: "11-7, 9-11, 11-5" } });
   expect(screen.getAllByText("AUTO")).toHaveLength(3);
   expect(screen.getByRole("button", { name: "Won" }).getAttribute("aria-pressed")).toBe("true");
@@ -132,6 +134,7 @@ it("derives result counts from score while preserving individual manual override
   expect(screen.getAllByText("AUTO")).toHaveLength(2);
   fireEvent.change(screen.getByLabelText("Score (optional)"), { target: { value: "unreadable" } });
   expect(screen.queryByText("AUTO")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Shots" }));
   expect(screen.getAllByText("Hold the ball, let go to rate").length).toBeGreaterThan(0);
 });
 
@@ -139,6 +142,7 @@ it("lets a player clear accidental optional counts and keep zero wins", async ()
   const { sb } = fakeSupabase();
   render(<SelfAssessmentPanel sb={sb} session={session} />);
   await screen.findByRole("slider", { name: /^Serve:/ });
+  fireEvent.click(screen.getByRole("button", { name: "Wrap-up" }));
   fireEvent.click(screen.getByRole("button", { name: "More games played" }));
   fireEvent.click(screen.getByRole("button", { name: "More games won" }));
   fireEvent.click(screen.getByRole("button", { name: "Fewer games won" }));

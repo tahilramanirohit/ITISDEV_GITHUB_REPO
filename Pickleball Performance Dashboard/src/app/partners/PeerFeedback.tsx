@@ -35,20 +35,20 @@ function AskSheet({ partners, shares, goalSkills, hasVideo, initialPartner, sess
   onSend: (partnerId: string, skills: SelfSkill[], withVideo: boolean) => Promise<void>; onClose: () => void;
 }) {
   const existing = (id: string | null) => shares.find((s) => s.partner_id === id);
-  const [partnerId, setPartnerId] = useState<string | null>(initialPartner ?? partners[0]?.other_id ?? null);
+  // Nobody is picked for you unless you started from that partner (or there is only one).
+  const [partnerId, setPartnerId] = useState<string | null>(initialPartner ?? (partners.length === 1 ? partners[0].other_id : null));
   const [skills, setSkills] = useState<SelfSkill[]>((existing(partnerId)?.focus_skills ?? goalSkills).slice(0, 1));
   const [withVideo, setWithVideo] = useState(hasVideo && (existing(partnerId)?.with_video ?? true));
-  const [changing, setChanging] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const name = partners.find((p) => p.other_id === partnerId)?.other_name ?? "Your partner";
+  const name = partners.find((p) => p.other_id === partnerId)?.other_name ?? null;
   const order = useMemo(() => askSkillOrder(goalSkills), [goalSkills]);
 
   function pickPartner(id: string) {
     setPartnerId(id);
     const share = existing(id);
-    setSkills((share?.focus_skills ?? goalSkills).slice(0, 1)); setWithVideo(hasVideo && (share?.with_video ?? true)); setChanging(false);
+    setSkills((share?.focus_skills ?? goalSkills).slice(0, 1)); setWithVideo(hasVideo && (share?.with_video ?? true)); setError("");
   }
   const toggle = (skill: SelfSkill) => setSkills([skill]);
   const nothingToDo = skills.length === 0;
@@ -90,9 +90,12 @@ function AskSheet({ partners, shares, goalSkills, hasVideo, initialPartner, sess
       }} role="dialog" aria-modal="true" aria-label="Ask for feedback" className="pp-sheet relative max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-[22px] px-4 pt-4"
         style={{ background: SURFACE, borderTop: `1px solid ${LINE_STRONG}`, paddingBottom: "max(16px, env(safe-area-inset-bottom))" }}>
         <div className="mx-auto mb-3 h-1 w-10 rounded-full" style={{ background: LINE_STRONG }} aria-hidden="true" />
-        <div className="flex items-start justify-between gap-2"><div><h2 className="text-2xl font-extrabold" style={{ color: INK }}>Ask {name} for feedback</h2><p className="mt-1 text-base" style={{ color: INK_2 }}>On {sessionTitle}</p></div><button type="button" aria-label="Close feedback request" onClick={onClose} disabled={busy} className="grid h-11 w-11 shrink-0 place-items-center"><X size={20} /></button></div>
-        {partners.length > 1 && <button type="button" className="min-h-[44px] text-sm font-bold underline" style={{ color: ACCENT_INK }} onClick={() => setChanging(!changing)}>Change</button>}
-        {changing && <div className="flex flex-wrap gap-2" role="group" aria-label="Who">{partners.map((p) => <Chip key={p.id} selected={partnerId === p.other_id} onClick={() => pickPartner(p.other_id!)}>{p.other_name}</Chip>)}</div>}
+        <div className="flex items-start justify-between gap-2"><div><h2 className="text-2xl font-extrabold" style={{ color: INK }}>{name ? `Ask ${name} for feedback` : "Ask for feedback"}</h2><p className="mt-1 text-base" style={{ color: INK_2 }}>On {sessionTitle}</p></div><button type="button" aria-label="Close feedback request" onClick={onClose} disabled={busy} className="grid h-11 w-11 shrink-0 place-items-center"><X size={20} /></button></div>
+        <h3 className="mt-5 text-xl font-extrabold leading-tight" style={{ color: INK }}>Who should look at it?</h3>
+        <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Who">{partners.map((p) => <Chip key={p.id} selected={partnerId === p.other_id}
+          onClick={() => pickPartner(p.other_id!)}>{p.other_name}{existing(p.other_id) ? " · asked" : ""}</Chip>)}</div>
+        {partners.length === 1 && <p className="mt-2 text-sm" style={{ color: INK_2 }}>Only your video partners can be asked.{" "}
+          <a href="#/players?section=partners" className="font-bold underline" style={{ color: ACCENT_INK }}>Partner with another buddy</a></p>}
         <h3 className="mt-5 text-xl font-extrabold leading-tight" style={{ color: INK }}>Which shot would you like feedback on?</h3>
         <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Skills to look at">
           {order.map((s) => <Chip key={s} selected={skills.includes(s)} onClick={() => toggle(s)}>{SKILL_INFO[s].label}</Chip>)}
@@ -105,7 +108,7 @@ function AskSheet({ partners, shares, goalSkills, hasVideo, initialPartner, sess
         <button type="button" disabled={busy || !partnerId || nothingToDo} onClick={() => void send()}
           className={`mt-3 inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full text-base font-extrabold ${pressable}`}
           style={{ background: ACTION, color: ON_ACTION, border: `1px solid ${ACTION_EDGE}` }}>
-          <Send size={18} aria-hidden="true" />{busy ? "Sending…" : `Send to ${name}`}</button>
+          <Send size={18} aria-hidden="true" />{busy ? "Sending…" : name ? `Send to ${name}` : "Pick who to ask"}</button>
         {skillNames.length > 0 && <span className="sr-only">Asking about {skillNames.join(", ")}</span>}
       </div>
     </div>, document.body);
@@ -294,7 +297,7 @@ export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings
       </div>
 
       {asking && partners.length > 0 && <AskSheet partners={partners} shares={shares} goalSkills={goalSkills} hasVideo={hasVideo}
-        sessionTitle={sessionTitle} initialPartner={asking.partner ?? (partners.some((p) => p.other_id === playedWith?.id) ? playedWith!.id : null)} onClose={() => setAsking(null)}
+        sessionTitle={sessionTitle} initialPartner={asking.partner} onClose={() => setAsking(null)}
         onSend={async (partnerId, skills, withVideo) => {
           await shareSession(sb, sessionId, partnerId, skills, withVideo);
           setAsking(null);
