@@ -62,6 +62,9 @@ describe("Peer feedback (owner)", () => {
     const { sb } = fakeSb([{ partner_id: "k", focus_skills: ["dinking", "serve"], with_video: true }], [
       { id: "n1", author_id: "k", author_name: "Kyle", mine: false, video_time_s: 134, body: "Paddle up before the dink", skill: "dinking",
         created_at: "", updated_at: "" },
+      // The owner's own comment on the video is not partner feedback.
+      { id: "n2", author_id: "me", author_name: "Rohit", mine: true, video_time_s: 135, body: "I feel late here", skill: null,
+        created_at: "", updated_at: "" },
     ]);
     render(<PeerFeedback sb={sb} sessionId="s1" hasVideo selfRatings={{ dinking: 4, serve: 3 }} peerRatings={[kyle("dinking", 2), kyle("serve", 3)]}
       goalSkills={[]} onWatch={onWatch} />);
@@ -70,6 +73,8 @@ describe("Peer feedback (owner)", () => {
     expect(within(list).getByText("You agree")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Watch at 2:14" }));
     expect(onWatch).toHaveBeenCalledWith(134);
+    expect(screen.queryByText("Feedback from Rohit")).toBeNull();
+    expect(screen.queryByText("I feel late here")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Stop sharing with Kyle" }));
     expect(await screen.findByText("Stopped sharing with Kyle.")).toBeTruthy();
   });

@@ -4,7 +4,7 @@ Two walkthroughs: a **blank slate** (a new sign-up) and one **with data** (the d
 
 ## Set up the demo accounts
 
-1. Apply every database update through `supabase/scripts/pickleproapp_upgrade_13.sql`.
+1. Apply every database update through `supabase/scripts/pickleproapp_upgrade_14.sql`.
 2. Paste [`supabase/scripts/demo_data.sql`](../supabase/scripts/demo_data.sql) into Supabase Dashboard → SQL Editor → New query → Run. Running it again resets the four accounts.
 3. Sign in with any account below. Password: `PickleDemo-2026` (change it in the script first if the repository is public).
 
@@ -41,6 +41,10 @@ Then sign in as **Lia** → Players → **Shared** → Marco's game → rate the
 **Your own accounts (Rohit and Carla, or any two players):** run [`supabase/scripts/link_rohit_carla.sql`](../supabase/scripts/link_rohit_carla.sql) (change the names, or set the emails, and the session title at the top). Carla becomes Rohit's buddy and video partner and his "videotest" session is shared with her, with the video. Both see it under Players → Shared.
 
 **Rohit accepts a buddy live:** run [`supabase/scripts/buddy_request_for_rohit.sql`](../supabase/scripts/buddy_request_for_rohit.sql) (set `from_name` to a player who is not already Rohit's buddy). Sign in as Rohit → Players → My partners → "Wants to be your buddy" → **Accept**.
+
+**Comments on a shared video:** Rohit opens his shared session → Video → under the video, **Comments**: pause at a moment, write, **Comment at 0:21**. Carla opens it from Players → Shared → Rohit's session: she sees Rohit's comment and adds her own at another second; tapping a time jumps the video there. Both see every comment.
+
+**Players:** partner cards open with a tap (photo, name, level and since when show while closed). Under Cancelled sessions, **Remove** takes a cancelled session off your list only.
 
 **Rating a game (hold the ball):** open a session → Rate & plan. For each shot, press and hold the pickleball: the ring fills one step at a time; let go at the number of shots out of 10 that went in (it shows "7 in · 3 errors · 70%"). A quick tap adds one. Tap (?) beside a skill to see what it means. Court and game skills use the same ball from 1 to 5. **Goal length:** Settings → Goals → 2 weeks; Progress → Your goals now says "2 weeks · due …".
 

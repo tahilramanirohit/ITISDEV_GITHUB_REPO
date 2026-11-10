@@ -12,7 +12,8 @@ import { WHITE_DIM } from "../theme";
 import { Notice, PageHero, SegmentedTabs, Sheet, tabPanelProps } from "../shell/primitives";
 import { announceBuddyChange } from "../buddy/useBuddyBadge";
 import { useInjury } from "../recovery/RecoveryCard";
-import { JoinCard } from "./parts";
+import { JoinCard, PlayerPhotos } from "./parts";
+import { listPlayerPhotos } from "../../lib/api/playerPhotos";
 import { FindSection } from "./FindSection";
 import { PeopleSection } from "./PeopleSection";
 import { SharedSection } from "./SharedSection";
@@ -66,6 +67,7 @@ export default function PlayersPage({ sb, userId }: { sb: SupabaseClient; userId
   const [actionError, setActionError] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<ReadonlyMap<string, string>>(new Map());
   const [params, setParams] = useSearchParams();
   const injury = useInjury(sb);
 
@@ -92,6 +94,17 @@ export default function PlayersPage({ sb, userId }: { sb: SupabaseClient; userId
     }
   }, [sb, userId]);
   useEffect(() => { void load(); }, [load]);
+
+  // Everyone's photo on the Players tab (update 14); initials until then.
+  const photoIds = useMemo(() => data ? [...data.players.map((p) => p.player_id), ...(data.buddies ?? []).map((b) => b.other_id),
+    ...data.requests.map((r) => r.other_player_id), ...data.links.flatMap((l) => l.other_id ? [l.other_id] : []),
+    ...data.shared.map((s) => s.owner_id), ...data.shares.map((s) => s.partner_id)].sort().join(",") : "", [data]);
+  useEffect(() => {
+    let active = true;
+    if (photoIds) void listPlayerPhotos(sb, [...new Set(photoIds.split(","))]).then((m) => { if (active) setPhotos(m); });
+    return () => { active = false; };
+  }, [sb, photoIds]);
+  const photoContext = useMemo(() => ({ sb, paths: photos }), [sb, photos]);
 
   const act: Act = useCallback(async (id, fn, done) => {
     setBusyId(id);
@@ -147,6 +160,7 @@ export default function PlayersPage({ sb, userId }: { sb: SupabaseClient; userId
 
   return <>
     {hero}
+    <PlayerPhotos.Provider value={photoContext}>
     <Sheet className="space-y-6">
       <SegmentedTabs label="Players" idBase="players" value={section} onChange={open} tabs={[
         // Counts are in the labels so phones show them too (tab badges are hidden on small screens).
@@ -169,5 +183,6 @@ export default function PlayersPage({ sb, userId }: { sb: SupabaseClient; userId
         <SharedSection data={data} onOpen={open} />
       </div>}
     </Sheet>
+    </PlayerPhotos.Provider>
   </>;
 }

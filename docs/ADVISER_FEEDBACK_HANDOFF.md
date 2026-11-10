@@ -17,8 +17,17 @@
 | After WP7: Oct 23 notes (demo data, error counting, 2/4 players, court lines, "I'm injured") | ✅ Done (5 Nov 2026) | **Yes** for "I'm injured" only: `20261105120000_injury.sql` (`pickleproapp_upgrade_11.sql`) |
 | Players: buddies as a friend list | ✅ Done (5 Nov 2026) | **Yes**: `20261105130000_buddy_friends.sql` (`pickleproapp_upgrade_12.sql`) |
 | Nov 7 notes (light-blue items): term help, goal length, shot counts, hold-to-rate, less text | ✅ Done (10 Nov 2026) | **Yes**: `20261110090000_shot_results_goal_weeks.sql` (`pickleproapp_upgrade_13.sql`) |
+| Players: closed partner cards, photos, video comments for everyone, removing cancelled sessions | ✅ Done (10 Nov 2026) | **Yes**: `20261111090000_video_comments_player_photos.sql` (`pickleproapp_upgrade_14.sql`) |
 
 **All work packages are done.** Still open (not a work package): a review-only video for solo drills (gap analysis §4b.1), and the proposal text changes in section 7. Everything left needs a new migration, so read rule 6 in section 3 first.
+
+### 10 Nov 2026: Players cards, photos and video comments
+
+- **Partner cards closed by default** (`PeopleSection.tsx`): the card shows the photo, name, Buddy / Video partner badge, level and "since" date; tap it (a button with `aria-expanded`) for the stats, buttons, buddy sessions and stop/remove links. A "Feedback asked" chip shows on a closed card when the partner is waiting for your feedback.
+- **Everyone's profile photo on the Players tab:** the `profile-photos` bucket can be read by every signed-in player (not guests); `player_photos(uuid[])` returns the photo paths for the players on screen. `PlayersPage` loads them once and `Avatar` (in `parts.tsx`) shows the photo or the initials. Uploading and deleting stay with the photo's owner. Edit profile says other players see the photo.
+- **Comments on a shared video for everyone on it:** `add_peer_note`, `edit_peer_note` and `session_peer_notes` are redefined. The owner can comment (no skill tag); the owner and every partner the session is shared with see every comment; each author edits their own, the owner can delete any. Before, a partner saw only their own notes and the owner could only read them, and the owner's notes card stayed hidden until a partner wrote one: this is why the feature looked gone. `PeerNotes` now shows the comment box to both sides (to the owner once the session is shared). The partner page (`SharedReportPage`) plays the shared video even when there is no analysis report, so comments still pin to a second. The owner's own comments are left out of "Feedback from …" on Rate & plan.
+- **Removing cancelled buddy sessions:** `hidden_buddy_sessions` + `hide_cancelled_session(uuid)`: a cancelled ("called off") session can be removed from your own list (Players → My partners → Cancelled sessions → Remove); the other player still sees it. `listMyRequests` leaves removed ones out.
+- Tests: `96_video_comments.sql` (SQL; `70_partners.sql` and `50_profile_photos.sql` updated for the new rules), PeerNotes, SharedReportPage, PeerFeedback and Players tests.
 
 ### 10 Nov 2026: Nov 7 notes (light-blue items)
 

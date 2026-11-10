@@ -1,6 +1,7 @@
 // Pieces shared by the Players tab's sections: forms and cards moved from the
 // former Buddy and Partners pages, unchanged in behaviour.
-import { useMemo, useState, type FormEvent } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type FormEvent } from "react";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { CalendarPlus, Clock, MapPin, Trash2 } from "lucide-react";
 import {
   CANCEL_REASONS, FORMATS, FORMAT_LABELS, LEVEL_LABELS, MAX_CANCEL_REASON, MAX_CITY, MAX_DAYS_AHEAD, MAX_FREE_TIMES,
@@ -9,6 +10,7 @@ import {
 } from "../../lib/api/buddy";
 import { BORDER, GREEN, GREEN_BG, INK, WHITE, WHITE_DIM } from "../theme";
 import { Card, Chip, Notice, PrimaryButton, SectionTitle, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
+import { profilePhotoUrl } from "../../lib/api/profilePhoto";
 
 export const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("") || "?";
 export const levelText = (l: BuddyLevel | null) => (l ? LEVEL_LABELS[l] : "Level not set");
@@ -22,9 +24,23 @@ export function LookingFor({ list }: { list: readonly BuddyPurpose[] }) {
   </span>;
 }
 
-export function Avatar({ name }: { name: string }) {
-  return <span aria-hidden="true" className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-sm font-bold"
-    style={{ background: GREEN_BG, color: INK }}>{initials(name)}</span>;
+/** Photo paths of the players on the Players tab, loaded once by PlayersPage. */
+export const PlayerPhotos = createContext<{ sb: SupabaseClient | null; paths: ReadonlyMap<string, string> }>({ sb: null, paths: new Map() });
+
+/** A player's profile photo, or their initials when there is none. */
+export function Avatar({ name, id, size = 44 }: { name: string; id?: string | null; size?: number }) {
+  const { sb, paths } = useContext(PlayerPhotos);
+  const path = id ? paths.get(id) : undefined;
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    setUrl(null);
+    if (sb && path) profilePhotoUrl(sb, path).then((u) => { if (active) setUrl(u); }).catch(() => {});
+    return () => { active = false; };
+  }, [sb, path]);
+  return <span aria-hidden="true" className="grid shrink-0 place-items-center overflow-hidden rounded-full text-sm font-bold"
+    style={{ width: size, height: size, background: GREEN_BG, color: INK }}>
+    {url ? <img src={url} alt="" className="h-full w-full object-cover" /> : initials(name)}</span>;
 }
 
 /** A new free time: the same hours on the day after the previous one. */

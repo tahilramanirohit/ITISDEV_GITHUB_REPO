@@ -12,6 +12,8 @@ type Fake = {
   links?: Row[]; shared?: Row[]; sessions?: Row[]; shares?: Row[]; peerRatings?: Row[];
   /** The buddy list (upgrade 12); leave out to test a database before that update. */
   buddies?: Row[];
+  /** Cancelled sessions removed from the list, and profile photo paths (update 14). */
+  hidden?: Row[]; photos?: Row[];
 };
 
 const link = (extra: Row): Row => ({ id: "l1", status: "active", direction: "sent", other_id: "q", other_name: "Quinn",
@@ -54,6 +56,8 @@ function fakeSb(state: Fake) {
         state.requests = state.requests!.filter((q) => q.other_player_id !== args?.p_player);
         return { data: null, error: null };
       case "shared_with_me": return { data: state.shared, error: null };
+      case "hide_cancelled_session": state.hidden = [...state.hidden ?? [], { request_id: args?.p_request_id }]; return { data: null, error: null };
+      case "player_photos": return { data: (state.photos ?? []).filter((p) => (args?.p_ids as string[]).includes(p.player_id as string)), error: null };
       case "send_buddy_request": case "respond_buddy_request": case "invite_buddy_as_partner": return { data: "x", error: null };
       case "buddy_player_details": return state.details ? { data: state.details, error: null } : { data: null, error: { message: "missing" } };
       case "my_buddy_listing": return state.listing ? { data: [{ ...state.listing, looking_for: state.profile.buddy_looking_for ?? [] }], error: null }
@@ -84,6 +88,7 @@ function fakeSb(state: Fake) {
     if (table === "sessions") return rows(state.sessions ?? []);
     if (table === "report_shares") return rows(state.shares ?? []);
     if (table === "peer_ratings") return rows(state.peerRatings ?? []);
+    if (table === "hidden_buddy_sessions") return rows(state.hidden ?? []);
     return rows([]); // injury_periods: not injured
   });
   return { sb: { rpc, from } as unknown as SupabaseClient, rpc, update };
@@ -185,7 +190,7 @@ describe("Players: answers and shared sessions", () => {
     fireEvent.click(screen.getByRole("button", { name: "Accept" }));
     await waitFor(() => expect(rpc).toHaveBeenCalledWith("respond_buddy", { p_id: "bl-j", p_accept: true }));
     expect(await screen.findByText("You and Jun are buddies.")).toBeTruthy();
-    expect(within(screen.getByRole("list", { name: "My partners" })).getByRole("heading", { name: "Jun" })).toBeTruthy();
+    expect(within(screen.getByRole("list", { name: "My partners" })).getByRole("heading", { name: /^Jun/ })).toBeTruthy();
   });
 
   it("accepts a video partner invite, and counts feedback asked of you on the Shared tab", async () => {
@@ -235,6 +240,26 @@ describe("Players: answers and shared sessions", () => {
     expect(await screen.findByText(/^Cy cancelled/)).toBeTruthy();
     expect(screen.getByText("No reason given")).toBeTruthy();
   });
+
+  it("removes a cancelled session from your list", async () => {
+    const { sb, rpc } = fakeSb({ profile: { ...me }, requests: [
+      buddySession({ status: "called_off", cancelled_by_me: true, cancel_reason: "Bad weather", cancelled_at: "2026-10-24T09:00:00Z" })] });
+    show(sb, "/players?section=partners");
+    fireEvent.click(await screen.findByRole("button", { name: "Remove the cancelled session with Cy" }));
+    await waitFor(() => expect(rpc).toHaveBeenCalledWith("hide_cancelled_session", { p_request_id: "s1" }));
+    expect(await screen.findByText("Removed from your list.")).toBeTruthy();
+    expect(screen.queryByRole("region", { name: /Cancelled sessions/ })).toBeNull();
+    expect(screen.queryByText(/^You cancelled/)).toBeNull();
+  });
+
+  it("shows players' profile photos, and initials for players without one", async () => {
+    const storage = { from: () => ({ createSignedUrl: async (path: string) => ({ data: { signedUrl: `https://photos.test/${path}` }, error: null }) }) };
+    const { sb } = fakeSb({ profile: { ...me }, buddies: [buddy("c", "Cy"), buddy("d", "Di Lee")], photos: [{ player_id: "c", avatar_path: "c/avatar-1.webp" }] });
+    Object.assign(sb, { storage });
+    const { container } = show(sb);
+    await waitFor(() => expect(container.querySelector('img[src="https://photos.test/c/avatar-1.webp"]')).toBeTruthy());
+    expect(within(screen.getByRole("button", { name: /^Di Lee/ })).getByText("DL")).toBeTruthy();
+  });
 });
 
 describe("Players: My partners", () => {
@@ -246,8 +271,14 @@ describe("Players: My partners", () => {
       shares: [{ session_id: "m1", partner_id: "q" }] });
     show(sb);
     const people = await screen.findByRole("list", { name: "My partners" });
-    expect(within(people).getAllByRole("heading", { name: "Quinn" })).toHaveLength(1);
+    expect(within(people).getAllByRole("heading", { name: /^Quinn/ })).toHaveLength(1);
     expect(within(people).getByText("Video partner")).toBeTruthy();
+    // Closed at first: name, photo or initials, level, since when and the kind of partner only.
+    const header = within(people).getByRole("button", { name: /^Quinn/ });
+    expect(header.getAttribute("aria-expanded")).toBe("false");
+    expect(within(people).queryByLabelText("You and Quinn")).toBeNull();
+    fireEvent.click(header);
+    expect(header.getAttribute("aria-expanded")).toBe("true");
     const stats = within(people).getByLabelText("You and Quinn");
     expect(within(stats).getByText("Games together").nextSibling?.textContent).toBe("1");
     expect(within(people).getByText("Feedback: you asked 1 · Quinn asked 0")).toBeTruthy();
@@ -268,7 +299,8 @@ describe("Players: My partners", () => {
       requests: [buddySession({ slots: [{ date: "2099-01-10", start: "08:00", end: "10:00" }] })] });
     show(sb);
     const people = await screen.findByRole("list", { name: "My partners" });
-    expect(within(people).getByText(/buddies since/)).toBeTruthy();
+    expect(within(people).getByText(/since Oct 2/)).toBeTruthy();
+    fireEvent.click(within(people).getByRole("button", { name: /^Cy/ }));
     expect(within(people).queryByText(/^Feedback:/)).toBeNull(); // nothing shared yet, so no feedback line
     // Cy is not listed in Find, but buddies can still ask each other to play.
     fireEvent.click(within(people).getByRole("button", { name: "Ask to play" }));
@@ -300,7 +332,8 @@ describe("Players: My partners", () => {
   it("asks before ending a video partnership", async () => {
     const { sb, rpc } = fakeSb({ profile: { ...me }, links: [link({})] });
     show(sb);
-    fireEvent.click(await screen.findByRole("button", { name: "Stop video partnership" }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Quinn/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Stop video partnership" }));
     expect(screen.getByText(/hidden from both\s+of you right away/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Keep partner" }));
     expect(rpc).not.toHaveBeenCalledWith("end_partnership", expect.anything());

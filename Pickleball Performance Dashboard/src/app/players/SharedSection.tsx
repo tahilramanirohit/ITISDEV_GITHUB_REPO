@@ -16,7 +16,7 @@ export function SharedCard({ s }: { s: SharedSession }) {
   return <a href={`#/shared/${s.session_id}`} className="block rounded-[var(--radius-lg)] focus:outline-none focus-visible:ring-2"
     aria-label={`${s.owner_name}: ${s.title}`}><Card>
     <div className="flex items-center gap-3">
-      <Avatar name={s.owner_name} />
+      <Avatar name={s.owner_name} id={s.owner_id} />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-bold" style={{ color: WHITE_DIM }}>From {s.owner_name}</p>
         <p className="truncate text-base font-bold" style={{ color: INK }}>{s.title}</p>
@@ -36,14 +36,14 @@ export function SharedCard({ s }: { s: SharedSession }) {
 }
 
 /** One of your sessions shared with a partner: open the video, and see whether they answered. */
-function MySharedCard({ title, date, partner, skills, withVideo, rated, sessionId }: {
-  title: string; date: string; partner: string; skills: string[]; withVideo: boolean; rated: number; sessionId: string;
+function MySharedCard({ title, date, partner, partnerId, skills, withVideo, rated, sessionId }: {
+  title: string; partnerId: string; date: string; partner: string; skills: string[]; withVideo: boolean; rated: number; sessionId: string;
 }) {
   const answered = skills.length ? rated >= skills.length : rated > 0;
   return <a href={`#/sessions/${sessionId}?tab=${withVideo ? "video" : "plan"}`} className="block rounded-[var(--radius-lg)] focus:outline-none focus-visible:ring-2"
     aria-label={`You shared ${title} with ${partner}`}><Card>
     <div className="flex items-center gap-3">
-      <Avatar name={partner} />
+      <Avatar name={partner} id={partnerId} />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-bold" style={{ color: WHITE_DIM }}>You shared with {partner}</p>
         <p className="truncate text-base font-bold" style={{ color: INK }}>{title}</p>
@@ -83,7 +83,7 @@ export function SharedSection({ data, onOpen }: { data: PlayersData; onOpen: (s:
     {mine.length > 0 && <section aria-labelledby="mine-heading" className="space-y-3">
       <SectionTitle><span id="mine-heading">You shared</span></SectionTitle>
       <ul className="space-y-3" aria-label="Sessions you shared">{mine.map((m) => <li key={`${m.session_id}-${m.partner_id}`}>
-        <MySharedCard title={m.session.title} date={m.session.session_date} partner={m.partner} skills={m.focus_skills ?? []}
+        <MySharedCard title={m.session.title} date={m.session.session_date} partner={m.partner} partnerId={m.partner_id} skills={m.focus_skills ?? []}
           withVideo={m.with_video ?? true} rated={m.rated} sessionId={m.session_id} /></li>)}</ul>
     </section>}
 

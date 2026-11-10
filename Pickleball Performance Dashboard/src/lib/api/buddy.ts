@@ -170,6 +170,9 @@ export function formatFreeTime(s: FreeTime): string {
 /** Turns database errors into the messages shown on screen. */
 export function buddyErrorText(e: unknown): string {
   const message = e instanceof Error ? e.message : String((e as { message?: string })?.message ?? e);
+  if (/hide_cancelled_session/i.test(message) && !/^buddy:/.test(message)) {
+    return "Removing cancelled sessions needs a database update. Run supabase/scripts/pickleproapp_upgrade_14.sql in the Supabase SQL Editor, then reload.";
+  }
   if (/add_buddy|respond_buddy\b|cancel_buddy_add|remove_buddy|my_buddies|public\.buddies/i.test(message) && !/^buddy:/.test(message)) {
     return "Buddies need a database update. Run supabase/scripts/pickleproapp_upgrade_12.sql in the Supabase SQL Editor, then reload.";
   }
@@ -197,7 +200,18 @@ export async function listBuddyPlayers(sb: SupabaseClient): Promise<BuddyPlayer[
 }
 
 export async function listMyRequests(sb: SupabaseClient): Promise<BuddyRequest[]> {
-  return (await rpc<BuddyRequest[] | null>(sb, "my_buddy_requests")) ?? [];
+  const [all, hidden] = await Promise.all([
+    rpc<BuddyRequest[] | null>(sb, "my_buddy_requests"),
+    // Cancelled sessions you removed from your list (update 14); nothing is hidden before it.
+    Promise.resolve(sb.from("hidden_buddy_sessions").select("request_id").limit(1000)).then((r) => r.error ? [] : (r.data ?? []) as { request_id: string }[], () => []),
+  ]);
+  const gone = new Set(hidden.map((h) => h.request_id));
+  return (all ?? []).filter((r) => !gone.has(r.id));
+}
+
+/** Removes a cancelled buddy session from your own list (the other player still sees it). */
+export async function hideCancelledSession(sb: SupabaseClient, id: string): Promise<void> {
+  await rpc<null>(sb, "hide_cancelled_session", { p_request_id: id });
 }
 
 export async function sendBuddyRequest(sb: SupabaseClient, to: string, purpose: BuddyPurpose, format: BuddyFormat,

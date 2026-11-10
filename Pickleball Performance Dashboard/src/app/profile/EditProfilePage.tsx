@@ -139,7 +139,7 @@ export default function EditProfilePage({ sb, userId }: { sb: SupabaseClient; us
             </div>
           </div>
           <input ref={fileInput} type="file" accept="image/*" className="hidden" onChange={(e) => void pickPhoto(e.target.files?.[0])} />
-          <p className="mt-3 text-xs" style={{ color: WHITE_SUB }}>Take a photo or choose one. It is cropped square, made smaller, and saves straight away.</p>
+          <p className="mt-3 text-xs" style={{ color: WHITE_SUB }}>Take a photo or choose one. It is cropped square, made smaller, and saves straight away. Other players see it on the Players tab.</p>
           {photoError && <div className="mt-3"><Notice tone="error">{photoError}</Notice></div>}
         </Card> : <Notice tone="info">Profile photo, bio, home court and paddle appear here after the latest database update.</Notice>}
 

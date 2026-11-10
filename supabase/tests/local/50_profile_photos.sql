@@ -25,7 +25,7 @@ select tests.expect_error($$ insert into storage.objects (bucket_id, name) value
 
 select set_config('request.jwt.claim.sub', 'f6666666-6666-4666-8666-666666666666', false);
 select tests.expect_count($$ select 1 from public.profiles where id = 'f5555555-5555-4555-8555-555555555555' $$, 0, 'other players cannot read the profile');
-select tests.expect_count($$ select 1 from storage.objects where bucket_id = 'profile-photos' $$, 0, 'other players cannot see the photo');
+select tests.expect_count($$ select 1 from storage.objects where bucket_id = 'profile-photos' $$, 1, 'other players can see the photo (update 14: photos on the Players tab)');
 select tests.expect_rows($$ delete from storage.objects where bucket_id = 'profile-photos' $$, 0, 'other players cannot delete the photo');
 reset role;
 

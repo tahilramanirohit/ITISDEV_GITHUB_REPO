@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useParams } from "react-router";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ArrowLeft } from "lucide-react";
@@ -13,6 +13,24 @@ import { ACTION, ACTION_EDGE, GREEN, INK, INK_2, ON_ACTION, WHITE_DIM } from "..
 import { Notice, PageHero, Sheet, cardStyle, pressable } from "../shell/primitives";
 import { ResultView } from "../analysis/ResultView";
 import { PeerNotes } from "./PeerNotes";
+import type { VideoControls } from "../analysis/ResultView";
+
+/** The shared video without a report (the analysis is not done or failed), so comments can still pin to a second. */
+function PlainVideo({ src, owner, children }: { src: string; owner: string; children: (controls: VideoControls) => ReactNode }) {
+  const [video, setVideo] = useState<HTMLVideoElement | null>(null);
+  const seek = (s: number) => {
+    if (!video) return;
+    video.currentTime = s;
+    video.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+  return <>
+    <section aria-label={`${owner}'s video`} className="space-y-2">
+      <h2 className="text-lg font-bold" style={{ color: INK }}>Watch {owner}'s video</h2>
+      <video ref={setVideo} src={src} controls playsInline preload="metadata" className="w-full rounded-[16px] bg-black" />
+    </section>
+    {children({ video, seek })}
+  </>;
+}
 
 /** Rate the skills the owner asked about, then send them in one go. */
 function FeedbackForm({ sb, sessionId, owner, skills, saved, onSent }: {
@@ -119,11 +137,12 @@ export default function SharedReportPage({ sb }: { sb: SupabaseClient; userId: s
       {skills.length > 0 && <FeedbackForm sb={sb} sessionId={s.id} owner={owner} skills={skills} saved={report.my_ratings ?? {}}
         onSent={() => void getSharedReport(sb, sessionId).then(setReport).catch(() => {})} />}
       {skills.length === 0 && <Notice>{owner} shared this session's video report with you. Their goals, ratings and practice plan stay private.
-        Notes you leave are shown to {owner}.</Notice>}
+        Comments you leave are shown to {owner}.</Notice>}
       {withVideo && parsed?.ok ? <ResultView result={parsed.result} videoUrl={videoUrl} sharedBy={owner} notes={notes} />
+        : withVideo && videoUrl ? <PlainVideo src={videoUrl} owner={owner}>{notes}</PlainVideo>
         : <>
           {withVideo && <Notice tone={parsed ? "error" : "info"}>{parsed ? `The report could not be read (${parsed.error}).`
-            : `There is no video report for this session yet. You can still leave ${owner} a note about the whole session.`}</Notice>}
+            : `There is no video for this session yet. You can still leave ${owner} a comment about the whole session.`}</Notice>}
           {notes({ video: null, seek: () => undefined })}
         </>}
     </Sheet>

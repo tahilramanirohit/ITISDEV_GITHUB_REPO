@@ -112,8 +112,7 @@ select set_config('request.jwt.claims', '{"sub":"c1111111-1111-4111-8111-1111111
 select tests.expect_true((select author_name || ' ' || video_time_s || ' ' || not mine from public.session_peer_notes('5e000000-0000-4000-8000-0000000000e1'))
   = 'Quinn 42.50 true', 'the owner sees the partner''s note with its time');
 select tests.expect_error(format($$ select public.edit_peer_note(%L, 'changed') $$, :'note_id'), 'the owner cannot edit a partner''s note');
-select tests.expect_error(format($$ select public.add_peer_note('5e000000-0000-4000-8000-0000000000e1', 1, 'self') $$),
-  'notes come from partners, not the owner');
+-- Since update 14 the owner can comment on their own video too: see 96_video_comments.sql.
 
 -- ── Rex is not linked ───────────────────────────────────────────────────
 select set_config('request.jwt.claim.sub', 'c3333333-3333-4333-8333-333333333333', false);

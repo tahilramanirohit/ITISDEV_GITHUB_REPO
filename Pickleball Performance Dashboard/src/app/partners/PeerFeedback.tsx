@@ -142,7 +142,8 @@ export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings
       setLinks(links);
       setPartners(links.filter((l) => l.status === "active" && l.other_id));
       setShares(s);
-      setNotes(n);
+      // Partners' feedback only: your own comments on the video (update 14) stay under the video.
+      setNotes(n.filter((x) => !x.mine));
       setError("");
     } catch (e) {
       setPartners([]);

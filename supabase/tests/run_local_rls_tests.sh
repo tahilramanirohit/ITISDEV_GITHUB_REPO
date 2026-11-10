@@ -54,6 +54,7 @@ done
 "${PSQL[@]}" -f "$HERE/local/90_peer_feedback.sql" 2>&1 >/dev/null | sed -e 's/^psql:[^ ]* NOTICE:  /  /'
 "${PSQL[@]}" -f "$HERE/local/95_buddy_match.sql" 2>&1 >/dev/null | sed -e 's/^psql:[^ ]* NOTICE:  /  /'
 "${PSQL[@]}" -f "$HERE/local/97_injury.sql" 2>&1 >/dev/null | sed -e 's/^psql:[^ ]* NOTICE:  /  /'
+"${PSQL[@]}" -f "$HERE/local/96_video_comments.sql" 2>&1 >/dev/null | sed -e 's/^psql:[^ ]* NOTICE:  /  /'
 "${PSQL[@]}" -f "$HERE/local/98_shot_results_goal_weeks.sql" 2>&1 >/dev/null | sed -e 's/^psql:[^ ]* NOTICE:  /  /'
 "${PSQL[@]}" -f "$HERE/local/99_buddy_friends.sql" 2>&1 >/dev/null | sed -e 's/^psql:[^ ]* NOTICE:  /  /'
 # The self-assessment migration is documented as safe to paste again into an existing project.
@@ -71,7 +72,8 @@ done
 "${PSQL[@]}" -c "set client_min_messages = warning" -f "$MIGRATIONS/20261105120000_injury.sql" >/dev/null
 "${PSQL[@]}" -c "set client_min_messages = warning" -f "$MIGRATIONS/20261105130000_buddy_friends.sql" >/dev/null
 "${PSQL[@]}" -c "set client_min_messages = warning" -f "$MIGRATIONS/20261110090000_shot_results_goal_weeks.sql" >/dev/null
-echo "  PASS self-assessment, onboarding, profile, buddy, partner, court-test, peer-feedback, buddy-match, injury, buddy-friends and shot-results migrations can be applied twice"
+"${PSQL[@]}" -c "set client_min_messages = warning" -f "$MIGRATIONS/20261111090000_video_comments_player_photos.sql" >/dev/null
+echo "  PASS self-assessment, onboarding, profile, buddy, partner, court-test, peer-feedback, buddy-match, injury, buddy-friends, shot-results and video-comments migrations can be applied twice"
 # The copy-paste script for the hosted SQL editor must also run cleanly on top.
 "${PSQL[@]}" -c "set client_min_messages = warning" -f "$HERE/../scripts/pickleproapp_upgrade.sql" >/dev/null
 "${PSQL[@]}" -c "set client_min_messages = warning" -f "$HERE/../scripts/pickleproapp_upgrade_2.sql" >/dev/null
@@ -86,7 +88,8 @@ echo "  PASS self-assessment, onboarding, profile, buddy, partner, court-test, p
 "${PSQL[@]}" -c "set client_min_messages = warning" -f "$HERE/../scripts/pickleproapp_upgrade_11.sql" >/dev/null
 "${PSQL[@]}" -c "set client_min_messages = warning" -f "$HERE/../scripts/pickleproapp_upgrade_12.sql" >/dev/null
 "${PSQL[@]}" -c "set client_min_messages = warning" -f "$HERE/../scripts/pickleproapp_upgrade_13.sql" >/dev/null
-echo "  PASS pickleproapp_upgrade.sql and _2.sql to _13.sql run on an up-to-date database"
+"${PSQL[@]}" -c "set client_min_messages = warning" -f "$HERE/../scripts/pickleproapp_upgrade_14.sql" >/dev/null
+echo "  PASS pickleproapp_upgrade.sql and _2.sql to _14.sql run on an up-to-date database"
 
 # Concurrency: 20 simultaneous finalize calls (double clicks, two tabs) → one job.
 "${PSQL[@]}" <<'SQL'

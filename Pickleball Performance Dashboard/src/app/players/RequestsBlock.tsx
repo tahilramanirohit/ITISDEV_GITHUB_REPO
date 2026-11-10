@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { Check, X } from "lucide-react";
-import { cancelBuddyAdd, cancelRequest, respondBuddy, respondToRequest } from "../../lib/api/buddy";
+import { Check, Trash2, X } from "lucide-react";
+import { cancelBuddyAdd, cancelRequest, hideCancelledSession, respondBuddy, respondToRequest } from "../../lib/api/buddy";
 import { cancelInvite, respondToInvite } from "../../lib/api/partners";
 import { ACTION_SOFT, INK, ROSE, WHITE_DIM } from "../theme";
 import { Card, PrimaryButton, SectionTitle } from "../shell/primitives";
@@ -20,7 +20,7 @@ export function NeedsAnswer({ sb, data, act, busyId }: { sb: SupabaseClient; dat
         {adds.map((b) => <li key={b.id}><div className="rounded-[20px] p-4"
           style={{ background: ACTION_SOFT, border: "1px solid color-mix(in srgb, var(--pp-action) 35%, var(--pp-line))", color: INK }}>
           <div className="flex flex-wrap items-center gap-3">
-            <Avatar name={b.other_name} />
+            <Avatar name={b.other_name} id={b.other_id} />
             <div className="min-w-[9rem] flex-1">
               <p className="text-base font-bold" style={{ color: INK }}>{b.other_name}</p>
               <p className="text-sm" style={{ color: WHITE_DIM }}>{levelText(b.other_level)}</p>
@@ -43,7 +43,7 @@ export function NeedsAnswer({ sb, data, act, busyId }: { sb: SupabaseClient; dat
       <ul className="space-y-3">
         {incoming.map((r) => <li key={r.id}><Card>
           <div className="flex items-center gap-3">
-            <Avatar name={r.other_name} />
+            <Avatar name={r.other_name} id={r.other_player_id} />
             <div className="min-w-0">
               <p className="text-base font-bold" style={{ color: INK }}>{r.other_name}</p>
               <p className="text-sm" style={{ color: WHITE_DIM }}>{levelText(r.other_level)}</p>
@@ -66,7 +66,7 @@ export function NeedsAnswer({ sb, data, act, busyId }: { sb: SupabaseClient; dat
       <SectionTitle><span id="invites-heading">Wants to be your video partner ({invites.length})</span></SectionTitle>
       <ul className="space-y-3">{invites.map((l) => <li key={l.id}><Card>
         <div className="flex items-center gap-3">
-          <Avatar name={l.other_name ?? "?"} />
+          <Avatar name={l.other_name ?? "?"} id={l.other_id} />
           <div className="min-w-0">
             <p className="text-base font-bold" style={{ color: INK }}>{l.other_name}</p>
             <p className="text-sm" style={{ color: WHITE_DIM }}>{levelText(l.other_level)}</p>
@@ -97,7 +97,7 @@ export function SentAndCancelled({ sb, data, act, busyId }: { sb: SupabaseClient
       <ul className="space-y-3">
         {sentAdds.map((b) => <li key={b.id}><Card>
           <div className="flex flex-wrap items-center gap-3">
-            <Avatar name={b.other_name} />
+            <Avatar name={b.other_name} id={b.other_id} />
             <div className="min-w-[9rem] flex-1">
               <p className="text-base font-bold" style={{ color: INK }}>{b.other_name}</p>
               <p className="text-sm font-bold" style={{ color: WHITE_DIM }}>Buddy request · waiting for an answer</p>
@@ -107,7 +107,7 @@ export function SentAndCancelled({ sb, data, act, busyId }: { sb: SupabaseClient
         </Card></li>)}
         {sent.map((r) => <li key={r.id}><Card>
           <div className="flex flex-wrap items-center gap-3">
-            <Avatar name={r.other_name} />
+            <Avatar name={r.other_name} id={r.other_player_id} />
             <div className="min-w-[9rem] flex-1">
               <p className="text-base font-bold" style={{ color: INK }}>{r.other_name}</p>
               <p className="text-sm font-bold" style={{ color: r.status === "declined" ? ROSE : WHITE_DIM }}>
@@ -120,7 +120,7 @@ export function SentAndCancelled({ sb, data, act, busyId }: { sb: SupabaseClient
         </Card></li>)}
         {waiting.map((l) => <li key={l.id}><Card>
           <div className="flex flex-wrap items-center gap-3">
-            <Avatar name={l.other_name ?? "?"} />
+            <Avatar name={l.other_name ?? "?"} id={l.other_id} />
             <div className="min-w-[9rem] flex-1">
               <p className="text-base font-bold" style={{ color: INK }}>{l.other_name}</p>
               <p className="text-sm font-bold" style={{ color: WHITE_DIM }}>Video partner invite · waiting for an answer</p>
@@ -135,13 +135,16 @@ export function SentAndCancelled({ sb, data, act, busyId }: { sb: SupabaseClient
       <SectionTitle><span id="called-off-heading">Cancelled sessions</span></SectionTitle>
       <ul className="space-y-3">
         {calledOff.map((r) => <li key={r.id}><Card>
-          <div className="flex items-center gap-3">
-            <Avatar name={r.other_name} />
-            <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-3">
+            <Avatar name={r.other_name} id={r.other_player_id} />
+            <div className="min-w-[9rem] flex-1">
               <p className="text-base font-bold" style={{ color: INK }}>{r.other_name}</p>
               <p className="text-sm font-bold" style={{ color: ROSE }}>
                 {r.cancelled_by_me ? "You cancelled" : `${r.other_name} cancelled`}{r.cancelled_at ? ` · ${shortDate(r.cancelled_at)}` : ""}</p>
             </div>
+            <PrimaryButton tone="light" disabled={busyId === `hide-${r.id}`} aria-label={`Remove the cancelled session with ${r.other_name}`}
+              onClick={() => void act(`hide-${r.id}`, () => hideCancelledSession(sb, r.id), "Removed from your list.")}>
+              <Trash2 size={16} aria-hidden="true" /> Remove</PrimaryButton>
           </div>
           <p className="mt-2 text-sm" style={{ color: INK }}>
             {r.cancel_reason ? <><strong>Reason:</strong> {r.cancel_reason}</> : <span style={{ color: WHITE_DIM }}>No reason given</span>}</p>

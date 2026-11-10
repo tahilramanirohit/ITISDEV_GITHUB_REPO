@@ -88,7 +88,7 @@ export function FindSection({ sb, userId, data, injured, act, busyId, reload }: 
           <ul className="space-y-2">
             {suggestions.map((s) => <li key={s.player.player_id}><Card>
               <div className="flex flex-wrap items-center gap-3">
-                <Avatar name={s.player.display_name} />
+                <Avatar name={s.player.display_name} id={s.player.player_id} />
                 <div className="min-w-[9rem] flex-1">
                   <p className="text-base font-bold" style={{ color: INK }}>{s.player.display_name}</p>
                   <p className="text-sm font-bold" style={{ color: ACCENT_INK }}>{s.reason}</p>
@@ -128,7 +128,7 @@ export function FindSection({ sb, userId, data, injured, act, busyId, reload }: 
             const d = details.get(p.player_id);
             return <li key={p.player_id} id={`player-${p.player_id}`} className="scroll-mt-6"><Card>
               <div className="flex flex-wrap items-center gap-3">
-                <Avatar name={p.display_name} />
+                <Avatar name={p.display_name} id={p.player_id} />
                 <div className="min-w-[9rem] flex-1">
                   <p className="text-base font-bold" style={{ color: INK }}>{p.display_name}</p>
                   <p className="text-sm" style={{ color: WHITE_DIM }}>

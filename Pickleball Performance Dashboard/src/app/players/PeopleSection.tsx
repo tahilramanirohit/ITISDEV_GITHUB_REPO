@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { CalendarX, Check, ClipboardCheck, Handshake, MessageSquareText, Send, UserRoundPlus, X } from "lucide-react";
+import { CalendarX, Check, ChevronDown, ClipboardCheck, Handshake, MessageSquareText, Send, UserRoundPlus, X } from "lucide-react";
 import {
   FORMAT_LABELS, PURPOSE_LABELS, cancelBuddySession, removeBuddy, formatFreeTime, logBuddySessionHref, nextFreeTime, sendBuddyRequest, upcomingBuddySessions,
 } from "../../lib/api/buddy";
@@ -26,6 +26,8 @@ function Stat({ label, value }: { label: string; value: string }) {
 function PersonCard({ sb, person: p, data, act, busyId, reload, onOpen }: {
   sb: SupabaseClient; person: Person; data: PlayersData; act: Act; busyId: string | null; reload: () => Promise<void>; onOpen: (s: Section) => void;
 }) {
+  // Closed by default (adviser notes, 10 Nov): name, photo, level, since when and the kind of partner; tap for the rest.
+  const [open, setOpen] = useState(false);
   const [panel, setPanel] = useState<"play" | "feedback" | "unlink" | "remove" | null>(null);
   const [cancelling, setCancelling] = useState<string | null>(null);
   // With the buddy list, any buddy can be asked to play (even while hidden from the list);
@@ -37,19 +39,31 @@ function PersonCard({ sb, person: p, data, act, busyId, reload, onOpen }: {
   const toggle = (next: typeof panel) => setPanel(panel === next ? null : next);
   const recent = recentSessions(data.sessions);
 
+  const detailsId = `person-${p.id}`;
   return <Card>
-    <div className="flex flex-wrap items-center gap-3">
-      <Avatar name={p.name} />
-      <div className="min-w-[9rem] flex-1">
-        <h3 className="text-base font-bold" style={{ color: INK }}>{p.name}</h3>
-        <p className="text-sm" style={{ color: WHITE_DIM }}>{levelText(p.level)}
-          {partner?.linked_at ? ` · video partners since ${shortDate(partner.linked_at)}`
-            : p.buddy?.responded_at ? ` · buddies since ${shortDate(p.buddy.responded_at)}` : ""}{p.next ? ` · next ${formatFreeTime(p.next)}` : ""}</p>
-      </div>
-      <span className="rounded-full px-3 py-1 text-xs font-extrabold" style={partner ? { background: ACTION_SOFT, color: ACCENT_INK } : { background: GREEN_BG, color: INK }}>
-        {partner ? "Video partner" : "Buddy"}</span>
-    </div>
+    <h3 className="m-0">
+      <button type="button" aria-expanded={open} aria-controls={detailsId} onClick={() => setOpen(!open)}
+        className="flex min-h-[48px] w-full items-center gap-3 rounded-[14px] text-left focus:outline-none focus-visible:ring-2">
+        <Avatar name={p.name} id={p.id} size={48} />
+        <span className="min-w-0 flex-1">
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="truncate text-base font-bold" style={{ color: INK }}>{p.name}</span>
+            <span className="rounded-full px-2.5 py-0.5 text-xs font-extrabold" style={partner ? { background: ACTION_SOFT, color: ACCENT_INK } : { background: GREEN_BG, color: INK }}>
+              {partner ? "Video partner" : "Buddy"}</span>
+            {!open && p.waitingOnYou.length > 0 && <span className="rounded-full px-2.5 py-0.5 text-xs font-extrabold" style={{ background: ACTION, color: ON_ACTION }}>
+              Feedback asked</span>}
+          </span>
+          <span className="mt-0.5 block text-sm" style={{ color: WHITE_DIM }}>{levelText(p.level)}
+            {partner?.linked_at ? ` · since ${shortDate(partner.linked_at)}`
+              : p.buddy?.responded_at ? ` · since ${shortDate(p.buddy.responded_at)}` : ""}</span>
+        </span>
+        <ChevronDown size={20} aria-hidden="true" className="shrink-0 transition-transform motion-reduce:transition-none"
+          style={{ color: WHITE_DIM, transform: open ? "rotate(180deg)" : "none" }} />
+      </button>
+    </h3>
 
+    {open && <div id={detailsId}>
+    {p.next && <p className="mt-3 text-sm font-bold" style={{ color: INK }}>Next: {formatFreeTime(p.next)}</p>}
     {/* Two numbers only (adviser notes, 7 Nov: less on screen); feedback counts show once there are any. */}
     <dl className="mt-3 grid grid-cols-2 gap-2" aria-label={`You and ${p.name}`}>
       <Stat label="Games together" value={String(p.gamesTogether)} />
@@ -166,6 +180,7 @@ function PersonCard({ sb, person: p, data, act, busyId, reload, onOpen }: {
         </div>
       : <button type="button" onClick={() => setPanel("remove")} className="mt-2 min-h-[44px] text-sm font-semibold underline" style={{ color: WHITE_DIM }}>
           Remove buddy</button>)}
+    </div>}
   </Card>;
 }
 
