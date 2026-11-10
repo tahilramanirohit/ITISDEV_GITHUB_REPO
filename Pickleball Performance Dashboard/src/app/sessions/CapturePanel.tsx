@@ -1,11 +1,35 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { Clock, Minus, Plus } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SessionRow } from "../../lib/api/types";
 import { loadCapture, saveCheckin, saveRecovery, saveReflection, type Capture } from "../../lib/api/capture";
 import { endInjury, injuryErrorText, startInjury } from "../../lib/api/injury";
 import { INJURY_AREAS, INJURY_AREA_LABELS, INJURY_DISCLAIMER, type InjuryArea, type InjuryPeriod } from "../../lib/coaching/injury";
-import { BLUE_SKY, BORDER, WHITE_DIM } from "../theme";
-import { Card, Notice, ScaleLabels, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
+import { BORDER, GREEN, INK, PICKLE, WHITE_DIM, WHITE_SUB } from "../theme";
+import { Card, Chip, Notice, PrimaryButton, fieldStyle, labelClass, labelStyle, numStyle } from "../shell/primitives";
+import { HoldRater } from "../selfAssessment/HoldRater";
+
+const READINESS = ["Drained", "Tired", "Okay", "Good", "Ready to go"];
+const SORENESS = ["None", "A little", "Some", "Sore", "Very sore"];
+const effortText = (n: number) => n <= 2 ? "Very easy" : n <= 4 ? "Easy" : n <= 6 ? "Moderate" : n <= 8 ? "Hard" : "All out";
+const toNumber = (v: string) => v === "" ? undefined : Number(v);
+
+/** One question, in the same card as the rating questions. */
+function Question({ title, hint, htmlFor, children, wide = false }: { title: string; hint?: string; htmlFor?: string; children: ReactNode; wide?: boolean }) {
+  return <Card className={`min-w-0 !p-4 ${wide ? "sm:col-span-2" : ""}`}>
+    {htmlFor ? <label htmlFor={htmlFor} className="block text-base font-bold" style={{ color: INK }}>{title}</label>
+      : <h4 className="text-base font-bold" style={{ color: INK }}>{title}</h4>}
+    {hint && <p className="text-sm" style={{ color: WHITE_DIM }}>{hint}</p>}
+    <div className="mt-3">{children}</div>
+  </Card>;
+}
+
+/** Yes / No chips; tapping the chosen one again clears it. */
+function YesNo({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return <div className="flex gap-2" role="group" aria-label={label}>
+    {[["yes", "Yes"], ["no", "No"]].map(([v, name]) => <Chip key={v} selected={value === v} onClick={() => onChange(value === v ? "" : v)}>{name}</Chip>)}
+  </div>;
+}
 
 function localDateTime(iso: string | null): string {
   if (!iso) return "";
@@ -85,7 +109,7 @@ export function CapturePanel({ sb, session, onSessionUpdated, step: requestedSte
       setCapture(await loadCapture(sb, session.id));
       onSaved?.();
       if (nextStep !== undefined) setStep(nextStep);
-      else setSavedMessage("Reflection saved. You can return to any step to edit your answers.");
+      else setSavedMessage("Saved. You can open any step to change your answers.");
     }
     catch (err) { setError(err instanceof Error ? err.message : String(err)); }
     finally { setSaving(false); }
@@ -130,73 +154,86 @@ export function CapturePanel({ sb, session, onSessionUpdated, step: requestedSte
     }
   }
 
-  const select = (id: string, label: string, current: string, change: (v: string) => void,
-    values: [string, string][]) => <div>
-      <label className={labelClass} style={labelStyle} htmlFor={id}>{label}</label>
-      <select id={id} value={current} onChange={(e) => change(e.target.value)} className="w-full rounded-xl px-3 py-2" style={fieldStyle}>
-        <option value="">Not recorded</option>
-        {values.map(([v, name]) => <option key={v} value={v}>{name}</option>)}
-      </select>
-      {values.length === 5 && values[0][0] === "1" && <ScaleLabels />}
-    </div>;
-
   const stepNames = ["Pre-game", "Post-game", "Reflection"];
+  const sleepHours = sleep === "" ? null : Number(sleep);
+  const setSleepHours = (h: number | null) => setSleep(h === null ? "" : String(h));
+  const stepButton = "flex h-11 w-11 items-center justify-center rounded-full disabled:opacity-30";
 
   return <section aria-label="Pre-game and post-game journal">
-    <Card accent={BLUE_SKY}>
-      <p className="text-sm font-bold" style={{ color: BLUE_SKY }}>Pre-game and post-game journal</p>
-      <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Answer at your own pace. Every question is optional, and your answers stay private.</p>
-      <ol aria-label="Questionnaire progress" className="mt-5 grid grid-cols-3 gap-2">
-        {stepNames.map((name, index) => <li key={name} aria-current={step === index ? "step" : undefined}
-          className="rounded-lg px-2 py-2 text-center text-xs sm:text-sm font-semibold"
-          style={{ background: step === index ? BLUE_SKY : "var(--pp-surface-2)", color: step === index ? "white" : WHITE_DIM }}>
-          <span className="block text-xs">Step {index + 1}</span>{name}
-        </li>)}
-      </ol>
+    <Card className="!p-4">
+      <div className="flex items-baseline justify-between gap-2">
+        <h2 className="text-xl font-extrabold tracking-tight" style={{ color: INK }}>Journal</h2>
+        <span className="text-xs font-bold" style={{ color: WHITE_SUB }}>Private · every question optional</span>
+      </div>
+      <nav aria-label="Questionnaire progress" className="mt-2 flex gap-5 overflow-x-auto border-b" style={{ borderColor: BORDER }}>
+        {stepNames.map((name, index) => <button key={name} type="button" aria-current={step === index ? "step" : undefined}
+          onClick={() => { setError(""); setSavedMessage(""); setStep(index); }}
+          className="-mb-px min-h-[40px] shrink-0 border-b-[3px] py-2 text-sm font-semibold"
+          style={step === index ? { color: INK, borderColor: PICKLE } : { color: index < step ? GREEN : WHITE_DIM, borderColor: "transparent" }}>{name}</button>)}
+      </nav>
+    </Card>
 
-      <div className="mt-6">
-        <p className="text-sm font-bold" style={{ color: BLUE_SKY }}>Step {step + 1} of 3</p>
-        {step === 0 && <>
-          <h2 className="mt-1 text-xl font-bold">Pre-game · private check-in</h2>
-          <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>These entries add context to your report. They are not medical scores.</p>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div><label className={labelClass} style={labelStyle} htmlFor="actual-start">Actual start of play</label>
+    <div className="mt-4">
+      {step === 0 && <>
+        <h3 className="text-lg font-extrabold" style={{ color: INK }}>Pre-game check-in</h3>
+        <p className="text-sm" style={{ color: WHITE_DIM }}>A quick check before you play. It shapes your plan, nothing else.</p>
+        <div className="mt-3 grid gap-4 sm:grid-cols-2">
+          <Question title="How ready do you feel?">
+            <HoldRater label="Readiness, 1 lowest to 5 highest" min={1} max={5} value={toNumber(readiness)}
+              onChange={(n) => setReadiness(String(n))} valueText={(n) => READINESS[n - 1]} />
+          </Question>
+          <Question title="Sleep last night">
+            <div className="flex items-center gap-3">
+              <button type="button" aria-label="Less sleep" disabled={sleepHours === null} className={stepButton} style={{ border: `1px solid ${BORDER}` }}
+                onClick={() => setSleepHours(sleepHours !== null && sleepHours > 0 ? sleepHours - 0.5 : null)}><Minus size={16} /></button>
+              <span className="min-w-[4.5rem] text-center text-3xl" style={numStyle} aria-live="polite">{sleepHours ?? "–"}<span className="text-base"> h</span></span>
+              <button type="button" aria-label="More sleep" disabled={(sleepHours ?? 0) >= 24} className={stepButton} style={{ border: `1px solid ${BORDER}` }}
+                onClick={() => setSleepHours(sleepHours === null ? 7 : sleepHours + 0.5)}><Plus size={16} /></button>
+            </div>
+          </Question>
+          <Question title="Warmed up?">
+            <YesNo label="Warmed up" value={warmup} onChange={setWarmup} />
+          </Question>
+          <Question title="When did play start?" htmlFor="actual-start">
+            <div className="flex gap-2">
               <input id="actual-start" type="datetime-local" value={actualStart} onChange={(e) => setActualStart(e.target.value)}
-                className="w-full rounded-xl px-3 py-2" style={fieldStyle} /></div>
-            {select("warmup", "Warm-up completed", warmup, setWarmup, [["yes", "Yes"], ["no", "No"]])}
-            <div><label className={labelClass} style={labelStyle} htmlFor="sleep">Sleep hours</label>
-              <input id="sleep" type="number" min="0" max="24" step="0.5" value={sleep} onChange={(e) => setSleep(e.target.value)}
-                className="w-full rounded-xl px-3 py-2" style={fieldStyle} /></div>
-            {select("readiness", "Readiness (1–5)", readiness, setReadiness,
-              [1, 2, 3, 4, 5].map((n) => [String(n), String(n)]))}
-            <div className="sm:col-span-2"><label className={labelClass} style={labelStyle} htmlFor="focus">Session focus</label>
-              <input id="focus" maxLength={500} value={focus} onChange={(e) => setFocus(e.target.value)}
-                className="w-full rounded-xl px-3 py-2" style={fieldStyle} /></div>
-          </div>
-          <p className="mt-3 text-sm" style={{ color: WHITE_DIM }}>Timing: {capture?.checkin?.timing_status === "pre_game" ? "recorded before play" :
-            capture?.checkin?.timing_status === "retrospective" ? "retrospective entry" : "unverified until actual start is entered"}.
-            {capture?.checkin && ` Captured ${new Date(capture.checkin.captured_at).toLocaleString()}.`}</p>
-        </>}
-        {step === 1 && <>
-          <h2 className="mt-1 text-xl font-bold">Post-game · recovery</h2>
-          <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>High soreness or effort makes your next practice plan lighter. This does not diagnose health or injury.</p>
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            {select("exertion", "Exertion (1–10)", exertion, setExertion,
-              Array.from({ length: 10 }, (_, i) => [String(i + 1), String(i + 1)]))}
-            {select("soreness", "Soreness (1–5)", soreness, setSoreness,
-              [1, 2, 3, 4, 5].map((n) => [String(n), String(n)]))}
-            {select("cooldown", "Cooldown completed", cooldown, setCooldown, [["yes", "Yes"], ["no", "No"]])}
-          </div>
-          {injury !== undefined && <div className="mt-4 rounded-xl p-3" style={{ border: `1px solid ${BORDER}` }}>
+                className="min-w-0 flex-1 rounded-xl px-3 py-2" style={fieldStyle} />
+              <button type="button" onClick={() => setActualStart(localDateTime(new Date().toISOString()))}
+                className="inline-flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full px-3 text-sm font-bold" style={{ border: `1px solid ${BORDER}`, color: INK }}>
+                <Clock size={15} aria-hidden="true" /> Now</button>
+            </div>
+          </Question>
+          <Question title="Focus for today" htmlFor="focus" wide>
+            <input id="focus" maxLength={500} value={focus} onChange={(e) => setFocus(e.target.value)}
+              placeholder="e.g. Get to the kitchen line after the return" className="w-full rounded-xl px-3 py-2" style={fieldStyle} />
+          </Question>
+        </div>
+      </>}
+      {step === 1 && <>
+        <h3 className="text-lg font-extrabold" style={{ color: INK }}>Post-game recovery</h3>
+        <p className="text-sm" style={{ color: WHITE_DIM }}>A hard or sore game makes your next practice lighter.</p>
+        <div className="mt-3 grid gap-4 sm:grid-cols-2">
+          <Question title="How hard was it?">
+            <HoldRater label="Effort, 1 lowest to 10 highest" min={1} max={10} value={toNumber(exertion)}
+              onChange={(n) => setExertion(String(n))} valueText={effortText} />
+          </Question>
+          <Question title="How sore are you?">
+            <HoldRater label="Soreness, 1 lowest to 5 highest" min={1} max={5} value={toNumber(soreness)}
+              onChange={(n) => setSoreness(String(n))} valueText={(n) => SORENESS[n - 1]} />
+          </Question>
+          <Question title="Cooled down?">
+            <YesNo label="Cooled down" value={cooldown} onChange={setCooldown} />
+          </Question>
+          {injury !== undefined && <Card className="min-w-0 !p-4">
             <label className="flex min-h-[44px] cursor-pointer items-start gap-3">
               <input type="checkbox" checked={injured} onChange={(e) => setInjured(e.target.checked)} className="mt-1 h-5 w-5 shrink-0" />
-              <span><b className="text-sm">I'm injured right now</b>
+              <span><b className="text-base" style={{ color: INK }}>I'm injured right now</b>
                 <span className="block text-sm" style={{ color: WHITE_DIM }}>
                   {injury && !injured ? "Unticking this ends recovery mode when you save, as if you tapped \"I'm back\"."
-                    : "Your plan switches to rest, your goal deadlines pause and you're hidden from the Buddy list until you tap \"I'm back\"."}</span></span>
+                    : "Your plan switches to rest and your goals pause until you tap \"I'm back\"."}</span></span>
             </label>
             {injured && <>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div className="mt-3 grid gap-3">
                 <div><label className={labelClass} style={labelStyle} htmlFor="injury-area">Where (optional)</label>
                   <select id="injury-area" value={injuryArea} onChange={(e) => setInjuryArea(e.target.value as InjuryArea | "")}
                     className="w-full rounded-xl px-3 py-2" style={fieldStyle}>
@@ -210,32 +247,32 @@ export function CapturePanel({ sb, session, onSessionUpdated, step: requestedSte
               </div>
               <p className="mt-2 text-xs" style={{ color: WHITE_DIM }}>{INJURY_DISCLAIMER}</p>
             </>}
-          </div>}
-        </>}
-        {step === 2 && <>
-          <h2 className="mt-1 text-xl font-bold">Reflection · what comes next</h2>
-          <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Write down what worked and one thing to try next time.</p>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div><label className={labelClass} style={labelStyle} htmlFor="went-well">What went well?</label>
-              <textarea id="went-well" rows={3} maxLength={2000} value={wentWell} onChange={(e) => setWentWell(e.target.value)}
-                className="w-full rounded-xl px-3 py-2" style={fieldStyle} /></div>
-            <div><label className={labelClass} style={labelStyle} htmlFor="change-next">What will you change next?</label>
-              <textarea id="change-next" rows={3} maxLength={2000} value={changeNext} onChange={(e) => setChangeNext(e.target.value)}
-                className="w-full rounded-xl px-3 py-2" style={fieldStyle} /></div>
-          </div>
-        </>}
-      </div>
+          </Card>}
+        </div>
+      </>}
+      {step === 2 && <>
+        <h3 className="text-lg font-extrabold" style={{ color: INK }}>Reflection</h3>
+        <p className="text-sm" style={{ color: WHITE_DIM }}>What worked, and one thing to try next time.</p>
+        <div className="mt-3 grid gap-4 sm:grid-cols-2">
+          <Question title="What went well?" htmlFor="went-well">
+            <textarea id="went-well" rows={3} maxLength={2000} value={wentWell} onChange={(e) => setWentWell(e.target.value)}
+              placeholder="e.g. My third-shot drops landed in the kitchen" className="w-full rounded-xl px-3 py-2" style={fieldStyle} />
+          </Question>
+          <Question title="What will you change next?" htmlFor="change-next">
+            <textarea id="change-next" rows={3} maxLength={2000} value={changeNext} onChange={(e) => setChangeNext(e.target.value)}
+              placeholder="e.g. Move up after my return" className="w-full rounded-xl px-3 py-2" style={fieldStyle} />
+          </Question>
+        </div>
+      </>}
+    </div>
 
-      {error && <div className="mt-4"><Notice tone="error">Could not load or save your answers: {error}</Notice></div>}
-      {savedMessage && <p role="status" className="mt-4 text-sm font-semibold" style={{ color: BLUE_SKY }}>{savedMessage}</p>}
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <button type="button" disabled={saving || step === 0} onClick={() => { setError(""); setSavedMessage(""); setStep(step - 1); }}
-          className="rounded-xl px-4 py-2 font-semibold disabled:opacity-40" style={{ border: `1px solid ${BORDER}` }}>Back</button>
-        <button type="button" disabled={saving || !capture} onClick={() => void saveCurrentStep()}
-          className="rounded-xl px-4 py-2 font-semibold disabled:opacity-50" style={{ background: BLUE_SKY, color: "white" }}>
-          {saving ? "Saving…" : step === 2 ? "Save reflection" : "Save and continue"}
-        </button>
-      </div>
-    </Card>
+    {error && <div className="mt-4"><Notice tone="error">Could not load or save your answers: {error}</Notice></div>}
+    {savedMessage && <div className="mt-4" role="status"><Notice>{savedMessage}</Notice></div>}
+    <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+      <PrimaryButton tone="light" disabled={saving || step === 0} className="disabled:opacity-40"
+        onClick={() => { setError(""); setSavedMessage(""); setStep(step - 1); }}>Back</PrimaryButton>
+      <PrimaryButton disabled={saving || !capture} className="disabled:opacity-50" onClick={() => void saveCurrentStep()}>
+        {saving ? "Saving…" : step === 2 ? "Save reflection" : "Save and continue"}</PrimaryButton>
+    </div>
   </section>;
 }

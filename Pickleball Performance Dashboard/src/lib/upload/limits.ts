@@ -67,6 +67,7 @@ export function limitErrorText(message: string): string | null {
   if (message.includes("video_duration_out_of_range")) return "This clip is too short or too long for analysis.";
   if (message.includes("video_storage_quota_exceeded")) return "Your video storage is full. Remove an old video first.";
   if (message.includes("video_daily_limit_reached")) return "You have reached today's upload limit. Try again tomorrow.";
+  if (message.includes("buddy_game_video_from_asker")) return "In a buddy game, the player who asked to play uploads the video. Add their video instead.";
   return null;
 }
 

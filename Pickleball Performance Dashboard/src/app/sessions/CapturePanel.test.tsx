@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SessionRow } from "../../lib/api/types";
@@ -25,17 +25,17 @@ describe("CapturePanel", () => {
 
     render(<CapturePanel sb={sb} session={session} onSessionUpdated={vi.fn()} />);
     expect(await screen.findByRole("heading", { name: /pre-game/i })).toBeTruthy();
-    expect(screen.queryByLabelText("Exertion (1–10)")).toBeNull();
-    fireEvent.change(screen.getByLabelText("Session focus"), { target: { value: "Serve placement" } });
+    expect(screen.queryByRole("slider", { name: /^Effort/ })).toBeNull();
+    fireEvent.change(screen.getByLabelText("Focus for today"), { target: { value: "Serve placement" } });
     fireEvent.click(screen.getByRole("button", { name: /save.*continue/i }));
 
     expect(await screen.findByRole("heading", { name: /post-game/i })).toBeTruthy();
     expect(saveCheckin).toHaveBeenCalledWith(sb, "participant-1", {
       warmup_done: null, sleep_hours: null, readiness: null, focus: "Serve placement",
     });
-    expect(screen.queryByLabelText("Session focus")).toBeNull();
+    expect(screen.queryByLabelText("Focus for today")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /back/i }));
-    expect(screen.getByLabelText("Session focus")).toHaveProperty("value", "Serve placement");
+    expect(screen.getByLabelText("Focus for today")).toHaveProperty("value", "Serve placement");
     fireEvent.click(screen.getByRole("button", { name: /save.*continue/i }));
     await screen.findByRole("heading", { name: /post-game/i });
     fireEvent.click(screen.getByRole("button", { name: /save.*continue/i }));
@@ -48,7 +48,33 @@ describe("CapturePanel", () => {
     await waitFor(() => expect(saveReflection).toHaveBeenCalledWith(sb, "participant-1", {
       went_well: "Better serves", change_next: null,
     }));
-    expect(await screen.findByText(/reflection saved/i)).toBeTruthy();
+    expect(await screen.findByText(/^Saved\. You can open any step/)).toBeTruthy();
+  });
+
+  it("answers with chips, the sleep stepper and the pickleball button", async () => {
+    vi.mocked(loadCapture).mockResolvedValue({ participantId: "participant-1", checkin: null, recovery: null, reflection: null });
+    vi.mocked(saveCheckin).mockResolvedValue();
+    vi.mocked(saveRecovery).mockResolvedValue();
+    const sb = { from: vi.fn() } as unknown as SupabaseClient;
+    render(<CapturePanel sb={sb} session={{ id: "session-1", actual_start_at: null } as SessionRow} onSessionUpdated={vi.fn()} />);
+    await screen.findByRole("heading", { name: /pre-game/i });
+    expect(screen.queryByText(/Timing:/)).toBeNull();
+    fireEvent.click(within(screen.getByRole("group", { name: "Warmed up" })).getByRole("button", { name: "Yes" }));
+    fireEvent.click(screen.getByRole("button", { name: "More sleep" }));
+    fireEvent.click(screen.getByRole("button", { name: "More sleep" }));
+    const ready = screen.getByRole("slider", { name: /^Readiness/ });
+    fireEvent.keyDown(ready, { key: "End" });
+    expect(ready.getAttribute("aria-valuetext")).toBe("Ready to go");
+    fireEvent.click(screen.getByRole("button", { name: /save.*continue/i }));
+    await waitFor(() => expect(saveCheckin).toHaveBeenCalledWith(sb, "participant-1", {
+      warmup_done: true, sleep_hours: 7.5, readiness: 5, focus: null,
+    }));
+    const effort = await screen.findByRole("slider", { name: /^Effort/ });
+    fireEvent.keyDown(effort, { key: "End" });
+    fireEvent.keyDown(screen.getByRole("slider", { name: /^Soreness/ }), { key: "Home" });
+    fireEvent.click(within(screen.getByRole("group", { name: "Cooled down" })).getByRole("button", { name: "No" }));
+    fireEvent.click(screen.getByRole("button", { name: /save.*continue/i }));
+    await waitFor(() => expect(saveRecovery).toHaveBeenCalledWith(sb, "participant-1", { exertion: 10, soreness: 1, cooldown_done: false }));
   });
 
   it("starts at the first step when the player opens another session", async () => {

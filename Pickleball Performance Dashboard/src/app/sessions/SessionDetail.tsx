@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ArrowDown, ArrowLeft, RefreshCw, Trash2, Upload } from "lucide-react";
+import { ArrowDown, ArrowLeft, Copy, RefreshCw, Trash2, Upload } from "lucide-react";
 import {
   deleteSession, finalizeUpload, findPreviousCoachableResult, getSessionBundle, listAnalysisRuns, registerVideo, removeVideo, requestReanalysis, setRawVideoKeep, signedVideoUrl,
   updateSessionDetails, updateSessionGoals, type SessionBundle,
@@ -24,7 +24,8 @@ import { GamePhases, PreGameSummary, type Phase } from "./GamePhases";
 import type { CaptureStep } from "./CapturePanel";
 import { BaselineNotice } from "./BaselineNotice";
 import { ACCENT_INK, BLUE_SKY, BORDER, DISPLAY_FONT, INK, NUM_FONT, ORANGE, WHITE_DIM, WHITE_SUB, alpha } from "../theme";
-import { Card, Chip, Notice, SegmentedTabs, Sheet, fieldStyle, pressable, tabPanelProps } from "../shell/primitives";
+import { Card, Chip, Notice, PreferenceSwitch, SegmentedTabs, Sheet, fieldStyle, pressable, tabPanelProps } from "../shell/primitives";
+import { addBuddyGameVideo, buddyVideoErrorText, getBuddyGameVideo, setBuddyCanUse, type BuddyGameVideo } from "../../lib/api/buddyVideo";
 import { SelfAssessmentPanel } from "../selfAssessment/SelfAssessmentPanel";
 import { AnalysisParamsForm, PlayersOnCourtToggle, ProgressBar, defaultPlayersOnCourt, type AnalysisParams, type PlayersOnCourt } from "../analysis/AnalysisStatus";
 import { CourtCorrection } from "../analysis/CourtCorrection";
@@ -115,6 +116,14 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
   }, [bundle]);
 
   useEffect(() => { void load(); }, [load]);
+  // A game from a buddy session: who uploads, and the other player's video to add (update 15).
+  const [buddyVideo, setBuddyVideo] = useState<BuddyGameVideo | null>(null);
+  const loadedVideoId = bundle?.video?.id ?? null;
+  useEffect(() => {
+    let active = true;
+    getBuddyGameVideo(sb, sessionId).then((b) => { if (active) setBuddyVideo(b); }).catch(() => {});
+    return () => { active = false; };
+  }, [sb, sessionId, loadedVideoId]);
 
   // Peer feedback (WP5): partners' ratings and the player's goal skills. Their own ratings come with the phases below.
   const [peerRatings, setPeerRatings] = useState<PeerRating[]>([]);
@@ -270,6 +279,29 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
     }
   }
 
+  /** The player who was asked adds the asker's video of the same buddy game: copied, then analysed for them. */
+  async function addFromBuddy() {
+    if (!bundle || inFlight.current || !params) return;
+    setError("");
+    if (!consentConfirmed && !consentChecked) return setError("Confirm recording consent before adding the video.");
+    inFlight.current = true;
+    setLocalUpload({ phase: "finalizing", progress: 1 });
+    try {
+      if (!consentConfirmed) {
+        await recordUploadConsent(sb, userId);
+        setConsentConfirmed(true);
+      }
+      const courtCount = playersOnCourt ?? defaultPlayersOnCourt(bundle.session.play_format);
+      await addBuddyGameVideo(sb, bundle.session.id, analysisJobParams({ ...params, players_on_court: courtCount }, null));
+    } catch (e) {
+      setError(buddyVideoErrorText(e));
+    } finally {
+      inFlight.current = false;
+      setLocalUpload(null);
+      await load();
+    }
+  }
+
   async function run(action: () => Promise<unknown>) {
     if (inFlight.current) return;
     inFlight.current = true;
@@ -325,6 +357,8 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
   const recovery = capture?.recovery ? { soreness: capture.recovery.soreness, exertion: capture.recovery.exertion } : null;
   const loggingOnly = session.play_format === "wall_practice" || session.play_format === "ball_machine";
   const canChangeVideo = !loggingOnly && (state === "not_uploaded" || state === "upload_incomplete");
+  /** In a buddy game the player who was asked adds the asker's video instead of uploading (update 15). */
+  const askedNoVideo = canChangeVideo && state === "not_uploaded" && buddyVideo?.role === "asked";
   const finished = state === "completed" || state === "insufficient_data" || state === "failed";
   const hasFeedback = state === "completed" || state === "insufficient_data";
   const stepTitle = loggingOnly ? "Practice log · no video analysis"
@@ -557,6 +591,18 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
           </dl>
           </details>
         )}
+        {buddyVideo?.role === "asker" && video?.upload_status === "uploaded" && !video.raw_video_deleted_at && (
+          <div className="mb-3 rounded-[16px] px-4" style={{ background: "var(--pp-surface-2)", border: `1px solid ${BORDER}` }}>
+            <PreferenceSwitch label={`Let ${buddyVideo.other_name} use this video`}
+              detail={`${buddyVideo.other_name} played this game with you and can add the video to their own session for their own analysis.`}
+              checked={buddyVideo.my_video_allowed !== false} disabled={busy}
+              onChange={() => void run(async () => {
+                const next = buddyVideo.my_video_allowed === false;
+                await setBuddyCanUse(sb, video.id, next);
+                setBuddyVideo({ ...buddyVideo, my_video_allowed: next });
+              })} />
+          </div>
+        )}
         {video?.raw_video_deleted_at && <Notice tone="info">The raw recording has expired and was removed. Your saved report remains available.</Notice>}
         {video?.raw_video_deleting_at && !video.raw_video_deleted_at && <Notice tone="info">The raw recording is being removed. Your saved report remains available.</Notice>}
         {video?.raw_video_expires_at && !video.raw_video_deleted_at && !video.raw_video_deleting_at && (
@@ -607,7 +653,33 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
         )}
 
         {canChangeVideo && config.trialNoWorker && <Notice tone="info">Video upload is paused on this public trial because analysis is not running online. You can explore the sample dashboard and try session planning and check-in.</Notice>}
-        {canChangeVideo && !config.trialNoWorker && (
+        {askedNoVideo && buddyVideo?.role === "asked" && !config.trialNoWorker && (
+          <section aria-label={`${buddyVideo.other_name}'s video of this game`} className="space-y-3 rounded-[18px] p-4" style={{ background: "var(--pp-surface-2)", border: `1px solid ${BORDER}` }}>
+            {buddyVideo.video && buddyVideo.allowed ? <>
+              <p className="text-base font-bold" style={{ color: INK }}>{buddyVideo.other_name} uploaded the video of this game</p>
+              <p className="text-sm" style={{ color: WHITE_DIM }}>{buddyVideo.video.original_filename} · {formatBytes(buddyVideo.video.byte_size)}.
+                Add it here to get your own analysis. Nothing to upload.</p>
+              {!consentConfirmed && <label className="flex items-start gap-2 text-sm" style={{ color: WHITE_DIM }}>
+                <input type="checkbox" checked={consentChecked} onChange={(e) => setConsentChecked(e.target.checked)} />
+                <span>I confirm that every person visible in this recording agreed to it being used for PicklePro analysis.
+                  Raw video is removed 30 days after analysis unless I keep it. <a href="#/privacy" className="underline" style={{ color: BLUE_SKY }}>Data and privacy</a></span>
+              </label>}
+              <PlayersOnCourtToggle value={courtCount} onChange={setPlayersOnCourt} />
+              <button type="button" disabled={!!localUpload || !params} onClick={() => void addFromBuddy()}
+                className={`flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full px-5 text-base font-extrabold disabled:opacity-50 ${pressable}`}
+                style={{ background: "var(--pp-action)", color: "var(--pp-on-action)" }}>
+                <Copy size={18} aria-hidden="true" /> {localUpload ? "Adding…" : `Add ${buddyVideo.other_name}'s video`}</button>
+            </> : buddyVideo.video ? <>
+              <p className="text-base font-bold" style={{ color: INK }}>{buddyVideo.other_name} turned off sharing this video</p>
+              <p className="text-sm" style={{ color: WHITE_DIM }}>Ask {buddyVideo.other_name} to turn on "Let you use this video" in their session's Video tab.</p>
+            </> : <>
+              <p className="text-base font-bold" style={{ color: INK }}>{buddyVideo.other_name} uploads the video of this game</p>
+              <p className="text-sm" style={{ color: WHITE_DIM }}>{buddyVideo.other_name} asked you to play, so they add the video. Once it's uploaded,
+                you can add it here with one tap. Your practice plan works without it.</p>
+            </>}
+          </section>
+        )}
+        {canChangeVideo && !config.trialNoWorker && !askedNoVideo && (
           <div className="space-y-3">
             <BaselineNotice />
             <details className="rounded-[16px] p-3" style={{ border: `1px solid ${BORDER}` }}>

@@ -18,8 +18,16 @@
 | Players: buddies as a friend list | ✅ Done (5 Nov 2026) | **Yes**: `20261105130000_buddy_friends.sql` (`pickleproapp_upgrade_12.sql`) |
 | Nov 7 notes (light-blue items): term help, goal length, shot counts, hold-to-rate, less text | ✅ Done (10 Nov 2026) | **Yes**: `20261110090000_shot_results_goal_weeks.sql` (`pickleproapp_upgrade_13.sql`) |
 | Players: closed partner cards, photos, video comments for everyone, removing cancelled sessions | ✅ Done (10 Nov 2026) | **Yes**: `20261111090000_video_comments_player_photos.sql` (`pickleproapp_upgrade_14.sql`) |
+| Buddy game video, Ask sheet picks who, result in Wrap-up only, journal redesign | ✅ Done (10 Nov 2026) | **Yes** for the buddy game video: `20261112090000_buddy_session_video.sql` (`pickleproapp_upgrade_15.sql`) |
 
 **All work packages are done.** Still open (not a work package): a review-only video for solo drills (gap analysis §4b.1), and the proposal text changes in section 7. Everything left needs a new migration, so read rule 6 in section 3 first.
+
+### 10 Nov 2026: Buddy game video, Ask sheet, Wrap-up result, journal
+
+- **One video per buddy game** (`20261112090000_buddy_session_video.sql`, `pickleproapp_upgrade_15.sql`): when both players logged the same buddy session (`sessions.buddy_request_id`), only the player who asked to play uploads. A trigger refuses an upload from the player who was asked (`buddy_game_video_from_asker`); instead their Video tab shows "Add Kirk's video". `add_buddy_session_video` registers a copy in their own folder (`video_assets.copied_from`), the app copies the file with Storage `copy` (a read policy lets the asked player read the asker's file while allowed) and finalises it like an upload, so it is analysed for them. The uploader has a "Let Kirk use this video" switch (`video_assets.buddy_can_use`, `set_buddy_can_use`, on by default). App: `src/lib/api/buddyVideo.ts`, Video tab in `SessionDetail.tsx`. Tests: `96b_buddy_session_video.sql`, `buddyVideo.test.ts`. Not linked to Kirk's game tags (`buddy_game_shares`), which stay as they were.
+- **Ask for feedback:** the sheet always lists your video partners under "Who should look at it?"; nobody is picked unless you started from that partner or have only one.
+- **Rate your game:** the Result card shows in Wrap-up only.
+- **Journal** (`CapturePanel.tsx`) redesigned like the rating cards: underlined step tabs, one card per question, Yes/No chips, a sleep stepper, the pickleball button for readiness, effort and soreness, a "Now" button for the start time. Saved fields are unchanged; the "Timing: unverified" line is gone.
 
 ### 10 Nov 2026: Players cards, photos and video comments
 
