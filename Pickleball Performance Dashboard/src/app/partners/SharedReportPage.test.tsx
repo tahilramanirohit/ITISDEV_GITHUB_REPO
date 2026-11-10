@@ -56,7 +56,9 @@ describe("Shared report", () => {
     expect(screen.getByText(/rate from what you saw when you played/)).toBeTruthy();
     expect(screen.getByText("How reliable and deep were Pia's serves?")).toBeTruthy();
     expect(screen.queryByText(/There is no video/)).toBeNull(); // ratings only: no video promised
-    fireEvent.click(screen.getByRole("radio", { name: /^Dinking 2 of 5/ }));
+    const dinking = screen.getByRole("slider", { name: /^Dinking rating/ });
+    fireEvent.keyDown(dinking, { key: "ArrowRight" });
+    fireEvent.keyDown(dinking, { key: "ArrowRight" });
     fireEvent.click(screen.getByRole("button", { name: "Send feedback to Pia" }));
     await waitFor(() => expect(rpc).toHaveBeenCalledWith("rate_shared_skill", { p_session_id: "s1", p_skill: "dinking", p_rating: 2 }));
     expect(rpc).not.toHaveBeenCalledWith("rate_shared_skill", expect.objectContaining({ p_skill: "serve" }));

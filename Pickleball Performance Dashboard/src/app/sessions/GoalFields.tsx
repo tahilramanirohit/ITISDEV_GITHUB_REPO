@@ -4,7 +4,10 @@ import {
   type GoalValues, type ImprovementGoal, type SelfRating,
 } from "../../lib/api/types";
 import { BORDER, INK, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
-import { ScaleLabels, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
+import { labelClass, labelStyle } from "../shell/primitives";
+import { HoldRater } from "../selfAssessment/HoldRater";
+
+const LEVELS = ["Just starting", "Learning", "Okay", "Good", "Strong"];
 
 const GOAL_DETAILS: Record<ImprovementGoal, string> = {
   positioning: "Moving up to the net and footwork.",
@@ -38,15 +41,17 @@ export function GoalFields({ value, onChange }: { value: GoalValues; onChange: (
                 </span>
               </label>
               {selected && (
-                <div><label className="mt-2 flex items-center justify-between gap-3 text-xs" style={{ color: WHITE_DIM }}>
-                  Your current level (optional)
-                  <select aria-label={`${GOAL_LABELS[goal]} self rating`} value={value[ratingKey] ?? ""}
-                    onChange={(e) => onChange({ ...value, [ratingKey]: e.target.value ? Number(e.target.value) as SelfRating : null })}
-                    className="rounded-xl px-2 py-1.5 text-sm" style={fieldStyle}>
-                    <option value="">Not sure</option>
-                    {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n} / 5</option>)}
-                  </select>
-                </label><ScaleLabels /></div>
+                <div className="mt-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs font-semibold" style={{ color: WHITE_DIM }}>Your current level (optional)</p>
+                    {value[ratingKey] != null && <button type="button" onClick={() => onChange({ ...value, [ratingKey]: null })}
+                      className="min-h-[36px] text-xs font-semibold underline" style={{ color: WHITE_SUB }}>Clear</button>}
+                  </div>
+                  <div className="mt-1">
+                    <HoldRater label={`${GOAL_LABELS[goal]} self rating, 1 lowest to 5 highest`} min={1} max={5} value={value[ratingKey] ?? undefined}
+                      onChange={(n) => onChange({ ...value, [ratingKey]: n as SelfRating })} valueText={(n) => LEVELS[n - 1]} />
+                  </div>
+                </div>
               )}
             </div>
           );

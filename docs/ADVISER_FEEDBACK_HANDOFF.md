@@ -23,6 +23,12 @@
 
 **All work packages are done.** Still open (not a work package): a review-only video for solo drills (gap analysis §4b.1), and the proposal text changes in section 7. Everything left needs a new migration, so read rule 6 in section 3 first.
 
+### 10 Nov 2026: Every rating is the pickleball button
+
+- Log a game (and Edit focus): "Your current level (optional)" is the hold-to-rate pickleball (1-5, "Just starting" to "Strong") with a Clear link, instead of a 1-5 dropdown (`GoalFields.tsx`).
+- The partner's rating page (`SharedReportPage`) now uses the pickleball too; the old 1-5 buttons (`classic` in `SkillRater`) are removed.
+- Counts (score, games played/won, court tests) and the None/Some/Many unforced-error chips are not ratings and stay as they are.
+
 ### 10 Nov 2026: Video report simplified
 
 Approved from a mock (about 7,700 px of scrolling on a phone down to about 2,800).

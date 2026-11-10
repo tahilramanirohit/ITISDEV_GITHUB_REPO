@@ -17,8 +17,17 @@ describe("GoalFields", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: "Shot outcomes" }));
     expect(value.improvement_goals).toEqual(["shot_outcomes"]);
     view.rerender(<GoalFields value={value} onChange={onChange} />);
-    fireEvent.change(screen.getByLabelText("Shot outcomes self rating"), { target: { value: "2" } });
+    // The pickleball button: arrow keys step it (holding works the same way with a finger).
+    const ball = screen.getByRole("slider", { name: /^Shot outcomes self rating/ });
+    fireEvent.keyDown(ball, { key: "ArrowRight" });
+    expect(value.shot_outcomes_rating).toBe(1);
+    view.rerender(<GoalFields value={value} onChange={onChange} />);
+    fireEvent.keyDown(screen.getByRole("slider", { name: /^Shot outcomes self rating/ }), { key: "ArrowRight" });
     expect(value.shot_outcomes_rating).toBe(2);
+    view.rerender(<GoalFields value={value} onChange={onChange} />);
+    expect(screen.getByRole("slider", { name: /^Shot outcomes self rating/ }).getAttribute("aria-valuetext")).toBe("Learning");
+    fireEvent.click(screen.getByRole("button", { name: "Clear" }));
+    expect(value.shot_outcomes_rating).toBeNull();
     expect(screen.getByText(/your own assessment/i)).toBeTruthy();
   });
 });
