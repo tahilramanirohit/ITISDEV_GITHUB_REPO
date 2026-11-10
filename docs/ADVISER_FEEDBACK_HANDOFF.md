@@ -19,8 +19,18 @@
 | Nov 7 notes (light-blue items): term help, goal length, shot counts, hold-to-rate, less text | ✅ Done (10 Nov 2026) | **Yes**: `20261110090000_shot_results_goal_weeks.sql` (`pickleproapp_upgrade_13.sql`) |
 | Players: closed partner cards, photos, video comments for everyone, removing cancelled sessions | ✅ Done (10 Nov 2026) | **Yes**: `20261111090000_video_comments_player_photos.sql` (`pickleproapp_upgrade_14.sql`) |
 | Buddy game video, Ask sheet picks who, result in Wrap-up only, journal redesign | ✅ Done (10 Nov 2026) | **Yes** for the buddy game video: `20261112090000_buddy_session_video.sql` (`pickleproapp_upgrade_15.sql`) |
+| Video report simplified (summary, tabs, Video settings) | ✅ Done (10 Nov 2026) | No |
 
 **All work packages are done.** Still open (not a work package): a review-only video for solo drills (gap analysis §4b.1), and the proposal text changes in section 7. Everything left needs a new migration, so read rule 6 in section 3 first.
+
+### 10 Nov 2026: Video report simplified
+
+Approved from a mock (about 7,700 px of scrolling on a phone down to about 2,800).
+- `ResultView.tsx`: one summary card with the status, "Which player are you?" (the person's photo and a "This is me" button, `PlayerPicker.tsx`), the video, one line of checks (✓ Players ✓ Court ✓ Ball ✓ Shots) instead of four cards, and up to three numbers (shots, errors, time at the kitchen line; yours once you pick yourself). For a limited result, the analyzer's message moves behind "Why?".
+- Tabs: Shots (unchanged rally view, as asked), Errors, Position (you only, "Show everyone"), Comments. A partner opening a shared report starts on Comments.
+- One estimate note under the tabs replaces the EXPERIMENTAL badges and repeated notes on Errors and Position (the Shots panel keeps its badge).
+- "Video settings" (closed) at the end holds Players on court (now just Singles / Doubles, no description), the upload record, "Let … use this video", keep recording, re-run and the analysis history. On the session page, the "Video analysis" card only shows until there is a report.
+- Removed: the goals card when the video can't measure the goal, the "Practice plan from this video" line, the long player explanation and the people off court, the zone definitions, "Seen by the camera". The coaching panel shows only when the video gives a plan.
 
 ### 10 Nov 2026: Buddy game video, Ask sheet, Wrap-up result, journal
 

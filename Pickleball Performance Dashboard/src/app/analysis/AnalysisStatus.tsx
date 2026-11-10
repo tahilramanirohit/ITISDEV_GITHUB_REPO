@@ -52,11 +52,10 @@ export function PlayersOnCourtToggle({ value, onChange, idBase = "players-on-cou
   return <div>
     <p className={labelClass} style={labelStyle} id={`${idBase}-label`}>Players on court</p>
     <div role="group" aria-labelledby={`${idBase}-label`} className="grid grid-cols-2 gap-1 rounded-full p-1" style={{ background: "var(--pp-surface-2)" }}>
-      {([[2, "2 · Singles"], [4, "4 · Doubles"]] as const).map(([v, label]) => <button key={v} type="button" aria-pressed={value === v}
+      {([[2, "Singles"], [4, "Doubles"]] as const).map(([v, label]) => <button key={v} type="button" aria-pressed={value === v}
         onClick={() => onChange(v)} className={`min-h-[44px] rounded-full text-sm font-bold ${pressable}`}
         style={value === v ? { background: "var(--pp-action)", color: "var(--pp-on-action)" } : { color: "var(--pp-ink-2)" }}>{label}</button>)}
     </div>
-    <p className="mt-1 text-xs" style={{ color: WHITE_DIM }}>The analyzer keeps at most {value === 2 ? "one player" : "two players"} on each side of the net, so people off court are not counted.</p>
   </div>;
 }
 

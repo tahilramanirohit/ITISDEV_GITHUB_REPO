@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { AlertTriangle, CheckCircle2, CircleDashed, FlaskConical } from "lucide-react";
-import { publicShotResult, type AnalysisResultV1 } from "../../lib/analysis/contract";
+import { ERROR_KINDS, publicShotResult, type AnalysisResultV1 } from "../../lib/analysis/contract";
 import { GOAL_LABELS, type SessionRow } from "../../lib/api/types";
 import { buildCoachingReport } from "../../lib/analysis/coaching";
 import { videoCoachScript, videoReviewScript } from "../../lib/coaching/coachScript";
 import { CoachLauncher } from "../coach/CoachPlayer";
-import { BLUE_SKY, BORDER, INK, NEON, ORANGE, ORANGE_L, ROSE, WHITE_DIM, WHITE_SUB } from "../theme";
-import { Card, Notice, Pill, WidgetHeader } from "../shell/primitives";
+import { BLUE_SKY, BORDER, INK, NEON, ORANGE, ORANGE_L, PICKLE, ROSE, WHITE_DIM, WHITE_SUB } from "../theme";
+import { Card, Notice, Pill, WidgetHeader, numStyle } from "../shell/primitives";
 import { CoachingPanel, type PreviousSession } from "./CoachingPanel";
 import { PlayerPicker } from "./PlayerPicker";
 import { ShotsPanel } from "./ShotsPanel";
@@ -65,11 +65,15 @@ function useMyPlayer(key: string, analysed: number | null): [number | null, (id:
   return [id, choose];
 }
 
+type ReportTab = "shots" | "errors" | "position" | "comments";
+
 /** What the notes under the video can do with it: read the current time and jump to a moment. */
 export type VideoControls = { video: HTMLVideoElement | null; seek: (timeSeconds: number) => void };
 
 export function ResultView({ result, videoUrl, previous, session, onSelectTrack, onRateSession, experimentalReview = false, sharedBy,
-  notes, seekTo = null, playersOnCourt, onChangePlayersOnCourt }: {
+  notes, seekTo = null, playersOnCourt, onChangePlayersOnCourt, settings }: {
+  /** Upload record, re-run and other video controls from the session page, shown under "Video settings". */
+  settings?: ReactNode;
   /** The player count this report was analysed for, and a way to re-run it with the other count. */
   playersOnCourt?: PlayersOnCourt;
   onChangePlayersOnCourt?: (n: PlayersOnCourt) => void;
@@ -129,6 +133,39 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
     } }) };
   }, [result, devMock, coaching, session?.title, sel, c, shotsShown, shotCount.shots.length, sharedBy]);
   const warnings = devMock ? result.warnings.filter((warning) => !warning.startsWith("DEV MOCK DATA")) : result.warnings;
+  const measured = result.data_origin === "measured" && !devMock;
+  const watch = videoUrl ? (time: number) => setJump({ time, id: Date.now() }) : undefined;
+
+  // Three numbers at the top: shots, errors and time at the kitchen line (yours once you pick yourself).
+  const errorValue = result.metrics.error_counts?.status !== "not_computed" ? result.metrics.error_counts?.value : null;
+  const myErrors = errorValue?.players.find((p) => p.player_id === myPlayerId)?.counts;
+  const errorTotal = errorValue ? ERROR_KINDS.reduce((sum, k) => sum + (myErrors ?? errorValue.counts)[k], 0) : null;
+  const zoneRows = result.metrics.zone_time.value?.players ?? [];
+  const myZone = zoneRows.find((r) => r.player_id === myPlayerId) ?? null;
+  const stats = measured ? [
+    shotsShown ? { label: shotCount.mine ? "Your shots" : "Shots", value: String(shotCount.shots.length), warn: false } : null,
+    errorTotal != null ? { label: myErrors ? "Your errors" : "Errors", value: String(errorTotal), warn: errorTotal > 0 } : null,
+    myZone ? { label: "At the kitchen line", value: `${Math.round(myZone.kitchen_line_share * 100)}%`, warn: false } : null,
+  ].filter((s): s is { label: string; value: string; warn: boolean } => !!s) : [];
+  const checks = measured ? [
+    { label: "Players", ok: c.frames_with_detections > 0 },
+    { label: "Court", ok: !!result.calibration },
+    { label: "Ball", ok: (c.frames_with_ball_detections ?? 0) > 0 },
+    { label: "Shots", ok: shotsShown },
+  ] : [];
+
+  // One section at a time: Shots, Errors, Position and Comments.
+  const tabCandidates: ([ReportTab, string] | null)[] = [
+    measured && allowShotDisplay && shotsShown ? ["shots", "Shots"] : null,
+    measured && errorValue ? ["errors", "Errors"] : null,
+    measured && zoneRows.length ? ["position", "Position"] : null,
+    notes ? ["comments", "Comments"] : null,
+  ];
+  const tabs = tabCandidates.filter((x): x is [ReportTab, string] => !!x);
+  const [tab, setTab] = useState<ReportTab | null>(null);
+  const activeTab = tabs.some(([k]) => k === tab) ? tab : sharedBy && notes ? "comments" : tabs[0]?.[0] ?? null;
+  const showGoals = !!session?.improvement_goals?.includes("positioning") && coaching.available && !sharedBy;
+  const changePlayers = playersOnCourt && onChangePlayersOnCourt && measured && !sharedBy;
 
   return (
     <div id="feedback" className="space-y-4 scroll-mt-6" data-testid="result-view">
@@ -140,28 +177,25 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
       )}
 
       <Card accent={result.status === "ok" ? NEON : ORANGE}>
-        <h2 className="mb-1 text-xl font-bold text-ink">Video review</h2>
-        {!devMock && !sharedBy && result.data_origin === "measured" && (
-          <p className="mb-3 text-sm font-semibold" style={{ color: coaching.available ? NEON : ORANGE_L }}>
-            {coaching.available ? "Practice plan from this video: available below." : "Practice plan from this video: not available."}
-            {!coaching.available && onRateSession && <> <button type="button" onClick={onRateSession} className="underline" style={{ color: BLUE_SKY }}>Rate this session instead</button></>}
-          </p>
-        )}
-        <div className="flex flex-wrap items-center gap-2 mb-2">
-          <OriginBadge origin={result.data_origin} devMock={devMock} />
-          <Pill color={devMock ? ORANGE : result.status === "ok" ? NEON : ORANGE}>
-            {devMock ? "SAMPLE" : result.status === "ok" ? "RESULT" : "INSUFFICIENT DATA"}
-          </Pill>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="flex flex-wrap items-center gap-2">
+            {(devMock || result.data_origin === "test_fixture") && <OriginBadge origin={result.data_origin} devMock={devMock} />}
+            <Pill color={devMock ? ORANGE : result.status === "ok" ? NEON : ORANGE}>
+              {devMock ? "SAMPLE" : result.status === "ok" ? "RESULT" : "LIMITED RESULT"}</Pill>
+          </span>
+          {measured && (result.video.container_duration_s ?? 0) > 0 && <span className="text-xs font-bold" style={{ color: WHITE_SUB }}>{Math.round(result.video.container_duration_s!)} s of video</span>}
         </div>
-        {audio && <div className="mb-3"><CoachLauncher shortScript={audio.short} fullScript={audio.full} tone="light" label={coaching.available ? undefined : "Play video review"} /></div>}
-        <p className="text-base text-ink">{devMock ? "This sample shows the kind of practice plan PicklePro can display. It is not feedback about your play." : visibleMessage}</p>
-        {warnings.length > 0 && (
-          <details className="mt-3">
+        <h2 id="video-heading" className="mt-2 text-xl font-bold text-ink">{sharedBy ? `Watch ${sharedBy}'s video` : "Your video review"}</h2>
+        {devMock && <p className="mt-1 text-sm text-ink">This sample shows the kind of practice plan PicklePro can display. It is not feedback about your play.</p>}
+        {!devMock && result.status !== "ok" && <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Some measures need a clearer view of the court or players.</p>}
+        {!devMock && result.status === "ok" && visibleMessage && <p className="sr-only">{visibleMessage}</p>}
+        {!devMock && (result.status !== "ok" || warnings.length > 0) && (
+          <details className="mt-1">
             <summary className="cursor-pointer text-sm font-semibold" style={{ color: ORANGE_L }}>
-              {warnings.length === 1 ? "1 note about this video" : `${warnings.length} notes about this video`}
+              {result.status !== "ok" ? "Why?" : warnings.length === 1 ? "1 note about this video" : `${warnings.length} notes about this video`}
             </summary>
             <ul className="mt-2 space-y-1.5">
-              {warnings.map((w) => (
+              {(result.status !== "ok" && visibleMessage ? [visibleMessage, ...warnings] : warnings).map((w) => (
                 <li key={w} className="text-sm flex gap-2" style={{ color: ORANGE_L }}>
                   <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" aria-hidden="true" /> {w}
                 </li>
@@ -169,148 +203,103 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
             </ul>
           </details>
         )}
+        {audio && <div className="mt-3"><CoachLauncher shortScript={audio.short} fullScript={audio.full} tone="light" label={coaching.available ? undefined : "Play video review"} /></div>}
+        {measured && !sharedBy && !coaching.available && onRateSession && (
+          <div className="mt-2 flex flex-wrap items-center gap-x-2 text-sm" style={{ color: WHITE_DIM }}>
+            <span>No practice plan from this video.</span>
+            <button type="button" onClick={onRateSession} className="min-h-[44px] font-bold underline" style={{ color: BLUE_SKY }}>Rate this session</button></div>
+        )}
+
+        {measured && hasPlayers && !sharedBy && <div className="mt-4">
+          <PlayerPicker result={shotDisplayResult} myPlayerId={myPlayerId} onPick={setMyPlayerId}
+            onUpdateCourt={onSelectTrack && myPlayerId != null ? () => {
+              const me = result.players?.find((p) => p.player_id === myPlayerId);
+              onSelectTrack(myPlayerId, me?.first_seen_s ?? 0);
+            } : undefined} />
+        </div>}
+
+        <section aria-labelledby="video-heading" className="mt-4 space-y-2">
+          <VideoOverlayPlayer src={videoUrl}
+            positions={heatValidated || selectingPlayer || hasPlayers ? result.player_positions : []}
+            ballPositions={result.ball_positions ?? []}
+            courtLines={result.court_lines ?? []} shots={allowShotDisplay ? shotDisplayResult.metrics.shot_classification.value?.shots ?? [] : []}
+            bounces={allowShotDisplay ? shotMetric.value?.bounces ?? [] : []}
+            selectedTrackId={myPlayerId} jump={jump} onVideoElement={setVideoEl}
+            onSelectTrack={selectingPlayer ? (id, time) => { setSelectingPlayer(false); setMyPlayerId(id); onSelectTrack?.(id, time); } : undefined} />
+          {videoUrl && onSelectTrack && result.tracks.length > 0 && !hasPlayers && (
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" onClick={() => setSelectingPlayer((value) => !value)} className="min-h-[44px] text-sm font-bold underline" style={{ color: BLUE_SKY }}>
+                {selectingPlayer ? "Cancel" : "Not you? Pick yourself in the video"}</button>
+              {selectingPlayer && <p className="text-sm" style={{ color: INK }}>Pause where you can be seen, then tap the box around you.</p>}
+            </div>
+          )}
+        </section>
+
+        {checks.length > 0 && <ul aria-label="What the video analysis found" className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm font-bold">
+          {checks.map((item) => <li key={item.label} className="flex items-center gap-1" style={{ color: item.ok ? NEON : WHITE_SUB }}>
+            {item.ok ? <CheckCircle2 size={16} aria-hidden="true" /> : <CircleDashed size={16} aria-hidden="true" />}
+            <span>{item.label}<span className="sr-only">{item.ok ? " found" : " not found"}</span></span></li>)}
+        </ul>}
+
+        {stats.length > 0 && <dl className="mt-3 grid gap-2" style={{ gridTemplateColumns: `repeat(${stats.length}, minmax(0, 1fr))` }}>
+          {stats.map((s) => <div key={s.label} className="rounded-[14px] p-2.5" style={{ background: "var(--pp-surface-2)" }}>
+            <dd className="text-[28px] leading-none" style={{ ...numStyle, color: s.warn ? ORANGE_L : INK }}>{s.value}</dd>
+            <dt className="mt-1 text-xs leading-tight" style={{ color: WHITE_DIM }}>{s.label}</dt>
+          </div>)}
+        </dl>}
       </Card>
 
-      {result.data_origin === "measured" && !devMock && <section aria-label="What the video analysis found" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <h2 className="sr-only">What PicklePro could see</h2>
-        {[
-          {
-            label: "Players",
-            ok: c.frames_with_detections > 0,
-            value: sel && sel.tracked_fraction > 0
-              ? `Found ${sharedBy ?? "you"} in ${Math.round(sel.tracked_fraction * 100)}% of the video`
-              : c.frames_with_detections > 0 ? "Players found" : "No players found",
-            detail: result.provenance.detector.confidence_is_model_score
-              ? "Boxes on the video show who was found. \u201cYou\u201d is the player used for your feedback."
-              : "Only movement was detected, so boxes may not always be people.",
-          },
-          {
-            label: "Court",
-            ok: !!result.calibration,
-            value: result.calibration ? "Court lines found" : "Court not found",
-            detail: result.calibration
-              ? "Yellow lines on the video show where PicklePro thinks the court is."
-              : "Film so the whole court and its lines are visible to get court feedback.",
-          },
-          {
-            label: "Ball",
-            ok: (c.frames_with_ball_detections ?? 0) > 0,
-            value: !result.provenance.ball_detector ? "Ball finder not set up"
-              : (c.frames_with_ball_detections ?? 0) > 0 ? "Ball followed" : "Ball not seen",
-            detail: result.provenance.ball_detector
-              ? "The orange dot and trail show where the ball was seen."
-              : "The analyzer needs a ball model to follow the ball.",
-          },
-          {
-            label: "Shots",
-            ok: shotsShown,
-            value: shotsShown
-              ? `${shotCount.shots.length} ${shotCount.mine ? "of your hits" : "hits"} named`
-              : "Not available",
-            detail: shotsShown
-              ? shotsValidated ? "Tap Watch next to a shot to check it."
-                : "Experimental: not yet checked against hand-labelled videos. Tap Watch to check a shot."
-              : !allowShotDisplay ? "Shot labels are hidden until they pass evaluation on labelled real footage."
-                : shotMetric.reason ?? "Shot types are not available for this video.",
-          },
-        ].map((item) => (
-          <div key={item.label} className="rounded-[14px] border bg-surface p-4" style={{ borderColor: BORDER }}>
-            <p className="flex items-center gap-2 text-sm font-bold" style={{ color: BLUE_SKY }}>
-              {item.ok ? <CheckCircle2 size={18} aria-label="found" style={{ color: NEON }} />
-                : <CircleDashed size={18} aria-label="not found" style={{ color: WHITE_SUB }} />}
-              {item.label}
-            </p>
-            <p className="mt-2 text-lg font-bold" style={{ color: INK }}>{item.value}</p>
-            <p className="mt-1 text-sm leading-relaxed" style={{ color: WHITE_DIM }}>{item.detail}</p>
-          </div>
-        ))}
-      </section>}
-
-      {session?.improvement_goals?.length ? (
+      {showGoals && (
         <Card accent={BLUE_SKY}>
           <WidgetHeader title="Your goals and video evidence" subtitle="Your own skill ratings are separate from video measurements." />
-          <ul className="space-y-2">
-            {session.improvement_goals.map((goal) => {
-              const rating = session[`${goal}_rating`];
-              const observed = goal === "positioning" && coaching.available;
-              const reason = goal === "positioning" ? coaching.introduction
-                : goal === "shot_outcomes"
-                  ? "Shot outcomes cannot be assessed. Shot success and in/out calls are outside this analysis scope."
-                  : "Technique cannot be assessed yet. The current analysis does not measure body and paddle mechanics.";
-              return <li key={goal} className="rounded-xl p-3 text-sm" style={{ border: `1px solid ${BORDER}` }}>
-                <p className="text-base font-semibold text-ink">{GOAL_LABELS[goal]} · {observed ? (goal === "positioning" ? "video feedback available" : "early estimate available") : "cannot assess from this analysis"}</p>
-                <p className="mt-1" style={{ color: WHITE_DIM }}>Your starting rating: {rating ? `${rating}/5` : "not set"}</p>
-                <p className="mt-1" style={{ color: observed ? NEON : ORANGE_L }}>{reason}</p>
-              </li>;
-            })}
-          </ul>
+          <p className="text-sm text-ink"><b>{GOAL_LABELS.positioning}:</b> {coaching.introduction}</p>
         </Card>
-      ) : null}
+      )}
 
-      {!sharedBy && (!session?.improvement_goals?.length || session.improvement_goals.includes("positioning")) &&
+      {!sharedBy && (coaching.available || devMock || result.data_origin === "test_fixture") &&
+        (!session?.improvement_goals?.length || session.improvement_goals.includes("positioning")) &&
         <CoachingPanel result={result} previous={previous} onRateSession={onRateSession} />}
 
-      {playersOnCourt && onChangePlayersOnCourt && result.data_origin === "measured" && !devMock && !sharedBy && (
-        <Card>
-          <PlayersOnCourtToggle idBase="report-players" value={recount ?? playersOnCourt} onChange={(n) => setRecount(n === playersOnCourt ? null : n)} />
-          {recount && <div className="mt-3 flex flex-wrap items-center gap-2">
-            <p className="min-w-[10rem] flex-1 text-sm text-ink">Analyse this video again for {recount} players? It takes a few minutes; this report stays until the new one is ready.</p>
-            <button type="button" onClick={() => { onChangePlayersOnCourt(recount); setRecount(null); }}
-              className="min-h-[44px] rounded-full px-4 text-sm font-bold" style={{ background: "var(--pp-action)", color: "var(--pp-on-action)" }}>Re-run for {recount} players</button>
-            <button type="button" onClick={() => setRecount(null)} className="min-h-[44px] rounded-full px-3 text-sm font-bold text-ink">Keep {playersOnCourt}</button>
-          </div>}
-        </Card>
-      )}
-
-      {result.data_origin === "measured" && !devMock && hasPlayers && !sharedBy && (
-        <PlayerPicker result={shotDisplayResult} myPlayerId={myPlayerId} onPick={setMyPlayerId} showShotCounts={allowShotDisplay}
-          onUpdateCourt={onSelectTrack && myPlayerId != null ? () => {
-            const me = result.players?.find((p) => p.player_id === myPlayerId);
-            onSelectTrack(myPlayerId, me?.first_seen_s ?? 0);
-          } : undefined} />
-      )}
-
-      <section aria-labelledby="video-heading" className="space-y-3">
-        <div>
-          <h2 id="video-heading" className="text-lg font-bold text-ink">{sharedBy ? `Watch ${sharedBy}'s video` : "Watch your video"}</h2>
-          <p className="text-base" style={{ color: WHITE_DIM }}>Press play to review the recording. Player boxes, observed ball positions and court lines are shown when available.{shotsValidated ? " Evaluated shot estimates are also shown." : " Experimental shot estimates are also shown; check them against the video."}</p>
+      {tabs.length > 0 && <div>
+        <div role="tablist" aria-label="Report sections" className="flex gap-4 overflow-x-auto border-b" style={{ borderColor: BORDER }}>
+          {tabs.map(([key, label]) => <button key={key} type="button" role="tab" id={`report-tab-${key}`} aria-selected={activeTab === key}
+            aria-controls={`report-panel-${key}`} onClick={() => setTab(key)}
+            className="-mb-px min-h-[44px] shrink-0 border-b-[3px] py-2 text-sm font-semibold"
+            style={activeTab === key ? { color: INK, borderColor: PICKLE } : { color: WHITE_DIM, borderColor: "transparent" }}>{label}</button>)}
         </div>
-        {videoUrl && onSelectTrack && result.tracks.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2">
-            <button type="button" onClick={() => setSelectingPlayer((value) => !value)}
-              className="rounded-lg px-4 py-2.5 text-sm font-semibold min-h-[44px]" style={{ background: "var(--pp-strong)", color: "var(--pp-on-strong)" }}>
-              {selectingPlayer ? "Cancel" : "Not you? Pick yourself in the video"}
-            </button>
-            {selectingPlayer && <p className="text-base" style={{ color: INK }}>Pause the video where you can be seen, then tap the box around you. PicklePro will check the video again for you.</p>}
+        <div role="tabpanel" id={`report-panel-${activeTab}`} aria-labelledby={`report-tab-${activeTab}`} className="mt-3 outline-none">
+          {activeTab === "shots" && <ShotsPanel result={shotDisplayResult} myPlayerId={myPlayerId} research={experimentalReview} teamsKey={`picklepro:teams:${reportKey}`} onWatch={watch} />}
+          {activeTab === "errors" && <ErrorsPanel result={result} myPlayerId={myPlayerId} onWatch={watch} />}
+          {activeTab === "position" && <ZoneTimePanel result={result} myPlayerId={myPlayerId} />}
+          {activeTab === "comments" && notes?.({ video: videoEl, seek })}
+        </div>
+      </div>}
+
+      {measured && (shotsShown || errorValue || zoneRows.length > 0) && <p className="text-center text-xs" style={{ color: WHITE_SUB }}>
+        Shots, errors and positions are estimates from the video and not yet checked against hand counts, so some will be wrong.
+        Shots without a seen bounce (for example into the net) are not counted as errors.</p>}
+
+      {(changePlayers || settings || (experimentalReview && result.data_origin === "measured")) && (
+        <details className="rounded-[20px] p-4" style={{ background: "var(--pp-surface)", border: `1px solid ${BORDER}` }}>
+          <summary className="flex min-h-[44px] cursor-pointer items-center text-base font-bold text-ink">Video settings</summary>
+          <div className="mt-3 space-y-4">
+            {changePlayers && <div>
+              <PlayersOnCourtToggle idBase="report-players" value={recount ?? playersOnCourt!} onChange={(n) => setRecount(n === playersOnCourt ? null : n)} />
+              {recount && <div className="mt-3 flex flex-wrap items-center gap-2">
+                <p className="min-w-[10rem] flex-1 text-sm text-ink">Analyse again for {recount === 2 ? "singles" : "doubles"}? This report stays until the new one is ready.</p>
+                <button type="button" onClick={() => { onChangePlayersOnCourt!(recount); setRecount(null); }}
+                  className="min-h-[44px] rounded-full px-4 text-sm font-bold" style={{ background: "var(--pp-action)", color: "var(--pp-on-action)" }}>Re-run</button>
+                <button type="button" onClick={() => setRecount(null)} className="min-h-[44px] rounded-full px-3 text-sm font-bold text-ink">Cancel</button>
+              </div>}
+            </div>}
+            {settings}
+            {/* The per-metric research table was removed (adviser notes, 7 Nov). The raw result stays downloadable in research mode. */}
+            {experimentalReview && result.data_origin === "measured" && <button type="button" onClick={() => downloadResult(result)}
+              className="text-sm font-semibold underline" style={{ color: BLUE_SKY }} title="For the Label shots page and for scoring shot detection">
+              Download analysis result (JSON)</button>}
           </div>
-        )}
-        <VideoOverlayPlayer src={videoUrl}
-          positions={heatValidated || selectingPlayer || hasPlayers ? result.player_positions : []}
-          ballPositions={result.ball_positions ?? []}
-          courtLines={result.court_lines ?? []} shots={allowShotDisplay ? shotDisplayResult.metrics.shot_classification.value?.shots ?? [] : []}
-          bounces={allowShotDisplay ? shotMetric.value?.bounces ?? [] : []}
-          selectedTrackId={myPlayerId} jump={jump} onVideoElement={setVideoEl}
-          onSelectTrack={selectingPlayer ? (id, time) => { setSelectingPlayer(false); setMyPlayerId(id); onSelectTrack?.(id, time); } : undefined} />
-      </section>
-
-      {notes?.({ video: videoEl, seek })}
-
-      {result.data_origin === "measured" && !devMock && allowShotDisplay && (
-        <ShotsPanel result={shotDisplayResult} myPlayerId={myPlayerId} research={experimentalReview} teamsKey={`picklepro:teams:${reportKey}`}
-          onWatch={videoUrl ? (time) => setJump({ time, id: Date.now() }) : undefined} />
+        </details>
       )}
-
-      {result.data_origin === "measured" && !devMock && <ErrorsPanel result={result} myPlayerId={myPlayerId}
-        onWatch={videoUrl ? (time) => setJump({ time, id: Date.now() }) : undefined} />}
-
-      {result.data_origin === "measured" && !devMock && <ZoneTimePanel result={result} myPlayerId={myPlayerId} />}
-
-      {/* The per-metric research table was removed (adviser notes, 7 Nov: too much for players). The raw result stays
-          downloadable in research mode for the Label shots page. */}
-      {experimentalReview && result.data_origin === "measured" && <button type="button" onClick={() => downloadResult(result)}
-        className="text-sm font-semibold underline" style={{ color: BLUE_SKY }} title="For the Label shots page and for scoring shot detection">
-        Download analysis result (JSON)</button>}
-
     </div>
   );
 }

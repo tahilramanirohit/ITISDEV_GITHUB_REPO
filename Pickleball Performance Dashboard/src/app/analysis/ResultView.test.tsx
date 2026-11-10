@@ -20,16 +20,33 @@ describe("ResultView", () => {
   it("shows what the analysis found, without the per-metric research table", () => {
     const measured = { ...structuredClone(testFixture), data_origin: "measured" };
     render(<ResultView result={parseAnalysisResult(measured)} videoUrl={null} />);
-    expect(screen.getByText("MEASURED FROM THIS VIDEO")).toBeTruthy();
-    expect(screen.getByRole("region", { name: "What the video analysis found" })).toBeTruthy();
-    expect(screen.getByText("Ball finder not set up")).toBeTruthy();
-    expect(screen.getByText("Court lines found")).toBeTruthy();
-    expect(screen.getAllByText("Not available").length).toBeGreaterThan(0);
+    // One line of checks under the video instead of four cards (adviser notes, 10 Nov).
+    const found = screen.getByRole("list", { name: "What the video analysis found" });
+    expect(found.textContent).toContain("Court found");
+    expect(found.textContent).toContain("Ball not found");
+    expect(screen.queryByText("MEASURED FROM THIS VIDEO")).toBeNull();
+    expect(screen.queryByText("Court lines found")).toBeNull();
     // Removed for players (adviser notes, 7 Nov): metrics list, provenance and coverage.
     expect(screen.queryByText(/Research details/)).toBeNull();
     expect(screen.queryByText("Share of video analyzed")).toBeNull();
     expect(screen.queryByText("NOT COMPUTED")).toBeNull();
     expect(screen.queryByRole("button", { name: /Download analysis result/ })).toBeNull();
+  });
+
+  it("opens one section at a time and keeps the video controls under Video settings", () => {
+    const measured = { ...structuredClone(testFixture), data_origin: "measured" };
+    const rerun = vi.fn();
+    render(<ResultView result={parseAnalysisResult(measured)} videoUrl={null} notes={() => <p>Comments here</p>}
+      settings={<p>Upload record here</p>} playersOnCourt={2} onChangePlayersOnCourt={rerun} />);
+    const tabs = screen.getByRole("tablist", { name: "Report sections" });
+    fireEvent.click(within(tabs).getByRole("tab", { name: "Comments" }));
+    expect(screen.getByText("Comments here")).toBeTruthy();
+    expect(screen.getByText("Video settings")).toBeTruthy();
+    expect(screen.getByText("Upload record here")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Doubles" }));
+    expect(screen.getByText(/Analyse again for doubles\?/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Re-run" }));
+    expect(rerun).toHaveBeenCalledWith(4);
   });
 
   it("keeps the raw result downloadable in research mode", () => {
@@ -40,28 +57,29 @@ describe("ResultView", () => {
 
   it("explains insufficient data instead of showing a heatmap", () => {
     render(<ResultView result={parseAnalysisResult(insufficient)} videoUrl={null} />);
-    expect(screen.getAllByText("INSUFFICIENT DATA").length).toBe(1); // the overall status (the metric table is gone)
+    expect(screen.getAllByText("LIMITED RESULT").length).toBe(1); // the overall status (the metric table is gone)
     expect(screen.getAllByText(/Court not calibrated/).length).toBeGreaterThan(0);
     expect(screen.queryByRole("img", { name: /Court heatmap/ })).toBeNull();
   });
 
-  it("shows player goals separately from video findings", () => {
+  it("leaves out the goals card when the video cannot measure them", () => {
     const session = {
       improvement_goals: ["positioning", "shot_outcomes", "shot_technique"],
       positioning_rating: 3, shot_outcomes_rating: 2, shot_technique_rating: null,
     } as SessionRow;
     render(<ResultView result={parseAnalysisResult(insufficient)} videoUrl={null} session={session} />);
-    expect(screen.getByText("Your goals and video evidence")).toBeTruthy();
-    expect(screen.getByText("Court positioning · cannot assess from this analysis")).toBeTruthy();
-    expect(screen.getByText("Shot outcomes · cannot assess from this analysis")).toBeTruthy();
-    expect(screen.getByText(/Shot success and in\/out calls are outside this analysis scope/)).toBeTruthy();
+    expect(screen.queryByText("Your goals and video evidence")).toBeNull();
+    expect(screen.queryByText(/cannot assess from this analysis/)).toBeNull();
   });
 
   it("offers a spoken video review when the video gives no practice plan", () => {
     const result = structuredClone(testFixture);
     result.data_origin = "measured";
-    render(<ResultView result={parseAnalysisResult(result)} videoUrl={null} />);
-    expect(screen.getByText("Practice plan from this video: not available.")).toBeTruthy();
+    const onRate = vi.fn();
+    render(<ResultView result={parseAnalysisResult(result)} videoUrl={null} onRateSession={onRate} />);
+    expect(screen.getByText(/No practice plan from this video\./)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Rate this session" }));
+    expect(onRate).toHaveBeenCalled();
     expect(screen.getByRole("button", { name: /^Play video review/ })).toBeTruthy();
     expect(screen.queryByRole("button", { name: /^Hear full plan/ })).toBeNull();
   });

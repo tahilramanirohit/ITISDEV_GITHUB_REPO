@@ -111,7 +111,10 @@ export function PeerNotes({ sb, sessionId, mode, ownerName, controls, skills = [
   }
 
   if (notes === null) return null;
-  if (mode === "owner" && !shared && notes.length === 0) return null;
+  if (mode === "owner" && !shared && notes.length === 0) {
+    return <Card><p className="text-sm" style={{ color: WHITE_DIM }}>No comments yet. Share this video with a partner
+      (Rate &amp; plan → Ask for feedback) and you can both comment on any second of it.</p></Card>;
+  }
 
   return (
     <Card>

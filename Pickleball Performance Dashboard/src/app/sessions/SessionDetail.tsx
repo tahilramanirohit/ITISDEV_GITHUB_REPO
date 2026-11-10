@@ -369,214 +369,9 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
     : state === "failed" ? "Your video needs attention"
     : hasFeedback ? "Your video review is ready" : "Uploading your video";
 
-  return (
-    <div>
-      <section className="pb-5" style={{ color: INK }}>
-        <a href="#/sessions" className="-ml-1 mb-2 inline-flex min-h-[44px] items-center gap-1 px-1 text-sm font-semibold" style={{ color: ACCENT_INK }}><ArrowLeft size={16} aria-hidden="true" /> Sessions</a>
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-sm" style={{ color: WHITE_SUB }}>
-              {KIND_LABELS[sessionKind(session)]}{session.tournament_round ? ` · ${session.tournament_round}` : ""} · {new Date(`${session.session_date}T12:00:00`).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })} · {FORMAT_LABELS[session.play_format]}
-            </p>
-            <h1 className="mt-1 break-words text-[1.75rem] font-extrabold leading-[1.1] tracking-[-0.02em] md:text-4xl" style={{ fontFamily: DISPLAY_FONT }}>{session.title}</h1>
-          </div>
-          <button type="button" title="Delete session" aria-label="Delete session" disabled={busy || state === "uploading" || state === "processing"}
-            onClick={() => { if (window.confirm("Delete this session, its ratings, video and results?")) void run(async () => { await deleteSession(sb, bundle); navigate("/sessions"); }); }}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] disabled:opacity-30" style={{ color: WHITE_DIM, border: "1px solid var(--pp-line-strong)" }}>
-            <Trash2 size={16} aria-hidden="true" />
-          </button>
-        </div>
-        {scoreGames(session.match_score).length > 0 ? <Scoreboard session={session} players={players} />
-        : (session.tournament_name || session.tournament_round || session.match_result || session.match_score) && (
-          <p className="mt-2 text-base font-bold tabular-nums">
-            {[session.tournament_name, session.tournament_round, session.match_result === "win" ? "Won" : session.match_result === "loss" ? "Lost" : null, session.match_score].filter(Boolean).join(" · ")}
-          </p>
-        )}
-        {players.length > 0 && <div className="mt-3 flex flex-wrap items-center gap-2 text-sm" style={{ color: WHITE_DIM }}>
-          <AvatarStack names={players.map((p) => p.display_name)} size={30} />
-          <span>
-            {players.some((p) => p.role === "partner") && <>With {players.filter((p) => p.role === "partner").map((p) => p.display_name).join(", ")}{" · "}</>}
-            {players.some((p) => p.role === "opponent") && <>vs {players.filter((p) => p.role === "opponent").map((p) => p.display_name).join(" & ")}</>}
-          </span>
-        </div>}
-        {session.notes && <p className="mt-2 text-sm leading-relaxed" style={{ color: WHITE_DIM }}>{session.notes}</p>}
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          {session.improvement_goals?.length > 0 && (
-            <ul className="flex flex-wrap gap-2" aria-label="Your focus">
-              {session.improvement_goals.map((goal: ImprovementGoal) => (
-                <li key={goal} className="rounded-[8px] px-2.5 py-1 text-[13px] font-semibold" style={{ background: "var(--pp-surface-2)", color: INK }}>
-                  {GOAL_LABELS[goal]}{session[`${goal}_rating`] ? ` · ${session[`${goal}_rating`]}/5` : ""}
-                </li>
-              ))}
-            </ul>
-          )}
-          <button type="button" className="min-h-[44px] px-1 text-sm font-semibold underline" style={{ color: ACCENT_INK }}
-            onClick={() => setGoalDraft({
-              improvement_goals: session.improvement_goals ?? [],
-              positioning_rating: session.positioning_rating ?? null,
-              shot_outcomes_rating: session.shot_outcomes_rating ?? null,
-              shot_technique_rating: session.shot_technique_rating ?? null,
-          })}>Edit focus</button>
-        </div>
-      </section>
-      <Sheet>
-      <div className="space-y-4">
-
-      {goalDraft && (
-        <Card accent={BLUE_SKY}>
-          <GoalFields value={goalDraft} onChange={setGoalDraft} />
-          <div className="flex gap-2 mt-3">
-            <button type="button" disabled={busy || goalDraft.improvement_goals.length === 0}
-              onClick={() => void run(async () => {
-                await updateSessionGoals(sb, session.id, goalDraft);
-                setGoalDraft(null);
-              })}
-              className="min-h-[44px] rounded-[12px] px-4 text-sm font-bold disabled:opacity-40"
-              style={{ background: "var(--pp-strong)", color: "var(--pp-on-strong)" }}>Save goals</button>
-            <button type="button" onClick={() => setGoalDraft(null)} className="min-h-[44px] px-3 text-sm font-semibold" style={{ color: WHITE_DIM }}>Cancel</button>
-          </div>
-        </Card>
-      )}
-
-      <GamePhases current={phase} onOpen={openPhase} done={{
-        pre: !!capture?.checkin,
-        in: rated,
-        post: !!(capture?.recovery || capture?.reflection),
-      }} />
-
-      <SegmentedTabs label="Session views" idBase="session" value={activeTab} onChange={setTab} tabs={[
-        { value: "plan", label: "Rate & plan" },
-        { value: "players", label: "Players" },
-        { value: "video", label: "Video", badge: selfMode ? "optional" : undefined },
-        { value: "journal", label: "Journal" },
-      ]} />
-
-      {activeTab === "plan" && <div {...tabPanelProps("session", "plan")} className="space-y-4 outline-none">
-        <PreGameSummary checkin={capture?.checkin ?? null} onOpen={() => openPhase("pre")} />
-        {injury.open && <RecoveryCard sb={sb} injury={injury.open} onChanged={() => void injury.reload()} showPlan={false} />}
-        <SelfAssessmentPanel sb={sb} session={session} recovery={recovery} peerRatings={peerRatings} injured={!!injury.open}
-          onSaved={() => { loadPhases(); void load(); loadFeedback(); }} />
-        {rated && !(capture?.recovery || capture?.reflection) && <button type="button" onClick={() => openPhase("post")}
-          className={`flex min-h-[52px] w-full items-center justify-center rounded-full px-4 text-base font-extrabold ${pressable}`}
-          style={{ background: "var(--pp-action)", color: "var(--pp-on-action)" }}>Next: post-game recovery</button>}
-        <PeerFeedback sb={sb} sessionTitle={session.title} sessionId={session.id} hasVideo={!!uploadedPath} selfRatings={selfRatings} peerRatings={peerRatings}
-          goalSkills={goalSkills} onChanged={loadFeedback} askFor={searchParams.get("ask")} playedWith={playedWith}
-          onWatch={uploadedPath ? (time) => { setTab("video"); setVideoSeek({ time, id: Date.now() }); } : undefined} />
-      </div>}
-      {activeTab === "journal" && <div {...tabPanelProps("session", "journal")} className="outline-none"><CapturePanel key={session.id} sb={sb} session={session}
-        step={journalStep} onStepChange={setJournalStep} onSaved={loadPhases} onSessionUpdated={() => void load()}
-        injury={injury.loaded ? injury.open : undefined} onInjuryChanged={() => void injury.reload()} /></div>}
-
-      {activeTab === "players" && <div {...tabPanelProps("session", "players")} className="space-y-4 outline-none">
-        {(session.tournament_name || session.match_result || session.match_score) && <Card>
-          <p className="text-xs font-extrabold" style={{ color: WHITE_SUB }}>Result</p>
-          <p className="mt-1 text-2xl font-extrabold" style={{ color: "var(--pp-ink)" }}>{session.match_result === "win" ? "Won" : session.match_result === "loss" ? "Lost" : "Not set"}
-            {session.match_score && <span className="ml-2 text-base font-semibold" style={{ color: WHITE_DIM }}>{session.match_score}</span>}</p>
-          {session.tournament_name && <p className="text-sm" style={{ color: WHITE_DIM }}>{session.tournament_name}{session.tournament_round ? ` · ${session.tournament_round}` : ""}</p>}
-        </Card>}
-        <Card>
-          <h2 className="text-base font-bold" style={{ fontFamily: DISPLAY_FONT }}>Players</h2>
-          {sessionKind(session) === "solo" ? <p className="mt-2 text-sm" style={{ color: WHITE_DIM }}>Solo practice: just you.</p> : (
-            <ul className="mt-3 grid grid-cols-4 gap-2 text-center text-xs font-semibold">
-              {[{ name: "You", role: "You" }, ...players.map((p) => ({ name: p.display_name, role: p.role === "partner" ? "Partner" : "Opponent" }))].map((p, i) => (
-                <li key={`${p.name}-${i}`} className="min-w-0">
-                  <span className="mx-auto mb-1 grid h-12 w-12 place-items-center rounded-full text-sm font-extrabold"
-                    style={i === 0 ? { background: "var(--pp-strong)", color: "var(--pp-on-strong)" } : { background: "var(--pp-surface-2)", color: "var(--pp-ink)" }}>{p.name === "You" ? "ME" : initials(p.name)}</span>
-                  <span className="block truncate" style={{ color: "var(--pp-ink)" }}>{p.name}</span>
-                  <span className="block text-xs" style={{ color: WHITE_SUB }}>{p.role}</span>
-                </li>
-              ))}
-            </ul>)}
-          {sessionKind(session) !== "solo" && players.length === 0 && <p className="mt-2 text-sm" style={{ color: WHITE_DIM }}>No names added yet.</p>}
-          {!detailsDraft && <button type="button" className="mt-4 inline-flex min-h-[44px] items-center rounded-[12px] px-5 text-sm font-bold"
-            style={{ border: `1px solid ${BORDER}`, color: "var(--pp-ink)" }}
-            onClick={() => setDetailsDraft({
-              title: session.title, session_date: session.session_date,
-              tournament_name: session.tournament_name ?? "", tournament_round: session.tournament_round ?? "",
-              match_result: session.match_result ?? null, match_score: session.match_score ?? "",
-              partner: players.find((p) => p.role === "partner")?.display_name ?? "",
-              opponents: [0, 1].map((i) => players.filter((p) => p.role === "opponent")[i]?.display_name ?? ""),
-            })}>Edit details &amp; players</button>}
-        </Card>
-      {detailsDraft && (
-          <Card accent={BLUE_SKY}>
-            <h2 className="text-lg font-extrabold">Edit details &amp; players</h2>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <label className="grid gap-1 text-sm font-semibold">Name
-                <input maxLength={120} value={detailsDraft.title} onChange={(e) => setDetailsDraft({ ...detailsDraft, title: e.target.value })} className="rounded-[14px] px-4 py-3 text-base font-normal" style={fieldStyle} />
-              </label>
-              <label className="grid gap-1 text-sm font-semibold">Date
-                <input type="date" value={detailsDraft.session_date} onChange={(e) => setDetailsDraft({ ...detailsDraft, session_date: e.target.value })} className="rounded-[14px] px-4 py-3 text-base font-normal" style={fieldStyle} />
-              </label>
-              {sessionKind(session) === "tournament" && <>
-                <label className="grid gap-1 text-sm font-semibold">Tournament
-                  <input maxLength={120} value={detailsDraft.tournament_name} onChange={(e) => setDetailsDraft({ ...detailsDraft, tournament_name: e.target.value })} className="rounded-[14px] px-4 py-3 text-base font-normal" style={fieldStyle} />
-                </label>
-                <label className="grid gap-1 text-sm font-semibold">Round
-                  <input maxLength={60} value={detailsDraft.tournament_round} onChange={(e) => setDetailsDraft({ ...detailsDraft, tournament_round: e.target.value })} placeholder="e.g. Semifinal" className="rounded-[14px] px-4 py-3 text-base font-normal" style={fieldStyle} />
-                </label>
-              </>}
-              {sessionKind(session) !== "solo" && <>
-                <div className="grid gap-1 text-sm font-semibold">Result
-                  <div className="flex gap-2">{(["win", "loss"] as const).map((r) => <Chip key={r} selected={detailsDraft.match_result === r}
-                    onClick={() => setDetailsDraft({ ...detailsDraft, match_result: detailsDraft.match_result === r ? null : r })}>{r === "win" ? "Won" : "Lost"}</Chip>)}</div>
-                </div>
-                <label className="grid gap-1 text-sm font-semibold">Score
-                  <input maxLength={40} value={detailsDraft.match_score} onChange={(e) => setDetailsDraft({ ...detailsDraft, match_score: e.target.value })} placeholder="11-7, 9-11, 11-5" className="rounded-[14px] px-4 py-3 text-base font-normal" style={fieldStyle} />
-                </label>
-              </>}
-              {sessionKind(session) !== "solo" && <>
-                {session.play_format === "doubles" && <label className="grid gap-1 text-sm font-semibold">Partner
-                  <input maxLength={80} value={detailsDraft.partner} onChange={(e) => setDetailsDraft({ ...detailsDraft, partner: e.target.value })} className="rounded-[14px] px-4 py-3 text-base font-normal" style={fieldStyle} />
-                </label>}
-                {detailsDraft.opponents.slice(0, session.play_format === "doubles" ? 2 : 1).map((name, i) => <label key={i} className="grid gap-1 text-sm font-semibold">{session.play_format === "doubles" ? `Opponent ${i + 1}` : "Opponent"}
-                  <input maxLength={80} value={name} onChange={(e) => setDetailsDraft({ ...detailsDraft, opponents: detailsDraft.opponents.map((v, j) => j === i ? e.target.value : v) })} className="rounded-[14px] px-4 py-3 text-base font-normal" style={fieldStyle} />
-                </label>)}
-              </>}
-            </div>
-            <div className="mt-4 flex gap-2">
-              <button type="button" disabled={busy || !detailsDraft.title.trim()}
-                onClick={() => void run(async () => {
-                  const d = detailsDraft;
-                  await updateSessionDetails(sb, session.id, {
-                    title: d.title.trim(), session_date: d.session_date,
-                    ...(sessionKind(session) === "tournament" ? {
-                      tournament_name: d.tournament_name.trim() || null, tournament_round: d.tournament_round.trim() || null,
-                    } : {}),
-                    // Any game can have a result, so Progress can show a win rate.
-                    ...(sessionKind(session) !== "solo" ? { match_result: d.match_result, match_score: d.match_score.trim() || null } : {}),
-                  });
-                  if (sessionKind(session) !== "solo") {
-                    const next: OtherPlayer[] = [
-                      ...(session.play_format === "doubles" ? [{ role: "partner" as const, display_name: d.partner }] : []),
-                      ...d.opponents.slice(0, session.play_format === "doubles" ? 2 : 1).map((n) => ({ role: "opponent" as const, display_name: n })),
-                    ];
-                    await saveOtherPlayers(sb, session.id, next);
-                    setPlayers(next.filter((p) => p.display_name.trim()));
-                  }
-                  setDetailsDraft(null);
-                })}
-                className="inline-flex min-h-[44px] items-center rounded-[12px] px-6 text-sm font-bold disabled:opacity-40" style={{ background: "var(--pp-strong)", color: "var(--pp-on-strong)" }}>Save details</button>
-              <button type="button" onClick={() => setDetailsDraft(null)} className="text-sm px-3 py-2" style={{ color: WHITE_DIM }}>Cancel</button>
-            </div>
-          </Card>
-        )}
-  
-        </div>}
-
-      {activeTab === "video" && <div {...tabPanelProps("session", "video")} className="space-y-4 outline-none">
-      {selfMode && !video && <Notice tone="info">Video analysis is optional. Your practice plan comes from your ratings in <strong>Rate &amp; plan</strong>. Add a clip here if you also want court positions measured.</Notice>}
-      <Card>
-        <p className="text-xs font-bold" style={{ color: BLUE_SKY }}>Video analysis{state ? ` · ${STATE_LABELS[state]}` : ""}</p>
-        <h2 className="text-xl font-bold text-ink mt-1" style={{ fontFamily: DISPLAY_FONT }}>{stepTitle}</h2>
-        <p className="text-sm mt-2 mb-4" style={{ color: WHITE_DIM }}>{loggingOnly
-          ? "Wall and ball-machine sessions record your check-in, recovery and reflection without computer-vision analysis."
-          : state ? stateDescription(state, job) : ""}</p>
-        {hasFeedback && (
-          <button type="button" onClick={() => document.getElementById("feedback")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-            className={`mb-4 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full px-4 text-[15px] font-extrabold ${pressable}`}
-            style={{ background: "var(--pp-action)", color: "var(--pp-on-action)" }}>See your feedback <ArrowDown size={16} aria-hidden="true" /></button>
-        )}
+  // Once there is a report, the upload record, re-run and other controls live under "Video settings" in it.
+  const reportReady = hasFeedback && !!parsed?.ok;
+  const videoControls = <>
         {video && (
           <details className="mb-3">
             <summary className="cursor-pointer text-sm font-semibold" style={{ color: BLUE_SKY }}>Research details: upload record, IDs and times</summary>
@@ -804,8 +599,230 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
           </details>
         )}
         {paramsError && <div className="mt-2"><Notice tone="error">{paramsError}</Notice></div>}
+  </>;
+  const runHistoryBlock = <details className="rounded-[14px] p-4" style={{ border: `1px solid ${BORDER}` }}>
+        <summary className="cursor-pointer text-base font-semibold" style={{ color: BLUE_SKY }}>Research details: analysis history ({runHistory.length} run{runHistory.length === 1 ? "" : "s"})</summary>
+        <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Each reanalysis is saved as a separate run. The active report changes only after a new run completes.</p>
+        <ul className="mt-3 space-y-2 text-sm">
+          {runHistory.map((run) => <li key={run.id} className="flex flex-wrap justify-between gap-2 border-b py-2" style={{ borderColor: BORDER }}>
+            <span>Run {run.run_number}{session.active_run_id === run.id ? " · active report" : ""}</span>
+            <span style={{ color: WHITE_DIM }}>{run.status}{run.result_status ? ` · ${run.result_status.replaceAll("_", " ")}` : ""} · {run.metric_definition_version}</span>
+          </li>)}
+        </ul>
+      </details>;
+
+  return (
+    <div>
+      <section className="pb-5" style={{ color: INK }}>
+        <a href="#/sessions" className="-ml-1 mb-2 inline-flex min-h-[44px] items-center gap-1 px-1 text-sm font-semibold" style={{ color: ACCENT_INK }}><ArrowLeft size={16} aria-hidden="true" /> Sessions</a>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm" style={{ color: WHITE_SUB }}>
+              {KIND_LABELS[sessionKind(session)]}{session.tournament_round ? ` · ${session.tournament_round}` : ""} · {new Date(`${session.session_date}T12:00:00`).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })} · {FORMAT_LABELS[session.play_format]}
+            </p>
+            <h1 className="mt-1 break-words text-[1.75rem] font-extrabold leading-[1.1] tracking-[-0.02em] md:text-4xl" style={{ fontFamily: DISPLAY_FONT }}>{session.title}</h1>
+          </div>
+          <button type="button" title="Delete session" aria-label="Delete session" disabled={busy || state === "uploading" || state === "processing"}
+            onClick={() => { if (window.confirm("Delete this session, its ratings, video and results?")) void run(async () => { await deleteSession(sb, bundle); navigate("/sessions"); }); }}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] disabled:opacity-30" style={{ color: WHITE_DIM, border: "1px solid var(--pp-line-strong)" }}>
+            <Trash2 size={16} aria-hidden="true" />
+          </button>
+        </div>
+        {scoreGames(session.match_score).length > 0 ? <Scoreboard session={session} players={players} />
+        : (session.tournament_name || session.tournament_round || session.match_result || session.match_score) && (
+          <p className="mt-2 text-base font-bold tabular-nums">
+            {[session.tournament_name, session.tournament_round, session.match_result === "win" ? "Won" : session.match_result === "loss" ? "Lost" : null, session.match_score].filter(Boolean).join(" · ")}
+          </p>
+        )}
+        {players.length > 0 && <div className="mt-3 flex flex-wrap items-center gap-2 text-sm" style={{ color: WHITE_DIM }}>
+          <AvatarStack names={players.map((p) => p.display_name)} size={30} />
+          <span>
+            {players.some((p) => p.role === "partner") && <>With {players.filter((p) => p.role === "partner").map((p) => p.display_name).join(", ")}{" · "}</>}
+            {players.some((p) => p.role === "opponent") && <>vs {players.filter((p) => p.role === "opponent").map((p) => p.display_name).join(" & ")}</>}
+          </span>
+        </div>}
+        {session.notes && <p className="mt-2 text-sm leading-relaxed" style={{ color: WHITE_DIM }}>{session.notes}</p>}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {session.improvement_goals?.length > 0 && (
+            <ul className="flex flex-wrap gap-2" aria-label="Your focus">
+              {session.improvement_goals.map((goal: ImprovementGoal) => (
+                <li key={goal} className="rounded-[8px] px-2.5 py-1 text-[13px] font-semibold" style={{ background: "var(--pp-surface-2)", color: INK }}>
+                  {GOAL_LABELS[goal]}{session[`${goal}_rating`] ? ` · ${session[`${goal}_rating`]}/5` : ""}
+                </li>
+              ))}
+            </ul>
+          )}
+          <button type="button" className="min-h-[44px] px-1 text-sm font-semibold underline" style={{ color: ACCENT_INK }}
+            onClick={() => setGoalDraft({
+              improvement_goals: session.improvement_goals ?? [],
+              positioning_rating: session.positioning_rating ?? null,
+              shot_outcomes_rating: session.shot_outcomes_rating ?? null,
+              shot_technique_rating: session.shot_technique_rating ?? null,
+          })}>Edit focus</button>
+        </div>
+      </section>
+      <Sheet>
+      <div className="space-y-4">
+
+      {goalDraft && (
+        <Card accent={BLUE_SKY}>
+          <GoalFields value={goalDraft} onChange={setGoalDraft} />
+          <div className="flex gap-2 mt-3">
+            <button type="button" disabled={busy || goalDraft.improvement_goals.length === 0}
+              onClick={() => void run(async () => {
+                await updateSessionGoals(sb, session.id, goalDraft);
+                setGoalDraft(null);
+              })}
+              className="min-h-[44px] rounded-[12px] px-4 text-sm font-bold disabled:opacity-40"
+              style={{ background: "var(--pp-strong)", color: "var(--pp-on-strong)" }}>Save goals</button>
+            <button type="button" onClick={() => setGoalDraft(null)} className="min-h-[44px] px-3 text-sm font-semibold" style={{ color: WHITE_DIM }}>Cancel</button>
+          </div>
+        </Card>
+      )}
+
+      <GamePhases current={phase} onOpen={openPhase} done={{
+        pre: !!capture?.checkin,
+        in: rated,
+        post: !!(capture?.recovery || capture?.reflection),
+      }} />
+
+      <SegmentedTabs label="Session views" idBase="session" value={activeTab} onChange={setTab} tabs={[
+        { value: "plan", label: "Rate & plan" },
+        { value: "players", label: "Players" },
+        { value: "video", label: "Video", badge: selfMode ? "optional" : undefined },
+        { value: "journal", label: "Journal" },
+      ]} />
+
+      {activeTab === "plan" && <div {...tabPanelProps("session", "plan")} className="space-y-4 outline-none">
+        <PreGameSummary checkin={capture?.checkin ?? null} onOpen={() => openPhase("pre")} />
+        {injury.open && <RecoveryCard sb={sb} injury={injury.open} onChanged={() => void injury.reload()} showPlan={false} />}
+        <SelfAssessmentPanel sb={sb} session={session} recovery={recovery} peerRatings={peerRatings} injured={!!injury.open}
+          onSaved={() => { loadPhases(); void load(); loadFeedback(); }} />
+        {rated && !(capture?.recovery || capture?.reflection) && <button type="button" onClick={() => openPhase("post")}
+          className={`flex min-h-[52px] w-full items-center justify-center rounded-full px-4 text-base font-extrabold ${pressable}`}
+          style={{ background: "var(--pp-action)", color: "var(--pp-on-action)" }}>Next: post-game recovery</button>}
+        <PeerFeedback sb={sb} sessionTitle={session.title} sessionId={session.id} hasVideo={!!uploadedPath} selfRatings={selfRatings} peerRatings={peerRatings}
+          goalSkills={goalSkills} onChanged={loadFeedback} askFor={searchParams.get("ask")} playedWith={playedWith}
+          onWatch={uploadedPath ? (time) => { setTab("video"); setVideoSeek({ time, id: Date.now() }); } : undefined} />
+      </div>}
+      {activeTab === "journal" && <div {...tabPanelProps("session", "journal")} className="outline-none"><CapturePanel key={session.id} sb={sb} session={session}
+        step={journalStep} onStepChange={setJournalStep} onSaved={loadPhases} onSessionUpdated={() => void load()}
+        injury={injury.loaded ? injury.open : undefined} onInjuryChanged={() => void injury.reload()} /></div>}
+
+      {activeTab === "players" && <div {...tabPanelProps("session", "players")} className="space-y-4 outline-none">
+        {(session.tournament_name || session.match_result || session.match_score) && <Card>
+          <p className="text-xs font-extrabold" style={{ color: WHITE_SUB }}>Result</p>
+          <p className="mt-1 text-2xl font-extrabold" style={{ color: "var(--pp-ink)" }}>{session.match_result === "win" ? "Won" : session.match_result === "loss" ? "Lost" : "Not set"}
+            {session.match_score && <span className="ml-2 text-base font-semibold" style={{ color: WHITE_DIM }}>{session.match_score}</span>}</p>
+          {session.tournament_name && <p className="text-sm" style={{ color: WHITE_DIM }}>{session.tournament_name}{session.tournament_round ? ` · ${session.tournament_round}` : ""}</p>}
+        </Card>}
+        <Card>
+          <h2 className="text-base font-bold" style={{ fontFamily: DISPLAY_FONT }}>Players</h2>
+          {sessionKind(session) === "solo" ? <p className="mt-2 text-sm" style={{ color: WHITE_DIM }}>Solo practice: just you.</p> : (
+            <ul className="mt-3 grid grid-cols-4 gap-2 text-center text-xs font-semibold">
+              {[{ name: "You", role: "You" }, ...players.map((p) => ({ name: p.display_name, role: p.role === "partner" ? "Partner" : "Opponent" }))].map((p, i) => (
+                <li key={`${p.name}-${i}`} className="min-w-0">
+                  <span className="mx-auto mb-1 grid h-12 w-12 place-items-center rounded-full text-sm font-extrabold"
+                    style={i === 0 ? { background: "var(--pp-strong)", color: "var(--pp-on-strong)" } : { background: "var(--pp-surface-2)", color: "var(--pp-ink)" }}>{p.name === "You" ? "ME" : initials(p.name)}</span>
+                  <span className="block truncate" style={{ color: "var(--pp-ink)" }}>{p.name}</span>
+                  <span className="block text-xs" style={{ color: WHITE_SUB }}>{p.role}</span>
+                </li>
+              ))}
+            </ul>)}
+          {sessionKind(session) !== "solo" && players.length === 0 && <p className="mt-2 text-sm" style={{ color: WHITE_DIM }}>No names added yet.</p>}
+          {!detailsDraft && <button type="button" className="mt-4 inline-flex min-h-[44px] items-center rounded-[12px] px-5 text-sm font-bold"
+            style={{ border: `1px solid ${BORDER}`, color: "var(--pp-ink)" }}
+            onClick={() => setDetailsDraft({
+              title: session.title, session_date: session.session_date,
+              tournament_name: session.tournament_name ?? "", tournament_round: session.tournament_round ?? "",
+              match_result: session.match_result ?? null, match_score: session.match_score ?? "",
+              partner: players.find((p) => p.role === "partner")?.display_name ?? "",
+              opponents: [0, 1].map((i) => players.filter((p) => p.role === "opponent")[i]?.display_name ?? ""),
+            })}>Edit details &amp; players</button>}
+        </Card>
+      {detailsDraft && (
+          <Card accent={BLUE_SKY}>
+            <h2 className="text-lg font-extrabold">Edit details &amp; players</h2>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <label className="grid gap-1 text-sm font-semibold">Name
+                <input maxLength={120} value={detailsDraft.title} onChange={(e) => setDetailsDraft({ ...detailsDraft, title: e.target.value })} className="rounded-[14px] px-4 py-3 text-base font-normal" style={fieldStyle} />
+              </label>
+              <label className="grid gap-1 text-sm font-semibold">Date
+                <input type="date" value={detailsDraft.session_date} onChange={(e) => setDetailsDraft({ ...detailsDraft, session_date: e.target.value })} className="rounded-[14px] px-4 py-3 text-base font-normal" style={fieldStyle} />
+              </label>
+              {sessionKind(session) === "tournament" && <>
+                <label className="grid gap-1 text-sm font-semibold">Tournament
+                  <input maxLength={120} value={detailsDraft.tournament_name} onChange={(e) => setDetailsDraft({ ...detailsDraft, tournament_name: e.target.value })} className="rounded-[14px] px-4 py-3 text-base font-normal" style={fieldStyle} />
+                </label>
+                <label className="grid gap-1 text-sm font-semibold">Round
+                  <input maxLength={60} value={detailsDraft.tournament_round} onChange={(e) => setDetailsDraft({ ...detailsDraft, tournament_round: e.target.value })} placeholder="e.g. Semifinal" className="rounded-[14px] px-4 py-3 text-base font-normal" style={fieldStyle} />
+                </label>
+              </>}
+              {sessionKind(session) !== "solo" && <>
+                <div className="grid gap-1 text-sm font-semibold">Result
+                  <div className="flex gap-2">{(["win", "loss"] as const).map((r) => <Chip key={r} selected={detailsDraft.match_result === r}
+                    onClick={() => setDetailsDraft({ ...detailsDraft, match_result: detailsDraft.match_result === r ? null : r })}>{r === "win" ? "Won" : "Lost"}</Chip>)}</div>
+                </div>
+                <label className="grid gap-1 text-sm font-semibold">Score
+                  <input maxLength={40} value={detailsDraft.match_score} onChange={(e) => setDetailsDraft({ ...detailsDraft, match_score: e.target.value })} placeholder="11-7, 9-11, 11-5" className="rounded-[14px] px-4 py-3 text-base font-normal" style={fieldStyle} />
+                </label>
+              </>}
+              {sessionKind(session) !== "solo" && <>
+                {session.play_format === "doubles" && <label className="grid gap-1 text-sm font-semibold">Partner
+                  <input maxLength={80} value={detailsDraft.partner} onChange={(e) => setDetailsDraft({ ...detailsDraft, partner: e.target.value })} className="rounded-[14px] px-4 py-3 text-base font-normal" style={fieldStyle} />
+                </label>}
+                {detailsDraft.opponents.slice(0, session.play_format === "doubles" ? 2 : 1).map((name, i) => <label key={i} className="grid gap-1 text-sm font-semibold">{session.play_format === "doubles" ? `Opponent ${i + 1}` : "Opponent"}
+                  <input maxLength={80} value={name} onChange={(e) => setDetailsDraft({ ...detailsDraft, opponents: detailsDraft.opponents.map((v, j) => j === i ? e.target.value : v) })} className="rounded-[14px] px-4 py-3 text-base font-normal" style={fieldStyle} />
+                </label>)}
+              </>}
+            </div>
+            <div className="mt-4 flex gap-2">
+              <button type="button" disabled={busy || !detailsDraft.title.trim()}
+                onClick={() => void run(async () => {
+                  const d = detailsDraft;
+                  await updateSessionDetails(sb, session.id, {
+                    title: d.title.trim(), session_date: d.session_date,
+                    ...(sessionKind(session) === "tournament" ? {
+                      tournament_name: d.tournament_name.trim() || null, tournament_round: d.tournament_round.trim() || null,
+                    } : {}),
+                    // Any game can have a result, so Progress can show a win rate.
+                    ...(sessionKind(session) !== "solo" ? { match_result: d.match_result, match_score: d.match_score.trim() || null } : {}),
+                  });
+                  if (sessionKind(session) !== "solo") {
+                    const next: OtherPlayer[] = [
+                      ...(session.play_format === "doubles" ? [{ role: "partner" as const, display_name: d.partner }] : []),
+                      ...d.opponents.slice(0, session.play_format === "doubles" ? 2 : 1).map((n) => ({ role: "opponent" as const, display_name: n })),
+                    ];
+                    await saveOtherPlayers(sb, session.id, next);
+                    setPlayers(next.filter((p) => p.display_name.trim()));
+                  }
+                  setDetailsDraft(null);
+                })}
+                className="inline-flex min-h-[44px] items-center rounded-[12px] px-6 text-sm font-bold disabled:opacity-40" style={{ background: "var(--pp-strong)", color: "var(--pp-on-strong)" }}>Save details</button>
+              <button type="button" onClick={() => setDetailsDraft(null)} className="text-sm px-3 py-2" style={{ color: WHITE_DIM }}>Cancel</button>
+            </div>
+          </Card>
+        )}
+  
+        </div>}
+
+      {activeTab === "video" && <div {...tabPanelProps("session", "video")} className="space-y-4 outline-none">
+      {selfMode && !video && <Notice tone="info">Video analysis is optional. Your practice plan comes from your ratings in <strong>Rate &amp; plan</strong>. Add a clip here if you also want court positions measured.</Notice>}
+      {reportReady && error && <Notice tone="error">{error}</Notice>}
+      {!reportReady && <Card>
+        <p className="text-xs font-bold" style={{ color: BLUE_SKY }}>Video analysis{state ? ` · ${STATE_LABELS[state]}` : ""}</p>
+        <h2 className="text-xl font-bold text-ink mt-1" style={{ fontFamily: DISPLAY_FONT }}>{stepTitle}</h2>
+        <p className="text-sm mt-2 mb-4" style={{ color: WHITE_DIM }}>{loggingOnly
+          ? "Wall and ball-machine sessions record your check-in, recovery and reflection without computer-vision analysis."
+          : state ? stateDescription(state, job) : ""}</p>
+        {hasFeedback && (
+          <button type="button" onClick={() => document.getElementById("feedback")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            className={`mb-4 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full px-4 text-[15px] font-extrabold ${pressable}`}
+            style={{ background: "var(--pp-action)", color: "var(--pp-on-action)" }}>See your feedback <ArrowDown size={16} aria-hidden="true" /></button>
+        )}
+        {videoControls}
         {error && <div className="mt-3"><Notice tone="error">{error}</Notice></div>}
-      </Card>
+      </Card>}
 
 
       {parsed?.ok && job?.status === "failed" && <Notice tone="warn">The reanalysis failed. The report below is from the last completed run.</Notice>}
@@ -815,6 +832,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
         onChangePlayersOnCourt={job && finished && !video?.raw_video_deleted_at && !video?.raw_video_deleting_at && !config.trialNoWorker
           ? (n) => { setPlayersOnCourt(n); void run(() => requestReanalysis(sb, job.id, { ...job.params, players_on_court: n })); } : undefined}
         notes={(controls) => <PeerNotes sb={sb} sessionId={session.id} mode="owner" controls={controls} />}
+        settings={reportReady ? <div className="space-y-3">{videoControls}{runHistory.length > 0 && runHistoryBlock}</div> : undefined}
         onRateSession={() => { setTab("plan"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
         onSelectTrack={job && finished && !video?.raw_video_deleted_at && !video?.raw_video_deleting_at && !config.trialNoWorker ? (trackId, timeSeconds) => void run(() => requestReanalysis(sb, job.id, {
           ...job.params, selection: { method: "track_id", track_id: trackId }, selection_time_s: timeSeconds,
@@ -825,16 +843,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
       {parsed && !parsed.ok && (
         <Notice tone="error">The stored result could not be read ({parsed.error}). It is not shown to avoid presenting it incorrectly.</Notice>
       )}
-      {runHistory.length > 0 && <details className="rounded-[14px] p-4" style={{ border: `1px solid ${BORDER}` }}>
-        <summary className="cursor-pointer text-base font-semibold" style={{ color: BLUE_SKY }}>Research details: analysis history ({runHistory.length} run{runHistory.length === 1 ? "" : "s"})</summary>
-        <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Each reanalysis is saved as a separate run. The active report changes only after a new run completes.</p>
-        <ul className="mt-3 space-y-2 text-sm">
-          {runHistory.map((run) => <li key={run.id} className="flex flex-wrap justify-between gap-2 border-b py-2" style={{ borderColor: BORDER }}>
-            <span>Run {run.run_number}{session.active_run_id === run.id ? " · active report" : ""}</span>
-            <span style={{ color: WHITE_DIM }}>{run.status}{run.result_status ? ` · ${run.result_status.replaceAll("_", " ")}` : ""} · {run.metric_definition_version}</span>
-          </li>)}
-        </ul>
-      </details>}
+      {!reportReady && runHistory.length > 0 && runHistoryBlock}
       </div>}
       </div>
       </Sheet>

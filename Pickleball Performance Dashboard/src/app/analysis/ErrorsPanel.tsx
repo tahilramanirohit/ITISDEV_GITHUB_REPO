@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { Play } from "lucide-react";
 import { ERROR_KINDS, type AnalysisResultV1, type ErrorKind } from "../../lib/analysis/contract";
-import { ACCENT_INK, ACCENT_SOFT, INK, INK_2, INK_3, LINE, SURFACE_2, VIOLET, WARN } from "../theme";
-import { Card, Pill, WidgetHeader, numStyle, pressable } from "../shell/primitives";
+import { ACCENT_INK, ACCENT_SOFT, INK, INK_2, INK_3, LINE, SURFACE_2, WARN } from "../theme";
+import { Card, numStyle, pressable } from "../shell/primitives";
 
 export const ERROR_LABELS: Record<ErrorKind, string> = {
   serve_fault: "Serve faults",
@@ -45,10 +45,7 @@ export function ErrorsPanel({ result, myPlayerId, onWatch }: {
   return (
     <section aria-label="Errors from the video">
       <Card>
-        <div className="flex flex-wrap items-center gap-2">
-          <WidgetHeader title="Errors from the video" subtitle="Counted from detected shots, bounces and where players stood." />
-          {metric.status === "experimental" && <Pill color={VIOLET}>EXPERIMENTAL · NOT YET CHECKED AGAINST HAND COUNTS</Pill>}
-        </div>
+        <h3 className="text-lg font-bold" style={{ color: INK }}>Errors from the video</h3>
         {mineKnown && <div role="group" aria-label="Count errors for" className="mt-3 grid grid-cols-2 gap-1 rounded-full p-1" style={{ background: SURFACE_2 }}>
           {([["me", "You"], ["all", "Everyone"]] as const).map(([v, label]) => <button key={v} type="button" aria-pressed={who === v}
             onClick={() => setWho(v)} className={`min-h-[44px] rounded-full text-sm font-bold ${pressable}`}
@@ -79,8 +76,6 @@ export function ErrorsPanel({ result, myPlayerId, onWatch }: {
                 </li>)}
               </ul>
             </details>}
-        <p className="mt-3 text-xs" style={{ color: INK_3 }}>Shots without a seen bounce (for example into the net) are not counted.
-          {metric.reason ? ` ${metric.reason}` : ""}</p>
       </Card>
     </section>
   );

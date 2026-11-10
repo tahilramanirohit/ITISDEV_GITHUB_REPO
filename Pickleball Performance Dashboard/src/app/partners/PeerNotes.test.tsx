@@ -81,10 +81,11 @@ describe("Peer notes", () => {
     expect(screen.getByText("No comments yet.")).toBeTruthy();
   });
 
-  it("stays hidden on the owner's report when the session is not shared and has no comments", async () => {
+  it("tells the owner how to get comments when the video is not shared yet", async () => {
     const { sb, rpc } = fakeSb([]);
-    const { container } = render(<PeerNotes sb={sb} sessionId="s1" mode="owner" controls={{ video: null, seek: vi.fn() }} />);
+    render(<PeerNotes sb={sb} sessionId="s1" mode="owner" controls={{ video: null, seek: vi.fn() }} />);
     await waitFor(() => expect(rpc).toHaveBeenCalled());
-    expect(container.textContent).toBe("");
+    expect(await screen.findByText(/No comments yet\. Share this video with a partner/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Add comment" })).toBeNull();
   });
 });
