@@ -30,23 +30,27 @@ function frameUrl(): string {
   return `${origin}${pathname}?${PHONE_VIEW_PARAM}=1${hash}`;
 }
 
-/** Shrinks the phone so it fits short laptop screens. */
-function useFitScale() {
-  const [scale, setScale] = useState(1);
+/**
+ * The phone's screen height: a real iPhone's 844, or less on a short laptop screen.
+ * The width always stays 390 so the layout matches a phone. Shortening the screen
+ * (instead of shrinking it with a CSS transform) keeps scrolling smooth.
+ */
+function useScreenHeight() {
+  const fit = () => Math.max(480, Math.min(PHONE_H, window.innerHeight - 96 - BEZEL * 2));
+  const [height, setHeight] = useState(fit);
   useEffect(() => {
-    const fit = () => setScale(Math.min(1, (window.innerHeight - 96) / (PHONE_H + BEZEL * 2)));
-    fit();
-    window.addEventListener("resize", fit);
-    return () => window.removeEventListener("resize", fit);
+    const onResize = () => setHeight(fit());
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
   }, []);
-  return scale;
+  return height;
 }
 
 function PhoneOverlay({ onClose }: { onClose: () => void }) {
   const [src] = useState(frameUrl);
   const frame = useRef<HTMLIFrameElement>(null);
   const back = useRef<HTMLButtonElement>(null);
-  const scale = useFitScale();
+  const height = useScreenHeight();
 
   // Leaving phone view keeps the screen you were on inside the phone.
   const close = () => {
@@ -63,10 +67,15 @@ function PhoneOverlay({ onClose }: { onClose: () => void }) {
     back.current?.focus();
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    // Stop drawing the desktop app behind the phone, so the browser only draws one app.
+    const root = document.getElementById("root");
+    const display = root?.style.display ?? "";
+    if (root) root.style.display = "none";
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") close(); };
     window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = overflow;
+      if (root) root.style.display = display;
       window.removeEventListener("keydown", onKey);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -81,15 +90,13 @@ function PhoneOverlay({ onClose }: { onClose: () => void }) {
           style={{ color: "#f2f5f1", border: "1px solid rgba(255,255,255,0.3)" }}>
           <Monitor size={18} aria-hidden="true" />Back to desktop
         </button>
-        <span className="text-xs" style={{ color: "#a9b8ae" }}>iPhone size · {PHONE_W} × {PHONE_H}</span>
+        <span className="text-xs" style={{ color: "#a9b8ae" }}>Phone size · {PHONE_W} × {height}</span>
       </div>
       <div className="flex min-h-0 flex-1 items-start justify-center">
-        <div style={{ width: (PHONE_W + BEZEL * 2) * scale, height: (PHONE_H + BEZEL * 2) * scale }}>
-          <div style={{ width: PHONE_W + BEZEL * 2, height: PHONE_H + BEZEL * 2, transform: `scale(${scale})`, transformOrigin: "top left",
-            border: `${BEZEL}px solid #2b3f33`, borderRadius: 54, overflow: "hidden", background: "#16271e", boxShadow: "0 20px 60px rgba(0,0,0,.45)" }}>
-            <iframe ref={frame} src={src} title="PicklePro on a phone" width={PHONE_W} height={PHONE_H}
-              style={{ display: "block", border: 0, borderRadius: 44 }} />
-          </div>
+        {/* One plain bezel and one rounded screen, no scaling or blurred shadow: cheap for the browser to scroll. */}
+        <div style={{ padding: BEZEL, borderRadius: 54, background: "#2b3f33" }}>
+          <iframe ref={frame} src={src} title="PicklePro on a phone" width={PHONE_W} height={height}
+            style={{ display: "block", border: 0, borderRadius: 44, background: "#16271e" }} />
         </div>
       </div>
     </div>,

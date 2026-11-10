@@ -15,7 +15,7 @@ import {
   SURFACE,
 } from "../theme";
 import { Notice, PageHero, PickleSays, cardStyle, mascotUrl, numStyle, pressable } from "../shell/primitives";
-import { LastGameCard, firstName, parseScore } from "./LastGame";
+import { LastGameCard, firstName, homeFeaturedGame, parseScore } from "./LastGame";
 import { formatSessionDate, useSessionsData, weekStreak } from "../sessions/sessionUi";
 
 const WEEKLY_TARGET = 3;
@@ -112,8 +112,9 @@ export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: s
 
   const left = Math.max(0, WEEKLY_TARGET - thisWeek);
   const weekHint = injured ? "Paused while you recover" : thisWeek >= WEEKLY_TARGET ? "Target hit. Nice work." : sessions.length === 0 ? `Goal: ${WEEKLY_TARGET} games a week` : `${left} more to hit your goal`;
-  const last = sessions[0];
-  const earlier = sessions.slice(1, 4);
+  // Featured game: the newest one with a video, so Shot replay and Heatmap show when you've uploaded one.
+  const last = homeFeaturedGame(sessions);
+  const earlier = sessions.filter((item) => item !== last).slice(0, 3);
   const greeting = <PageHero band eyebrow={new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })} title={`Hi${name ? `, ${name}` : ""}`} />;
 
   if (newPlayer && !injured) return <div className="mx-auto max-w-2xl space-y-5">

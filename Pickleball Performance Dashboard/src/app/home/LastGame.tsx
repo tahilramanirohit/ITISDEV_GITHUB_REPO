@@ -20,6 +20,20 @@ export function parseScore(score?: string | null): [number, number] | null {
 
 export const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? "";
 
+/** True when the game's uploaded video file can still be played. */
+export const hasPlayableVideo = (item: SessionListItem) => {
+  const v = item.video;
+  return !!v && v.upload_status === "uploaded" && !v.raw_video_deleted_at && !v.raw_video_deleting_at;
+};
+
+/**
+ * The game Home features: the newest game with a video you can still play (so Shot replay
+ * and Heatmap show), otherwise the newest game. `items` is newest first.
+ */
+export function homeFeaturedGame(items: SessionListItem[]): SessionListItem | undefined {
+  return items.find(hasPlayableVideo) ?? items[0];
+}
+
 type Props = { item: SessionListItem; players: OtherPlayer[]; you: string; rating: number | null };
 
 function teams({ item, players, you }: Props) {
