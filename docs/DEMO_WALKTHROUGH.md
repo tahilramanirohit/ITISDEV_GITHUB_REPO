@@ -4,7 +4,7 @@ Two walkthroughs: a **blank slate** (a new sign-up) and one **with data** (the d
 
 ## Set up the demo accounts
 
-1. Apply every database update through `supabase/scripts/pickleproapp_upgrade_15.sql`.
+1. Apply every database update through `supabase/scripts/pickleproapp_upgrade_16.sql`. `supabase/scripts/check_database.sql` lists anything still missing.
 2. Paste [`supabase/scripts/demo_data.sql`](../supabase/scripts/demo_data.sql) into Supabase Dashboard → SQL Editor → New query → Run. Running it again resets the four accounts.
 3. Sign in with any account below. Password: `PickleDemo-2026` (change it in the script first if the repository is public).
 

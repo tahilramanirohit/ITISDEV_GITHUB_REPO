@@ -23,6 +23,12 @@
 
 **All work packages are done.** Still open (not a work package): a review-only video for solo drills (gap analysis §4b.1), and the proposal text changes in section 7. Everything left needs a new migration, so read rule 6 in section 3 first.
 
+### 10 Nov 2026: Database check
+
+- `supabase/scripts/check_database.sql` (read-only): one row per thing the app needs, from the base schema to update 16, with OK or MISSING and the file to run. It also catches the comment functions being put back to the old rules by re-running update 7 or 9. The local test run checks it reports nothing missing.
+- `pickleproapp_upgrade_16.sql`: Kirk's two migrations from 9 Nov (`20261108132612_data_consent.sql`, `20261109090000_buddy_game_shares.sql`) had no paste-in script; this is them, safe to run again.
+- A scan of the app's code found every database function (48), table (21) and column it uses defined in the migrations.
+
 ### 10 Nov 2026: Every rating is the pickleball button
 
 - Log a game (and Edit focus): "Your current level (optional)" is the hold-to-rate pickleball (1-5, "Just starting" to "Strong") with a Clear link, instead of a 1-5 dropdown (`GoalFields.tsx`).

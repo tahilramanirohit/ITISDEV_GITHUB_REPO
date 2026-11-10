@@ -92,7 +92,9 @@ echo "  PASS self-assessment, onboarding, profile, buddy, partner, court-test, p
 "${PSQL[@]}" -c "set client_min_messages = warning" -f "$HERE/../scripts/pickleproapp_upgrade_13.sql" >/dev/null
 "${PSQL[@]}" -c "set client_min_messages = warning" -f "$HERE/../scripts/pickleproapp_upgrade_14.sql" >/dev/null
 "${PSQL[@]}" -c "set client_min_messages = warning" -f "$HERE/../scripts/pickleproapp_upgrade_15.sql" >/dev/null
-echo "  PASS pickleproapp_upgrade.sql and _2.sql to _15.sql run on an up-to-date database"
+"${PSQL[@]}" -c "set client_min_messages = warning" -f "$HERE/../scripts/pickleproapp_upgrade_16.sql" >/dev/null
+"${PSQL[@]}" -f "$HERE/../scripts/check_database.sql" | grep -q MISSING && { echo "  FAIL check_database.sql reports something missing"; exit 1; } || echo "  PASS check_database.sql finds nothing missing"
+echo "  PASS pickleproapp_upgrade.sql and _2.sql to _16.sql run on an up-to-date database"
 
 # Concurrency: 20 simultaneous finalize calls (double clicks, two tabs) → one job.
 "${PSQL[@]}" <<'SQL'
