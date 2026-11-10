@@ -3,5 +3,20 @@
 
 @import 'tw-animate-css';
 
-/* Computers with a mouse or trackpad. Phones and tablets (touch) keep the bottom tab bar at any width. */
-@custom-variant desktop (@media (hover: hover) and (pointer: fine));
+/* Computers with a mouse or trackpad. Phones and tablets (touch) keep the bottom tab bar at any width.
+   The desktop "Phone view" frame sets data-phone-view so it shows the phone layout. */
+@custom-variant desktop {
+  @media (hover: hover) and (pointer: fine) {
+    :root:not([data-phone-view]) & {
+      @slot;
+    }
+  }
+}
+
+/* Inside the desktop "Phone view" frame, hide the computer's scrollbar like a real phone does. */
+:root[data-phone-view] {
+  scrollbar-width: none;
+}
+:root[data-phone-view]::-webkit-scrollbar {
+  display: none;
+}

@@ -6,6 +6,7 @@ import {
   applyAppearance, readAppearance, type Appearance,
 } from "../theme";
 import { PickleProLogo, PickleProMark, pressable } from "./primitives";
+import { PhoneViewToggle } from "./PhoneView";
 
 const TEXT_SIZE_KEY = "picklepro.largeText";
 
@@ -157,8 +158,8 @@ function SideNav({ account, badges }: { account?: ReactNode; badges?: TabBadges 
           })}
         </ul>
       </nav>
-      <div className="mt-auto hidden w-full lg:flex lg:justify-start"><AppearanceToggle /></div>
-      <div className="mt-auto lg:hidden"><AppearanceToggle /></div>
+      <div className="mt-auto hidden w-full items-center gap-2 lg:flex lg:justify-start"><AppearanceToggle /><PhoneViewToggle /></div>
+      <div className="mt-auto flex flex-col items-center gap-2 lg:hidden"><AppearanceToggle /><PhoneViewToggle compact /></div>
       <div className="mt-3 hidden space-y-3 px-2 lg:block">
         {account}
         <p className="text-xs leading-relaxed" style={{ color: INK_3 }}>PicklePro research prototype. Video findings have not yet been validated on real footage.</p>
