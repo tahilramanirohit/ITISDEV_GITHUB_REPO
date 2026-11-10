@@ -39,7 +39,7 @@ function FeedbackForm({ sb, sessionId, owner, skills, saved, onSent }: {
   }
 
   return <section aria-label={`Rate ${owner}`} className="space-y-3">
-    {skills.map((skill) => <SkillRater key={skill} skill={skill} value={draft[skill] as SkillRating | undefined}
+    {skills.map((skill) => <SkillRater classic key={skill} skill={skill} value={draft[skill] as SkillRating | undefined}
       question={aboutPlayer(SKILL_INFO[skill].question, owner)}
       onChange={(v) => { setDraft({ ...draft, [skill]: v }); setSent(false); }} />)}
     {error && <Notice tone="error">{error}</Notice>}

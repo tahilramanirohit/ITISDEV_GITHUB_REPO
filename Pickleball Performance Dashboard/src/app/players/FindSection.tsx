@@ -75,9 +75,6 @@ export function FindSection({ sb, userId, data, injured, act, busyId, reload }: 
           })}
         </div>
       </div>}
-      <p className="mt-3 text-xs" style={{ color: WHITE_DIM }}>The Buddy list shows only your name, level, a game rating rounded from your last 5 rated
-        games, up to 2 strong skills and what you're looking for. Never your individual ratings, sessions or videos: those stay
-        private until you share a session with a partner.</p>
       {!myLevel && <p className="mt-3 text-sm" style={{ color: INK }}>
         Your level is not set. <a href="#/profile/edit" className="font-bold underline" style={{ color: GREEN }}>Add it in Edit profile</a> so
         players can find a buddy at their level.</p>}

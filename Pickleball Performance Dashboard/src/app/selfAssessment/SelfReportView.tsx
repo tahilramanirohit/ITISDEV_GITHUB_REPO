@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { ChevronDown, Dumbbell, Target, TrendingDown, TrendingUp, Minus } from "lucide-react";
-import type { SelfProgressRow, SelfReport } from "../../lib/coaching/selfAssessment";
+import { SKILL_INFO, type SelfProgressRow, type SelfReport } from "../../lib/coaching/selfAssessment";
+import { TermHelp } from "./TermHelp";
 import { ACCENT_INK, ACTION, ACTION_SOFT, BORDER, DISPLAY_FONT, GREEN, GREEN_BG, HERO, INK, ON_HERO, OPTIC, ORANGE, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Card, RingTile, SectionTitle, mascot2xUrl, mascotUrl } from "../shell/primitives";
 import { selfCoachScript } from "../../lib/coaching/coachScript";
@@ -44,7 +45,7 @@ function FocusCard({ index, item }: { index: number; item: SelfReport["focus"][n
         <ChevronDown size={20} style={{ color: WHITE_SUB, transform: open ? "rotate(180deg)" : undefined }} aria-hidden="true" />
       </button>
       {open && <div className="space-y-3 border-t px-4 pb-4 pt-3 text-sm" style={{ borderColor: BORDER }}>
-        <p style={{ color: INK }}>{item.observation}</p>
+        <p style={{ color: INK }}>{item.observation}<TermHelp term={item.label} meaning={SKILL_INFO[item.skill].meaning} /></p>
         <p style={{ color: WHITE_DIM }}>{item.why}</p>
         <div className="rounded-[14px] p-3" style={{ background: GREEN_BG }}>
           <p className="flex items-center gap-1.5 font-bold" style={{ color: GREEN }}><Dumbbell size={15} /> Drill: {item.drill.name}</p>

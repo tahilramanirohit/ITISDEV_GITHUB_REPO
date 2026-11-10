@@ -25,6 +25,10 @@ export type SkillInfo = {
   drill: Drill;
   /** Words in the player's own notes that point to this skill. */
   keywords: string[];
+  /** What the term means, in one or two plain sentences (shown behind the "?" button). */
+  meaning: string;
+  /** Shots only: rated as successes out of 10 ("how many went in?") instead of 1-5. */
+  success?: { question: string; usual: string; unit: string };
 };
 
 export const SKILL_INFO: Record<SelfSkill, SkillInfo> = {
@@ -35,6 +39,8 @@ export const SKILL_INFO: Record<SelfSkill, SkillInfo> = {
     why: "A deep serve keeps the returner back and buys your team time. Consistency matters more than pace.",
     drill: { name: "Target serves", how: "Put a towel 1 m inside the far baseline. Serve 20 balls, counting how many land past the service-box midpoint. Repeat from both sides." },
     keywords: ["serve", "serving", "fault"],
+    meaning: "The shot that starts every point. It is hit underhand, diagonally into the opponent's service box, and must land beyond the kitchen.",
+    success: { question: "Out of 10 serves, how many went in?", usual: "Out of 10 serves, how many usually go in?", unit: "serves" },
   },
   return: {
     label: "Return of serve", group: "Shots", question: "Were your returns deep, and did you get forward after them?",
@@ -43,6 +49,8 @@ export const SKILL_INFO: Record<SelfSkill, SkillInfo> = {
     why: "A deep return gives you time to reach the kitchen line before the third shot.",
     drill: { name: "Return-and-close", how: "Your partner serves deep. Hit a high, deep return and keep moving until you are set at the kitchen line before their next shot bounces. Twenty returns." },
     keywords: ["return"],
+    meaning: "The first shot back after the serve. It must bounce first, so a deep return keeps the serving team back while you move up.",
+    success: { question: "Out of 10 returns, how many went in deep?", usual: "Out of 10 returns, how many usually go in deep?", unit: "returns" },
   },
   third_shot: {
     label: "Third-shot drop", group: "Shots", question: "Could you drop the third shot softly into the kitchen?",
@@ -51,6 +59,8 @@ export const SKILL_INFO: Record<SelfSkill, SkillInfo> = {
     why: "A good drop lets the serving team come forward safely. It is the shot that most separates beginner and intermediate play.",
     drill: { name: "Drop ladder", how: "Feed from the kitchen line while you start at the baseline. Drop five balls into the kitchen, step forward two steps, and repeat until you reach the line. Three rounds." },
     keywords: ["drop", "third", "3rd"],
+    meaning: "The serving team's first shot after the return. A drop is a soft, arcing shot that lands in the opponent's kitchen so you can move up to the net.",
+    success: { question: "Out of 10 third-shot drops, how many landed soft in the kitchen?", usual: "Out of 10 third-shot drops, how many usually land soft in the kitchen?", unit: "drops" },
   },
   dinking: {
     label: "Dinking", group: "Shots", question: "How patient and controlled were your dinks?",
@@ -59,6 +69,8 @@ export const SKILL_INFO: Record<SelfSkill, SkillInfo> = {
     why: "Low, patient dinks force opponents to hit up, giving you the first chance to attack.",
     drill: { name: "Cross-court dink count", how: "Dink cross-court with a partner and count rallies without a ball going above net-plus-30 cm. Aim to beat your best count over three rounds of two minutes." },
     keywords: ["dink", "dinks", "dinking", "soft game", "pop", "popped"],
+    meaning: "Soft, low shots from the kitchen line that land in the opponent's kitchen. Patient dinking waits for a ball you can attack.",
+    success: { question: "Out of 10 dinks, how many stayed low and in?", usual: "Out of 10 dinks, how many usually stay low and in?", unit: "dinks" },
   },
   volleys: {
     label: "Volleys & hands", group: "Shots", question: "How well did you handle fast balls at the net?",
@@ -67,6 +79,8 @@ export const SKILL_INFO: Record<SelfSkill, SkillInfo> = {
     why: "Quick hands win hand battles and let you finish points when an opponent pops the ball up.",
     drill: { name: "Volley rally", how: "Both players stand at the kitchen line and volley without letting the ball bounce, starting slow. Keep the paddle up between shots. Three rounds of one minute." },
     keywords: ["volley", "hands", "speed-up", "speed up", "block", "reaction"],
+    meaning: "Hitting the ball in the air before it bounces, usually near the net. \"Hands\" means quick paddle reactions to fast balls.",
+    success: { question: "Out of 10 volleys, how many did you keep in play?", usual: "Out of 10 volleys, how many do you usually keep in play?", unit: "volleys" },
   },
   kitchen_line: {
     label: "Moving up to the net", group: "Court", question: "Did you move up close to the net during rallies?",
@@ -75,6 +89,7 @@ export const SKILL_INFO: Record<SelfSkill, SkillInfo> = {
     why: "At the kitchen line you can volley and keep opponents hitting upward. Teams that get there first win most points.",
     drill: { name: "Split-step ladder", how: "Start at the baseline. Each time your partner calls \"go\", move forward and split-step; reach the line in no more than three moves. Ten reps, then add a fed ball at each stop." },
     keywords: ["kitchen", "nvz", "get forward", "come forward", "stayed back", "stay back"],
+    meaning: "The kitchen (non-volley zone) is the 7-foot area on each side of the net. Most points are won by the team that reaches the line in front of it first.",
   },
   transition: {
     label: "Transition & resets", group: "Court", question: "When caught mid-court, could you reset the ball and keep moving?",
@@ -83,6 +98,7 @@ export const SKILL_INFO: Record<SelfSkill, SkillInfo> = {
     why: "Balls often land at your feet mid-court. A soft reset turns a defensive spot into a neutral rally.",
     drill: { name: "Drop-and-step", how: "From the baseline, hit a soft drop off a partner's feed, take two or three steps forward, split-step as your partner hits, reset the next ball, and repeat to the kitchen line. Three sets of ten." },
     keywords: ["transition", "reset", "mid-court", "midcourt", "feet", "no man"],
+    meaning: "The middle of the court between the baseline and the kitchen. A reset is a soft shot from there that takes the pace off and buys time to move up.",
   },
   footwork: {
     label: "Footwork & ready position", group: "Court", question: "Were you balanced and ready before each shot?",
@@ -91,6 +107,7 @@ export const SKILL_INFO: Record<SelfSkill, SkillInfo> = {
     why: "Being set before the ball arrives makes every other shot easier.",
     drill: { name: "Shadow recovery", how: "After each shadow swing, recover to your ready spot with a split step while a partner points to random targets. Three rounds of one minute." },
     keywords: ["footwork", "feet", "balance", "slow", "late", "split"],
+    meaning: "Small steps that put you in position, and the ready position: knees bent, paddle up and in front, before every shot.",
   },
   consistency: {
     label: "Consistency", group: "Game", question: "How often did you keep the ball in play instead of making an error?",
@@ -99,6 +116,7 @@ export const SKILL_INFO: Record<SelfSkill, SkillInfo> = {
     why: "Most recreational points end on an error. Keeping one more ball in play wins a lot of them.",
     drill: { name: "Twenty in a row", how: "With a partner, rally any shot type and count how many in a row stay in. Restart at zero after an error. Reach 20 before increasing pace." },
     keywords: ["error", "consistent", "consistency", "miss", "into the net", "hit out"],
+    meaning: "Keeping the ball in play. Most points at every level are lost by errors, not won by winners.",
   },
   strategy: {
     label: "Shot choice", group: "Game", question: "Did you choose sensible shots for each situation?",
@@ -107,6 +125,7 @@ export const SKILL_INFO: Record<SelfSkill, SkillInfo> = {
     why: "Choosing when to stay patient and when to attack avoids easy mistakes.",
     drill: { name: "Patience game", how: "Play to 7 where you may only attack a ball that is above the net. Everything else is a reset or a dink." },
     keywords: ["strategy", "partner", "communication", "choice", "rushed", "impatient", "attack"],
+    meaning: "Choosing the right shot for the moment: when to stay patient, when to attack and where to place the ball.",
   },
 };
 
@@ -152,6 +171,27 @@ const VARIANTS: Partial<Record<SelfSkill, Partial<Record<FormatGroup, SkillVaria
   },
 };
 
+/** Shots rated as successes out of 10 ("how many went in?"). */
+export const SUCCESS_OUT_OF = 10;
+
+/** Successes out of 10 to the 1-5 scale the plan uses: 0-2 → 1, 3-4 → 2, 5-6 → 3, 7-8 → 4, 9-10 → 5. */
+export function successToRating(successes: number): SkillRating {
+  const n = Math.max(0, Math.min(SUCCESS_OUT_OF, Math.round(successes)));
+  return Math.min(5, Math.max(1, Math.floor((n + 1) / 2))) as SkillRating;
+}
+
+/** Shot results saved with a rating: successes out of 10 per shot. Keeps only valid values. */
+export type ShotResults = Partial<Record<SelfSkill, number>>;
+export function parseShotResults(raw: unknown): ShotResults {
+  const out: ShotResults = {};
+  if (!raw || typeof raw !== "object") return out;
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if ((SELF_SKILLS as readonly string[]).includes(k) && SKILL_INFO[k as SelfSkill].success
+        && typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= SUCCESS_OUT_OF) out[k as SelfSkill] = v;
+  }
+  return out;
+}
+
 /** A skill's wording for a session format; falls back to the general wording. */
 export function skillInfo(skill: SelfSkill, playFormat?: string | null): SkillInfo {
   const group = formatGroup(playFormat);
@@ -172,6 +212,8 @@ export type SelfAssessmentInput = {
   recovery?: RecoveryLevels | null;
   /** The player marked an injury ("I'm injured"): the plan becomes a rest plan until they are back. */
   injured?: boolean;
+  /** Shots counted as successes out of 10; the plan quotes them ("6 of 10 serves in"). */
+  shotResults?: ShotResults;
   /** Skills a partner rated at least 1 lower than the player (peer feedback): they become the first focus. */
   peerLower?: { skill: SelfSkill; by: string; peer: number }[];
 };
@@ -276,7 +318,9 @@ export function buildSelfReport(input: SelfAssessmentInput): SelfReport {
       label: i.label,
       title: r <= 2 ? `Build your ${i.label.toLowerCase()}` : `Level up your ${i.label.toLowerCase()}`,
       rating: r,
-      observation: `You rated your ${i.label.toLowerCase()} ${r}/5: "${i.anchors[r - 1]}".`,
+      observation: input.shotResults?.[skill] != null && i.success
+        ? `You got ${input.shotResults[skill]} of ${SUCCESS_OUT_OF} ${i.success.unit} in.`
+        : `You rated your ${i.label.toLowerCase()} ${r}/5: "${i.anchors[r - 1]}".`,
       why: i.why,
       drill: i.drill,
       target: `Next session: aim for ${r + 1}/5, "${(i.anchors as readonly string[])[r]}".`,

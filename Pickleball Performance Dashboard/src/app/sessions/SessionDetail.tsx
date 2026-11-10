@@ -384,9 +384,6 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
               shot_technique_rating: session.shot_technique_rating ?? null,
           })}>Edit focus</button>
         </div>
-        <p className="mt-1 text-xs" style={{ color: WHITE_SUB }}>
-          Session ID <span className="font-mono" title={session.id}>{shortId(session.id)}</span> · created {new Date(session.created_at).toLocaleString()}
-        </p>
       </section>
       <Sheet>
       <div className="space-y-4">

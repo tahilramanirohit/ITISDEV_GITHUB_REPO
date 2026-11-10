@@ -7,7 +7,7 @@ import {
 } from "../../lib/api/profile";
 import { friendlyDbError } from "../../lib/api/selfAssessment";
 import { GOAL_LABELS, IMPROVEMENT_GOALS, type ImprovementGoal } from "../../lib/api/types";
-import { MIN_RATED_SKILLS, SELF_SKILLS, SKILL_GROUPS, SKILL_INFO, type SkillRating } from "../../lib/coaching/selfAssessment";
+import { MIN_RATED_SKILLS, SELF_SKILLS, SKILL_GROUPS, SKILL_INFO, type SelfSkill, type SkillRating } from "../../lib/coaching/selfAssessment";
 import { goalTargets } from "../../lib/coaching/goals";
 import { ACTION, ON_ACTION, SURFACE, LINE, ACCENT_INK, INK_2, alpha, BORDER, CHECK, CREAM, DISPLAY_FONT, INK, ON_CHECK, ON_CREAM, SURFACE_2, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Chip, Notice, PickleSays, numStyle, pressable, rovingIndex, PrimaryButton, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
@@ -60,6 +60,8 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
     main_goals: initial?.main_goals ?? [],
     baseline_ratings: initial?.baseline_ratings ?? {},
   });
+  // Shots are counted out of 10 ("how many usually go in?"); the baseline keeps the 1-5 rating that follows.
+  const [shotCounts, setShotCounts] = useState<Partial<Record<SelfSkill, number>>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const set = <K extends keyof OnboardingInput>(k: K, v: OnboardingInput[K]) => setForm((f) => ({ ...f, [k]: v }));
@@ -172,7 +174,7 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
         <div>
           <h2 className="text-2xl font-extrabold leading-tight" style={{ color: INK, fontFamily: DISPLAY_FONT }}>Where is your game today?</h2>
           <p className="mt-1.5 text-sm leading-relaxed" style={{ color: WHITE_DIM }}>
-            This is your <strong style={{ color: INK }}>baseline</strong>. Pickle measures your progress against it and sets your goals from your lowest skills. 3 means "okay for my level". Skip any you're unsure about.
+            This is your <strong style={{ color: INK }}>baseline</strong>. Pickle sets your goals from your lowest skills. Skip any you're unsure about.
           </p>
         </div>
         <div role="status" aria-live="polite" className="flex items-center gap-2.5 rounded-[14px] px-3 py-2.5" style={{ background: SURFACE_2 }}>
@@ -184,7 +186,8 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
           <h2 className="text-sm font-bold" style={{ color: WHITE_SUB }}>{group}</h2>
           <div className="grid gap-3 lg:grid-cols-2">
           {SELF_SKILLS.filter((s) => SKILL_INFO[s].group === group).map((skill) => (
-            <SkillRater key={skill} skill={skill} value={form.baseline_ratings[skill]} question="Your usual level"
+            <SkillRater key={skill} skill={skill} value={form.baseline_ratings[skill]} question="Your usual level" usual
+              successes={shotCounts[skill]} onSuccesses={(n) => setShotCounts((c) => { const next = { ...c }; if (n === undefined) delete next[skill]; else next[skill] = n; return next; })}
               onChange={(v?: SkillRating) => setForm((f) => {
                 const ratings = { ...f.baseline_ratings };
                 if (v) ratings[skill] = v; else delete ratings[skill];

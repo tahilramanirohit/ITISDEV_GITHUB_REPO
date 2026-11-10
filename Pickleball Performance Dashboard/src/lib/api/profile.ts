@@ -38,6 +38,8 @@ export type PlayerProfile = {
   paddle?: string | null;
   // Listed in Buddy; missing until the buddy migration.
   buddy_visible?: boolean;
+  /** How many weeks each set of goals runs (1-52); missing before update 13, which means 4. */
+  goal_weeks?: number;
 };
 
 export type SessionDefaults = Required<Pick<PlayerProfile, "default_review_mode" | "default_session_kind" | "default_play_format">>;
@@ -96,6 +98,17 @@ export async function saveDataConsent(sb: SupabaseClient, userId: string, prefer
   }, { onConflict: "id" });
   if (error) throw error;
 }
+/** The goal length in weeks (update 13). */
+export async function saveGoalWeeks(sb: SupabaseClient, userId: string, weeks: number): Promise<void> {
+  const { error } = await sb.from("profiles").update({ goal_weeks: weeks }).eq("id", userId);
+  if (error) {
+    if (/goal_weeks/.test(error.message ?? "") && !/profiles_goal_weeks/.test(error.message ?? "")) {
+      throw new Error("Goal length needs a database update. Run supabase/scripts/pickleproapp_upgrade_13.sql in the Supabase SQL Editor, then reload.");
+    }
+    throw new Error(/profiles_goal_weeks/.test(error.message ?? "") ? "Pick between 1 and 52 weeks." : error.message);
+  }
+}
+
 export async function saveDataPreferences(sb: SupabaseClient, userId: string, preferences: DataPreferences): Promise<void> {
   const { error } = await sb.from("profiles").update(preferences).eq("id", userId);
   if (error) throw error;

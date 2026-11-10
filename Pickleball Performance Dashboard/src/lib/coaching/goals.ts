@@ -1,8 +1,18 @@
 import type { ImprovementGoal } from "../api/types";
 import { SELF_SKILLS, SKILL_INFO, type SelfRatings, type SelfSkill, type SkillRating } from "./selfAssessment";
 
-/** Goals run for four weeks from the baseline, then the player re-rates. */
-export const GOAL_WINDOW_DAYS = 28;
+/** Goals run for four weeks from the baseline unless the player picks another length (Settings), then they re-rate. */
+export const DEFAULT_GOAL_WEEKS = 4;
+export const GOAL_WINDOW_DAYS = DEFAULT_GOAL_WEEKS * 7;
+export const MAX_GOAL_WEEKS = 52;
+
+/** A goal length from the profile: whole weeks from 1 to 52, else the default. */
+export function goalWeeks(value: unknown): number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= MAX_GOAL_WEEKS ? value : DEFAULT_GOAL_WEEKS;
+}
+
+/** "1 week", "2 weeks". */
+export const weeksLabel = (weeks: number) => `${weeks} week${weeks === 1 ? "" : "s"}`;
 export const MAX_GOAL_TARGETS = 2;
 
 export type GoalTarget = {
@@ -16,12 +26,12 @@ export type GoalTarget = {
 
 const DAY_MS = 86_400_000;
 
-/** The date the goals are due: four weeks after the baseline was set, plus any days paused by an injury. */
-export function goalDueDate(setAt: string | null | undefined, pausedDays = 0): string | null {
+/** The date the goals are due: the goal length after the baseline was set, plus any days paused by an injury. */
+export function goalDueDate(setAt: string | null | undefined, pausedDays = 0, weeks = DEFAULT_GOAL_WEEKS): string | null {
   if (!setAt) return null;
   const start = Date.parse(setAt);
   if (Number.isNaN(start)) return null;
-  return new Date(start + (GOAL_WINDOW_DAYS + pausedDays) * DAY_MS).toISOString().slice(0, 10);
+  return new Date(start + (weeks * 7 + pausedDays) * DAY_MS).toISOString().slice(0, 10);
 }
 
 /** Whole days since the baseline was set, or null without a date. */
@@ -40,9 +50,10 @@ export function goalTargets(
   mainGoals: readonly ImprovementGoal[] = [],
   setAt?: string | null,
   pausedDays = 0,
+  weeks = DEFAULT_GOAL_WEEKS,
 ): GoalTarget[] {
   if (!baseline) return [];
-  const due = goalDueDate(setAt, pausedDays);
+  const due = goalDueDate(setAt, pausedDays, weeks);
   const matchesGoal = (skill: SelfSkill) => (mainGoals.includes(SKILL_INFO[skill].goal) ? 0 : 1);
   return SELF_SKILLS
     .filter((skill) => baseline[skill] != null && baseline[skill]! < 5)

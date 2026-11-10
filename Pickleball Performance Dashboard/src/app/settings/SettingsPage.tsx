@@ -6,6 +6,8 @@ import { clearGameShareTrust, setGameShareMode, type GameShareMode } from "../..
 import { friendlyDbError } from "../../lib/api/selfAssessment";
 import { FORMAT_LABELS, KIND_LABELS, SOLO_FORMATS, type PlayFormat, type SessionKind } from "../../lib/api/types";
 import { Card, Chip, Notice, PreferenceSwitch, PageHero, PrimaryButton, SectionTitle, Sheet, labelClass, labelStyle } from "../shell/primitives";
+import { GoalLength } from "./GoalLength";
+import { goalWeeks } from "../../lib/coaching/goals";
 import { DATA_PREFERENCES_UPDATED } from "../onboarding/DataUse";
 import { LargeTextToggle } from "../shell/AppShell";
 import { BORDER, INK, WHITE, WHITE_DIM, WHITE_SUB, applyAppearance, readAppearance, type Appearance } from "../theme";
@@ -34,11 +36,14 @@ export default function SettingsPage({ sb, userId, account, devLinks }: {
   const [defaults, setDefaults] = useState<SessionDefaults>({ default_review_mode: null, default_session_kind: null, default_play_format: null });
   const [savingDefaults, setSavingDefaults] = useState(false);
   const [defaultsMessage, setDefaultsMessage] = useState("");
+  // Null until loaded; a database before update 13 has no goal length and uses 4 weeks.
+  const [goalLength, setGoalLength] = useState<number | null>(null);
   useEffect(() => {
     let active = true;
     getProfile(sb, userId).then((profile) => {
       if (active && profile) setPreferences({ analytics_opt_in: profile.analytics_opt_in === true, research_opt_in: profile.research_opt_in === true });
       if (active && profile?.game_share_mode) setShareMode(profile.game_share_mode);
+      if (active && profile) setGoalLength(goalWeeks(profile.goal_weeks));
       if (active && profile) setDefaults({
         default_review_mode: profile.default_review_mode ?? null, default_session_kind: profile.default_session_kind ?? null,
         default_play_format: profile.default_play_format ?? null,
@@ -105,6 +110,7 @@ export default function SettingsPage({ sb, userId, account, devLinks }: {
       </div>
     </Card>
     <div className="space-y-6">
+    <GoalLength sb={sb} userId={userId} weeks={goalLength} />
     <Card>
       <SectionTitle>Your data choices</SectionTitle>
       <PreferenceSwitch label="Performance analytics · optional" detail="Trends, win rate and tips from your games and videos." checked={preferences?.analytics_opt_in === true} disabled={!preferences || preferenceBusy} onChange={() => void changePreference("analytics_opt_in")} />

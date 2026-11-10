@@ -16,8 +16,22 @@
 
 | After WP7: Oct 23 notes (demo data, error counting, 2/4 players, court lines, "I'm injured") | ✅ Done (5 Nov 2026) | **Yes** for "I'm injured" only: `20261105120000_injury.sql` (`pickleproapp_upgrade_11.sql`) |
 | Players: buddies as a friend list | ✅ Done (5 Nov 2026) | **Yes**: `20261105130000_buddy_friends.sql` (`pickleproapp_upgrade_12.sql`) |
+| Nov 7 notes (light-blue items): term help, goal length, shot counts, hold-to-rate, less text | ✅ Done (10 Nov 2026) | **Yes**: `20261110090000_shot_results_goal_weeks.sql` (`pickleproapp_upgrade_13.sql`) |
 
 **All work packages are done.** Still open (not a work package): a review-only video for solo drills (gap analysis §4b.1), and the proposal text changes in section 7. Everything left needs a new migration, so read rule 6 in section 3 first.
+
+### 10 Nov 2026: Nov 7 notes (light-blue items)
+
+Goal of the round: less text, quicker rating, more fun. Green items (Kirk's), the 20 accounts, simplifying peer coaching and the Sessions video recordings were left for later on purpose.
+
+- **(?) term help:** `src/app/selfAssessment/TermHelp.tsx`. Every skill in `SKILL_INFO` (`src/lib/coaching/selfAssessment.ts`) has a one-line `meaning`; the (?) shows it on the rating cards (game and onboarding) and on the plan's focus card.
+- **Shot counts instead of 1-5 for the five shots:** serve, return, third-shot drop, dinking and volleys ask "Out of 10, how many went in?" and show "7 in · 3 errors · 70%". The count is saved in `self_assessments.shot_results` and turned into the 1-5 rating with `successToRating` (0-2 → 1, 3-4 → 2, 5-6 → 3, 7-8 → 4, 9-10 → 5), so Progress, goals, Buddy ratings and older games are unchanged. Without upgrade 13 the app saves the rating only. The plan quotes the count ("You got 3 of 10 dinks in.").
+- **Hold-to-rate pickleball:** `src/app/selfAssessment/HoldRater.tsx` (a `role="slider"`: hold to fill the ring step by step, tap for one step, arrow / Home / End keys, a short vibration per step). Used by `SkillRater` for every skill. The partner rating page (`SharedReportPage`) keeps the old 1-5 buttons (`classic`) until peer coaching is simplified.
+- **Goal length:** `profiles.goal_weeks` (1-52, default 4). Settings → Goals (`src/app/settings/GoalLength.tsx`): 1, 2 or 4 weeks, or Other. `goalDueDate` / `goalTargets` take the length; Progress shows "N weeks · due … · Change" and the re-rate and re-test reminders follow it.
+- **Removed metrics:** the "Research details" block at the end of the video report (`ResultView.tsx`: metrics list, heatmap card, provenance and coverage). The JSON download is shown only in research mode.
+- **Removed extra info:** the Session ID line (SessionDetail), the privacy paragraph on Find, the per-card privacy sentence and third stat on partner cards; "How it works" on My partners is two lines.
+- **Rohit accepts a buddy (demo):** `supabase/scripts/buddy_request_for_rohit.sql` sends Rohit a buddy request from another player (`from_name` at the top), so he can accept it under Players → My partners. Safe to rerun.
+- Tests: `98_shot_results_goal_weeks.sql` (SQL), `GoalLength.test.tsx`, and the rating, plan, goals, report and Players tests updated.
 
 ### 5 Nov 2026: after WP7 (adviser notes of 23 Oct)
 

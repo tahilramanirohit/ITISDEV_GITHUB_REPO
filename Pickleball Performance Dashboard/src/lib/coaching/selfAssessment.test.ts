@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSelfReport, compareSelfRatings, levelLabel, parseRatings, skillsMentioned } from "./selfAssessment";
+import { SELF_SKILLS, SKILL_INFO, buildSelfReport, compareSelfRatings, levelLabel, parseRatings, parseShotResults, skillsMentioned, successToRating } from "./selfAssessment";
 import { RECOVERY_PLAN } from "./injury";
 
 describe("plan after a hard session", () => {
@@ -86,5 +86,28 @@ describe("helpers", () => {
   it("labels levels", () => {
     expect(levelLabel(1.8)).toBe("Building foundations");
     expect(levelLabel(4.5)).toBe("Advanced");
+  });
+});
+
+describe("shots as successes out of 10", () => {
+  it("map to the 1-5 scale in pairs: 0-2 → 1, 3-4 → 2, 5-6 → 3, 7-8 → 4, 9-10 → 5", () => {
+    expect([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(successToRating)).toEqual([1, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5]);
+    expect(successToRating(14)).toBe(5);
+    expect(successToRating(-2)).toBe(1);
+  });
+
+  it("keep only counted shots with whole numbers from 0 to 10", () => {
+    expect(parseShotResults({ serve: 7, dinking: 11, volleys: 2.5, strategy: 3, nope: 4, return: 0 })).toEqual({ serve: 7, return: 0 });
+    expect(parseShotResults(null)).toEqual({});
+  });
+
+  it("every skill explains itself, and only shots are counted", () => {
+    for (const skill of SELF_SKILLS) expect(SKILL_INFO[skill].meaning.length).toBeGreaterThan(20);
+    expect(SELF_SKILLS.filter((s) => SKILL_INFO[s].success)).toEqual(SELF_SKILLS.filter((s) => SKILL_INFO[s].group === "Shots"));
+  });
+
+  it("quotes the count in the plan", () => {
+    const report = buildSelfReport({ ratings: { serve: 2, dinking: 4, consistency: 4 }, goals: [], shotResults: { serve: 3 } });
+    expect(report.focus.find((f) => f.skill === "serve")?.observation).toBe("You got 3 of 10 serves in.");
   });
 });

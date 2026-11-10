@@ -50,16 +50,13 @@ function PersonCard({ sb, person: p, data, act, busyId, reload, onOpen }: {
         {partner ? "Video partner" : "Buddy"}</span>
     </div>
 
-    <dl className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label={`You and ${p.name}`}>
+    {/* Two numbers only (adviser notes, 7 Nov: less on screen); feedback counts show once there are any. */}
+    <dl className="mt-3 grid grid-cols-2 gap-2" aria-label={`You and ${p.name}`}>
       <Stat label="Games together" value={String(p.gamesTogether)} />
       <Stat label="Last played" value={p.lastPlayed ? shortDate(p.lastPlayed) : "—"} />
-      <Stat label="You asked them" value={String(p.askedThem)} />
-      <Stat label="They asked you" value={String(p.theyShared.length)} />
     </dl>
-
-    <p className="mt-2 text-xs leading-snug" style={{ color: WHITE_DIM }}>
-      {partner ? `${p.name} sees only the sessions you share, and only what you ask about.`
-        : `${p.name} sees your Buddy listing only. Partner for video feedback to share sessions with them.`}</p>
+    {p.askedThem + p.theyShared.length > 0 && <p className="mt-2 text-xs" style={{ color: WHITE_DIM }}>
+      Feedback: you asked {p.askedThem} · {p.name} asked {p.theyShared.length}</p>}
 
     {p.waitingOnYou.length > 0 && <a href={`#/shared/${p.waitingOnYou[0].session_id}`}
       className={`mt-3 flex min-h-[44px] items-center gap-2 rounded-[12px] px-3 text-sm font-bold ${pressable}`} style={{ background: ACTION_SOFT, color: INK }}>
@@ -175,14 +172,12 @@ function PersonCard({ sb, person: p, data, act, busyId, reload, onOpen }: {
 /** Who sees what: the two levels of trust, said plainly. */
 function PrivacyNote() {
   return <section aria-label="Who sees what" className="rounded-[18px] p-4" style={{ background: SURFACE_2, color: INK }}>
-    <h2 className="text-[15px] font-extrabold">How it works, and who sees what</h2>
+    <h2 className="text-[15px] font-extrabold">How it works</h2>
     <dl className="mt-2 space-y-2 text-sm">
-      <div><dt className="font-bold">1. Buddy (Find → Add buddy, they accept)</dt>
-        <dd style={{ color: WHITE_DIM }}>Like a friend list. Buddies can ask each other to play (purpose, format, place and times). While you're
-          listed in Find, players 18+ see only your name, level, a rounded game rating and what you're looking for.</dd></div>
-      <div><dt className="font-bold">2. Video partner (a buddy you partner with)</dt>
-        <dd style={{ color: WHITE_DIM }}>Sees only the sessions you choose to share, and only the skills you ask about, with or without the video.
-          Never your journal, plan or other sessions. Stop at any time; you stay buddies.</dd></div>
+      <div><dt className="font-bold">1. Buddy</dt>
+        <dd style={{ color: WHITE_DIM }}>Add from Find. Buddies ask each other to play.</dd></div>
+      <div><dt className="font-bold">2. Video partner</dt>
+        <dd style={{ color: WHITE_DIM }}>Sees only the sessions you share. Never your journal or plan.</dd></div>
     </dl>
   </section>;
 }

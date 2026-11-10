@@ -17,30 +17,30 @@ describe("ResultView", () => {
     expect(screen.queryByRole("button", { name: "Play audio coaching" })).toBeNull();
   });
 
-  it("shows provenance, coverage and per-metric status", () => {
+  it("shows what the analysis found, without the per-metric research table", () => {
     const measured = { ...structuredClone(testFixture), data_origin: "measured" };
     render(<ResultView result={parseAnalysisResult(measured)} videoUrl={null} />);
     expect(screen.getByText("MEASURED FROM THIS VIDEO")).toBeTruthy();
     expect(screen.getByRole("region", { name: "What the video analysis found" })).toBeTruthy();
     expect(screen.getByText("Ball finder not set up")).toBeTruthy();
     expect(screen.getByText("Court lines found")).toBeTruthy();
-    expect(screen.getByText("Not available")).toBeTruthy();
     expect(screen.getAllByText("Not available").length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByText("Research details: measurements, analysis notes and export"));
-    expect(screen.getByText(testFixture.provenance.pipeline_version)).toBeTruthy();
-    expect(screen.getByText("Share of video analyzed")).toBeTruthy();
-    expect(screen.getByText("Player track IDs")).toBeTruthy();
-    expect(screen.getByText("not available")).toBeTruthy(); // motion detector: no confidence
-    expect(screen.getAllByText("Accuracy not yet evaluated").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("NOT COMPUTED").length).toBe(4); // rallies, shots, zone time and errors (fixture predates the last two)
-    expect(screen.getByText("WHOLE-CLIP METRICS")).toBeTruthy();
-    expect(screen.queryByRole("img", { name: /Court heatmap/ })).toBeNull();
-    expect(screen.getByText(/Hidden until positional accuracy passes evaluation/)).toBeTruthy();
+    // Removed for players (adviser notes, 7 Nov): metrics list, provenance and coverage.
+    expect(screen.queryByText(/Research details/)).toBeNull();
+    expect(screen.queryByText("Share of video analyzed")).toBeNull();
+    expect(screen.queryByText("NOT COMPUTED")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Download analysis result/ })).toBeNull();
+  });
+
+  it("keeps the raw result downloadable in research mode", () => {
+    const measured = { ...structuredClone(testFixture), data_origin: "measured" };
+    render(<ResultView result={parseAnalysisResult(measured)} videoUrl={null} experimentalReview />);
+    expect(screen.getByRole("button", { name: "Download analysis result (JSON)" })).toBeTruthy();
   });
 
   it("explains insufficient data instead of showing a heatmap", () => {
     render(<ResultView result={parseAnalysisResult(insufficient)} videoUrl={null} />);
-    expect(screen.getAllByText("INSUFFICIENT DATA").length).toBe(3); // overall status + heatmap + positioning
+    expect(screen.getAllByText("INSUFFICIENT DATA").length).toBe(1); // the overall status (the metric table is gone)
     expect(screen.getAllByText(/Court not calibrated/).length).toBeGreaterThan(0);
     expect(screen.queryByRole("img", { name: /Court heatmap/ })).toBeNull();
   });

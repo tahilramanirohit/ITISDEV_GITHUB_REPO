@@ -250,9 +250,7 @@ describe("Players: My partners", () => {
     expect(within(people).getByText("Video partner")).toBeTruthy();
     const stats = within(people).getByLabelText("You and Quinn");
     expect(within(stats).getByText("Games together").nextSibling?.textContent).toBe("1");
-    expect(within(stats).getByText("You asked them").nextSibling?.textContent).toBe("1");
-    expect(within(stats).getByText("They asked you").nextSibling?.textContent).toBe("0");
-    expect(within(people).getByText(/sees only the sessions you share/)).toBeTruthy();
+    expect(within(people).getByText("Feedback: you asked 1 · Quinn asked 0")).toBeTruthy();
     expect(screen.getByRole("region", { name: "Who sees what" })).toBeTruthy();
     // The past buddy session was logged: a link to it, no second "Log this session", no cancelling the past.
     expect(within(people).getByRole("link", { name: /Logged: Doubles with Quinn/ }).getAttribute("href")).toBe("#/sessions/m1");
@@ -271,7 +269,7 @@ describe("Players: My partners", () => {
     show(sb);
     const people = await screen.findByRole("list", { name: "My partners" });
     expect(within(people).getByText(/buddies since/)).toBeTruthy();
-    expect(within(people).getByText(/sees your Buddy listing only/)).toBeTruthy();
+    expect(within(people).queryByText(/^Feedback:/)).toBeNull(); // nothing shared yet, so no feedback line
     // Cy is not listed in Find, but buddies can still ask each other to play.
     fireEvent.click(within(people).getByRole("button", { name: "Ask to play" }));
     fireEvent.click(screen.getByRole("button", { name: "Send to Cy" }));
@@ -318,7 +316,7 @@ describe("Players: My partners", () => {
     expect(await screen.findByText(/No buddies yet. Add players as buddies under Find/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Create an invite code" })).toBeNull();
     const how = screen.getByRole("region", { name: "Who sees what" });
-    expect(within(how).getByText(/1\. Buddy/)).toBeTruthy();
-    expect(within(how).getByText(/2\. Video partner/)).toBeTruthy();
+    expect(within(how).getByText("1. Buddy")).toBeTruthy();
+    expect(within(how).getByText("2. Video partner")).toBeTruthy();
   });
 });

@@ -1,16 +1,12 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { AlertTriangle, CheckCircle2, CircleDashed, FlaskConical, Info } from "lucide-react";
-import {
-  METRIC_KEYS, METRIC_LABELS, VALIDATION_LABELS, publicShotResult,
-  type AnalysisResultV1, type MetricKey, type MetricStatus,
-} from "../../lib/analysis/contract";
+import { AlertTriangle, CheckCircle2, CircleDashed, FlaskConical } from "lucide-react";
+import { publicShotResult, type AnalysisResultV1 } from "../../lib/analysis/contract";
 import { GOAL_LABELS, type SessionRow } from "../../lib/api/types";
 import { buildCoachingReport } from "../../lib/analysis/coaching";
 import { videoCoachScript, videoReviewScript } from "../../lib/coaching/coachScript";
 import { CoachLauncher } from "../coach/CoachPlayer";
-import { BLUE_SKY, BORDER, INK, NEON, ORANGE, ORANGE_L, ROSE, VIOLET, WHITE_DIM, WHITE_SUB } from "../theme";
+import { BLUE_SKY, BORDER, INK, NEON, ORANGE, ORANGE_L, ROSE, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Card, Notice, Pill, WidgetHeader } from "../shell/primitives";
-import { CourtDwellHeatmap } from "./CourtDwellHeatmap";
 import { CoachingPanel, type PreviousSession } from "./CoachingPanel";
 import { PlayerPicker } from "./PlayerPicker";
 import { ShotsPanel } from "./ShotsPanel";
@@ -19,22 +15,6 @@ import { ErrorsPanel } from "./ErrorsPanel";
 import { PlayersOnCourtToggle, type PlayersOnCourt } from "./AnalysisStatus";
 import { VideoOverlayPlayer, type JumpRequest } from "./VideoOverlayPlayer";
 import { courtPlayers, focusShots } from "../../lib/analysis/shotLabels";
-
-const STATUS_COLORS: Record<MetricStatus, string> = {
-  measured: NEON,
-  insufficient_data: ORANGE,
-  not_computed: WHITE_SUB,
-  experimental: VIOLET,
-};
-const STATUS_TEXT: Record<MetricStatus, string> = {
-  measured: "Measured",
-  insufficient_data: "Insufficient data",
-  not_computed: "Not computed",
-  experimental: "Experimental",
-};
-
-const fmtS = (s: number | null | undefined) => (s == null ? "unknown" : `${s.toFixed(1)} s`);
-const pct = (f: number | null | undefined) => (f == null ? "unknown" : `${Math.round(f * 100)}%`);
 
 function downloadResult(result: AnalysisResultV1) {
   const name = (result.provenance.source.filename ?? "video").replace(/\.[^.]+$/, "");
@@ -85,15 +65,6 @@ function useMyPlayer(key: string, analysed: number | null): [number | null, (id:
   return [id, choose];
 }
 
-function Row({ k, v }: { k: string; v: React.ReactNode }) {
-  return (
-    <div className="flex justify-between gap-3 py-1.5 border-b text-sm" style={{ borderColor: BORDER }}>
-      <span style={{ color: WHITE_DIM }}>{k}</span>
-      <span className="font-mono text-right" style={{ color: INK }}>{v}</span>
-    </div>
-  );
-}
-
 /** What the notes under the video can do with it: read the current time and jump to a moment. */
 export type VideoControls = { video: HTMLVideoElement | null; seek: (timeSeconds: number) => void };
 
@@ -116,7 +87,6 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
 }) {
   const c = result.coverage;
   const heat = result.metrics.court_heatmap;
-  const zones = result.metrics.zone_occupancy;
   const sel = result.player_selection;
   const coaching = useMemo(() => buildCoachingReport(result), [result]);
   const [selectingPlayer, setSelectingPlayer] = useState(false);
@@ -143,7 +113,6 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
   const shotCount = focusShots(shotDisplayResult, myPlayerId);
   const devMock = isDevMock(result);
   const heatValidated = devMock || heat.validation === "evaluated_on_real_footage";
-  const zonesValidated = devMock || zones.validation === "evaluated_on_real_footage";
   // Optional audio: the coaching plan when the video supports one, otherwise a spoken review of what was found.
   const audio = useMemo(() => {
     if (result.data_origin !== "measured" || devMock || sharedBy) return null;
@@ -336,99 +305,12 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
 
       {result.data_origin === "measured" && !devMock && <ZoneTimePanel result={result} myPlayerId={myPlayerId} />}
 
-      <details className="rounded-[14px] p-4" style={{ border: `1px solid ${BORDER}` }}>
-        <summary className="cursor-pointer text-base font-semibold" style={{ color: BLUE_SKY }}>Research details: measurements, analysis notes and export</summary>
-        {result.data_origin === "measured" && <button type="button" onClick={() => downloadResult(result)} className="mt-3 text-sm font-semibold underline"
-          style={{ color: BLUE_SKY }} title="For the Label shots page and for scoring shot detection">
-          Download research result (JSON)
-        </button>}
-        <div className="mt-3"><Pill color={BLUE_SKY}>{heat.scope === "selected_view" ? "SELECTED-VIEW METRICS" : "WHOLE-CLIP METRICS"}</Pill></div>
-        <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_340px]">
-          <div className="space-y-4">
+      {/* The per-metric research table was removed (adviser notes, 7 Nov: too much for players). The raw result stays
+          downloadable in research mode for the Label shots page. */}
+      {experimentalReview && result.data_origin === "measured" && <button type="button" onClick={() => downloadResult(result)}
+        className="text-sm font-semibold underline" style={{ color: BLUE_SKY }} title="For the Label shots page and for scoring shot detection">
+        Download analysis result (JSON)</button>}
 
-            <Card>
-              <WidgetHeader title="Metrics" subtitle={heat.scope === "selected_view"
-                ? "Court measures cover one camera view. Other estimates report their own scope and status."
-                : "Each metric reports its own status and validation level."} />
-              <ul className="space-y-2">
-                {METRIC_KEYS.map((key: MetricKey) => {
-                  const m = result.metrics[key];
-                  return (
-                    <li key={key} className="rounded-xl p-3" style={{ background: "var(--pp-surface-2)", border: `1px solid ${BORDER}` }}>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-sm font-semibold text-ink">{METRIC_LABELS[key]}</span>
-                        <Pill color={STATUS_COLORS[m.status]}>{STATUS_TEXT[m.status].toUpperCase()}</Pill>
-                        {m.status !== "not_computed" && <Pill color={WHITE_SUB}>{VALIDATION_LABELS[m.validation]}</Pill>}
-                      </div>
-                      {m.reason && <p className="text-sm mt-1" style={{ color: WHITE_DIM }}>{m.reason}</p>}
-                    </li>
-                  );
-                })}
-              </ul>
-            </Card>
-          </div>
-
-          <div className="space-y-4">
-            <Card>
-              <WidgetHeader title="Court heatmap" subtitle="Where the selected player's feet were, weighted by time." />
-              {heatValidated && heat.status === "measured" && heat.value ? (
-                <>
-                  <CourtDwellHeatmap value={heat.value} />
-                  <div className="mt-3">
-                    <Row k="Tracked time" v={fmtS(heat.value.tracked_time_s)} />
-                    <Row k="Outside mapped area" v={fmtS(heat.value.outside_mapped_area_s)} />
-                  </div>
-                </>
-              ) : (
-                <p className="text-sm flex gap-2" style={{ color: ORANGE_L }}>
-                  <Info size={12} className="flex-shrink-0 mt-0.5" /> {heatValidated ? heat.reason ?? "Not available." : "Hidden until positional accuracy passes evaluation on labelled real footage."}
-                </p>
-              )}
-              {zonesValidated && zones.status === "experimental" && zones.value && (
-                <div className="mt-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-semibold text-ink">Zone occupancy</span>
-                    <Pill color={VIOLET}>EXPERIMENTAL</Pill>
-                  </div>
-                  {Object.entries(zones.value.fraction_of_tracked_time).map(([zone, f]) => (
-                    <Row key={zone} k={zone.replace(/_/g, " ")} v={pct(f)} />
-                  ))}
-                </div>
-              )}
-            </Card>
-
-            <Card>
-              <WidgetHeader title="Provenance & coverage" subtitle="How this result was produced and how much of the video it covers." />
-              <Row k="Origin" v={result.data_origin === "test_fixture" ? "test fixture" : "measured"} />
-              <Row k="Pipeline version" v={result.provenance.pipeline_version} />
-              <Row k="Detector" v={result.provenance.detector.name} />
-              <Row k="Ball detector" v={result.provenance.ball_detector?.name ?? "not configured"} />
-              <Row k="Detection confidence" v={result.provenance.detector.confidence_is_model_score ? "model score" : "not available"} />
-              <Row k="Video length" v={fmtS(result.video.container_duration_s)} />
-              <Row k="Analyzed" v={`${fmtS(c.analyzed_start_s)} – ${fmtS(c.analyzed_end_s)}`} />
-              <Row k="Share of video analyzed" v={pct(c.fraction_of_video_analyzed)} />
-              {c.selected_view_duration_s != null && <Row k="Selected camera view" v={fmtS(c.selected_view_duration_s)} />}
-              <Row k="Frames analyzed" v={`${c.frames_analyzed} (every ${c.sample_stride}${c.sample_stride === 1 ? "" : "th"} frame)`} />
-              <Row k="Frames with player detections" v={c.frames_with_detections} />
-              <Row k="Frames with ball detections" v={c.frames_with_ball_detections ?? 0} />
-              {c.decode_failures > 0 && <Row k="Undecodable frames" v={c.decode_failures} />}
-              <Row k="Calibration" v={result.calibration
-                ? result.calibration.method === "auto_painted_lines"
-                  ? "automatic · checked against the painted lines in every frame"
-                  : `${result.calibration.method === "auto_model_landmarks" ? "automatic" : result.calibration.method === "user_confirmed_landmarks" ? "user confirmed, checked against painted lines" : "manual"} · ${result.calibration.landmarks_used.length} landmarks · ${result.calibration.quality} (${result.calibration.reprojection_rmse_m.toFixed(2)} m)`
-                : "none"} />
-              <Row k="Player selection" v={sel
-                ? `${sel.method === "court_half" ? `${sel.court_half} half` : `track #${sel.track_id}`} · tracked ${pct(sel.tracked_fraction)}`
-                : "none"} />
-              {result.tracks.length > 0 && <Row k="Player track IDs" v={result.tracks
-                .slice().sort((a, b) => b.observed_frames - a.observed_frames)
-                .slice(0, 8).map((track) => `#${track.track_id}`).join(", ")} />}
-              <Row k="Generated" v={new Date(result.provenance.generated_at).toLocaleString()} />
-              {result.provenance.source.filename && <Row k="Source file" v={result.provenance.source.filename} />}
-            </Card>
-          </div>
-        </div>
-      </details>
     </div>
   );
 }
