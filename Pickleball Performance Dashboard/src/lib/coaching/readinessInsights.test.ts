@@ -32,18 +32,18 @@ describe("before and after your games", () => {
 
   it("notes heavy recovery from the last two logged sessions", () => {
     const points = [point("a", 3), point("b", 3), point("c", 3)];
-    const journal = new Map([["a", entry({ soreness: 1 })], ["b", entry({ soreness: 4 })], ["c", entry({ exertion: 9 })]]);
+    const journal = new Map([["a", entry({ soreness: 1 })], ["b", entry({ soreness: 4 })], ["c", entry({ exertion: 5 })]]);
     expect(readinessInsights(points, journal).recoveryNote).toMatch(/last 2 sessions/);
     journal.set("b", entry({ soreness: 2 }));
     expect(readinessInsights(points, journal).recoveryNote).toMatch(/last session/);
-    journal.set("c", entry({ exertion: 5 }));
+    journal.set("c", entry({ exertion: 3 }));
     expect(readinessInsights(points, journal).recoveryNote).toBeNull();
   });
 
-  it("calls soreness 4+ or effort 8+ heavy", () => {
+  it("calls soreness or effort of 4+ out of 5 heavy", () => {
     expect(isHeavyRecovery({ soreness: 4, exertion: null })).toBe(true);
-    expect(isHeavyRecovery({ soreness: 3, exertion: 8 })).toBe(true);
-    expect(isHeavyRecovery({ soreness: 3, exertion: 7 })).toBe(false);
+    expect(isHeavyRecovery({ soreness: 3, exertion: 4 })).toBe(true);
+    expect(isHeavyRecovery({ soreness: 3, exertion: 3 })).toBe(false);
     expect(isHeavyRecovery(null)).toBe(false);
   });
 });

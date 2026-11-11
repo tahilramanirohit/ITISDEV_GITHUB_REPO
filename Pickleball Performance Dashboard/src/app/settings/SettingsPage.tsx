@@ -10,6 +10,8 @@ import { GoalLength } from "./GoalLength";
 import { goalWeeks } from "../../lib/coaching/goals";
 import { DATA_PREFERENCES_UPDATED } from "../onboarding/DataUse";
 import { LargeTextToggle } from "../shell/AppShell";
+import { RecoveryCard, useInjury } from "../recovery/RecoveryCard";
+import { RecoveryEntry } from "../recovery/RecoverySwitch";
 import { BORDER, INK, WHITE, WHITE_DIM, WHITE_SUB, applyAppearance, readAppearance, type Appearance } from "../theme";
 
 function LinkRow({ href, title, detail }: { href: string; title: string; detail: string }) {
@@ -26,6 +28,7 @@ function LinkRow({ href, title, detail }: { href: string; title: string; detail:
 export default function SettingsPage({ sb, userId, account, devLinks }: {
   sb: SupabaseClient; userId: string; account?: string; devLinks?: ReactNode;
 }) {
+  const recovery = useInjury(sb);
   const [preferences, setPreferences] = useState<DataPreferences | null>(null);
   const [preferenceBusy, setPreferenceBusy] = useState(false);
   const [preferenceError, setPreferenceError] = useState("");
@@ -111,6 +114,9 @@ export default function SettingsPage({ sb, userId, account, devLinks }: {
     </Card>
     <div className="space-y-6">
     <GoalLength sb={sb} userId={userId} weeks={goalLength} />
+    {recovery.loaded && (recovery.open
+      ? <RecoveryCard sb={sb} injury={recovery.open} onChanged={() => void recovery.reload()} showPlan={false} />
+      : <RecoveryEntry sb={sb} onChanged={() => void recovery.reload()} />)}
     <Card>
       <SectionTitle>Your data choices</SectionTitle>
       <PreferenceSwitch label="Performance analytics · optional" detail="Trends, win rate and tips from your games and videos." checked={preferences?.analytics_opt_in === true} disabled={!preferences || preferenceBusy} onChange={() => void changePreference("analytics_opt_in")} />

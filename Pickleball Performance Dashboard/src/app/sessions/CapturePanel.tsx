@@ -7,11 +7,12 @@ import { endInjury, injuryErrorText, startInjury } from "../../lib/api/injury";
 import { INJURY_AREAS, INJURY_AREA_LABELS, INJURY_DISCLAIMER, type InjuryArea, type InjuryPeriod } from "../../lib/coaching/injury";
 import { BORDER, GREEN, INK, PICKLE, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Card, Chip, Notice, PrimaryButton, fieldStyle, labelClass, labelStyle, numStyle } from "../shell/primitives";
+import { RecoverySwitch } from "../recovery/RecoverySwitch";
 import { HoldRater } from "../selfAssessment/HoldRater";
 
 const READINESS = ["Drained", "Tired", "Okay", "Good", "Ready to go"];
 const SORENESS = ["None", "A little", "Some", "Sore", "Very sore"];
-const effortText = (n: number) => n <= 2 ? "Very easy" : n <= 4 ? "Easy" : n <= 6 ? "Moderate" : n <= 8 ? "Hard" : "All out";
+const EFFORT = ["Easy", "Light", "Moderate", "Hard", "All out"];
 const toNumber = (v: string) => v === "" ? undefined : Number(v);
 
 /** One question, in the same card as the rating questions. */
@@ -214,8 +215,8 @@ export function CapturePanel({ sb, session, onSessionUpdated, step: requestedSte
         <p className="text-sm" style={{ color: WHITE_DIM }}>A hard or sore game makes your next practice lighter.</p>
         <div className="mt-3 grid gap-4 sm:grid-cols-2">
           <Question title="How hard was it?">
-            <HoldRater label="Effort, 1 lowest to 10 highest" min={1} max={10} value={toNumber(exertion)}
-              onChange={(n) => setExertion(String(n))} valueText={effortText} />
+            <HoldRater label="Effort, 1 lowest to 5 highest" min={1} max={5} value={toNumber(exertion)}
+              onChange={(n) => setExertion(String(n))} valueText={(n) => EFFORT[n - 1]} />
           </Question>
           <Question title="How sore are you?">
             <HoldRater label="Soreness, 1 lowest to 5 highest" min={1} max={5} value={toNumber(soreness)}
@@ -224,15 +225,10 @@ export function CapturePanel({ sb, session, onSessionUpdated, step: requestedSte
           <Question title="Cooled down?">
             <YesNo label="Cooled down" value={cooldown} onChange={setCooldown} />
           </Question>
-          {injury !== undefined && <Card className="min-w-0 !p-4">
-            <label className="flex min-h-[44px] cursor-pointer items-start gap-3">
-              <input type="checkbox" checked={injured} onChange={(e) => setInjured(e.target.checked)} className="mt-1 h-5 w-5 shrink-0" />
-              <span><b className="text-base" style={{ color: INK }}>I'm injured right now</b>
-                <span className="block text-sm" style={{ color: WHITE_DIM }}>
-                  {injury && !injured ? "Unticking this ends recovery mode when you save, as if you tapped \"I'm back\"."
-                    : "Your plan switches to rest and your goals pause until you tap \"I'm back\"."}</span></span>
-            </label>
-            {injured && <>
+          {injury !== undefined && <Card className="min-w-0 !p-1">
+            <RecoverySwitch on={injured} onChange={setInjured}
+              status={injury && !injured ? "Turns off when you save" : !injury && injured ? "Turns on when you save" : undefined} />
+            {injured && <div className="px-3 pb-3">
               <div className="mt-3 grid gap-3">
                 <div><label className={labelClass} style={labelStyle} htmlFor="injury-area">Where (optional)</label>
                   <select id="injury-area" value={injuryArea} onChange={(e) => setInjuryArea(e.target.value as InjuryArea | "")}
@@ -246,7 +242,7 @@ export function CapturePanel({ sb, session, onSessionUpdated, step: requestedSte
                     placeholder="What happened" className="w-full rounded-xl px-3 py-2" style={fieldStyle} /></div>
               </div>
               <p className="mt-2 text-xs" style={{ color: WHITE_DIM }}>{INJURY_DISCLAIMER}</p>
-            </>}
+            </div>}
           </Card>}
         </div>
       </>}

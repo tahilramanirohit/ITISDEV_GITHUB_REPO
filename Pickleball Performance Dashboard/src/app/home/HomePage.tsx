@@ -10,6 +10,7 @@ import { buildSelfReport } from "../../lib/coaching/selfAssessment";
 import { CoachLauncher } from "../coach/CoachPlayer";
 import { InstallTip } from "../shell/InstallTip";
 import { RecoveryCard, useInjury } from "../recovery/RecoveryCard";
+import { RecoveryEntry } from "../recovery/RecoverySwitch";
 import {
   ACCENT_INK, ACTION, ACTION_SOFT, alpha, CHECK, HERO, INK, INK_2, INK_3, LINE, LINE_STRONG, ON_ACTION, ON_CHECK, ON_HERO,
   SURFACE,
@@ -105,13 +106,13 @@ export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: s
 
   const focus = latestPlan?.report.focus[0];
   const bubble = items === null ? null
-    : injured ? { title: `Rest up${name ? `, ${name}` : ""}.`, body: "Your plan is rest for now and your goals are paused. Tap \"I'm back to playing\" when you're ready." }
+    : injured ? { title: `Rest up${name ? `, ${name}` : ""}.`, body: "Recovery mode is on: your plan is rest and your goals are paused. Turn off recovery mode when you're ready." }
     : sessions.length === 0 ? { title: `Hi${name ? ` ${name}` : ""}, I'm Pickle.`, body: "Log your first game and I'll tell you what to work on." }
     : focus ? { title: hasRatedPlan ? `Next up: ${focus.label.toLowerCase()}` : "Nice first game!", body: `${focus.drill.name}, 3 times this week.` }
     : { title: thisWeek >= WEEKLY_TARGET ? "You hit this week's target." : "Good to see you back.", body: "Rate your next game and I'll pick a drill." };
 
   const left = Math.max(0, WEEKLY_TARGET - thisWeek);
-  const weekHint = injured ? "Paused while you recover" : thisWeek >= WEEKLY_TARGET ? "Target hit. Nice work." : sessions.length === 0 ? `Goal: ${WEEKLY_TARGET} games a week` : `${left} more to hit your goal`;
+  const weekHint = injured ? "Paused for recovery mode" : thisWeek >= WEEKLY_TARGET ? "Target hit. Nice work." : sessions.length === 0 ? `Goal: ${WEEKLY_TARGET} games a week` : `${left} more to hit your goal`;
   // Featured game: the newest one with a video, so Shot replay and Heatmap show when you've uploaded one.
   const last = homeFeaturedGame(sessions);
   const earlier = sessions.filter((item) => item !== last).slice(0, 3);
@@ -188,6 +189,7 @@ export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: s
               })}
             </ul>
           </section>}
+    {injury.loaded && !injured && sessions.length > 0 && <RecoveryEntry sb={sb} onChanged={() => void injury.reload()} />}
     <InstallTip />
   </div>;
 }

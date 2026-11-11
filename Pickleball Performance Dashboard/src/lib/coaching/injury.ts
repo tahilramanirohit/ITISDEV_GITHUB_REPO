@@ -1,5 +1,5 @@
-// "I'm injured" (adviser note: what if the user is injured?). While an injury is
-// open, the plan becomes a rest plan, goal deadlines pause and the player is
+// Recovery mode (adviser note: what if the user is injured?). Stored as injury periods. While one is
+// open, the plan becomes a recovery plan, goal deadlines pause and the player is
 // hidden from Buddy (supabase/migrations/20261105120000_injury.sql).
 // Not medical advice: the app never asks for a diagnosis.
 
@@ -25,12 +25,12 @@ export type InjuryPeriod = {
 export const INJURY_DISCLAIMER =
   "PicklePro is not medical advice. If the pain is sharp, there is swelling, or it is not getting better after a few days, see a doctor or physiotherapist.";
 
-/** The rest plan shown instead of drills while a player is injured. */
+/** The recovery plan shown instead of drills while recovery mode is on. */
 export const RECOVERY_PLAN: { day: string; title: string; detail: string }[] = [
-  { day: "Now", title: "Rest the injured area", detail: "Skip games and any drill that hurts. Your goals are paused, so nothing is falling behind." },
+  { day: "Now", title: "Rest what hurts", detail: "Skip games and any drill that hurts. Your goals are paused, so nothing is falling behind." },
   { day: "When it eases", title: "Pain-free touch only", detail: "Short, easy sessions: shadow swings or soft dinks against a wall, stopping at the first twinge." },
   { day: "Coming back", title: "Ease back into play", detail: "Start with dinks and drops at an easy pace, then add one game. Warm up and cool down every time." },
-  { day: "Then", title: "Tap \"I'm back\"", detail: "Your goals restart where they paused and Buddy lists you again if you were listed." },
+  { day: "Then", title: "Turn off recovery mode", detail: "Your goals restart where they paused and Buddy lists you again if you were listed." },
 ];
 
 /** The open injury (still injured), if any. */

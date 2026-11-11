@@ -67,7 +67,11 @@ checks(n, upd, needs, ok) as (values
        and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'analytics_opt_in')),
   (16, 'pickleproapp_upgrade_16.sql', 'tag a buddy in a game (game shares)',
        to_regclass('public.game_tags') is not null
-       and exists (select 1 from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname = 'my_game_shares'))
+       and exists (select 1 from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname = 'my_game_shares')),
+  (17, 'pickleproapp_upgrade_17.sql', 'effort rated out of 5',
+       exists (select 1 from pg_constraint c where c.conrelid = 'public.recovery_logs'::regclass
+               and c.conname = 'recovery_logs_exertion_check' and pg_get_constraintdef(c.oid) like '%5)%'
+               and pg_get_constraintdef(c.oid) not like '%10%'))
 )
 select case when n = 0 then 'Base' else n::text end as "#",
        needs as "What the app needs",

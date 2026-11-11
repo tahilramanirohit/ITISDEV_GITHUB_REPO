@@ -39,27 +39,29 @@ function setSlider(name: RegExp, steps: number) {
 }
 
 describe("SelfAssessmentPanel", () => {
-  it("counts shots as successes out of 10, with arrow keys or by holding the pickleball", async () => {
+  it("rates shots out of 5 like every other skill, with arrow keys or by holding the pickleball", async () => {
     const { sb } = fakeSupabase();
     render(<SelfAssessmentPanel sb={sb} session={session} />);
-    const serve = await screen.findByRole("slider", { name: /^Serve: Out of 10 serves, how many went in\?/ });
+    const serve = await screen.findByRole("slider", { name: /^Serve rating, 1 lowest to 5 highest/ });
+    expect(screen.getByText("How reliable and deep were your serves?")).toBeTruthy();
+    expect(screen.queryByText(/Out of 10/)).toBeNull();
     expect(serve.getAttribute("aria-valuetext")).toBe("Not rated");
     fireEvent.keyDown(serve, { key: "End" });
-    expect(serve.getAttribute("aria-valuetext")).toBe("10 in · 0 errors · 100%");
+    expect(serve.getAttribute("aria-valuetext")).toBe("5/5 · Deep, placed on purpose");
     fireEvent.keyDown(serve, { key: "ArrowLeft" });
-    expect(serve.getAttribute("aria-valuenow")).toBe("9");
+    expect(serve.getAttribute("aria-valuenow")).toBe("4");
 
-    // Holding fills the ring from 0, one step at a time; letting go keeps the value. A quick tap adds one.
+    // Holding fills the ring from 1, one step at a time; letting go keeps the value. A quick tap adds one.
     vi.useFakeTimers();
     try {
-      const dinks = screen.getByRole("slider", { name: /^Dinking:/ });
+      const dinks = screen.getByRole("slider", { name: /^Dinking rating/ });
       fireEvent.pointerDown(dinks, { pointerId: 1 });
       act(() => { vi.advanceTimersByTime(1300); });
       fireEvent.pointerUp(dinks, { pointerId: 1 });
-      expect(dinks.getAttribute("aria-valuenow")).toBe("3");
+      expect(dinks.getAttribute("aria-valuenow")).toBe("4");
       fireEvent.pointerDown(dinks, { pointerId: 1 });
       fireEvent.pointerUp(dinks, { pointerId: 1 });
-      expect(dinks.getAttribute("aria-valuenow")).toBe("4");
+      expect(dinks.getAttribute("aria-valuenow")).toBe("5");
     } finally {
       vi.useRealTimers();
     }
@@ -80,7 +82,7 @@ describe("SelfAssessmentPanel", () => {
   it("asks singles players about placement, not a partner", async () => {
     const { sb } = fakeSupabase();
     render(<SelfAssessmentPanel sb={sb} session={{ ...session, play_format: "singles" }} />);
-    await screen.findByRole("slider", { name: /^Serve:/ });
+    await screen.findByRole("slider", { name: /^Serve rating/ });
     for (let i = 0; i < 2; i++) fireEvent.click(screen.getByRole("button", { name: "Next" }));
     expect(screen.getByText("Shot choice & placement")).toBeTruthy();
     expect(screen.queryByText(/partner/i)).toBeNull();
@@ -89,10 +91,10 @@ describe("SelfAssessmentPanel", () => {
   it("rates skills without a video and shows a practice plan", async () => {
     const { sb, upserts } = fakeSupabase();
     render(<SelfAssessmentPanel sb={sb} session={session} />);
-    await screen.findByRole("slider", { name: /^Serve:/ });
-    setSlider(/^Serve:/, 7);           // 7 of 10 → 4/5
-    setSlider(/^Dinking:/, 3);         // 3 of 10 → 2/5
-    setSlider(/^Volleys & hands:/, 5); // 5 of 10 → 3/5
+    await screen.findByRole("slider", { name: /^Serve rating/ });
+    setSlider(/^Serve rating/, 3);           // 1 + 3 steps → 4/5
+    setSlider(/^Dinking rating/, 1);         // 2/5
+    setSlider(/^Volleys & hands rating/, 2); // 3/5
     for (let i = 0; i < 3; i++) fireEvent.click(screen.getByRole("button", { name: "Next" }));
     fireEvent.click(screen.getByRole("button", { name: "Many" }));
     fireEvent.click(screen.getByRole("button", { name: "See my practice plan" }));
@@ -100,16 +102,17 @@ describe("SelfAssessmentPanel", () => {
     expect(await screen.findByText("This week's drill")).toBeTruthy();
     expect(screen.getByText("Build your dinking")).toBeTruthy();
     expect(screen.getAllByText(/Cross-court dink count/).length).toBeGreaterThan(0);
+    // Old shot counts out of 10 are cleared when a rating is saved.
     expect(upserts[0]).toMatchObject({ session_id: "s1", ratings: { serve: 4, dinking: 2, volleys: 3 },
-      shot_results: { serve: 7, dinking: 3, volleys: 5 }, unforced_errors: "many" });
-    expect(screen.getByText("You got 3 of 10 dinks in.")).toBeTruthy();
+      shot_results: {}, unforced_errors: "many" });
+    expect(screen.getByText('You rated your dinking 2/5: "Often too high".')).toBeTruthy();
   });
 
   it("asks for at least three ratings before saving", async () => {
     const { sb, upserts } = fakeSupabase();
     render(<SelfAssessmentPanel sb={sb} session={session} />);
-    await screen.findByRole("slider", { name: /^Serve:/ });
-    setSlider(/^Serve:/, 7);
+    await screen.findByRole("slider", { name: /^Serve rating/ });
+    setSlider(/^Serve rating/, 7);
     for (let i = 0; i < 3; i++) fireEvent.click(screen.getByRole("button", { name: "Next" }));
     // Not enough coverage: the button is disabled and the reason is explained.
     expect((screen.getByRole("button", { name: "See my practice plan" }) as HTMLButtonElement).disabled).toBe(true);
@@ -121,7 +124,7 @@ describe("SelfAssessmentPanel", () => {
 it("derives result counts from score while preserving individual manual overrides", async () => {
   const { sb } = fakeSupabase();
   render(<SelfAssessmentPanel sb={sb} session={session} />);
-  await screen.findByRole("slider", { name: /^Serve:/ });
+  await screen.findByRole("slider", { name: /^Serve rating/ });
   expect(screen.queryByLabelText("Score (optional)")).toBeNull(); // the result is asked in Wrap-up only
   fireEvent.click(screen.getByRole("button", { name: "Wrap-up" }));
   fireEvent.change(screen.getByLabelText("Score (optional)"), { target: { value: "11-7, 9-11, 11-5" } });
@@ -141,7 +144,7 @@ it("derives result counts from score while preserving individual manual override
 it("lets a player clear accidental optional counts and keep zero wins", async () => {
   const { sb } = fakeSupabase();
   render(<SelfAssessmentPanel sb={sb} session={session} />);
-  await screen.findByRole("slider", { name: /^Serve:/ });
+  await screen.findByRole("slider", { name: /^Serve rating/ });
   fireEvent.click(screen.getByRole("button", { name: "Wrap-up" }));
   fireEvent.click(screen.getByRole("button", { name: "More games played" }));
   fireEvent.click(screen.getByRole("button", { name: "More games won" }));

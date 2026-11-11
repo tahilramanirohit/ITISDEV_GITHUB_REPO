@@ -55,7 +55,7 @@ export function FindSection({ sb, userId, data, injured, act, busyId, reload }: 
           <p className="text-sm" style={{ color: WHITE_DIM }}>
             {visible ? `Others see: ${[profile.display_name, levelText(myLevel), listing?.game_rating != null ? `game ${listing.game_rating.toFixed(1)}` : null,
               listing?.looking_for.length ? `looking for ${listing.looking_for.map((l) => SHORT_PURPOSE[l].toLowerCase()).join(", ")}` : null]
-              .filter(Boolean).join(" · ")}` : injured ? "Hidden while you recover. \"I'm back to playing\" on Home lists you again."
+              .filter(Boolean).join(" · ")}` : injured ? "Hidden while recovery mode is on. Turning it off on Home lists you again."
               : "You can still ask others. Turn this on so others can ask you."}
           </p>
         </div>

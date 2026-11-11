@@ -16,7 +16,7 @@ export async function startInjury(sb: SupabaseClient, area: InjuryArea | null, n
   if (error) throw new Error(error.message);
 }
 
-/** "I'm back": closes the open injury and lists the player on Buddy again if they were listed. */
+/** "End recovery mode": closes the open injury period and lists the player on Buddy again if they were listed. */
 export async function endInjury(sb: SupabaseClient): Promise<void> {
   const { error } = await sb.rpc("end_injury");
   if (error) throw new Error(error.message);
@@ -26,7 +26,7 @@ export async function endInjury(sb: SupabaseClient): Promise<void> {
 export function injuryErrorText(e: unknown): string {
   const message = e instanceof Error ? e.message : String((e as { message?: string })?.message ?? e);
   if (/injury_periods|start_injury|end_injury/.test(message) && /does not exist|schema cache|could not find|PGRST20[02]|42P01|42883/i.test(message)) {
-    return "The injury option needs a database update. Run supabase/scripts/pickleproapp_upgrade_11.sql in the Supabase SQL Editor, then reload.";
+    return "Recovery mode needs a database update. Run supabase/scripts/pickleproapp_upgrade_11.sql in the Supabase SQL Editor, then reload.";
   }
   return message;
 }

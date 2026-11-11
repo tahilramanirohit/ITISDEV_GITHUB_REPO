@@ -217,13 +217,13 @@ describe("getting to know the player", () => {
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
     fireEvent.click(await screen.findByRole("button", { name: /Court positioning/ }));
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-    // Shots: successes out of 10 on the hold-to-rate pickleball (keyboard here). 3 of 10 dinks → 2/5.
-    await screen.findByRole("slider", { name: /^Dinking: Out of 10 dinks, how many usually stay low and in/ });
-    for (const k of ["Home", ...Array(3).fill("ArrowRight")]) fireEvent.keyDown(screen.getByRole("slider", { name: /^Dinking:/ }), { key: k });
+    // Every skill, shots included, is rated out of 5 on the hold-to-rate pickleball (keyboard here).
+    await screen.findByRole("slider", { name: /^Dinking rating, 1 lowest to 5 highest/ });
+    for (const k of ["Home", "ArrowRight"]) fireEvent.keyDown(screen.getByRole("slider", { name: /^Dinking rating/ }), { key: k });  // 2/5
     // A baseline needs at least 3 skills.
     fireEvent.click(screen.getByRole("button", { name: "Save · next: quick court tests" }));
     expect(await screen.findByText(/Rate at least 3 skills/)).toBeTruthy();
-    for (const k of ["Home", ...Array(5).fill("ArrowRight")]) fireEvent.keyDown(screen.getByRole("slider", { name: /^Serve:/ }), { key: k });  // 5 of 10 → 3/5
+    for (const k of ["Home", ...Array(2).fill("ArrowRight")]) fireEvent.keyDown(screen.getByRole("slider", { name: /^Serve rating/ }), { key: k });  // 3/5
     for (const k of ["Home", ...Array(3).fill("ArrowRight")]) fireEvent.keyDown(screen.getByRole("slider", { name: /^Consistency rating/ }), { key: k });  // 1 + 3 steps → 4/5
     expect(screen.getByText(/Dinking 2 → 3/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Save · next: quick court tests" }));

@@ -74,7 +74,7 @@ describe("CapturePanel", () => {
     fireEvent.keyDown(screen.getByRole("slider", { name: /^Soreness/ }), { key: "Home" });
     fireEvent.click(within(screen.getByRole("group", { name: "Cooled down" })).getByRole("button", { name: "No" }));
     fireEvent.click(screen.getByRole("button", { name: /save.*continue/i }));
-    await waitFor(() => expect(saveRecovery).toHaveBeenCalledWith(sb, "participant-1", { exertion: 10, soreness: 1, cooldown_done: false }));
+    await waitFor(() => expect(saveRecovery).toHaveBeenCalledWith(sb, "participant-1", { exertion: 5, soreness: 1, cooldown_done: false }));
   });
 
   it("starts at the first step when the player opens another session", async () => {
@@ -90,7 +90,7 @@ describe("CapturePanel", () => {
     expect(await screen.findByRole("heading", { name: /pre-game/i })).toBeTruthy();
   });
 
-  it("marks an injury in the post-game step, and unticking it ends recovery mode", async () => {
+  it("turns recovery mode on in the post-game step, and turning it off ends it", async () => {
     vi.mocked(loadCapture).mockResolvedValue({ participantId: "participant-1", checkin: null, recovery: null, reflection: null });
     vi.mocked(saveRecovery).mockResolvedValue();
     vi.mocked(startInjury).mockResolvedValue();
@@ -99,7 +99,8 @@ describe("CapturePanel", () => {
     const session = { id: "session-1", actual_start_at: null } as SessionRow;
     const changed = vi.fn();
     const view = render(<CapturePanel sb={sb} session={session} onSessionUpdated={vi.fn()} step={1} injury={null} onInjuryChanged={changed} />);
-    fireEvent.click(await screen.findByRole("checkbox", { name: /i'm injured right now/i }));
+    fireEvent.click(await screen.findByRole("switch", { name: "Recovery mode" }));
+    expect(screen.getByText("Turns on when you save")).toBeTruthy();
     expect(screen.getByText(/not medical advice/i)).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Where (optional)"), { target: { value: "knee" } });
     fireEvent.change(screen.getByLabelText("Private note (optional)"), { target: { value: " Twisted it " } });
@@ -111,20 +112,20 @@ describe("CapturePanel", () => {
     // Saving moved on to the reflection step; open the post-game step again, now injured.
     view.unmount();
     render(<CapturePanel sb={sb} session={session} onSessionUpdated={vi.fn()} step={1} injury={open} onInjuryChanged={changed} />);
-    const box = await screen.findByRole("checkbox", { name: /i'm injured right now/i });
-    await waitFor(() => expect(box).toHaveProperty("checked", true));
-    fireEvent.click(box);
-    expect(screen.getByText(/ends recovery mode/i)).toBeTruthy();
+    const toggle = await screen.findByRole("switch", { name: "Recovery mode" });
+    await waitFor(() => expect(toggle.getAttribute("aria-checked")).toBe("true"));
+    fireEvent.click(toggle);
+    expect(screen.getByText("Turns off when you save")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /save.*continue/i }));
     await waitFor(() => expect(endInjury).toHaveBeenCalledWith(sb));
     expect(startInjury).toHaveBeenCalledTimes(1);
   });
 
-  it("does not offer the injury option while the injury status is unknown", async () => {
+  it("does not offer recovery mode while its status is unknown", async () => {
     vi.mocked(loadCapture).mockResolvedValue({ participantId: "participant-1", checkin: null, recovery: null, reflection: null });
     render(<CapturePanel sb={{ from: vi.fn() } as unknown as SupabaseClient} session={{ id: "s", actual_start_at: null } as SessionRow}
       onSessionUpdated={vi.fn()} step={1} />);
     await screen.findByRole("heading", { name: /post-game/i });
-    expect(screen.queryByRole("checkbox", { name: /injured/i })).toBeNull();
+    expect(screen.queryByRole("switch", { name: "Recovery mode" })).toBeNull();
   });
 });

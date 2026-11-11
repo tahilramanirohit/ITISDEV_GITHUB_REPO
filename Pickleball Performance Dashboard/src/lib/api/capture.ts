@@ -20,6 +20,15 @@ export type Recovery = {
   soreness: number | null;
   cooldown_done: boolean | null;
 };
+/**
+ * Effort is rated 1-5. Before update 17 it was 1-10; until that update runs, an older value
+ * above 5 is read on the new scale (9-10 -> 5, 7-8 -> 4, 6 -> 3).
+ */
+export function effortOutOf5(value: number | null | undefined): number | null {
+  if (value == null) return null;
+  return value > 5 ? Math.ceil(value / 2) : value;
+}
+
 export type Reflection = {
   participant_id: string;
   captured_at: string;
@@ -49,7 +58,7 @@ export async function loadCapture(sb: SupabaseClient, sessionId: string): Promis
   return {
     participantId: participant.id,
     checkin: value<Checkin | null>(checkin),
-    recovery: value<Recovery | null>(recovery),
+    recovery: (() => { const r = value<Recovery | null>(recovery); return r ? { ...r, exertion: effortOutOf5(r.exertion) } : null; })(),
     reflection: value<Reflection | null>(reflection),
   };
 }
@@ -90,7 +99,7 @@ export async function listJournalSummaries(sb: SupabaseClient): Promise<Map<stri
     const e = entry(r.participant_id);
     if (!e) continue;
     e.soreness = r.soreness;
-    e.exertion = r.exertion;
+    e.exertion = effortOutOf5(r.exertion);
   }
   return out;
 }

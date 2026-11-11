@@ -27,8 +27,6 @@ export type SkillInfo = {
   keywords: string[];
   /** What the term means, in one or two plain sentences (shown behind the "?" button). */
   meaning: string;
-  /** Shots only: rated as successes out of 10 ("how many went in?") instead of 1-5. */
-  success?: { question: string; usual: string; unit: string };
 };
 
 export const SKILL_INFO: Record<SelfSkill, SkillInfo> = {
@@ -40,7 +38,6 @@ export const SKILL_INFO: Record<SelfSkill, SkillInfo> = {
     drill: { name: "Target serves", how: "Put a towel 1 m inside the far baseline. Serve 20 balls, counting how many land past the service-box midpoint. Repeat from both sides." },
     keywords: ["serve", "serving", "fault"],
     meaning: "The shot that starts every point. It is hit underhand, diagonally into the opponent's service box, and must land beyond the kitchen.",
-    success: { question: "Out of 10 serves, how many went in?", usual: "Out of 10 serves, how many usually go in?", unit: "serves" },
   },
   return: {
     label: "Return of serve", group: "Shots", question: "Were your returns deep, and did you get forward after them?",
@@ -50,7 +47,6 @@ export const SKILL_INFO: Record<SelfSkill, SkillInfo> = {
     drill: { name: "Return-and-close", how: "Your partner serves deep. Hit a high, deep return and keep moving until you are set at the kitchen line before their next shot bounces. Twenty returns." },
     keywords: ["return"],
     meaning: "The first shot back after the serve. It must bounce first, so a deep return keeps the serving team back while you move up.",
-    success: { question: "Out of 10 returns, how many went in deep?", usual: "Out of 10 returns, how many usually go in deep?", unit: "returns" },
   },
   third_shot: {
     label: "Third-shot drop", group: "Shots", question: "Could you drop the third shot softly into the kitchen?",
@@ -60,7 +56,6 @@ export const SKILL_INFO: Record<SelfSkill, SkillInfo> = {
     drill: { name: "Drop ladder", how: "Feed from the kitchen line while you start at the baseline. Drop five balls into the kitchen, step forward two steps, and repeat until you reach the line. Three rounds." },
     keywords: ["drop", "third", "3rd"],
     meaning: "The serving team's first shot after the return. A drop is a soft, arcing shot that lands in the opponent's kitchen so you can move up to the net.",
-    success: { question: "Out of 10 third-shot drops, how many landed soft in the kitchen?", usual: "Out of 10 third-shot drops, how many usually land soft in the kitchen?", unit: "drops" },
   },
   dinking: {
     label: "Dinking", group: "Shots", question: "How patient and controlled were your dinks?",
@@ -70,7 +65,6 @@ export const SKILL_INFO: Record<SelfSkill, SkillInfo> = {
     drill: { name: "Cross-court dink count", how: "Dink cross-court with a partner and count rallies without a ball going above net-plus-30 cm. Aim to beat your best count over three rounds of two minutes." },
     keywords: ["dink", "dinks", "dinking", "soft game", "pop", "popped"],
     meaning: "Soft, low shots from the kitchen line that land in the opponent's kitchen. Patient dinking waits for a ball you can attack.",
-    success: { question: "Out of 10 dinks, how many stayed low and in?", usual: "Out of 10 dinks, how many usually stay low and in?", unit: "dinks" },
   },
   volleys: {
     label: "Volleys & hands", group: "Shots", question: "How well did you handle fast balls at the net?",
@@ -80,7 +74,6 @@ export const SKILL_INFO: Record<SelfSkill, SkillInfo> = {
     drill: { name: "Volley rally", how: "Both players stand at the kitchen line and volley without letting the ball bounce, starting slow. Keep the paddle up between shots. Three rounds of one minute." },
     keywords: ["volley", "hands", "speed-up", "speed up", "block", "reaction"],
     meaning: "Hitting the ball in the air before it bounces, usually near the net. \"Hands\" means quick paddle reactions to fast balls.",
-    success: { question: "Out of 10 volleys, how many did you keep in play?", usual: "Out of 10 volleys, how many do you usually keep in play?", unit: "volleys" },
   },
   kitchen_line: {
     label: "Moving up to the net", group: "Court", question: "Did you move up close to the net during rallies?",
@@ -171,26 +164,8 @@ const VARIANTS: Partial<Record<SelfSkill, Partial<Record<FormatGroup, SkillVaria
   },
 };
 
-/** Shots rated as successes out of 10 ("how many went in?"). */
-export const SUCCESS_OUT_OF = 10;
-
-/** Successes out of 10 to the 1-5 scale the plan uses: 0-2 → 1, 3-4 → 2, 5-6 → 3, 7-8 → 4, 9-10 → 5. */
-export function successToRating(successes: number): SkillRating {
-  const n = Math.max(0, Math.min(SUCCESS_OUT_OF, Math.round(successes)));
-  return Math.min(5, Math.max(1, Math.floor((n + 1) / 2))) as SkillRating;
-}
-
-/** Shot results saved with a rating: successes out of 10 per shot. Keeps only valid values. */
-export type ShotResults = Partial<Record<SelfSkill, number>>;
-export function parseShotResults(raw: unknown): ShotResults {
-  const out: ShotResults = {};
-  if (!raw || typeof raw !== "object") return out;
-  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
-    if ((SELF_SKILLS as readonly string[]).includes(k) && SKILL_INFO[k as SelfSkill].success
-        && typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= SUCCESS_OUT_OF) out[k as SelfSkill] = v;
-  }
-  return out;
-}
+/** Every rating in the app is out of 5. */
+export const RATING_MAX = 5;
 
 /** A skill's wording for a session format; falls back to the general wording. */
 export function skillInfo(skill: SelfSkill, playFormat?: string | null): SkillInfo {
@@ -210,19 +185,17 @@ export type SelfAssessmentInput = {
   playFormat?: string | null;
   /** Post-game recovery for this session; high soreness or effort makes the plan lighter. */
   recovery?: RecoveryLevels | null;
-  /** The player marked an injury ("I'm injured"): the plan becomes a rest plan until they are back. */
+  /** Recovery mode is on (an injury or a needed break): the plan becomes a recovery plan until it ends. */
   injured?: boolean;
-  /** Shots counted as successes out of 10; the plan quotes them ("6 of 10 serves in"). */
-  shotResults?: ShotResults;
   /** Skills a partner rated at least 1 lower than the player (peer feedback): they become the first focus. */
   peerLower?: { skill: SelfSkill; by: string; peer: number }[];
 };
 
 export type RecoveryLevels = { soreness: number | null; exertion: number | null };
 
-/** High soreness (4+ of 5) or effort (8+ of 10) after play: the next plan should be lighter. */
+/** High soreness or effort (4+ of 5) after play: the next plan should be lighter. */
 export function isHeavyRecovery(entry: RecoveryLevels | null | undefined): boolean {
-  return !!entry && ((entry.soreness ?? 0) >= 4 || (entry.exertion ?? 0) >= 8);
+  return !!entry && ((entry.soreness ?? 0) >= 4 || (entry.exertion ?? 0) >= 4);
 }
 
 export type SelfFocusItem = {
@@ -318,9 +291,7 @@ export function buildSelfReport(input: SelfAssessmentInput): SelfReport {
       label: i.label,
       title: r <= 2 ? `Build your ${i.label.toLowerCase()}` : `Level up your ${i.label.toLowerCase()}`,
       rating: r,
-      observation: input.shotResults?.[skill] != null && i.success
-        ? `You got ${input.shotResults[skill]} of ${SUCCESS_OUT_OF} ${i.success.unit} in.`
-        : `You rated your ${i.label.toLowerCase()} ${r}/5: "${i.anchors[r - 1]}".`,
+      observation: `You rated your ${i.label.toLowerCase()} ${r}/5: "${i.anchors[r - 1]}".`,
       why: i.why,
       drill: i.drill,
       target: `Next session: aim for ${r + 1}/5, "${(i.anchors as readonly string[])[r]}".`,
@@ -344,7 +315,7 @@ export function buildSelfReport(input: SelfAssessmentInput): SelfReport {
   const plan = input.injured && focus.length ? RECOVERY_PLAN.map((step) => ({ ...step })) : buildPlan(focus, light);
   const record = input.gamesPlayed ? ` You won ${input.gamesWon ?? 0} of ${input.gamesPlayed} games.` : "";
   const coverage = ` Based on ${rated.length} of ${SELF_SKILLS.length} skills; skipped skills were treated as not played, not as low scores.`;
-  const lighter = input.injured ? " You marked an injury, so this is a rest plan for now. These skills wait until you're back."
+  const lighter = input.injured ? " Recovery mode is on, so this is a recovery plan for now. These skills wait until you end it."
     : light ? " You logged high soreness or effort after this session, so this plan is lighter: shorter drills at an easy pace." : "";
   const introduction = focus.length
     ? `${focus.length} thing${focus.length === 1 ? "" : "s"} to practice before your next session, picked from your ratings and goals.${record}${lighter}${coverage}`

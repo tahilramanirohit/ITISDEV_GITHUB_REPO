@@ -8,7 +8,7 @@ import { listSessions, updateMatchResult } from "../../lib/api/sessions";
 import { sessionKind, type MatchResult, type SessionRow } from "../../lib/api/types";
 import {
   buildSelfReport, compareSelfRatings, MIN_RATED_SKILLS, ratedSkills, SELF_SKILLS, SKILL_GROUPS, SKILL_INFO,
-  type ErrorLevel, type RecoveryLevels, type SelfRatings, type SelfSkill, type ShotResults, type SkillRating,
+  type ErrorLevel, type RecoveryLevels, type SelfRatings, type SelfSkill, type SkillRating,
 } from "../../lib/coaching/selfAssessment";
 import { ACCENT_SOFT, ACCENT_INK, CHECK, BORDER, GREEN, INK, PICKLE, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Chip, Notice, PrimaryButton, cardStyle, numStyle, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
@@ -22,8 +22,6 @@ export { SkillRater };
 
 type Draft = {
   ratings: SelfRatings;
-  /** Shots as successes out of 10. */
-  shot_results: ShotResults;
   games_played: number | null;
   games_won: number | null;
   unforced_errors: ErrorLevel | null;
@@ -32,7 +30,7 @@ type Draft = {
   match_score: string;
 };
 
-const emptyDraft: Draft = { ratings: {}, shot_results: {}, games_played: null, games_won: null, unforced_errors: null, biggest_struggle: "", match_result: null, match_score: "" };
+const emptyDraft: Draft = { ratings: {}, games_played: null, games_won: null, unforced_errors: null, biggest_struggle: "", match_result: null, match_score: "" };
 const STEPS = [...SKILL_GROUPS, "Wrap-up"] as const;
 
 function Stepper({ label, value, onChange, max, auto = false, min = 1 }: { label: string; value: number | null; onChange: (v: number | null) => void; max: number; auto?: boolean; min?: number }) {
@@ -57,7 +55,7 @@ function AutoTag() {
 /**
  * The In-game step: rate the session's skills and record the result.
  * `recovery` (from the post-game step) makes the plan lighter after a hard session;
- * `injured` ("I'm injured") turns it into a rest plan.
+ * `injured` (recovery mode is on) turns it into a recovery plan.
  */
 export function SelfAssessmentPanel({ sb, session, recovery, onSaved, peerRatings = [], injured = false }: {
   sb: SupabaseClient; session: SessionRow; recovery?: RecoveryLevels | null; onSaved?: () => void; injured?: boolean;
@@ -100,7 +98,7 @@ export function SelfAssessmentPanel({ sb, session, recovery, onSaved, peerRating
       setSaved(row);
       setEditing(!row);
       if (row) setManual({ match_result: session.match_result != null, games_played: row.games_played != null, games_won: row.games_won != null });
-      if (row) setDraft((d) => ({ ...d, ratings: row.ratings, shot_results: row.shot_results, games_played: row.games_played, games_won: row.games_won,
+      if (row) setDraft((d) => ({ ...d, ratings: row.ratings, games_played: row.games_played, games_won: row.games_won,
         unforced_errors: row.unforced_errors, biggest_struggle: row.biggest_struggle ?? "" }));
     }).catch((e) => { if (active) { setSaved(null); setEditing(true); setError(friendlyDbError(e instanceof Error ? e.message : String(e))); } });
     void loadPrevious();
@@ -110,7 +108,7 @@ export function SelfAssessmentPanel({ sb, session, recovery, onSaved, peerRating
   const report = useMemo(() => saved ? buildSelfReport({
     ratings: saved.ratings, goals: session.improvement_goals ?? [], biggestStruggle: saved.biggest_struggle,
     unforcedErrors: saved.unforced_errors, gamesPlayed: saved.games_played, gamesWon: saved.games_won, playFormat: session.play_format,
-    recovery, injured, peerLower: peerLowerSkills(saved.ratings, peerRatings), shotResults: saved.shot_results,
+    recovery, injured, peerLower: peerLowerSkills(saved.ratings, peerRatings),
   }) : null, [saved, session.improvement_goals, session.play_format, recovery, injured, peerRatings]);
 
   const progress = useMemo(() => saved && previous ? compareSelfRatings(saved.ratings, previous.ratings, session.play_format) : null,
@@ -118,8 +116,6 @@ export function SelfAssessmentPanel({ sb, session, recovery, onSaved, peerRating
 
   const rate = (skill: SelfSkill, v: SkillRating | undefined) =>
     setDraft((d) => { const ratings = { ...d.ratings }; if (v) ratings[skill] = v; else delete ratings[skill]; return { ...d, ratings }; });
-  const count = (skill: SelfSkill, n: number | undefined) =>
-    setDraft((d) => { const shot_results = { ...d.shot_results }; if (n === undefined) delete shot_results[skill]; else shot_results[skill] = n; return { ...d, shot_results }; });
   const ratedCount = ratedSkills(draft.ratings).length;
   const solo = sessionKind(session) === "solo";
 
@@ -129,7 +125,7 @@ export function SelfAssessmentPanel({ sb, session, recovery, onSaved, peerRating
     setError("");
     try {
       const row = await saveSelfAssessment(sb, session.id, {
-        ratings: draft.ratings, shot_results: draft.shot_results, games_played: effective.games_played,
+        ratings: draft.ratings, games_played: effective.games_played,
         games_won: effective.games_played == null ? null : Math.min(effective.games_won ?? 0, effective.games_played),
         unforced_errors: draft.unforced_errors, biggest_struggle: draft.biggest_struggle.trim() || null,
       });
@@ -193,8 +189,7 @@ export function SelfAssessmentPanel({ sb, session, recovery, onSaved, peerRating
       </div>
 
       {last && resultFields}
-      {group !== "Wrap-up" ? <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">{skills.map((skill) => <SkillRater key={skill} skill={skill} playFormat={session.play_format} value={draft.ratings[skill]} onChange={(v) => rate(skill, v)}
-        successes={draft.shot_results[skill]} onSuccesses={(n) => count(skill, n)} />)}</div> : <div className="space-y-4 lg:max-w-xl">
+      {group !== "Wrap-up" ? <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">{skills.map((skill) => <SkillRater key={skill} skill={skill} playFormat={session.play_format} value={draft.ratings[skill]} onChange={(v) => rate(skill, v)} />)}</div> : <div className="space-y-4 lg:max-w-xl">
         <div>
           <p className={labelClass} style={labelStyle}>Unforced errors</p>
           <div className="flex gap-2">

@@ -222,7 +222,7 @@ export default function ProgressPage({ sb, userId }: { sb: SupabaseClient; userI
           {(goals.length > 0 || measured.length > 0) && <section aria-label="Your goals" className="rounded-[20px] p-4" style={{ ...cardStyle, borderTop: `4px solid ${CHECK}` }}>
             <div className="flex items-baseline justify-between gap-2">
               <h2 className="text-[17px] font-extrabold">Your goals</h2>
-              <span className="text-xs" style={{ color: INK_3 }}>{weeksLabel(goalLength)}{injury.open ? " · paused while you recover"
+              <span className="text-xs" style={{ color: INK_3 }}>{weeksLabel(goalLength)}{injury.open ? " · paused for recovery mode"
                 : goals[0]?.due ? ` · due ${shortDate(goals[0].due)}` : ""} · <a href="#/settings" className="font-bold underline" style={{ color: ACCENT_INK }}>Change</a></span>
             </div>
             <ul className="mt-3 space-y-3.5">
