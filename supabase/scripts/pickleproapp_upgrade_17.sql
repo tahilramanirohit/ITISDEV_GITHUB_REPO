@@ -18,3 +18,10 @@ begin
     alter table public.recovery_logs add constraint recovery_logs_exertion_check check (exertion between 1 and 5);
   end if;
 end $$;
+
+-- Check: shows "OK" and the new rule once the update is in place.
+select case when pg_get_constraintdef(c.oid) not like '%10%' then 'OK' else 'NOT UPDATED' end as "Update 17",
+       pg_get_constraintdef(c.oid) as "Effort rule",
+       (select max(exertion) from public.recovery_logs) as "Highest saved effort"
+from pg_constraint c
+where c.conrelid = 'public.recovery_logs'::regclass and c.conname = 'recovery_logs_exertion_check';
