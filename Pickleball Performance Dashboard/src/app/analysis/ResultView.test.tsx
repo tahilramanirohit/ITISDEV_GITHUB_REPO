@@ -256,9 +256,10 @@ describe("ResultView", () => {
     expect((within(sheet).getByRole("button", { name: "Done" }) as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it("shows where each player stood, with the estimated share visible", () => {
+  it("without a court map, shows where each player stood, with the estimated share visible", () => {
     const measured = structuredClone(testFixture) as Record<string, any>;
     measured.data_origin = "measured";
+    measured.metrics.court_heatmap = { ...measured.metrics.court_heatmap, status: "not_computed", value: null };
     measured.players = [{ player_id: 1, label: "Near side, left", on_court: true, side: "near", first_seen_s: 0,
       last_seen_s: 10, observed_frames: 90 }];
     measured.metrics.zone_time = {
@@ -277,5 +278,20 @@ describe("ResultView", () => {
     expect(screen.getByText("Kitchen 10% · Transition 70% · Baseline 15% · Outside 5%")).toBeTruthy();
     expect(screen.getByText("29%")).toBeTruthy(); // estimated position share
     expect(screen.getByRole("img", { name: /Transition 70%/ })).toBeTruthy();
+  });
+
+  it("always shows the court map on the Position tab, even before positions are checked on real footage", () => {
+    const measured = structuredClone(testFixture) as Record<string, any>;
+    measured.data_origin = "measured";
+    measured.metrics.court_heatmap.validation = "not_evaluated";
+    render(<ResultView result={parseAnalysisResult(measured)} videoUrl={null} />);
+    expect(screen.getByRole("tab", { name: "Position" })).toBeTruthy();
+    expect(screen.getByText("Where you moved")).toBeTruthy();
+    expect(screen.getByRole("img", { name: /half of the court from above/ })).toBeTruthy();
+    const zones = screen.getByRole("group", { name: "Zones" });
+    const noMansLand = within(zones).getByRole("button", { name: /No-man's land/ });
+    fireEvent.click(noMansLand);
+    expect(noMansLand.getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByText(/hardest spot to defend/)).toBeTruthy();
   });
 });

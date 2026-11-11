@@ -109,3 +109,33 @@ export function shotTip(shots: ShotEvent[]): ShotTip | null {
   }
   return null;
 }
+
+/** Names the session page knows: the uploader, their partner and the opponents. */
+export type SessionNames = { me?: string | null; partner?: string | null; opponents?: string[] };
+
+/**
+ * Labels for the players in the video, by player id. A real name is used only where it is
+ * certain: the chosen player, the one other player on their side (partner), and a lone
+ * opponent. Everyone else on court gets a neutral label ("Partner", "Opponent 1"), since
+ * two opponents, or strangers in a pickup game, cannot be told apart from the video.
+ * The chosen player without a name is left out, so the video says "You".
+ */
+export function playerNamesFor(result: AnalysisResultV1, myPlayerId: number | null | undefined, names: SessionNames): Record<number, string> {
+  const out: Record<number, string> = {};
+  if (myPlayerId == null) return out;
+  const first = (name?: string | null) => name?.trim().split(/\s+/)[0] ?? "";
+  if (first(names.me)) out[myPlayerId] = first(names.me);
+  const players = courtPlayers(result);
+  const side = players.find((p) => p.player_id === myPlayerId)?.side;
+  if (!side) return out;
+  const others = players.filter((p) => p.player_id !== myPlayerId && p.side);
+  const mates = others.filter((p) => p.side === side);
+  const across = others.filter((p) => p.side !== side).sort((a, b) => a.player_id - b.player_id);
+  const partner = first(names.partner);
+  mates.forEach((p, i) => { out[p.player_id] = mates.length === 1 && partner ? partner : mates.length === 1 ? "Partner" : `Partner ${i + 1}`; });
+  const opponents = (names.opponents ?? []).map(first).filter(Boolean);
+  across.forEach((p, i) => {
+    out[p.player_id] = across.length === 1 ? (opponents.length === 1 ? opponents[0] : "Opponent") : `Opponent ${i + 1}`;
+  });
+  return out;
+}

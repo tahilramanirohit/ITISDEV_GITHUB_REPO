@@ -38,7 +38,7 @@ import { PeerFeedback } from "../partners/PeerFeedback";
 import { listPeerRatings } from "../../lib/api/partners";
 import { listMyRequests } from "../../lib/api/buddy";
 import { useDataUse } from "../onboarding/DataUse";
-import { getProfile } from "../../lib/api/profile";
+import { getProfile, saveMainGoals } from "../../lib/api/profile";
 import { goalTargets } from "../../lib/coaching/goals";
 import type { PeerRating } from "../../lib/coaching/peerFeedback";
 import type { SelfRatings, SelfSkill } from "../../lib/coaching/selfAssessment";
@@ -129,6 +129,8 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
   const [peerRatings, setPeerRatings] = useState<PeerRating[]>([]);
   const [selfRatings, setSelfRatings] = useState<SelfRatings | null>(null);
   const [goalSkills, setGoalSkills] = useState<SelfSkill[]>([]);
+  const [myName, setMyName] = useState<string | null>(null);
+  const [mainGoals, setMainGoals] = useState<ImprovementGoal[] | null>(null);
   // "?t=15" (from a Home moment chip) opens the video at that second.
   const [videoSeek, setVideoSeek] = useState<JumpRequest>(() => {
     const t = Number(searchParams.get("t"));
@@ -141,10 +143,27 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
       getProfile(sb, userId).catch(() => null),
     ]).then(([peer, profile]) => {
       setPeerRatings(peer);
+      setMyName(profile?.display_name ?? null);
+      setMainGoals(profile ? profile.main_goals ?? [] : null);
       setGoalSkills(goalTargets(profile?.baseline_ratings, profile?.main_goals ?? []).map((g) => g.skill));
     });
   }, [sb, sessionId, userId]);
   useEffect(loadFeedback, [loadFeedback]);
+  // Names shown on the video in place of "You" and "Player 2".
+  const videoNames = useMemo(() => ({
+    me: myName,
+    partner: players.find((p) => p.role === "partner")?.display_name,
+    opponents: players.filter((p) => p.role === "opponent").map((p) => p.display_name),
+  }), [myName, players]);
+  // The court map's challenge can add "Court positioning" to the player's focus areas.
+  const positioningGoal = useMemo(() => mainGoals == null ? undefined : {
+    active: mainGoals.includes("positioning"),
+    onAdd: async () => {
+      const next: ImprovementGoal[] = [...mainGoals.filter((g) => g !== "positioning"), "positioning"];
+      await saveMainGoals(sb, userId, next);
+      setMainGoals(next);
+    },
+  }, [mainGoals, sb, userId]);
   // Played from a buddy session: who with, so the plan can offer "Ask them for feedback?".
   const buddyRequestId = bundle?.session?.buddy_request_id ?? null;
   const [playedWith, setPlayedWith] = useState<{ id: string; name: string } | null>(null);
@@ -827,7 +846,7 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
 
       {parsed?.ok && job?.status === "failed" && <Notice tone="warn">The reanalysis failed. The report below is from the last completed run.</Notice>}
       {parsed?.ok && (job?.status === "queued" || job?.status === "processing") && <Notice tone="info">A new analysis is in progress. The report below is the last published run.</Notice>}
-      {parsed?.ok && <ResultView result={parsed.result} videoUrl={videoUrl} previous={previous} session={session} seekTo={videoSeek}
+      {parsed?.ok && <ResultView result={parsed.result} videoUrl={videoUrl} previous={previous} session={session} seekTo={videoSeek} names={videoNames} positioningGoal={positioningGoal}
         playersOnCourt={courtCount}
         onChangePlayersOnCourt={job && finished && !video?.raw_video_deleted_at && !video?.raw_video_deleting_at && !config.trialNoWorker
           ? (n) => { setPlayersOnCourt(n); void run(() => requestReanalysis(sb, job.id, { ...job.params, players_on_court: n })); } : undefined}

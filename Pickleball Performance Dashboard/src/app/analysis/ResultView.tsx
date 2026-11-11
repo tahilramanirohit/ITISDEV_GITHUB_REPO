@@ -11,10 +11,12 @@ import { CoachingPanel, type PreviousSession } from "./CoachingPanel";
 import { PlayerPicker } from "./PlayerPicker";
 import { ShotsPanel } from "./ShotsPanel";
 import { ZoneTimePanel } from "./ZoneTimePanel";
+import { CourtMapPanel, type PositioningGoal } from "./CourtMapPanel";
+import { buildCourtMap } from "../../lib/analysis/courtMap";
 import { ErrorsPanel } from "./ErrorsPanel";
 import { PlayersOnCourtToggle, type PlayersOnCourt } from "./AnalysisStatus";
 import { VideoOverlayPlayer, type JumpRequest } from "./VideoOverlayPlayer";
-import { courtPlayers, focusShots } from "../../lib/analysis/shotLabels";
+import { courtPlayers, focusShots, playerNamesFor, type SessionNames } from "../../lib/analysis/shotLabels";
 
 function downloadResult(result: AnalysisResultV1) {
   const name = (result.provenance.source.filename ?? "video").replace(/\.[^.]+$/, "");
@@ -71,7 +73,11 @@ type ReportTab = "shots" | "errors" | "position" | "comments";
 export type VideoControls = { video: HTMLVideoElement | null; seek: (timeSeconds: number) => void };
 
 export function ResultView({ result, videoUrl, previous, session, onSelectTrack, onRateSession, experimentalReview = false, sharedBy,
-  notes, seekTo = null, playersOnCourt, onChangePlayersOnCourt, settings }: {
+  notes, seekTo = null, playersOnCourt, onChangePlayersOnCourt, settings, names, positioningGoal }: {
+  /** Whether "Court positioning" is one of the player's goals, and a way to add it, for the court map challenge. */
+  positioningGoal?: PositioningGoal;
+  /** Names of the people in this game, shown on the video instead of "You" and "Player 2". */
+  names?: SessionNames;
   /** Upload record, re-run and other video controls from the session page, shown under "Video settings". */
   settings?: ReactNode;
   /** The player count this report was analysed for, and a way to re-run it with the other count. */
@@ -110,6 +116,9 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
   const reportKey = session?.id ?? result.provenance.source.sha256 ?? result.provenance.generated_at;
   const [myPlayerId, setMyPlayerId] = useMyPlayer(`picklepro:me:${reportKey}`, analysedId);
   const hasPlayers = courtPlayers(result).length > 0;
+  // A shared report is seen by someone else, so the chosen player is the owner, not "You".
+  const playerNames = useMemo(() => playerNamesFor(result, myPlayerId, sharedBy ? { me: sharedBy } : names ?? {}),
+    [result, myPlayerId, sharedBy, names]);
   // Older saved reports included an experimental hit count in the summary.
   // Keep that count hidden until the shot detector has real-footage evaluation.
   const visibleMessage = shotsValidated ? result.message
@@ -142,6 +151,12 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
   const errorTotal = errorValue ? ERROR_KINDS.reduce((sum, k) => sum + (myErrors ?? errorValue.counts)[k], 0) : null;
   const zoneRows = result.metrics.zone_time.value?.players ?? [];
   const myZone = zoneRows.find((r) => r.player_id === myPlayerId) ?? null;
+  // The court map follows the player picked when the video was analysed. It is always shown;
+  // the level and challenge only when that player is the viewer.
+  const courtMap = useMemo(() => (measured ? buildCourtMap(result) : null), [measured, result]);
+  const previousMap = useMemo(() => (previous ? buildCourtMap(previous.result) : null), [previous]);
+  const mapIsMine = analysedId == null || myPlayerId == null || myPlayerId === analysedId;
+  const mapName = sharedBy ?? (mapIsMine ? undefined : playerNames[analysedId!] ?? `Player ${analysedId}`);
   const stats = measured ? [
     shotsShown ? { label: shotCount.mine ? "Your shots" : "Shots", value: String(shotCount.shots.length), warn: false } : null,
     errorTotal != null ? { label: myErrors ? "Your errors" : "Errors", value: String(errorTotal), warn: errorTotal > 0 } : null,
@@ -158,7 +173,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
   const tabCandidates: ([ReportTab, string] | null)[] = [
     measured && allowShotDisplay && shotsShown ? ["shots", "Shots"] : null,
     measured && errorValue ? ["errors", "Errors"] : null,
-    measured && zoneRows.length ? ["position", "Position"] : null,
+    measured && (zoneRows.length || courtMap) ? ["position", "Position"] : null,
     notes ? ["comments", "Comments"] : null,
   ];
   const tabs = tabCandidates.filter((x): x is [ReportTab, string] => !!x);
@@ -224,7 +239,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
             ballPositions={result.ball_positions ?? []}
             courtLines={result.court_lines ?? []} shots={allowShotDisplay ? shotDisplayResult.metrics.shot_classification.value?.shots ?? [] : []}
             bounces={allowShotDisplay ? shotMetric.value?.bounces ?? [] : []}
-            selectedTrackId={myPlayerId} jump={jump} onVideoElement={setVideoEl}
+            selectedTrackId={myPlayerId} playerNames={playerNames} jump={jump} onVideoElement={setVideoEl}
             onSelectTrack={selectingPlayer ? (id, time) => { setSelectingPlayer(false); setMyPlayerId(id); onSelectTrack?.(id, time); } : undefined} />
           {videoUrl && onSelectTrack && result.tracks.length > 0 && !hasPlayers && (
             <div className="flex flex-wrap items-center gap-2">
@@ -270,12 +285,16 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
         <div role="tabpanel" id={`report-panel-${activeTab}`} aria-labelledby={`report-tab-${activeTab}`} className="mt-3 outline-none">
           {activeTab === "shots" && <ShotsPanel result={shotDisplayResult} myPlayerId={myPlayerId} research={experimentalReview} teamsKey={`picklepro:teams:${reportKey}`} onWatch={watch} />}
           {activeTab === "errors" && <ErrorsPanel result={result} myPlayerId={myPlayerId} onWatch={watch} />}
-          {activeTab === "position" && <ZoneTimePanel result={result} myPlayerId={myPlayerId} />}
+          {activeTab === "position" && <div className="space-y-3">
+            {courtMap && <CourtMapPanel map={courtMap} name={mapName} previous={previousMap} playful={mapIsMine && !sharedBy}
+              goal={mapIsMine && !sharedBy ? positioningGoal : undefined} />}
+            <ZoneTimePanel result={result} myPlayerId={myPlayerId} othersOf={courtMap ? analysedId ?? myPlayerId : undefined} />
+          </div>}
           {activeTab === "comments" && notes?.({ video: videoEl, seek })}
         </div>
       </div>}
 
-      {measured && (shotsShown || errorValue || zoneRows.length > 0) && <p className="text-center text-xs" style={{ color: WHITE_SUB }}>
+      {measured && (shotsShown || errorValue || zoneRows.length > 0 || courtMap) && <p className="text-center text-xs" style={{ color: WHITE_SUB }}>
         Shots, errors and positions are estimates from the video and not yet checked against hand counts, so some will be wrong.
         Shots without a seen bounce (for example into the net) are not counted as errors.</p>}
 

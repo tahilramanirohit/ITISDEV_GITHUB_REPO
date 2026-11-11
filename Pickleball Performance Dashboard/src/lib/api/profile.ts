@@ -98,6 +98,12 @@ export async function saveDataConsent(sb: SupabaseClient, userId: string, prefer
   }, { onConflict: "id" });
   if (error) throw error;
 }
+/** The player's focus areas (set in onboarding), e.g. after accepting a court map challenge. */
+export async function saveMainGoals(sb: SupabaseClient, userId: string, goals: ImprovementGoal[]): Promise<void> {
+  const { error } = await sb.from("profiles").update({ main_goals: goals }).eq("id", userId);
+  if (error) throw error;
+}
+
 /** The goal length in weeks (update 13). */
 export async function saveGoalWeeks(sb: SupabaseClient, userId: string, weeks: number): Promise<void> {
   const { error } = await sb.from("profiles").update({ goal_weeks: weeks }).eq("id", userId);

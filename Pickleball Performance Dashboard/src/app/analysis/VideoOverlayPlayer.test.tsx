@@ -129,4 +129,65 @@ describe("VideoOverlayPlayer", () => {
     fireEvent.click(canvas, { clientX: 75, clientY: 70 });
     expect(onSelectTrack).toHaveBeenCalledWith(7, 6);
   });
+
+  it("uses names instead of You and Player when they are known", () => {
+    let drawFrame: FrameRequestCallback | undefined;
+    vi.stubGlobal("requestAnimationFrame", vi.fn((callback: FrameRequestCallback) => { drawFrame = callback; return 1; }));
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+    const ctx = fakeContext();
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(ctx as unknown as CanvasRenderingContext2D);
+    const { container, getByText } = render(<VideoOverlayPlayer src="/demo.mp4" selectedTrackId={7} playerNames={{ 7: "Kirk", 8: "Rafa" }}
+      positions={[{ time_seconds: 6, players: [
+        { track_id: 7, bbox: [100, 80, 200, 300], confidence: 0.9 },
+        { track_id: 8, bbox: [400, 20, 440, 100], confidence: 0.9 },
+        { track_id: 9, bbox: [600, 20, 640, 100], confidence: 0.9 },
+      ] }]}
+      shots={[{
+        time_seconds: 5.8, rally_index: 0, shot_number: 3, hitter_track_id: 7, hitter_side: "near", by_selected_player: true,
+        hitter_court_m: [3, 1], shot_type: "drop", contact: "after_bounce", ground_speed_mps: 4, landing_court_m: null,
+        landed_in: null, evidence: "soft shot",
+      }]} />);
+    const video = container.querySelector("video")!;
+    Object.defineProperties(video, {
+      clientWidth: { value: 480 }, clientHeight: { value: 270 },
+      videoWidth: { value: 960 }, videoHeight: { value: 540 }, currentTime: { value: 6 },
+    });
+    act(() => drawFrame?.(0));
+    const texts = ctx.fillText.mock.calls.map((call) => call[0]);
+    expect(texts).toEqual(expect.arrayContaining(["Kirk", "Rafa", "Player 9", "Kirk: Drop?"]));
+    expect(texts).not.toContain("You");
+    expect(getByText("Kirk")).toBeTruthy(); // legend
+  });
+
+  it("on a phone-width video draws corner brackets, small tags, and the shot in a bar below", () => {
+    let drawFrame: FrameRequestCallback | undefined;
+    vi.stubGlobal("requestAnimationFrame", vi.fn((callback: FrameRequestCallback) => { drawFrame = callback; return 1; }));
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+    const ctx = fakeContext();
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(ctx as unknown as CanvasRenderingContext2D);
+    const { container, getByLabelText } = render(<VideoOverlayPlayer src="/demo.mp4" selectedTrackId={7} playerNames={{ 7: "Kirk" }}
+      positions={[{ time_seconds: 6, players: [
+        { track_id: 7, bbox: [100, 80, 200, 300], confidence: 0.9 },
+        { track_id: 8, bbox: [400, 20, 440, 100], confidence: 0.9 },
+      ] }]}
+      shots={[{
+        time_seconds: 5.8, rally_index: 0, shot_number: 3, hitter_track_id: 7, hitter_side: "near", by_selected_player: true,
+        hitter_court_m: [3, 1], shot_type: "drop", contact: "after_bounce", ground_speed_mps: 4, landing_court_m: null,
+        landed_in: null, evidence: "soft shot",
+      }]} />);
+    const video = container.querySelector("video")!;
+    Object.defineProperties(video, {
+      clientWidth: { value: 320 }, clientHeight: { value: 180 },
+      videoWidth: { value: 960 }, videoHeight: { value: 540 }, currentTime: { value: 6 },
+    });
+    act(() => drawFrame?.(0));
+    expect(ctx.strokeRect).not.toHaveBeenCalled();
+    expect(ctx.font).toContain("9px");
+    // Only the named player is tagged on the video; the shot name is not drawn over it.
+    expect(ctx.fillText.mock.calls.map((call) => call[0])).toEqual(["Kirk"]);
+    const bar = getByLabelText("Latest shot");
+    expect(bar.textContent).toContain("0:05");
+    expect(bar.textContent).toContain("Drop?");
+    expect(bar.textContent).toContain("Kirk");
+  });
 });
