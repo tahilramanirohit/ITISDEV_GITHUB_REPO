@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
-import { ChevronDown, Dumbbell, Target, TrendingDown, TrendingUp, Minus } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Clock, Dumbbell, Target, TrendingDown, TrendingUp, Minus, Video } from "lucide-react";
 import { SKILL_INFO, type SelfProgressRow, type SelfReport } from "../../lib/coaching/selfAssessment";
 import { TermHelp } from "./TermHelp";
-import { ACCENT_INK, ACTION, ACTION_SOFT, BORDER, DISPLAY_FONT, GREEN, GREEN_BG, HERO, INK, ON_HERO, OPTIC, ORANGE, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
-import { Card, RingTile, SectionTitle, mascot2xUrl, mascotUrl } from "../shell/primitives";
+import { ACCENT_INK, ACTION, ACTION_SOFT, BORDER, CHECK, DISPLAY_FONT, GREEN, GREEN_BG, HERO, INK, ON_CHECK, ON_HERO, OPTIC, ORANGE, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
+import { Card, RingTile, SectionTitle, cardStyle, mascot2xUrl, mascotUrl, numStyle, pressable } from "../shell/primitives";
 import { selfCoachScript } from "../../lib/coaching/coachScript";
 import { CoachLauncher } from "../coach/CoachPlayer";
+import { readPlanTicks, writePlanTicks } from "./planTicks";
 
 /** Circular 1-5 score, drawn as an SVG ring. */
 export function ScoreRing({ value, size = 88 }: { value: number; size?: number }) {
@@ -36,9 +37,12 @@ function FocusCard({ index, item }: { index: number; item: SelfReport["focus"][n
   return (
     <Card className="!p-0 overflow-hidden">
       <button type="button" aria-expanded={open} onClick={() => setOpen((v) => !v)} className="flex w-full items-center gap-3 p-4 text-left">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] text-base font-extrabold"
-          style={{ background: index === 0 ? "var(--pp-strong)" : "var(--pp-surface-2)", color: index === 0 ? "var(--pp-on-strong)" : INK, fontFamily: DISPLAY_FONT }}>{index + 1}</span>
+        <span aria-hidden="true" className="grid h-14 w-14 shrink-0 place-items-center rounded-full"
+          style={{ background: `conic-gradient(${index === 0 ? ACTION : GREEN} ${item.rating * 20}%, var(--pp-surface-2) 0)` }}>
+          <span className="grid h-11 w-11 place-items-center rounded-full text-[15px]" style={{ ...numStyle, background: WHITE, color: INK }}>{item.rating}→{Math.min(5, item.rating + 1)}</span>
+        </span>
         <span className="min-w-0 flex-1">
+          <span className="block text-xs font-bold" style={{ color: WHITE_SUB }}>Focus {index + 1}</span>
           <span className="block text-base font-bold" style={{ color: INK }}>{item.title}</span>
           <span className="mt-1 block"><RatingDots value={item.rating} /></span>
         </span>
@@ -58,10 +62,24 @@ function FocusCard({ index, item }: { index: number; item: SelfReport["focus"][n
   );
 }
 
-export function SelfReportView({ report, progress, previousLabel, onEdit, sessionTitle, playFormat }: {
+/** Plan steps the player ticked off, kept on this device only. */
+function usePlanTicks(planKey?: string) {
+  const [done, setDone] = useState<string[]>(() => planKey ? readPlanTicks(planKey) : []);
+  const toggle = (id: string) => setDone((d) => {
+    const next = d.includes(id) ? d.filter((x) => x !== id) : [...d, id];
+    if (planKey) writePlanTicks(planKey, next);
+    return next;
+  });
+  return { done, toggle };
+}
+
+export function SelfReportView({ report, progress, previousLabel, onEdit, sessionTitle, playFormat, planKey }: {
   report: SelfReport; progress: SelfProgressRow[] | null; previousLabel?: string; onEdit: () => void;
   sessionTitle?: string | null; playFormat?: string | null;
+  /** The session id, so ticked-off plan steps are remembered. */
+  planKey?: string;
 }) {
+  const ticks = usePlanTicks(planKey);
   const coach = useMemo(() => report.available ? {
     short: selfCoachScript({ report, progress, sessionTitle, playFormat, length: "short" }),
     full: selfCoachScript({ report, progress, sessionTitle, playFormat, length: "full" }),
@@ -77,7 +95,12 @@ export function SelfReportView({ report, progress, previousLabel, onEdit, sessio
           <img src={mascot2xUrl} alt="" aria-hidden="true" className="pointer-events-none absolute bottom-2 right-3 h-28 w-auto" />
           <p className="text-sm font-bold" style={{ color: ACTION }}>This week's drill</p>
           <p className="mt-0.5 text-[1.5rem] font-extrabold leading-tight" style={{ fontFamily: DISPLAY_FONT }}>{report.focus[0].drill.name}</p>
-          <p className="mt-1 text-base leading-relaxed" style={{ color: "#c6d3ca" }}>For your {report.focus[0].label.toLowerCase()}. 15 minutes, 3 times this week.</p>
+          <p className="mt-1 text-base leading-relaxed" style={{ color: "#c6d3ca" }}><b style={{ color: ON_HERO }}>Pickle says:</b> {report.strengths[0]
+            ? `your ${report.strengths[0].title.toLowerCase()} is solid. Let's get your ${report.focus[0].label.toLowerCase()} up this week.`
+            : `let's get your ${report.focus[0].label.toLowerCase()} up this week.`}</p>
+          <ul className="mt-2 flex flex-wrap gap-1.5 text-xs font-bold">
+            <li className="inline-flex items-center gap-1 rounded-full px-2.5 py-1" style={{ background: "rgba(255,255,255,.1)" }}><Clock size={13} aria-hidden="true" />15 min · 3× this week</li>
+          </ul>
           {coach && <div className="relative mt-3"><CoachLauncher shortScript={coach.short} fullScript={coach.full} /></div>}
         </section>
       )}
@@ -110,22 +133,33 @@ export function SelfReportView({ report, progress, previousLabel, onEdit, sessio
       </div>
       <div className="space-y-5">
       {report.plan.length > 0 && <section className="space-y-3">
-        <SectionTitle>Your next week</SectionTitle>
-        <Card>
-          <ol className="relative space-y-4">
-            {report.plan.map((step, i) => <li key={step.day} className="flex gap-3">
-              <span className="flex flex-col items-center">
-                <span className="h-3 w-3 rounded-full" style={{ background: i === report.plan.length - 1 ? OPTIC : GREEN, border: `2px solid ${i === report.plan.length - 1 ? INK : GREEN}` }} />
-                {i < report.plan.length - 1 && <span className="mt-1 w-0.5 flex-1" style={{ background: BORDER }} />}
-              </span>
-              <span className="-mt-1 pb-1">
-                <span className="block text-xs font-bold" style={{ color: WHITE_SUB }}>{step.day}</span>
-                <span className="block text-sm font-bold" style={{ color: INK }}>{step.title}</span>
-                <span className="block text-sm" style={{ color: WHITE_DIM }}>{step.detail}</span>
-              </span>
-            </li>)}
+        <div className="flex items-baseline justify-between"><SectionTitle>Your next week</SectionTitle>
+          <span className="text-sm font-bold" style={{ color: WHITE_SUB }}>{report.plan.filter((st) => ticks.done.includes(st.day)).length} of {report.plan.length} done</span></div>
+        <Card className="!py-2">
+          <ol>
+            {report.plan.map((step) => {
+              const on = ticks.done.includes(step.day);
+              return <li key={step.day} className="border-t first:border-t-0" style={{ borderColor: BORDER }}>
+                <button type="button" role="checkbox" aria-checked={on} onClick={() => ticks.toggle(step.day)}
+                  className="flex min-h-[56px] w-full items-start gap-3 py-2.5 text-left">
+                  <span aria-hidden="true" className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-[9px] transition-colors"
+                    style={on ? { background: CHECK, color: ON_CHECK } : { border: `2px solid ${BORDER}` }}>{on && <Check size={16} strokeWidth={3} />}</span>
+                  <span className="min-w-0">
+                    <span className="block text-xs font-bold" style={{ color: WHITE_SUB }}>{step.day}</span>
+                    <span className="block text-sm font-bold" style={{ color: INK, textDecoration: on ? "line-through" : undefined }}>{step.title}</span>
+                    <span className="block text-sm" style={{ color: WHITE_DIM }}>{step.detail}</span>
+                  </span>
+                </button>
+              </li>;
+            })}
           </ol>
         </Card>
+        <a href="#/new?mode=video" className={`flex min-h-[64px] items-center gap-3 rounded-[18px] p-3.5 ${pressable}`} style={cardStyle}>
+          <span aria-hidden="true" className="grid h-10 w-10 shrink-0 place-items-center rounded-full" style={{ background: ACTION_SOFT, color: ACCENT_INK }}><Video size={20} /></span>
+          <span className="min-w-0 flex-1"><span className="block text-[15px] font-bold" style={{ color: INK }}>Film your next game</span>
+            <span className="block text-sm" style={{ color: WHITE_DIM }}>See where you stood on the court map.</span></span>
+          <ChevronRight size={18} aria-hidden="true" style={{ color: WHITE_SUB }} />
+        </a>
       </section>}
 
       {progress && progress.length > 0 && <section className="space-y-3">

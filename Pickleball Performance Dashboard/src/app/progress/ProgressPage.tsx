@@ -7,6 +7,11 @@ import { SKILL_INFO, type ErrorLevel } from "../../lib/coaching/selfAssessment";
 import { daysSince, goalProgress, goalTargets, goalWeeks, weeksLabel } from "../../lib/coaching/goals";
 import { pausedDays } from "../../lib/coaching/injury";
 import { RecoveryCard, useInjury } from "../recovery/RecoveryCard";
+import { PickleGrowthCard } from "./PickleGrowthCard";
+import { pickleJar, weeklyQuests, type JarSession } from "../../lib/coaching/brineJar";
+import { localDate } from "../../lib/coaching/sessionNames";
+import { deriveAnalysisState } from "../../lib/analysis/state";
+import { readPlanTicks } from "../selfAssessment/planTicks";
 import {
   baselineSummary, buildPoints, gameResults, inMode, latestRating, MODE_LABELS, PROGRESS_MODES, skillRows, weeksCovered,
   type ProgressMode,
@@ -139,6 +144,11 @@ export default function ProgressPage({ sb, userId }: { sb: SupabaseClient; userI
   const change = last && reference != null && (baseline || rated.length > 1) ? Math.round((last.overall! - reference) * 10) / 10 : null;
   const weeks = weeksCovered(rated);
   const trend = rated.slice(-10).map((p) => p.overall!);
+  // Pickle's brine jar. Games compare with the baseline first; practice and "All" start from the first rating.
+  const analyzed = new Set((items ?? []).filter((i) => deriveAnalysisState({ video: i.video, job: i.job, result: i.result }) === "completed").map((i) => i.session.id));
+  const jarSessions: JarSession[] = points.map((p) => ({ date: p.date, overall: p.overall, analyzed: analyzed.has(p.sessionId), planSteps: readPlanTicks(p.sessionId).length }));
+  const jar = pickleJar(jarSessions, mode === "games" ? baseline?.overall ?? null : null);
+  const quests = weeklyQuests(jarSessions, localDate(new Date()));
   const unrated = allPoints.filter((p) => p.overall == null).reverse();
   const baselineAge = daysSince(baseline?.setAt);
   const lastTest = courtTests ? lastTestedOn(courtTests) : null;
@@ -166,6 +176,8 @@ export default function ProgressPage({ sb, userId }: { sb: SupabaseClient; userI
       {injury.open && <RecoveryCard sb={sb} injury={injury.open} onChanged={() => void injury.reload()} showPlan={false} />}
       <div className="space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
         <div className="space-y-4">
+          {(points.length > 0 || baseline) && <PickleGrowthCard jar={jar} quests={quests} kindWord={kindWord}
+            planHref={last ? `#/sessions/${last.sessionId}?tab=plan` : null} />}
           <section aria-label={`Average ${kindWord} rating`} className="rounded-[22px] p-4" style={{ background: HERO, color: ON_HERO, borderTop: `4px solid ${ACTION}` }}>
             <div>
               <p className="text-sm font-bold" style={{ color: "#c6d3ca" }}>Average {kindWord} rating</p>

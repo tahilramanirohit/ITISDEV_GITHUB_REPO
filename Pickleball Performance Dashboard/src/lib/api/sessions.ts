@@ -128,6 +128,8 @@ export type NewSession = {
   shot_technique_rating: SelfRating | null;
   /** The accepted buddy session this was logged from (buddy-match update). */
   buddy_request_id?: string | null;
+  /** When play started; set automatically when the session is logged. */
+  actual_start_at?: string | null;
 };
 
 export async function createSession(sb: SupabaseClient, input: NewSession): Promise<SessionRow> {

@@ -1,22 +1,22 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ArrowLeft, Camera, Check, ClipboardCheck, Target, Trophy, Users } from "lucide-react";
+import { ArrowLeft, Camera, ChevronDown, ClipboardCheck, ChevronRight, Target, Trophy, User, Users } from "lucide-react";
 import { createSession, type NewSession } from "../../lib/api/sessions";
 import { friendlyDbError } from "../../lib/api/selfAssessment";
 import { getProfile } from "../../lib/api/profile";
 import {
-  CONTEXT_LABELS, FORMAT_LABELS, KIND_LABELS, SOLO_FORMATS,
+  CONTEXT_LABELS, FORMAT_LABELS, SOLO_FORMATS,
   type MatchResult, type PlayFormat, type ReviewMode, type SessionContext, type SessionKind,
 } from "../../lib/api/types";
 import { saveOtherPlayers, type OtherPlayer } from "../../lib/api/players";
 import { listMyBuddies, type BuddyLink } from "../../lib/api/buddy";
 import { matchBuddy, tagBuddiesInGame } from "../../lib/api/gameShares";
-import { BORDER, CARD_GLOW, GREEN, INK, PICKLE, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
-import { Chip, HeroProgress, Notice, PageHero, PreferenceSwitch, PrimaryButton, Sheet, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
+import { ACTION, BORDER, INK, ON_ACTION, SURFACE_2, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
+import { Chip, HeroProgress, Notice, PageHero, PreferenceSwitch, PrimaryButton, Sheet, cardStyle, fieldStyle, labelClass, labelStyle, pressable } from "../shell/primitives";
+import { autoSessionTitle, localDate } from "../../lib/coaching/sessionNames";
 import { GoalFields } from "./GoalFields";
 
-const today = () => new Date().toISOString().slice(0, 10);
 
 /** Values from a Buddy "Log this session" link; anything malformed is ignored. */
 export function buddyPreset(params: URLSearchParams): { name: string; date?: string; context?: SessionContext; format?: PlayFormat; requestId?: string } | null {
@@ -36,34 +36,53 @@ export function buddyPreset(params: URLSearchParams): { name: string; date?: str
 }
 const ROUNDS = ["Pool play", "Round of 16", "Quarterfinal", "Semifinal", "Final", "Other"];
 
-function defaultTitle(date: string, context: NewSession["session_context"]) {
-  const weekday = new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { weekday: "long" });
-  return `${weekday} ${CONTEXT_LABELS[context].toLowerCase()}`;
+const KIND_ICON: Record<SessionKind, typeof Trophy> = { solo: Target, match: Users, tournament: Trophy };
+const KIND_SHORT: Record<SessionKind, string> = { solo: "Solo", match: "Game", tournament: "Tournament" };
+
+/** One tap picks how to review the session and moves on. */
+function ModeCard({ onSelect, icon, title, detail }: { onSelect: () => void; icon: ReactNode; title: string; detail: string }) {
+  return (
+    <button type="button" onClick={onSelect}
+      className={`flex w-full items-center gap-3 rounded-[20px] p-4 text-left ${pressable}`}
+      style={{ ...cardStyle, borderWidth: 2 }}>
+      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full" style={{ background: ACTION, color: ON_ACTION }}>{icon}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[17px] font-extrabold" style={{ color: INK }}>{title}</span>
+        <span className="mt-0.5 block text-sm leading-snug" style={{ color: WHITE_DIM }}>{detail}</span>
+      </span>
+      <ChevronRight size={20} aria-hidden="true" style={{ color: WHITE_SUB }} />
+    </button>
+  );
 }
 
-const KIND_META: Record<SessionKind, { Icon: typeof Trophy; detail: string; bg: string; fg: string }> = {
-  solo: { Icon: Target, detail: "Drills, wall practice or a ball machine", bg: "var(--pp-surface-2)", fg: "var(--pp-ink)" },
-  match: { Icon: Users, detail: "Open play, ladders and friendlies", bg: "var(--pp-surface-2)", fg: "var(--pp-ink)" },
-  tournament: { Icon: Trophy, detail: "Official match with round, result and score", bg: "var(--pp-surface-2)", fg: "var(--pp-ink)" },
-};
-
-function ModeCard({ selected, onSelect, icon, title, detail, tag }: {
-  selected: boolean; onSelect: () => void; icon: ReactNode; title: string; detail: string; tag: string;
+/** An either/or choice as one bar of options, with an icon on each when given. */
+function Segmented<T extends string>({ label, options, value, onChange }: {
+  label: string; value: T | null | undefined; onChange: (v: T) => void;
+  options: { value: T; label: string; Icon?: typeof Trophy }[];
 }) {
   return (
-    <button type="button" aria-pressed={selected} onClick={onSelect}
-      className="flex w-full items-start gap-3 rounded-[18px] p-4 text-left transition-transform duration-100 active:scale-[0.98] motion-reduce:transition-none"
-      style={{ background: selected ? "var(--pp-action-soft)" : WHITE, boxShadow: CARD_GLOW, border: `2px solid ${selected ? "var(--pp-action)" : BORDER}` }}>
-      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full" style={{ background: selected ? "var(--pp-action)" : "var(--pp-surface-2)", color: selected ? "var(--pp-on-action)" : INK }}>{icon}</span>
-      <span className="min-w-0 flex-1">
-        <span className="flex items-center justify-between gap-2">
-          <span className="text-base font-bold" style={{ color: INK }}>{title}</span>
-          {selected && <Check size={18} style={{ color: "var(--pp-accent-ink)" }} aria-hidden="true" />}
-        </span>
-        <span className="mt-0.5 block text-sm leading-snug" style={{ color: WHITE_DIM }}>{detail}</span>
-        <span className="mt-2 block text-[13px] font-semibold" style={{ color: GREEN }}>{tag}</span>
-      </span>
-    </button>
+    <div role="radiogroup" aria-label={label} className="grid gap-1 rounded-[16px] p-1"
+      style={{ background: SURFACE_2, gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
+      {options.map((o) => {
+        const on = o.value === value;
+        return <button key={o.value} type="button" role="radio" aria-checked={on} onClick={() => onChange(o.value)}
+          className={`flex min-h-[52px] flex-col items-center justify-center gap-0.5 rounded-[12px] px-1 text-sm font-bold ${pressable}`}
+          style={on ? { background: ACTION, color: ON_ACTION } : { color: INK }}>
+          {o.Icon && <o.Icon size={18} aria-hidden="true" />}{o.label}
+        </button>;
+      })}
+    </div>
+  );
+}
+
+/** A labelled group of questions in one card. */
+function Group({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
+  return (
+    <section aria-label={title} className="space-y-2.5 rounded-[20px] p-4" style={cardStyle}>
+      <h2 className="flex items-baseline justify-between text-base font-extrabold" style={{ color: INK }}>{title}
+        {hint && <span className="text-xs font-semibold" style={{ color: WHITE_SUB }}>{hint}</span>}</h2>
+      {children}
+    </section>
   );
 }
 
@@ -74,8 +93,10 @@ export default function NewSessionPage({ sb, userId, trialNoWorker = false }: { 
   // "Log this session" from Buddy: the buddy, purpose, format and date arrive in the link.
   const buddy = buddyPreset(params);
   const [step, setStep] = useState<1 | 2>(preset === "self" || preset === "video" ? 2 : 1);
+  // The session is named and timed automatically from when it's logged; the player can rename it later.
+  const [startedAt] = useState(() => new Date());
   const [form, setForm] = useState<NewSession>({
-    title: "", session_date: buddy?.date ?? today(), session_context: buddy?.context ?? "casual_match", play_format: buddy?.format ?? "doubles",
+    title: "", session_date: buddy?.date ?? localDate(startedAt), session_context: buddy?.context ?? "casual_match", play_format: buddy?.format ?? "doubles",
     performance_scope: "individual", review_mode: preset === "video" ? "video" : "self", notes: null, improvement_goals: [],
     positioning_rating: null, shot_outcomes_rating: null, shot_technique_rating: null,
   });
@@ -121,21 +142,22 @@ export default function NewSessionPage({ sb, userId, trialNoWorker = false }: { 
     return () => { active = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per player
   }, [sb, userId]);
-  const chooseMode = (mode: ReviewMode) => set("review_mode", mode);
+  const chooseMode = (mode: ReviewMode) => { set("review_mode", mode); setStep(2); };
+  const when = `${startedAt.toLocaleDateString("en-US", { weekday: "long" })} · ${startedAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
 
   async function submit() {
     if (!form.improvement_goals.length) return setError("Choose at least one thing to improve.");
     setBusy(true);
     setError("");
     try {
-      const title = form.title.trim() || (kind === "tournament" && form.tournament_name?.trim()) || defaultTitle(form.session_date, form.session_context);
+      const title = form.title.trim() || autoSessionTitle(startedAt, kind, form.tournament_name);
       const { tournament_name, tournament_round, match_result, match_score, ...base } = form;
-      // Tournament fields are only sent for tournaments, so other sessions also work on older databases.
-      const tournament = kind === "tournament" ? {
-        tournament_name: tournament_name?.trim() || null, tournament_round: tournament_round || null,
-        match_result: match_result ?? null, match_score: match_score?.trim() || null,
-      } : {};
-      const s = await createSession(sb, { ...base, ...tournament, title, notes: form.notes?.trim() || null,
+      // Tournament name and round only for tournaments; result and score for any game.
+      const tournament = kind === "tournament" ? { tournament_name: tournament_name?.trim() || null, tournament_round: tournament_round || null } : {};
+      const result = kind !== "solo" && (match_result || match_score?.trim()) ? { match_result: match_result ?? null, match_score: match_score?.trim() || null } : {};
+      // A buddy session keeps the date from the link; otherwise play started now.
+      const start = buddy?.date ? {} : { actual_start_at: startedAt.toISOString() };
+      const s = await createSession(sb, { ...base, ...tournament, ...result, ...start, title, notes: form.notes?.trim() || null,
         // Logged from a buddy session: link it so Progress can count games with buddies.
         ...(buddy?.requestId ? { buddy_request_id: buddy.requestId } : {}) });
       const players: OtherPlayer[] = kind === "solo" ? [] : [
@@ -156,130 +178,104 @@ export default function NewSessionPage({ sb, userId, trialNoWorker = false }: { 
     }
   }
 
+  const formats: PlayFormat[] = kind === "solo" ? SOLO_FORMATS : ["singles", "doubles"];
   return (
     <div>
-      <PageHero eyebrow={`Step ${step} of 2`} title={step === 1 ? "Log a session" : "What did you play?"}
-        subtitle={step === 1 ? "How do you want to review your game?" : "A few taps. Everything except your focus is optional."}
-        action={step === 2 ? <button type="button" onClick={() => setStep(1)} className="inline-flex min-h-[40px] shrink-0 items-center gap-1 rounded-[12px] px-3 text-sm font-semibold"
+      <PageHero eyebrow={when} title={step === 1 ? "How do you want to review it?" : "What did you play?"}
+        action={step === 2 ? <button type="button" onClick={() => setStep(1)} className="inline-flex min-h-[44px] shrink-0 items-center gap-1 rounded-[12px] px-3 text-sm font-semibold"
           style={{ background: "var(--pp-surface)", color: INK, border: "1px solid var(--pp-line)" }}><ArrowLeft size={16} /> Back</button> : undefined}>
         <HeroProgress value={step / 2} label={`Step ${step} of 2`} />
       </PageHero>
       <Sheet>
-      <div className="space-y-5 lg:mx-auto lg:max-w-3xl">
+      <div className="space-y-4 lg:mx-auto lg:max-w-3xl">
 
-      {step === 1 && <>
-        <div className="grid gap-3 lg:grid-cols-2">
-          <ModeCard selected={form.review_mode === "self"} onSelect={() => chooseMode("self")} icon={<ClipboardCheck size={24} />}
-            title="Rate my own game" tag="No video · about 2 minutes to rate"
-            detail="Rate ten skills from how the session felt. You get focus areas, drills and a practice plan right away." />
-          <ModeCard selected={form.review_mode === "video"} onSelect={() => chooseMode("video")} icon={<Camera size={24} />}
-            title="Analyze a video" tag="Computer vision · takes longer"
-            detail="Upload a rally clip. PicklePro maps where you stood on court. Best results need a fixed camera and a clear court view. Moving-camera clips may produce limited results. You can rate yourself too." />
-        </div>
-        {form.review_mode === "video" && trialNoWorker && <Notice tone="info">Video analysis is paused on this public trial. You can still create the session and rate yourself.</Notice>}
-        <PrimaryButton type="button" className="w-full" onClick={() => setStep(2)}>Continue</PrimaryButton>
-      </>}
+      {step === 1 && <div className="grid gap-3 lg:grid-cols-2">
+        <ModeCard onSelect={() => chooseMode("self")} icon={<ClipboardCheck size={24} />}
+          title="Rate my own game" detail="Rate your skills and get a practice plan." />
+        <ModeCard onSelect={() => chooseMode("video")} icon={<Camera size={24} />}
+          title="Analyze a video" detail="See where you stood on court. You can rate yourself too." />
+      </div>}
 
       {step === 2 && <>
-        <section className="space-y-2">
-          <p className={labelClass} style={labelStyle}>What kind of session?</p>
-          <div className="grid gap-2 lg:grid-cols-3" role="group" aria-label="Session kind">
-            {(["solo", "match", "tournament"] as SessionKind[]).map((k) => {
-              const on = kind === k;
-              const meta = KIND_META[k];
-              return <button key={k} type="button" aria-pressed={on} onClick={() => setKind(k)}
-                className="grid grid-cols-[2.75rem_1fr_auto] items-center gap-3 rounded-[18px] p-2.5 text-left"
-                style={{ background: on ? "var(--pp-action-soft)" : WHITE, border: on ? "2px solid var(--pp-action)" : `1.5px solid ${BORDER}`, boxShadow: CARD_GLOW }}>
-                <span className="grid h-11 w-11 place-items-center rounded-full" style={{ background: meta.bg, color: meta.fg }}><meta.Icon size={20} aria-hidden="true" /></span>
-                <span className="min-w-0"><b className="block text-base" style={{ color: INK }}>{KIND_LABELS[k]}</b><span className="block text-sm" style={{ color: WHITE_SUB }}>{meta.detail}</span></span>
-                <span aria-hidden="true" className="grid h-6 w-6 place-items-center rounded-full text-xs font-extrabold" style={on ? { background: "var(--pp-action)", color: "var(--pp-on-action)" } : { border: `1.5px solid ${BORDER}` }}>{on ? "✓" : ""}</span>
-              </button>;
-            })}
-          </div>
-        </section>
-        {kind !== "tournament" && <section className="space-y-2">
-          <p className={labelClass} style={labelStyle}>{kind === "solo" ? "Type of practice" : "Setting"}</p>
-          <div className="flex flex-wrap gap-2">
-            {(kind === "solo" ? ["practice", "drill"] : ["casual_match", "leveling_game", "practice"] as SessionContext[]).map((c) =>
-              <Chip key={c} selected={form.session_context === c} onClick={() => set("session_context", c as SessionContext)}>{CONTEXT_LABELS[c as SessionContext]}</Chip>)}
-          </div>
-          {kind === "match" && <p className="text-xs" style={{ color: WHITE_SUB }}>
-            {form.session_context === "leveling_game" ? "Leveling game: a game used to place you in a skill level or group, such as at a club or open play."
-              : form.session_context === "practice" ? "Practice match: a game where trying things matters more than the score."
-              : "Casual match: a friendly game, such as open play."}
-          </p>}
-        </section>}
-        <section className="space-y-2">
-          <p className={labelClass} style={labelStyle}>Format</p>
-          <div className="flex flex-wrap gap-2">
-            {(kind === "solo" ? SOLO_FORMATS : ["singles", "doubles"] as PlayFormat[]).map((f) => <Chip key={f} selected={form.play_format === f} onClick={() => set("play_format", f)}>{FORMAT_LABELS[f]}</Chip>)}
-          </div>
+        {form.review_mode === "video" && trialNoWorker && <Notice tone="info">Video analysis is paused on this public trial. You can still create the session and rate yourself.</Notice>}
+        <Group title="Type">
+          <Segmented label="Session kind" value={kind} onChange={(k) => setKind(k)}
+            options={(["solo", "match", "tournament"] as SessionKind[]).map((k) => ({ value: k, label: KIND_SHORT[k], Icon: KIND_ICON[k] }))} />
+          <Segmented label="Format" value={form.play_format} onChange={(f) => set("play_format", f)}
+            options={formats.map((f) => ({ value: f, label: FORMAT_LABELS[f], Icon: f === "singles" ? User : f === "doubles" ? Users : undefined }))} />
           {kind === "solo" && form.review_mode === "video" && form.play_format !== "drill_other" &&
             <p className="text-xs" style={{ color: WHITE_SUB }}>Wall and ball-machine sessions are rated only; video analysis needs a court view.</p>}
-        </section>
-        {kind === "tournament" && <section className="space-y-3 rounded-[14px] p-4" style={{ background: WHITE, border: `6px solid ${PICKLE}` }}>
-          <p className="text-sm font-bold" style={{ color: INK }}>Tournament match</p>
-          <div>
-            <label className={labelClass} style={labelStyle} htmlFor="tournament-name">Tournament</label>
-            <input id="tournament-name" maxLength={120} value={form.tournament_name ?? ""} onChange={(e) => set("tournament_name", e.target.value)}
-              placeholder="e.g. Manila Open 2026" className="w-full rounded-[16px] px-4 py-3 text-base" style={fieldStyle} />
-          </div>
-          <div>
-            <p className={labelClass} style={labelStyle}>Round</p>
-            <div className="flex flex-wrap gap-2">{ROUNDS.map((r) => <Chip key={r} selected={form.tournament_round === r} onClick={() => set("tournament_round", form.tournament_round === r ? null : r)}>{r}</Chip>)}</div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
+          {kind === "tournament" && <div className="space-y-2.5 pt-1">
             <div>
-              <p className={labelClass} style={labelStyle}>Result</p>
-              <div className="flex gap-2">{(["win", "loss"] as MatchResult[]).map((r) => <Chip key={r} selected={form.match_result === r}
-                onClick={() => set("match_result", form.match_result === r ? null : r)}>{r === "win" ? "Won" : "Lost"}</Chip>)}</div>
+              <label className={labelClass} style={labelStyle} htmlFor="tournament-name">Tournament</label>
+              <input id="tournament-name" maxLength={120} value={form.tournament_name ?? ""} onChange={(e) => set("tournament_name", e.target.value)}
+                placeholder="e.g. Manila Open 2026" className="w-full rounded-[16px] px-4 py-3 text-base" style={fieldStyle} />
             </div>
-            <div className="min-w-0">
-              <label className={labelClass} style={labelStyle} htmlFor="score">Score</label>
-              <input id="score" maxLength={40} value={form.match_score ?? ""} onChange={(e) => set("match_score", e.target.value)}
-                placeholder="11-7, 9-11, 11-5" className="w-full min-w-0 rounded-[16px] px-4 py-3 text-base" style={fieldStyle} />
+            <div>
+              <p className={labelClass} style={labelStyle}>Round</p>
+              <div className="flex flex-wrap gap-2">{ROUNDS.map((r) => <Chip key={r} selected={form.tournament_round === r} onClick={() => set("tournament_round", form.tournament_round === r ? null : r)}>{r}</Chip>)}</div>
             </div>
-          </div>
-        </section>}
-        {kind !== "solo" && <section className="space-y-2">
-          <p className={labelClass} style={labelStyle}>Who did you play with? (optional)</p>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {form.play_format === "doubles" && <input aria-label="Partner name" maxLength={80} value={partner} onChange={(e) => setPartner(e.target.value)}
-              placeholder="Partner" className="w-full rounded-[16px] px-4 py-3 text-base sm:col-span-2" style={fieldStyle} />}
-            {opponents.slice(0, form.play_format === "doubles" ? 2 : 1).map((name, i) => <input key={i} aria-label={`Opponent ${i + 1} name`} maxLength={80} value={name}
-              onChange={(e) => setOpponents((o) => o.map((v, j) => j === i ? e.target.value : v))}
-              placeholder={form.play_format === "doubles" ? `Opponent ${i + 1}` : "Opponent"} className="w-full rounded-[16px] px-4 py-3 text-base" style={fieldStyle} />)}
-          </div>
-          {buddyMatches.length > 0 && <div className="rounded-[16px] px-4" style={{ background: WHITE, border: `1px solid ${BORDER}` }}>
-            {buddyMatches.map((m) => <PreferenceSwitch key={m.id} label={`Share this game with ${m.name}`}
-              detail={`${m.name.split(" ")[0]} is your buddy. They'll be asked to add it, with any video and analysis, to their Sessions.`}
-              checked={!shareOff.has(m.id)} onChange={() => setShareOff((s) => { const n = new Set(s); if (n.has(m.id)) n.delete(m.id); else n.add(m.id); return n; })} />)}
           </div>}
-          <p className="text-sm" style={{ color: WHITE_SUB }}>Names stay private to you. Buddies you share with see only this game, never your ratings or journal.</p>
-        </section>}
+        </Group>
+
+        {kind !== "solo" && <Group title="Result" hint="optional">
+          <Segmented label="Result" value={form.match_result} onChange={(r) => set("match_result", form.match_result === r ? null : r)}
+            options={(["win", "loss"] as MatchResult[]).map((r) => ({ value: r, label: r === "win" ? "Won" : "Lost" }))} />
+          <div>
+            <label className={labelClass} style={labelStyle} htmlFor="score">Score by game</label>
+            <input id="score" maxLength={40} inputMode="numeric" value={form.match_score ?? ""} onChange={(e) => set("match_score", e.target.value)}
+              placeholder="11-7, 9-11, 11-5" className="w-full min-w-0 rounded-[16px] px-4 py-3 text-base" style={fieldStyle} />
+          </div>
+        </Group>}
+
         <GoalFields value={form} onChange={(goals) => setForm((current) => ({ ...current, ...goals }))} />
-        <div className="grid grid-cols-2 gap-3">
-          <div className="col-span-2">
-            <label className={labelClass} style={labelStyle} htmlFor="title">Name (optional)</label>
-            <input id="title" maxLength={120} value={form.title} onChange={(e) => set("title", e.target.value)}
-              placeholder={defaultTitle(form.session_date, form.session_context)} className="w-full rounded-[16px] px-4 py-3 text-base" style={fieldStyle} />
+
+        <details className="group rounded-[20px]" style={{ ...cardStyle, borderStyle: "dashed" }}>
+          <summary className="flex min-h-[52px] cursor-pointer list-none items-center justify-between gap-2 px-4 text-base font-extrabold" style={{ color: INK }}>
+            More details
+            <span className="flex items-center gap-1 text-sm font-semibold" style={{ color: WHITE_SUB }}>
+              {kind === "solo" ? "Practice type, notes" : "Players, setting, notes"}
+              <ChevronDown size={16} aria-hidden="true" className="transition-transform group-open:rotate-180 motion-reduce:transition-none" /></span>
+          </summary>
+          <div className="space-y-4 px-4 pb-4">
+            {kind !== "solo" && <section className="space-y-2">
+              <p className={labelClass} style={labelStyle}>Who played</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {form.play_format === "doubles" && <input aria-label="Partner name" maxLength={80} value={partner} onChange={(e) => setPartner(e.target.value)}
+                  placeholder="Partner" className="w-full rounded-[16px] px-4 py-3 text-base sm:col-span-2" style={fieldStyle} />}
+                {opponents.slice(0, form.play_format === "doubles" ? 2 : 1).map((name, i) => <input key={i} aria-label={`Opponent ${i + 1} name`} maxLength={80} value={name}
+                  onChange={(e) => setOpponents((o) => o.map((v, j) => j === i ? e.target.value : v))}
+                  placeholder={form.play_format === "doubles" ? `Opponent ${i + 1}` : "Opponent"} className="w-full rounded-[16px] px-4 py-3 text-base" style={fieldStyle} />)}
+              </div>
+              {buddyMatches.length > 0 && <div className="rounded-[16px] px-4" style={{ background: WHITE, border: `1px solid ${BORDER}` }}>
+                {buddyMatches.map((m) => <PreferenceSwitch key={m.id} label={`Share this game with ${m.name}`}
+                  detail={`${m.name.split(" ")[0]} is your buddy. They'll be asked to add it, with any video and analysis, to their Sessions.`}
+                  checked={!shareOff.has(m.id)} onChange={() => setShareOff((s) => { const n = new Set(s); if (n.has(m.id)) n.delete(m.id); else n.add(m.id); return n; })} />)}
+              </div>}
+              <p className="text-sm" style={{ color: WHITE_SUB }}>Names stay private to you.</p>
+            </section>}
+            {kind !== "tournament" && <section className="space-y-2">
+              <p className={labelClass} style={labelStyle}>{kind === "solo" ? "Type of practice" : "Setting"}</p>
+              <div className="flex flex-wrap gap-2">
+                {(kind === "solo" ? ["practice", "drill"] : ["casual_match", "leveling_game", "practice"] as SessionContext[]).map((c) =>
+                  <Chip key={c} selected={form.session_context === c} onClick={() => set("session_context", c as SessionContext)}>{CONTEXT_LABELS[c as SessionContext]}</Chip>)}
+              </div>
+            </section>}
+            <div>
+              <label className={labelClass} style={labelStyle} htmlFor="notes">Notes</label>
+              <textarea id="notes" rows={2} maxLength={2000} value={form.notes ?? ""} onChange={(e) => set("notes", e.target.value)}
+                placeholder="Where you played, anything to remember" className="w-full rounded-[16px] px-4 py-3 text-base" style={fieldStyle} />
+            </div>
           </div>
-          <div className="col-span-2">
-            <label className={labelClass} style={labelStyle} htmlFor="date">Date</label>
-            <input id="date" type="date" value={form.session_date} onChange={(e) => set("session_date", e.target.value)}
-              className="w-full rounded-[16px] px-4 py-3 text-base" style={fieldStyle} />
-          </div>
-          <div className="col-span-2">
-            <label className={labelClass} style={labelStyle} htmlFor="notes">Notes (optional)</label>
-            <textarea id="notes" rows={2} maxLength={2000} value={form.notes ?? ""} onChange={(e) => set("notes", e.target.value)}
-              placeholder="Where you played, who with, anything to remember" className="w-full rounded-[16px] px-4 py-3 text-base" style={fieldStyle} />
-          </div>
-        </div>
+        </details>
+
         {error && <Notice tone="error">{error}</Notice>}
-        <PrimaryButton type="button" className="w-full" disabled={busy} onClick={() => void submit()}>
-          {busy ? "Creating…" : form.review_mode === "self" ? "Start rating" : "Continue to video upload"}
-        </PrimaryButton>
-        <p className="text-center text-xs" style={{ color: WHITE_SUB }}>Your sessions are private to your account.</p>
+        <div className="sticky bottom-24 z-10 lg:static">
+          <PrimaryButton type="button" className="w-full" disabled={busy} onClick={() => void submit()}>
+            {busy ? "Creating…" : form.review_mode === "self" ? "Start rating" : "Continue to video upload"}
+          </PrimaryButton>
+        </div>
+        <p className="text-center text-xs" style={{ color: WHITE_SUB }}>Named "{autoSessionTitle(startedAt, kind, form.tournament_name)}" automatically. You can rename it later.</p>
       </>}
       </div>
       </Sheet>

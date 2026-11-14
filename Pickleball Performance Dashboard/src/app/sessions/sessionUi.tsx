@@ -8,6 +8,7 @@ import { initials, listAllOtherPlayers, type OtherPlayer } from "../../lib/api/p
 import { CONTEXT_LABELS, FORMAT_LABELS, KIND_LABELS, sessionKind, type SessionRow } from "../../lib/api/types";
 import { deriveAnalysisState, STATE_LABELS, type AnalysisUiState } from "../../lib/analysis/state";
 import { buildSelfReport } from "../../lib/coaching/selfAssessment";
+import { startTimeLabel } from "../../lib/coaching/sessionNames";
 import { BLUE, BLUE_BG, BORDER, INK, NUM_FONT, ORANGE, ROSE, SUCCESS, WHITE, WHITE_DIM, WHITE_SUB, YELLOW_BG, alpha } from "../theme";
 
 export const reviewMode = (session: SessionRow) => session.review_mode ?? "video";
@@ -44,14 +45,15 @@ const STATE_TONE: Record<AnalysisUiState, string> = {
   processing: BLUE, completed: SUCCESS, insufficient_data: ORANGE, failed: ROSE,
 };
 
-export function sessionStatus(item: SessionListItem, assessment: SelfAssessment | undefined): { text: string; color: string } {
+/** A session's status. `done` means nothing is waiting on the player, so the list stays quiet. */
+export function sessionStatus(item: SessionListItem, assessment: SelfAssessment | undefined): { text: string; color: string; done: boolean } {
   if (reviewMode(item.session) === "self" && !item.video) {
-    if (!assessment) return { text: "Rate yourself", color: ORANGE };
+    if (!assessment) return { text: "Rate yourself", color: ORANGE, done: false };
     const report = buildSelfReport({ ratings: assessment.ratings, goals: item.session.improvement_goals ?? [], playFormat: item.session.play_format });
-    return report.available ? { text: "Plan ready", color: SUCCESS } : { text: "Finish rating", color: ORANGE };
+    return report.available ? { text: "Plan ready", color: SUCCESS, done: true } : { text: "Finish rating", color: ORANGE, done: false };
   }
   const state = deriveAnalysisState({ video: item.video, job: item.job, result: item.result });
-  return { text: STATE_LABELS[state], color: STATE_TONE[state] };
+  return { text: STATE_LABELS[state], color: STATE_TONE[state], done: state === "completed" };
 }
 
 export function formatSessionDate(iso: string, opts: Intl.DateTimeFormatOptions = { weekday: "short", month: "short", day: "numeric" }) {
@@ -91,19 +93,18 @@ export function SessionCard({ item, assessment, players = [], you = "You" }: {
   const status = sessionStatus(item, assessment);
   const kind = sessionKind(session);
   const video = reviewMode(session) === "video" || !!item.video;
-  const report = assessment ? buildSelfReport({ ratings: assessment.ratings, goals: session.improvement_goals ?? [], playFormat: session.play_format }) : null;
   const KindIcon = kind === "tournament" ? Trophy : kind === "solo" ? User : video ? Camera : ClipboardCheck;
   const score = firstGame(session.match_score);
   const won = session.match_result ? session.match_result === "win" : score ? score[0] > score[1] : null;
-  const rating = report?.available && report.overall != null ? report.overall : null;
   const others = players.map((p) => p.display_name).filter(Boolean);
   const named = (role: OtherPlayer["role"]) => players.filter((p) => p.role === role).map((p) => p.display_name.split(" ")[0]).filter(Boolean);
   const partners = named("partner"), opponents = named("opponent");
   const who = partners.length ? `with ${partners.join(" & ")}` : opponents.length ? `vs ${opponents.join(" & ")}` : CONTEXT_LABELS[session.session_context];
-  const meta = [formatSessionDate(session.session_date), FORMAT_LABELS[session.play_format], who];
+  const time = startTimeLabel(session.actual_start_at);
+  const meta = [`${formatSessionDate(session.session_date, { weekday: "short" })}${time ? ` ${time}` : ""}`, FORMAT_LABELS[session.play_format], who];
   const pill = "inline-flex min-h-[26px] items-center gap-1 rounded-full px-2.5 text-xs font-bold";
   return (
-    <a href={`#/sessions/${session.id}`} className="flex min-h-[64px] w-full items-center gap-3 py-3 pl-4 pr-3 text-left transition-colors hover:bg-sunken">
+    <a href={`#/sessions/${session.id}`} className="flex min-h-[60px] w-full items-center gap-3 py-2.5 pl-4 pr-3 text-left transition-colors hover:bg-sunken">
       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] text-sm font-extrabold"
         style={won === true ? { background: "var(--pp-action)", color: "var(--pp-on-action)" }
           : won === false ? { background: "var(--pp-hero)", color: "var(--pp-on-hero)" } : { background: "var(--pp-surface-2)", color: WHITE_SUB }}>
@@ -112,15 +113,12 @@ export function SessionCard({ item, assessment, players = [], you = "You" }: {
       <span className="min-w-0 flex-1">
         <span className="block truncate text-base font-bold" style={{ color: INK }}>{session.title}</span>
         <span className="block text-sm" style={{ color: WHITE_SUB }} aria-label={[you, ...others].join(", ")}>{meta.join(" · ")}</span>
-        <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
-          {rating != null && <span role="img" aria-label={`Self rating ${rating.toFixed(1)} of 5`} className="mr-0.5 inline-flex gap-[3px]">
-            {[1, 2, 3, 4, 5].map((n) => <i key={n} className="h-[7px] w-[7px] rounded-full" style={{ background: n <= Math.round(rating) ? "var(--pp-action)" : "var(--pp-line-strong)" }} />)}
-          </span>}
-          <span className={pill} style={{ background: alpha(status.color, 14), color: status.color }}>{status.text}</span>
+        {(!status.done || kind === "tournament" || item.result?.data_origin === "test_fixture") && <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          {!status.done && <span className={pill} style={{ background: alpha(status.color, 14), color: status.color }}>{status.text}</span>}
           {kind === "tournament" && <span className={pill} style={{ background: "var(--pp-surface-2)", color: INK }}>
             <Trophy size={13} aria-hidden="true" />{KIND_LABELS[kind]}{session.tournament_round ? ` · ${session.tournament_round}` : ""}</span>}
           {item.result?.data_origin === "test_fixture" && <span className={pill} style={{ color: ROSE }}>TEST DATA</span>}
-        </span>
+        </span>}
       </span>
       {score && <span className="shrink-0 text-xl font-bold leading-none" style={{ fontFamily: NUM_FONT, color: won ? "var(--pp-green)" : INK }}
         title={session.match_score ?? undefined}>{score[0]}–{score[1]}</span>}

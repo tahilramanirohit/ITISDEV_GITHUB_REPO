@@ -30,20 +30,31 @@ function renderPage(sb: SupabaseClient, url = "/new?mode=self") {
 }
 
 describe("NewSessionPage", () => {
+  it("moves on with one tap on how to review it, without asking for a name or date", async () => {
+    const { sb } = fakeSupabase();
+    renderPage(sb, "/new");
+    expect(screen.queryByText(/minutes/)).toBeNull();
+    fireEvent.click(await screen.findByRole("button", { name: /Rate my own game/ }));
+    expect(await screen.findByRole("radiogroup", { name: "Session kind" })).toBeTruthy();
+    expect(screen.queryByLabelText(/^Name/)).toBeNull();
+    expect(screen.queryByLabelText(/^Date/)).toBeNull();
+  });
+
   it("logs a tournament match with its result and named players", async () => {
     const { sb, inserts } = fakeSupabase();
     renderPage(sb);
-    fireEvent.click(await screen.findByRole("button", { name: /^Tournament/ }));
+    fireEvent.click(await screen.findByRole("radio", { name: /Tournament/ }));
     fireEvent.change(screen.getByLabelText("Tournament"), { target: { value: "Manila Open" } });
     fireEvent.click(screen.getByRole("button", { name: "Semifinal" }));
-    fireEvent.click(screen.getByRole("button", { name: "Won" }));
-    fireEvent.change(screen.getByLabelText("Score"), { target: { value: "11-7, 11-9" } });
+    fireEvent.click(screen.getByRole("radio", { name: "Won" }));
+    fireEvent.change(screen.getByLabelText("Score by game"), { target: { value: "11-7, 11-9" } });
     fireEvent.change(screen.getByLabelText("Partner name"), { target: { value: "Ana" } });
     fireEvent.change(screen.getByLabelText("Opponent 1 name"), { target: { value: "Ben" } });
     fireEvent.click(screen.getByRole("checkbox", { name: "Shot outcomes" }));
     fireEvent.click(screen.getByRole("button", { name: "Start rating" }));
 
     expect(await screen.findByText("Opened session")).toBeTruthy();
+    expect((inserts[0].row as Record<string, unknown>).actual_start_at).toBeTruthy();
     expect(inserts[0]).toMatchObject({ table: "sessions", row: {
       title: "Manila Open", session_context: "tournament", play_format: "doubles", review_mode: "self",
       tournament_name: "Manila Open", tournament_round: "Semifinal", match_result: "win", match_score: "11-7, 11-9",
@@ -57,14 +68,17 @@ describe("NewSessionPage", () => {
   it("starts from saved default settings and sends no tournament fields for solo practice", async () => {
     const { sb, inserts } = fakeSupabase({ id: "u1", main_goals: ["shot_technique"], default_session_kind: "solo", default_play_format: "ball_machine" });
     renderPage(sb);
-    await waitFor(() => expect(screen.getByRole("button", { name: /^Solo practice/ }).getAttribute("aria-pressed")).toBe("true"));
-    expect(screen.getByRole("button", { name: "Ball machine" }).getAttribute("aria-pressed")).toBe("true");
+    await waitFor(() => expect(screen.getByRole("radio", { name: /Solo/ }).getAttribute("aria-checked")).toBe("true"));
+    expect(screen.getByRole("radio", { name: "Ball machine" }).getAttribute("aria-checked")).toBe("true");
     expect(screen.queryByLabelText("Partner name")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Start rating" }));
     expect(await screen.findByText("Opened session")).toBeTruthy();
     const row = inserts[0].row as Record<string, unknown>;
     expect(row).toMatchObject({ play_format: "ball_machine", improvement_goals: ["shot_technique"] });
+    // Named automatically: "<weekday> <morning|afternoon|evening> practice".
+    expect(row.title).toMatch(/^[A-Z][a-z]+day (morning|afternoon|evening) practice$/);
     expect("tournament_name" in row).toBe(false);
+    expect("match_result" in row).toBe(false);
     expect(inserts).toHaveLength(1);
   });
 });

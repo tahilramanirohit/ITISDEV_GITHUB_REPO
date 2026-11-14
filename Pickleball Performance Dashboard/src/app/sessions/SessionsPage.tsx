@@ -7,6 +7,8 @@ import { sessionKind } from "../../lib/api/types";
 import { Chip, Notice, PageHero, Sheet } from "../shell/primitives";
 import { INK, WHITE_SUB, YELLOW, YELLOW_INK } from "../theme";
 import { EmptySessions, reviewMode, SessionCard, SessionList, SharedGameRow, useSessionsData } from "./sessionUi";
+import { groupByWeek, weekRecord } from "../../lib/coaching/sessionWeeks";
+import { localDate } from "../../lib/coaching/sessionNames";
 import { GameShareRequests } from "./GameShareRequests";
 
 type Filter = "all" | "self" | "video" | "tournament" | "solo";
@@ -39,10 +41,16 @@ export default function SessionsPage({ sb, userId }: { sb: SupabaseClient; userI
         return m.set(key, [...(m.get(key) ?? []), item]);
       }, new Map<string, typeof shown>())]
     : [["", shown]];
+  // Everything else is grouped by week, newest first, each week with its record.
+  const weeks = filter === "tournament" ? [] : groupByWeek(mergeByDate(shown, sharedShown), (row) => "share" in row
+    ? { date: row.share.session_date, practice: false, won: row.share.match_result ? row.share.match_result === "win" : null }
+    : { date: row.session.session_date, practice: sessionKind(row.session) === "solo", won: row.session.match_result ? row.session.match_result === "win" : null },
+  localDate());
+  const monthCount = (items ?? []).filter((i) => i.session.session_date.slice(0, 7) === localDate().slice(0, 7)).length;
 
   return (
     <div>
-      <PageHero band eyebrow="Your games" title="Sessions" subtitle={items ? `${items.length} logged` : undefined}
+      <PageHero band eyebrow="Your games" title="Sessions" subtitle={items ? `${items.length} logged${monthCount ? ` · ${monthCount} this month` : ""}` : undefined}
         action={<a href="#/new" aria-label="Log a session" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full" style={{ background: YELLOW, color: YELLOW_INK }}><Plus size={22} /></a>} />
       <Sheet>
       <div className="space-y-5">
@@ -58,6 +66,19 @@ export default function SessionsPage({ sb, userId }: { sb: SupabaseClient; userI
       {items === null ? <p className="text-sm" style={{ color: WHITE_SUB }}>Loading your sessions…</p>
         : items.length === 0 && !sharedShown.length ? <EmptySessions />
         : shown.length === 0 && !sharedShown.length ? <p className="text-sm" style={{ color: WHITE_SUB }}>No sessions match this filter.</p>
+        : filter !== "tournament" ? weeks.map((week) => (
+          <section key={week.start} className="space-y-2" aria-label={week.label}>
+            <div className="flex items-baseline justify-between px-1">
+              <h2 className="text-[13px] font-extrabold uppercase tracking-[0.08em]" style={{ color: WHITE_SUB }}>{week.label}</h2>
+              {weekRecord(week) && <span className="text-[13px] font-bold" style={{ color: week.won > week.lost ? "var(--pp-accent-ink)" : WHITE_SUB }}>{weekRecord(week)}</span>}
+            </div>
+            <SessionList label={week.label}>
+              {week.items.map((entry) => "share" in entry
+                ? <li key={`shared-${entry.share.id}`}><SharedGameRow share={entry.share} /></li>
+                : <li key={entry.session.id}><SessionCard item={entry} assessment={byId.get(entry.session.id)} players={players.get(entry.session.id)} you={you} /></li>)}
+            </SessionList>
+          </section>
+        ))
         : groups.map(([title, list]) => (
           <section key={title || "all"} className="space-y-3" aria-label={title || undefined}>
             {title && <div className="flex flex-wrap items-center gap-2">
@@ -80,9 +101,10 @@ export default function SessionsPage({ sb, userId }: { sb: SupabaseClient; userI
   );
 }
 
-/** Your games and games shared with you, newest first. */
-function mergeByDate<T extends { session: { session_date: string } }>(own: T[], shared: GameShare[]): (T | { share: GameShare })[] {
+/** Your games and games shared with you, newest first; same-day sessions by start time. */
+function mergeByDate<T extends { session: { session_date: string; actual_start_at?: string | null; created_at?: string } }>(own: T[], shared: GameShare[]): (T | { share: GameShare })[] {
   const rows: (T | { share: GameShare })[] = [...own, ...shared.map((share) => ({ share }))];
   const date = (r: T | { share: GameShare }) => ("share" in r ? r.share.session_date : r.session.session_date);
-  return rows.sort((a, b) => date(b).localeCompare(date(a)));
+  const when = (r: T | { share: GameShare }) => ("share" in r ? "" : r.session.actual_start_at ?? r.session.created_at ?? "");
+  return rows.sort((a, b) => date(b).localeCompare(date(a)) || when(b).localeCompare(when(a)));
 }

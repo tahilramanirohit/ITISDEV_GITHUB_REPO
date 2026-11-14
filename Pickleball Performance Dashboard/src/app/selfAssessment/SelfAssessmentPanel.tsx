@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ArrowLeft, Minus, Plus } from "lucide-react";
+import { ArrowLeft, Frown, Meh, Minus, Plus, Smile, Sparkles } from "lucide-react";
 import {
   friendlyDbError, getSelfAssessment, listSelfAssessments, previousAssessment, saveSelfAssessment, type SelfAssessment,
 } from "../../lib/api/selfAssessment";
 import { listSessions, updateMatchResult } from "../../lib/api/sessions";
 import { sessionKind, type MatchResult, type SessionRow } from "../../lib/api/types";
 import {
-  buildSelfReport, compareSelfRatings, MIN_RATED_SKILLS, ratedSkills, SELF_SKILLS, SKILL_GROUPS, SKILL_INFO,
+  buildSelfReport, compareSelfRatings, MIN_RATED_SKILLS, ratedSkills, SELF_SKILLS, SKILL_GROUPS, SKILL_INFO, skillInfo,
   type ErrorLevel, type RecoveryLevels, type SelfRatings, type SelfSkill, type SkillRating,
 } from "../../lib/coaching/selfAssessment";
-import { ACCENT_SOFT, ACCENT_INK, CHECK, BORDER, GREEN, INK, PICKLE, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
-import { Chip, Notice, PrimaryButton, cardStyle, numStyle, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
+import { ACCENT_SOFT, ACCENT_INK, ACTION, ACTION_SOFT, CHECK, BORDER, GREEN, HERO, INK, ON_ACTION, ON_HERO, PICKLE, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
+import { Chip, Notice, PrimaryButton, cardStyle, numStyle, fieldStyle, labelClass, labelStyle, pressable } from "../shell/primitives";
 import { SelfReportView } from "./SelfReportView";
 import { SkillRater } from "./SkillRater";
 import { useDataUse } from "../onboarding/DataUse";
@@ -148,7 +148,7 @@ export function SelfAssessmentPanel({ sb, session, recovery, onSaved, peerRating
   if (saved === undefined) return <p className="text-sm" style={{ color: WHITE_SUB }}>Loading…</p>;
 
   if (!editing && saved && report) {
-    return <SelfReportView report={report} previousLabel={previous?.label} sessionTitle={session.title} playFormat={session.play_format}
+    return <SelfReportView report={report} previousLabel={previous?.label} sessionTitle={session.title} playFormat={session.play_format} planKey={session.id}
       progress={progress}
       onEdit={() => { setEditing(true); setStep(0); }} />;
   }
@@ -156,6 +156,23 @@ export function SelfAssessmentPanel({ sb, session, recovery, onSaved, peerRating
   const group = STEPS[step];
   const skills = SELF_SKILLS.filter((s) => SKILL_INFO[s].group === group);
   const last = step === STEPS.length - 1;
+
+  const won = effective.match_result === "win";
+  const scores = draft.match_score.split(",").map((g) => g.trim()).filter((g) => /^\d{1,2}\s*[-–:]\s*\d{1,2}$/.test(g));
+  const scoreboard = !solo && (effective.match_result || effective.games_played != null) && <section aria-label="Scoreboard"
+    className="relative overflow-hidden rounded-[22px] p-4" style={{ background: HERO, color: ON_HERO }}>
+    <span aria-hidden="true" className="pointer-events-none absolute -bottom-12 -right-10 h-40 w-40 rounded-full" style={{ background: "radial-gradient(rgba(254,188,23,.3), transparent 70%)" }} />
+    <div className="relative flex items-center gap-3">
+      {effective.match_result && <span className="grid h-14 w-14 shrink-0 place-items-center rounded-[16px] text-[28px]"
+        style={{ ...numStyle, ...(won ? { background: ACTION, color: ON_ACTION } : { background: "#0e1a13", color: ON_HERO, border: "1px solid #5b7263" }) }}>{won ? "W" : "L"}</span>}
+      <span className="min-w-0">
+        {effective.games_played != null && <span className="block text-[40px] leading-none" style={{ ...numStyle, color: won ? ACTION : ON_HERO }}>
+          {effective.games_won ?? 0}–{effective.games_played - (effective.games_won ?? 0)}</span>}
+        <span className="mt-1 block text-sm" style={{ color: "#c6d3ca" }}>{scores.length ? scores.join(" · ") : effective.match_result ? (won ? "Won" : "Lost") : ""}</span>
+      </span>
+    </div>
+  </section>;
+  const ratedList = SELF_SKILLS.filter((sk) => draft.ratings[sk] != null);
 
   const resultFields = !solo && <section aria-label="Game result" className="space-y-3 rounded-[20px] border-t-4 p-4" style={{ ...cardStyle, borderTop: `4px solid ${CHECK}` }}>
     <h3 className="text-sm font-extrabold uppercase tracking-wide" style={{ color: ACCENT_INK }}>Result</h3>
@@ -186,16 +203,45 @@ export function SelfAssessmentPanel({ sb, session, recovery, onSaved, peerRating
             style={i === step ? { color: INK, borderColor: PICKLE } : { color: i < step ? GREEN : WHITE_DIM, borderColor: "transparent" }}>{s}</button>)}
         </nav>
         {step === 0 && <p className="mt-3 text-sm" style={{ color: WHITE_DIM }}>Think about this game only. Skip anything that didn't come up.</p>}
+        {last && <p className="mt-3 text-[26px] font-extrabold leading-tight" style={{ color: INK }}>{solo ? "Nice session." : "Nice game."}</p>}
       </div>
 
+      {last && scoreboard}
+      {last && ratedList.length > 0 && <section aria-label="You rated" className="rounded-[20px] p-4" style={cardStyle}>
+        <h3 className="text-sm font-extrabold uppercase tracking-wide" style={{ color: ACCENT_INK }}>You rated</h3>
+        <ul className="mt-1">
+          {ratedList.map((sk) => {
+            const v = draft.ratings[sk]!;
+            const info = skillInfo(sk, session.play_format);
+            return <li key={sk} className="border-t first:border-t-0" style={{ borderColor: BORDER }}>
+              <button type="button" onClick={() => setStep(SKILL_GROUPS.indexOf(SKILL_INFO[sk].group))} aria-label={`${info.label}: ${v} out of 5, ${info.anchors[v - 1]}. Change`}
+                className="flex min-h-[52px] w-full items-center gap-3 py-1.5 text-left">
+                <span aria-hidden="true" className="grid h-10 w-10 shrink-0 place-items-center rounded-full" style={{ background: `conic-gradient(${ACTION} ${v * 20}%, ${BORDER} 0)` }}>
+                  <span className="grid h-[30px] w-[30px] place-items-center rounded-full text-base"
+                    style={{ ...numStyle, color: "#1f1a05", background: "radial-gradient(circle at 35% 30%, #fff3b0 0 12%, #f3d46b 13%)" }}>{v}</span>
+                </span>
+                <span className="min-w-0 flex-1"><span className="block text-[15px] font-bold" style={{ color: INK }}>{info.label}</span>
+                  <span className="block text-[13px]" style={{ color: WHITE_DIM }}>{info.anchors[v - 1]}</span></span>
+                <span className="text-xs font-semibold underline" style={{ color: WHITE_SUB }}>Change</span>
+              </button>
+            </li>;
+          })}
+        </ul>
+      </section>}
       {last && resultFields}
       {group !== "Wrap-up" ? <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">{skills.map((skill) => <SkillRater key={skill} skill={skill} playFormat={session.play_format} value={draft.ratings[skill]} onChange={(v) => rate(skill, v)} />)}</div> : <div className="space-y-4 lg:max-w-xl">
         <div>
           <p className={labelClass} style={labelStyle}>Unforced errors</p>
-          <div className="flex gap-2">
-            {(["few", "some", "many"] as ErrorLevel[]).map((level) => <Chip key={level} selected={draft.unforced_errors === level}
-              onClick={() => setDraft((d) => ({ ...d, unforced_errors: d.unforced_errors === level ? null : level }))}>
-              {level[0].toUpperCase() + level.slice(1)}</Chip>)}
+          <div className="grid grid-cols-3 gap-2" role="group" aria-label="Unforced errors">
+            {(["few", "some", "many"] as ErrorLevel[]).map((level) => {
+              const on = draft.unforced_errors === level;
+              const Icon = level === "few" ? Smile : level === "some" ? Meh : Frown;
+              return <button key={level} type="button" aria-pressed={on}
+                onClick={() => setDraft((d) => ({ ...d, unforced_errors: d.unforced_errors === level ? null : level }))}
+                className={`flex min-h-[64px] flex-col items-center justify-center gap-1 rounded-[16px] text-sm font-bold ${pressable}`}
+                style={{ background: on ? ACTION_SOFT : WHITE, border: `1.5px solid ${on ? ACTION : BORDER}`, color: INK }}>
+                <Icon size={22} aria-hidden="true" style={{ color: on ? ACTION : WHITE_DIM }} />{level[0].toUpperCase() + level.slice(1)}</button>;
+            })}
           </div>
         </div>
         <div>
@@ -214,7 +260,7 @@ export function SelfAssessmentPanel({ sb, session, recovery, onSaved, peerRating
         {step > 0 && <button type="button" onClick={() => setStep(step - 1)} aria-label="Previous step"
           className="flex min-h-[48px] w-14 items-center justify-center rounded-[14px]" style={{ border: `1px solid ${BORDER}`, background: WHITE }}><ArrowLeft size={18} /></button>}
         {last
-          ? <PrimaryButton type="button" className="flex-1" disabled={busy || ratedCount < MIN_RATED_SKILLS} onClick={() => void save()}>{busy ? "Saving…" : "See my practice plan"}</PrimaryButton>
+          ? <PrimaryButton type="button" className="flex-1" disabled={busy || ratedCount < MIN_RATED_SKILLS} onClick={() => void save()}>{busy ? "Saving…" : <span className="inline-flex items-center gap-2">See my practice plan <Sparkles size={18} aria-hidden="true" /></span>}</PrimaryButton>
           : <PrimaryButton type="button" className="flex-1" onClick={() => { setError(""); setStep(step + 1); window.scrollTo({ top: 0 }); }}>Next</PrimaryButton>}
       </div>
       {saved && <button type="button" onClick={() => { setEditing(false); setError(""); }} className="w-full text-sm font-semibold underline" style={{ color: WHITE_DIM }}>Cancel editing</button>}

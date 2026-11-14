@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ArrowDown, ArrowLeft, Copy, RefreshCw, Trash2, Upload } from "lucide-react";
+import { ArrowDown, ArrowLeft, Copy, Pencil, RefreshCw, Trash2, Upload } from "lucide-react";
+import { startTimeLabel } from "../../lib/coaching/sessionNames";
 import {
   deleteSession, finalizeUpload, findPreviousCoachableResult, getSessionBundle, listAnalysisRuns, registerVideo, removeVideo, requestReanalysis, setRawVideoKeep, signedVideoUrl,
   updateSessionDetails, updateSessionGoals, type SessionBundle,
@@ -629,6 +630,13 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
           </li>)}
         </ul>
       </details>;
+  const openDetails = () => setDetailsDraft({
+    title: session.title, session_date: session.session_date,
+    tournament_name: session.tournament_name ?? "", tournament_round: session.tournament_round ?? "",
+    match_result: session.match_result ?? null, match_score: session.match_score ?? "",
+    partner: players.find((p) => p.role === "partner")?.display_name ?? "",
+    opponents: [0, 1].map((i) => players.filter((p) => p.role === "opponent")[i]?.display_name ?? ""),
+  });
 
   return (
     <div>
@@ -637,9 +645,11 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-sm" style={{ color: WHITE_SUB }}>
-              {KIND_LABELS[sessionKind(session)]}{session.tournament_round ? ` · ${session.tournament_round}` : ""} · {new Date(`${session.session_date}T12:00:00`).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })} · {FORMAT_LABELS[session.play_format]}
+              {KIND_LABELS[sessionKind(session)]}{session.tournament_round ? ` · ${session.tournament_round}` : ""} · {new Date(`${session.session_date}T12:00:00`).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}{startTimeLabel(session.actual_start_at) ? ` · ${startTimeLabel(session.actual_start_at)}` : ""} · {FORMAT_LABELS[session.play_format]}
             </p>
-            <h1 className="mt-1 break-words text-[1.75rem] font-extrabold leading-[1.1] tracking-[-0.02em] md:text-4xl" style={{ fontFamily: DISPLAY_FONT }}>{session.title}</h1>
+            <h1 className="mt-1 break-words text-[1.75rem] font-extrabold leading-[1.1] tracking-[-0.02em] md:text-4xl" style={{ fontFamily: DISPLAY_FONT }}>{session.title}
+              <button type="button" aria-label="Rename session" onClick={() => { openDetails(); window.setTimeout(() => document.getElementById("edit-details")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50); }}
+                className="ml-1.5 inline-grid h-9 w-9 place-items-center rounded-full align-middle" style={{ color: ACCENT_INK }}><Pencil size={18} aria-hidden="true" /></button></h1>
           </div>
           <button type="button" title="Delete session" aria-label="Delete session" disabled={busy || state === "uploading" || state === "processing"}
             onClick={() => { if (window.confirm("Delete this session, its ratings, video and results?")) void run(async () => { await deleteSession(sb, bundle); navigate("/sessions"); }); }}
@@ -751,17 +761,11 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
           {sessionKind(session) !== "solo" && players.length === 0 && <p className="mt-2 text-sm" style={{ color: WHITE_DIM }}>No names added yet.</p>}
           {!detailsDraft && <button type="button" className="mt-4 inline-flex min-h-[44px] items-center rounded-[12px] px-5 text-sm font-bold"
             style={{ border: `1px solid ${BORDER}`, color: "var(--pp-ink)" }}
-            onClick={() => setDetailsDraft({
-              title: session.title, session_date: session.session_date,
-              tournament_name: session.tournament_name ?? "", tournament_round: session.tournament_round ?? "",
-              match_result: session.match_result ?? null, match_score: session.match_score ?? "",
-              partner: players.find((p) => p.role === "partner")?.display_name ?? "",
-              opponents: [0, 1].map((i) => players.filter((p) => p.role === "opponent")[i]?.display_name ?? ""),
-            })}>Edit details &amp; players</button>}
+            onClick={openDetails}>Edit details &amp; players</button>}
         </Card>
       {detailsDraft && (
           <Card accent={BLUE_SKY}>
-            <h2 className="text-lg font-extrabold">Edit details &amp; players</h2>
+            <h2 id="edit-details" className="scroll-mt-24 text-lg font-extrabold">Edit details &amp; players</h2>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <label className="grid gap-1 text-sm font-semibold">Name
                 <input maxLength={120} value={detailsDraft.title} onChange={(e) => setDetailsDraft({ ...detailsDraft, title: e.target.value })} className="rounded-[14px] px-4 py-3 text-base font-normal" style={fieldStyle} />
