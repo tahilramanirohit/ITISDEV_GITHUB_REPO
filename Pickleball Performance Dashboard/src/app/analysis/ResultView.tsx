@@ -133,6 +133,12 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
     try { window.localStorage.setItem(namesKey, JSON.stringify(next)); } catch { /* private window: this visit only */ }
   };
   const playerNames = useMemo(() => ({ ...sessionNames, ...customNames }), [sessionNames, customNames]);
+  // For the Shots, Errors and Position lists: "You" stays "You" unless you typed your own name.
+  const listNames = useMemo(() => {
+    const out: Record<number, string> = { ...sessionNames, ...customNames };
+    if (myPlayerId != null && !customNames[myPlayerId]) delete out[myPlayerId];
+    return out;
+  }, [sessionNames, customNames, myPlayerId]);
   // Older saved reports included an experimental hit count in the summary.
   // Keep that count hidden until the shot detector has real-footage evaluation.
   const visibleMessage = shotsValidated ? result.message
@@ -214,14 +220,15 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
 
       {/* No status badge or "Why?" (team request, 22 Nov): the sentence below says it plainly. */}
       <Card accent={NEON}>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="flex flex-wrap items-center gap-2">
-            {(devMock || result.data_origin === "test_fixture") && <OriginBadge origin={result.data_origin} devMock={devMock} />}
-            {devMock && <Pill color={ORANGE}>SAMPLE</Pill>}
-          </span>
-          {measured && (result.video.container_duration_s ?? 0) > 0 && <span className="text-xs font-bold" style={{ color: WHITE_SUB }}>{Math.round(result.video.container_duration_s!)} s of video</span>}
+        {(devMock || result.data_origin === "test_fixture") && <div className="mb-2 flex flex-wrap items-center gap-2">
+          <OriginBadge origin={result.data_origin} devMock={devMock} />
+          {devMock && <Pill color={ORANGE}>SAMPLE</Pill>}
+        </div>}
+        {/* Title and video length on one line (team request, 22 Nov). */}
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 id="video-heading" className="text-xl font-bold text-ink">{sharedBy ? `Watch ${sharedBy}'s video` : "Your video review"}</h2>
+          {measured && (result.video.container_duration_s ?? 0) > 0 && <span className="shrink-0 text-xs font-bold" style={{ color: WHITE_SUB }}>{Math.round(result.video.container_duration_s!)} s of video</span>}
         </div>
-        <h2 id="video-heading" className="mt-2 text-xl font-bold text-ink">{sharedBy ? `Watch ${sharedBy}'s video` : "Your video review"}</h2>
         {devMock && <p className="mt-1 text-sm text-ink">This sample shows the kind of practice plan PicklePro can display. It is not feedback about your play.</p>}
         {!devMock && result.status === "ok" && visibleMessage && <p className="sr-only">{visibleMessage}</p>}
         {!devMock && result.status === "ok" && warnings.length > 0 && (
@@ -247,6 +254,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
 
         {measured && hasPlayers && !sharedBy && <div className="mt-4">
           <PlayerPicker result={shotDisplayResult} myPlayerId={myPlayerId} onPick={setMyPlayerId}
+            names={playerNames} typedNames={customNames} onName={setCustomName}
             onUpdateCourt={onSelectTrack && myPlayerId != null ? () => {
               const me = result.players?.find((p) => p.player_id === myPlayerId);
               onSelectTrack(myPlayerId, me?.first_seen_s ?? 0);
@@ -264,8 +272,13 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
           {videoUrl && tracks.size > 0 && <div className="space-y-1.5">
             <button type="button" role="switch" aria-checked={courtView} onClick={() => setCourtView(!courtView)}
               className="inline-flex min-h-[40px] items-center gap-2 text-sm font-bold" style={{ color: INK }}>
-              <span aria-hidden="true" className="relative inline-block h-5 w-9 rounded-full transition-colors" style={{ background: courtView ? NEON : WHITE_SUB }}>
-                <span className="absolute top-0.5 h-4 w-4 rounded-full bg-white transition-[left]" style={{ left: courtView ? 18 : 2 }} /></span>
+              {/* A pickleball for the knob on a dark green track (team request, 22 Nov). */}
+              <span aria-hidden="true" className="relative inline-block h-6 w-11 rounded-full transition-colors motion-reduce:transition-none"
+                style={{ background: courtView ? "#1f5a34" : "color-mix(in srgb, var(--pp-ink) 22%, transparent)", boxShadow: "inset 0 0 0 1px rgba(0,0,0,.25)" }}>
+                <svg viewBox="0 0 20 20" width="20" height="20" className="absolute top-0.5 transition-[left] duration-200 motion-reduce:transition-none" style={{ left: courtView ? 22 : 2 }}>
+                  <circle cx="10" cy="10" r="9.2" fill="#f6d33c" stroke="#c9a400" strokeWidth="1.2" />
+                  {[[10, 4.6], [5.6, 7.4], [14.4, 7.4], [6.4, 12.8], [13.6, 12.8], [10, 10], [10, 15.6]].map(([x, y]) => <circle key={`${x}-${y}`} cx={x} cy={y} r="1.1" fill="#c9a400" />)}
+                </svg></span>
               Court view</button>
             {courtView && <LiveCourtStrip result={result} tracks={tracks} video={videoEl} names={playerNames} myPlayerId={myPlayerId} />}
             <details className="text-sm">
@@ -275,7 +288,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
                   <label className="flex items-center gap-2">
                     <i aria-hidden="true" className="inline-block h-3 w-3 shrink-0 rounded-full" style={{ background: courtColors[id] }} />
                     <span className="sr-only">Name for player {id}</span>
-                    <input type="text" maxLength={24} defaultValue={customNames[id] ?? ""} placeholder={sessionNames[id] ?? playerName(result, id, myPlayerId)}
+                    <input type="text" maxLength={24} key={customNames[id] ?? ""} defaultValue={customNames[id] ?? ""} placeholder={sessionNames[id] ?? playerName(result, id, myPlayerId)}
                       onBlur={(e) => setCustomName(id, e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
                       className="min-h-[44px] w-full min-w-0 rounded-[12px] px-3 text-sm" style={{ background: "var(--pp-surface)", border: `1px solid ${BORDER}`, color: INK }} />
                   </label>
@@ -326,13 +339,13 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
             style={activeTab === key ? { color: INK, borderColor: PICKLE } : { color: WHITE_DIM, borderColor: "transparent" }}>{label}</button>)}
         </div>
         <div role="tabpanel" id={`report-panel-${activeTab}`} aria-labelledby={`report-tab-${activeTab}`} className="mt-3 outline-none">
-          {activeTab === "shots" && <ShotsPanel result={shotDisplayResult} myPlayerId={myPlayerId} research={experimentalReview} teamsKey={`picklepro:teams:${reportKey}`} onWatch={watch} names={playerNames} />}
-          {activeTab === "errors" && <ErrorsPanel result={result} myPlayerId={myPlayerId} onWatch={watch} names={playerNames} />}
+          {activeTab === "shots" && <ShotsPanel result={shotDisplayResult} myPlayerId={myPlayerId} research={experimentalReview} teamsKey={`picklepro:teams:${reportKey}`} onWatch={watch} names={listNames} />}
+          {activeTab === "errors" && <ErrorsPanel result={result} myPlayerId={myPlayerId} onWatch={watch} names={listNames} />}
           {activeTab === "position" && <div className="space-y-3">
             {courtMap && <CourtMapPanel map={courtMap} name={mapName} previous={previousMap} playful={mapIsMine && !sharedBy}
               goal={mapIsMine && !sharedBy ? positioningGoal : undefined} />}
             {allHeat.length > 0 && <PlayersCourtMap result={result} heat={allHeat} tracks={tracks.size ? tracks : undefined} video={videoEl} myPlayerId={myPlayerId} names={playerNames} />}
-            <ZoneTimePanel result={result} myPlayerId={myPlayerId} othersOf={courtMap ? analysedId ?? myPlayerId : undefined} names={playerNames} />
+            <ZoneTimePanel result={result} myPlayerId={myPlayerId} othersOf={courtMap ? analysedId ?? myPlayerId : undefined} names={listNames} />
           </div>}
           {activeTab === "comments" && notes?.({ video: videoEl, seek })}
         </div>

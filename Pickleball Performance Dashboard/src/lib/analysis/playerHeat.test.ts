@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import fixture from "../../../contracts/fixtures/analysis_result.test_fixture.v1.json";
 import { parseAnalysisResult, type AnalysisResultV1 } from "./contract";
-import { applyHomography, courtMappingFrom, heatZoneAt, homographyFrom4, mainZone, heatmapFromPositions, playerHeat, playerTracks, positionAt, HEAT_CELL_M, HEAT_X0, HEAT_Y0 } from "./playerHeat";
+import { applyHomography, courtMappingFrom, heatZoneAt, homographyFrom4, mainZone, playerHeat, playerTracks, positionAt, HEAT_CELL_M, HEAT_X0, HEAT_Y0 } from "./playerHeat";
 import { COURT_LENGTH_M as L, COURT_WIDTH_M as W } from "../coaching/lastGameReview";
 
 // A camera behind the near baseline: the court as a trapezoid, narrower far away.
@@ -96,15 +96,3 @@ describe("moving dots", () => {
   });
 });
 
-describe("heatmap for Home", () => {
-  it("gives the chosen player's own heat, or everyone's when nobody is chosen", () => {
-    const mine = heatmapFromPositions(withPlayers(), 2)!;
-    expect(mine.everyone).toBe(false);
-    expect(mine.nearSide).toBe(false);
-    expect(mine.value.dwell_seconds.flat().reduce((a, b) => a + b, 0)).toBeCloseTo(mine.value.tracked_time_s, 2);
-    const all = heatmapFromPositions(withPlayers(), null)!;
-    expect(all.everyone).toBe(true);
-    expect(all.value.tracked_time_s).toBeCloseTo(9.4, 1);
-    expect(all.value.x_edges_m).toHaveLength(15);
-  });
-});

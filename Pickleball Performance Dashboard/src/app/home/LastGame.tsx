@@ -1,14 +1,11 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ChevronRight, Play, Video } from "lucide-react";
+import { ChevronRight, Video } from "lucide-react";
 import { getSessionBundle, signedVideoUrl, type SessionListItem } from "../../lib/api/sessions";
 import type { OtherPlayer } from "../../lib/api/players";
 import { parseAnalysisResult } from "../../lib/analysis/contract";
 import { formatClock } from "../../lib/analysis/shotLabels";
 import { chosenPlayer, lastGameReview, type LastGameReview } from "../../lib/coaching/lastGameReview";
-import { deriveAnalysisState } from "../../lib/analysis/state";
-import { heatmapFromPositions } from "../../lib/analysis/playerHeat";
-import { TopCourtHeatmap } from "../analysis/TopCourtHeatmap";
 import { ACTION, HERO, INK, LINE, ON_ACTION, ON_HERO, PAGE_BG, SURFACE } from "../theme";
 import { numStyle, pressable } from "../shell/primitives";
 import { formatSessionDate } from "../sessions/sessionUi";
@@ -83,9 +80,6 @@ export function LastGame(props: Props) {
   );
 }
 
-type View = "replay" | "heat";
-const VIEW_KEY = "picklepro.home.lastGameView";
-const readView = (): View => { try { return window.localStorage.getItem(VIEW_KEY) === "replay" ? "replay" : "heat"; } catch { return "heat"; } };
 const savedPlayer = (sessionId: string): number | null => {
   try { const v = window.localStorage.getItem(`picklepro:me:${sessionId}`); return v != null && /^\d+$/.test(v) ? Number(v) : null; } catch { return null; }
 };
@@ -110,12 +104,7 @@ function useReview(sb: SupabaseClient, item: SessionListItem) {
       if (measured && bundle.result?.result) {
         try {
           const result = parseAnalysisResult(bundle.result.result);
-          const me = chosenPlayer(result, savedPlayer(id));
-          review = lastGameReview(result, me);
-          // No analyser heatmap (e.g. nobody picked as "you"): draw it from the stored positions, as the session page does.
-          const fallback = review ? null : heatmapFromPositions(result, me);
-          if (fallback) review = { heatmap: fallback.value, nearSide: fallback.nearSide, kitchenLineShare: null, zoneShare: null,
-            window: "video", moments: [], everyone: fallback.everyone } as LastGameReview & { everyone: boolean };
+          review = lastGameReview(result, chosenPlayer(result, savedPlayer(id)));
         } catch { /* An unreadable result: show the video without a heatmap. */ }
       }
       const v = bundle.video;
@@ -127,60 +116,33 @@ function useReview(sb: SupabaseClient, item: SessionListItem) {
   return state;
 }
 
-/** Why there's no heatmap yet, in plain words. */
-function heatmapWaiting(item: SessionListItem): string {
-  switch (deriveAnalysisState({ video: item.video, job: item.job, result: item.result })) {
-    case "queued": return "Your video is waiting for the analyzer. Your heatmap appears here once it's analyzed.";
-    case "processing": return "Analyzing your video… Your heatmap appears here when it's done.";
-    case "failed": return "We couldn't analyze this video. Open the full review to try again.";
-    case "insufficient_data": return "The video didn't show enough of the court to map where you stood.";
-    default: return "No heatmap for this video yet.";
-  }
-}
-
 /**
- * Home "Last game" for a game with an analyzed video: the score, then a switch between
- * Shot replay (the video, with jump-to-moment chips) and Heatmap (the court from above,
- * where the player stood). Any other game shows the drawn court.
+ * Home "Last game" for a game with an analyzed video: the score, then the video with
+ * jump-to-moment chips (the heatmap moved out of Home, 22 Nov). Any other game shows the drawn court.
  */
 export function LastGameCard({ sb, ...props }: Props & { sb: SupabaseClient }) {
   const data = useReview(sb, props.item);
-  const [saved, setSaved] = useState<View>(readView);
-  const [picked, setPicked] = useState<View | null>(null);
-  // Until there's a heatmap, open on the video (it works as soon as it's uploaded); a tap always wins.
-  const view: View = picked ?? (data && !data.review ? "replay" : saved);
-  const setView = (next: View) => { setPicked(next); setSaved(next); };
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const videoPath = data?.videoPath ?? null;
   useEffect(() => {
-    if (view !== "replay" || !videoPath) { setVideoUrl(null); return; }
+    if (!videoPath) { setVideoUrl(null); return; }
     let active = true;
     signedVideoUrl(sb, videoPath).then((url) => { if (active) setVideoUrl(url); }).catch(() => { if (active) setVideoUrl(null); });
     return () => { active = false; };
-  }, [sb, view, videoPath]);
+  }, [sb, videoPath]);
   if (!data) return <div className="space-y-3"><LastGame {...props} />
     {!props.item.video && <a href={`#/sessions/${props.item.session.id}?tab=video`} className={`flex min-h-[56px] items-center gap-3 rounded-[18px] px-3.5 py-3 ${pressable}`}
       style={{ background: "var(--pp-action-soft)", border: "1px solid color-mix(in srgb, var(--pp-action) 35%, var(--pp-line))", color: INK }}>
       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px]" style={{ background: ACTION, color: ON_ACTION }}><Video size={20} aria-hidden="true" /></span>
       <span className="min-w-0 flex-1"><b className="block text-[15px]">Add a video of this game</b>
-        <span className="block text-sm" style={{ color: "var(--pp-ink-2)" }}>Unlocks Shot replay and Heatmap here.</span></span>
+        <span className="block text-sm" style={{ color: "var(--pp-ink-2)" }}>Watch it here, with jumps to your best moments.</span></span>
       <ChevronRight size={18} aria-hidden="true" style={{ color: "var(--pp-line-strong)" }} />
     </a>}
   </div>;
 
   const { review } = data;
   const { session } = props.item;
-  const choose = (next: View) => { setView(next); try { window.localStorage.setItem(VIEW_KEY, next); } catch { /* this visit only */ } };
   const videoHref = (t?: number) => `#/sessions/${session.id}?tab=video${t != null ? `&t=${Math.floor(t)}` : ""}`;
-  const share = review?.kitchenLineShare != null ? Math.round(review.kitchenLineShare * 100) : null;
-  const where = share != null
-    ? `You spent ${share}% of ${review?.window === "rallies" ? "rallies" : "the video"} at the kitchen line`
-    : (review as { everyone?: boolean } | null)?.everyone ? "Where everyone stood. Pick yourself in the full review to see just you"
-    : "Where you stood during the game";
-  const tabs: [View, string, ReactNode][] = [
-    ["replay", "Shot replay", <Play key="p" size={16} fill="currentColor" aria-hidden="true" />],
-    ["heat", "Heatmap", <svg key="h" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M12 5v14" /><circle cx="8" cy="10" r="2" fill="currentColor" /></svg>],
-  ];
 
   return (
     <section aria-label="Last game" className="flex flex-col gap-3 rounded-[22px] p-3" style={{ background: HERO, color: ON_HERO, borderTop: `4px solid ${ACTION}` }}>
@@ -191,30 +153,9 @@ export function LastGameCard({ sb, ...props }: Props & { sb: SupabaseClient }) {
           {formatSessionDate(session.session_date, { weekday: "short" })}{props.rating != null ? ` · Rated ${props.rating.toFixed(1)}` : ""}
         </a>
       </div>
-      <div role="tablist" aria-label="Last game view" className="grid grid-cols-2 gap-0.5 rounded-full p-1" style={{ background: PAGE_BG }}>
-        {tabs.map(([value, label, icon]) => (
-          <button key={value} type="button" role="tab" aria-selected={view === value} onClick={() => choose(value)}
-            className={`flex min-h-[44px] items-center justify-center gap-1.5 rounded-full text-[15px] font-bold ${pressable}`}
-            style={view === value ? { background: ACTION, color: ON_ACTION } : { color: "#c6d3ca" }}>{icon}{label}</button>
-        ))}
-      </div>
 
-      {view === "heat" && !review ? <div role="tabpanel" aria-label="Heatmap" className="grid aspect-[2/1] w-full place-items-center rounded-[16px] px-6 text-center text-[15px]"
-        style={{ background: PAGE_BG, color: "#c6d3ca" }}>{heatmapWaiting(props.item)}</div>
-      : view === "heat" && review ? <div role="tabpanel" aria-label="Heatmap" className="flex flex-col gap-2.5">
-        <a href={videoHref()} className="block overflow-hidden rounded-[16px]" aria-label={`${where}. Open the full review.`}>
-          <TopCourtHeatmap value={review.heatmap} nearSide={review.nearSide} label={`Court from above. ${where}.`} />
-        </a>
-        {share != null
-          ? <p className="flex items-center gap-3"><span className="text-[34px] leading-none" style={{ ...numStyle, color: ACTION }}>{share}%</span>
-              <span className="text-[15px] leading-snug"><b className="block">of {review.window === "rallies" ? "rallies" : "the video"} at the kitchen line</b>
-                <span style={{ color: "#c6d3ca" }}>From your video. Tap for the full review.</span></span></p>
-          : <p className="text-[15px]" style={{ color: "#c6d3ca" }}>Where you stood, from your video.</p>}
-        <p className="flex flex-wrap gap-x-4 gap-y-1 text-[13px]" style={{ color: "#c6d3ca" }} aria-hidden="true">
-          <span className="inline-flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full" style={{ background: "#febc17" }} />Where you stood most</span>
-          <span className="inline-flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full" style={{ background: "#ff8a65" }} />At the back</span>
-        </p>
-      </div> : <div role="tabpanel" aria-label="Shot replay" className="flex flex-col gap-2.5">
+      {/* Home shows the video only (team request, 22 Nov); the court views are in the full review. */}
+      <div aria-label="Shot replay" className="flex flex-col gap-2.5">
         {videoPath
           ? videoUrl
             ? <video src={`${videoUrl}#t=0.1`} controls playsInline preload="metadata" className="block aspect-video w-full rounded-[16px] bg-black" aria-label="Your last game's video" />
@@ -231,7 +172,7 @@ export function LastGameCard({ sb, ...props }: Props & { sb: SupabaseClient }) {
             ))}
           </div>
         </>}
-      </div>}
+      </div>
     </section>
   );
 }

@@ -37,7 +37,7 @@ export function ErrorsPanel({ result, myPlayerId, onWatch, names = {} }: {
     return value.players.find((p) => p.player_id === myPlayerId)!.counts;
   }, [value, scope, myPlayerId]);
   const events = useMemo(() => (value?.events ?? []).filter((e) => scope === "all" || e.player_id === myPlayerId), [value, scope, myPlayerId]);
-  const name = (id: number | null) => (id == null ? "Unknown player" : id === myPlayerId ? "You" : names[id] ?? `Player ${id}`);
+  const name = (id: number | null) => (id == null ? "Unknown player" : names[id] ?? (id === myPlayerId ? "You" : `Player ${id}`));
 
   if (!metric || metric.status === "not_computed" || !value || !counts) return null;
   const total = ERROR_KINDS.reduce((sum, k) => sum + counts[k], 0);

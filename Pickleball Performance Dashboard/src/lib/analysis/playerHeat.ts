@@ -1,4 +1,4 @@
-import type { AnalysisResultV1, CourtLinesSnapshot, HeatmapValue } from "./contract";
+import type { AnalysisResultV1, CourtLinesSnapshot } from "./contract";
 import { courtPlayers } from "./shotLabels";
 import { COURT_LENGTH_M as L, COURT_WIDTH_M as W } from "../coaching/lastGameReview";
 
@@ -193,27 +193,4 @@ export function positionAt(track: TrackPoint[], t: number): TrackPoint | null {
   }
   if (t - a.t <= 0.6) return a;
   return b && b.t - t <= 0.6 ? b : null;
-}
-
-/**
- * A heatmap in the analyser's court_heatmap format from the stored positions, for places that only
- * know that format (Home's Last game). The chosen player's own time if they are on court, else everyone's.
- */
-export function heatmapFromPositions(result: AnalysisResultV1, playerId: number | null): { value: HeatmapValue; nearSide: boolean; everyone: boolean } | null {
-  const heat = playerHeat(result);
-  if (!heat.length) return null;
-  const mine = playerId != null ? heat.find((h) => h.playerId === playerId) : undefined;
-  const parts = mine ? [mine] : heat;
-  const seconds = Array.from({ length: HEAT_ROWS }, (_, r) => Array.from({ length: HEAT_COLS }, (_, c) => parts.reduce((s, h) => s + h.seconds[r][c], 0)));
-  return {
-    value: {
-      units: "seconds", coordinate_system: "pickleball_full_court_v1: x across court from near-left sideline, y from near baseline (metres)",
-      cell_size_m: HEAT_CELL_M,
-      x_edges_m: Array.from({ length: HEAT_COLS + 1 }, (_, i) => HEAT_X0 + i * HEAT_CELL_M),
-      y_edges_m: Array.from({ length: HEAT_ROWS + 1 }, (_, i) => HEAT_Y0 + i * HEAT_CELL_M),
-      dwell_seconds: seconds, tracked_time_s: parts.reduce((s, h) => s + h.totalS, 0), outside_mapped_area_s: 0,
-    },
-    nearSide: mine ? mine.side !== "far" : true,
-    everyone: !mine,
-  };
 }

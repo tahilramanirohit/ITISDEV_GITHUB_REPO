@@ -60,7 +60,7 @@ export function ShotsPanel({ result, myPlayerId, onWatch, research = false, team
   const isMe = (s: ShotEvent) => (myPlayerId != null ? s.hitter_track_id === myPlayerId : s.by_selected_player);
   const role = (s: ShotEvent): Exclude<Filter, "all"> => (isMe(s) ? "you" : shotSide(s) === mySide ? "partner" : "them");
   const name = (s: ShotEvent) => {
-    if (isMe(s)) return "You";
+    if (isMe(s)) return (s.hitter_track_id != null && names[s.hitter_track_id]) || "You";
     if (s.hitter_track_id == null) return "Unknown player";
     return names[s.hitter_track_id] ?? `Player ${s.hitter_track_id}`;
   };
@@ -199,7 +199,7 @@ function TeamsSheet({ players, sideOf, myPlayerId, onMove, onReset, onClose, nam
           style={{ background: SURFACE, border: `1px solid ${LINE}`, color: INK }}>
           <span className="grid h-7 w-7 place-items-center rounded-full text-[10px] font-extrabold"
             style={id === myPlayerId ? { background: ACTION, color: ON_ACTION } : { background: LINE, color: INK_2 }}>{id === myPlayerId ? "You" : id}</span>
-          {id === myPlayerId ? "You" : names[id] ?? `Player ${id}`}
+          {names[id] ?? (id === myPlayerId ? "You" : `Player ${id}`)}
           <ArrowLeftRight size={13} aria-hidden="true" className="ml-auto" style={{ color: INK_3 }} />
         </button>
       ))}
@@ -259,7 +259,7 @@ function PlayerTable({ result, research, myPlayerId, names }: { result: Analysis
         <tbody>
           {rows.map(({ player, shots }) => (
             <tr key={player?.player_id ?? "unknown"} className="border-t" style={{ borderColor: LINE, color: INK }}>
-              <th scope="row" className="py-1.5 pr-3 text-left font-semibold">{player ? (player.player_id === myPlayerId ? "You" : names[player.player_id] ?? `Player ${player.player_id}`) : "Hitter not identified"}</th>
+              <th scope="row" className="py-1.5 pr-3 text-left font-semibold">{player ? names[player.player_id] ?? (player.player_id === myPlayerId ? "You" : `Player ${player.player_id}`) : "Hitter not identified"}</th>
               <td className="px-2 py-1.5 text-right font-bold">{shots.length}</td>
               {types.map((t) => <td key={t} className="px-2 py-1.5 text-right">{shots.filter((s) => s.shot_type === t).length || "·"}</td>)}
             </tr>

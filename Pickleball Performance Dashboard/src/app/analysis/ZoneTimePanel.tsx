@@ -36,8 +36,8 @@ function ZoneLegend({ definitions }: { definitions: Record<string, string> }) {
   );
 }
 
-function ZoneRow({ row, mine, name, thumbnail, rules }: {
-  row: PlayerZoneTime; mine: boolean; name?: string; thumbnail?: string | null; rules: string;
+function ZoneRow({ row, mine, name, myName, thumbnail, rules }: {
+  row: PlayerZoneTime; mine: boolean; name?: string; myName?: string; thumbnail?: string | null; rules: string;
 }) {
   return (
     <li className="rounded-xl p-3"
@@ -45,7 +45,7 @@ function ZoneRow({ row, mine, name, thumbnail, rules }: {
       <div className="flex items-center gap-3">
         {thumbnail && <img src={thumbnail} alt="" className="h-12 w-auto rounded" />}
         <div className="min-w-0 flex-1">
-          <p className="text-base font-semibold" style={{ color: INK }}>{mine ? "You" : name ?? `Player ${row.player_id}`}</p>
+          <p className="text-base font-semibold" style={{ color: INK }}>{mine ? myName ?? "You" : name ?? `Player ${row.player_id}`}</p>
           <ZoneBar row={row} />
           <p className="text-sm mt-1" style={{ color: WHITE_DIM }}>
             {ZONES.map((z) => `${ZONE_STYLE[z].label} ${pct(row.zone_share[z])}`).join(" · ")}
@@ -90,7 +90,7 @@ export function ZoneTimePanel({ result, myPlayerId, othersOf, names = {} }: {
         <p className="text-sm" style={{ color: WHITE_DIM }}>{value.window === "detected_rallies"
           ? `During rallies (${Math.round(value.window_s)} s of play).` : `Over the whole video (${Math.round(value.window_s)} s).`}</p>
         <ZoneLegend definitions={value.zone_definitions} />
-        <ul className="mb-3 space-y-3">{others.map((row) => <ZoneRow key={row.player_id} row={row} mine={row.player_id === myPlayerId}
+        <ul className="mb-3 space-y-3">{others.map((row) => <ZoneRow key={row.player_id} row={row} mine={row.player_id === myPlayerId} myName={names[row.player_id]}
           name={names[row.player_id] ?? people.get(row.player_id)?.label} thumbnail={people.get(row.player_id)?.thumbnail} rules={value.estimate_rules} />)}</ul>
       </details>
     );
@@ -103,7 +103,7 @@ export function ZoneTimePanel({ result, myPlayerId, othersOf, names = {} }: {
           ? `During rallies (${Math.round(value.window_s)} s of play).` : `Over the whole video (${Math.round(value.window_s)} s).`}</p>
         <ZoneLegend definitions={value.zone_definitions} />
         <ul className="space-y-3">
-          {rows.map((row) => <ZoneRow key={row.player_id} row={row} mine={row.player_id === myPlayerId}
+          {rows.map((row) => <ZoneRow key={row.player_id} row={row} mine={row.player_id === myPlayerId} myName={names[row.player_id]}
             name={names[row.player_id] ?? people.get(row.player_id)?.label} thumbnail={people.get(row.player_id)?.thumbnail} rules={value.estimate_rules} />)}
         </ul>
         {mineKnown && sorted.length > 1 && <button type="button" onClick={() => setEveryone(!everyone)}
