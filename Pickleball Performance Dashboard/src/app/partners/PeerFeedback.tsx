@@ -29,10 +29,7 @@ function RatingBar({ who, value, color }: { who: string; value: number | null; c
   </div>;
 }
 
-/** The most shots one request can ask about (the share_session check allows 3). */
-const MAX_ASK_SKILLS = 3;
-
-/** The bottom sheet for asking a partner to look at up to 3 skills. */
+/** The bottom sheet for asking a partner to look at one or more skills (any number since update 18). */
 function AskSheet({ partners, shares, goalSkills, hasVideo, initialPartner, sessionTitle, onSend, onClose }: {
   sessionTitle: string; partners: PartnerLink[]; shares: SessionShare[]; goalSkills: SelfSkill[]; hasVideo: boolean; initialPartner: string | null;
   onSend: (partnerId: string, skills: SelfSkill[], withVideo: boolean) => Promise<void>; onClose: () => void;
@@ -40,8 +37,8 @@ function AskSheet({ partners, shares, goalSkills, hasVideo, initialPartner, sess
   const existing = (id: string | null) => shares.find((s) => s.partner_id === id);
   // Nobody is picked for you unless you started from that partner (or there is only one).
   const [partnerId, setPartnerId] = useState<string | null>(initialPartner ?? (partners.length === 1 ? partners[0].other_id : null));
-  // A new request starts with your first goal skill; asking again keeps what you asked before (up to 3).
-  const startSkills = (share: SessionShare | undefined) => share ? share.focus_skills.slice(0, MAX_ASK_SKILLS) : goalSkills.slice(0, 1);
+  // A new request starts with your first goal skill; asking again keeps what you asked before.
+  const startSkills = (share: SessionShare | undefined) => share?.focus_skills.length ? [...share.focus_skills] : goalSkills.slice(0, 1);
   const [skills, setSkills] = useState<SelfSkill[]>(startSkills(existing(partnerId)));
   const [withVideo, setWithVideo] = useState(hasVideo && (existing(partnerId)?.with_video ?? true));
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -55,15 +52,13 @@ function AskSheet({ partners, shares, goalSkills, hasVideo, initialPartner, sess
     const share = existing(id);
     setSkills(startSkills(share)); setWithVideo(hasVideo && (share?.with_video ?? true)); setError("");
   }
-  // Pick one to three shots (the database allows up to 3 per request); tap again to remove one.
-  const toggle = (skill: SelfSkill) => setSkills((list) => list.includes(skill) ? list.filter((s) => s !== skill)
-    : list.length >= MAX_ASK_SKILLS ? list : [...list, skill]);
-  const full = skills.length >= MAX_ASK_SKILLS;
+  // Pick one or more shots; tap a picked one again to remove it.
+  const toggle = (skill: SelfSkill) => setSkills((list) => list.includes(skill) ? list.filter((s) => s !== skill) : [...list, skill]);
   const nothingToDo = skills.length === 0;
 
   async function send() {
     if (!partnerId) return setError("Pick who to ask.");
-    if (nothingToDo) return setError("Pick at least one skill for a ratings-only request.");
+    if (nothingToDo) return setError("Pick at least one shot.");
     setBusy(true);
     setError("");
     try {
@@ -106,11 +101,11 @@ function AskSheet({ partners, shares, goalSkills, hasVideo, initialPartner, sess
           <a href="#/players?section=partners" className="font-bold underline" style={{ color: ACCENT_INK }}>Partner with another buddy</a></p>}
         <div className="mt-5 flex items-baseline justify-between gap-3">
           <h3 className="text-xl font-extrabold leading-tight" style={{ color: INK }}>Which shots would you like feedback on?</h3>
-          <span className="shrink-0 text-sm font-bold tabular-nums" style={{ color: full ? ACCENT_INK : INK_2 }} aria-live="polite">{skills.length} of {MAX_ASK_SKILLS}</span>
+          <span className="shrink-0 text-sm font-bold tabular-nums" style={{ color: skills.length ? ACCENT_INK : INK_2 }} aria-live="polite">{skills.length} picked</span>
         </div>
-        <p className="mt-1 text-sm" style={{ color: INK_2 }}>Pick up to {MAX_ASK_SKILLS}.</p>
+        <p className="mt-1 text-sm" style={{ color: INK_2 }}>Pick one or more.</p>
         <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Skills to look at">
-          {order.map((s) => <Chip key={s} selected={skills.includes(s)} disabled={full && !skills.includes(s)} onClick={() => toggle(s)}>{SKILL_INFO[s].label}</Chip>)}
+          {order.map((s) => <Chip key={s} selected={skills.includes(s)} onClick={() => toggle(s)}>{SKILL_INFO[s].label}</Chip>)}
         </div>
         <div className="mt-4 rounded-[20px] px-4" style={{ ...cardStyle, background: SURFACE_2 }}>
           {hasVideo ? <PreferenceSwitch label="Share the video" detail="Your ratings, journal and plan stay private." checked={withVideo} onChange={() => setWithVideo(!withVideo)} disabled={busy} />

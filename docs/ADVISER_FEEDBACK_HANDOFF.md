@@ -21,6 +21,7 @@
 | Buddy game video, Ask sheet picks who, result in Wrap-up only, journal redesign | ✅ Done (10 Nov 2026) | **Yes** for the buddy game video: `20261112090000_buddy_session_video.sql` (`pickleproapp_upgrade_15.sql`) |
 | Video report simplified (summary, tabs, Video settings) | ✅ Done (10 Nov 2026) | No |
 | Professor's notes of 22 Nov: checklist bar, pickleball create button, less text | ✅ Done (22 Nov 2026) | No |
+| Feedback on any number of shots (was at most 3) | ✅ Done (22 Nov 2026) | **Yes**: `20261122090000_feedback_any_number_of_skills.sql` (`pickleproapp_upgrade_18.sql`) |
 
 **All work packages are done.** Still open (not a work package): a review-only video for solo drills (gap analysis §4b.1), and the proposal text changes in section 7. Everything left needs a new migration, so read rule 6 in section 3 first.
 

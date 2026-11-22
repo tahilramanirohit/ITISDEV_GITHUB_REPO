@@ -71,7 +71,13 @@ checks(n, upd, needs, ok) as (values
   (17, 'pickleproapp_upgrade_17.sql', 'effort rated out of 5',
        exists (select 1 from pg_constraint c where c.conrelid = 'public.recovery_logs'::regclass
                and c.conname = 'recovery_logs_exertion_check' and pg_get_constraintdef(c.oid) like '%5)%'
-               and pg_get_constraintdef(c.oid) not like '%10%'))
+               and pg_get_constraintdef(c.oid) not like '%10%')),
+  -- Running update 9 again puts the old limit of 3 back; this catches that too.
+  (18, 'pickleproapp_upgrade_18.sql', 'feedback on any number of shots',
+       exists (select 1 from pg_proc p join pg_namespace s on s.oid = p.pronamespace
+               where s.nspname = 'public' and p.proname = 'share_session' and p.prosrc not like '%> 3%')
+       and not exists (select 1 from pg_constraint c where c.conrelid = 'public.report_shares'::regclass
+               and c.conname = 'report_shares_focus_skills' and pg_get_constraintdef(c.oid) like '%<= 3%'))
 )
 select case when n = 0 then 'Base' else n::text end as "#",
        needs as "What the app needs",

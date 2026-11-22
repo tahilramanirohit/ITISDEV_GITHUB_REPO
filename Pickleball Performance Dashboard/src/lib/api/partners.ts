@@ -96,6 +96,10 @@ export function formatVideoTime(seconds: number | null): string {
 /** Turns database errors into the messages shown on screen. */
 export function partnerErrorText(e: unknown): string {
   const message = e instanceof Error ? e.message : String((e as { message?: string })?.message ?? e);
+  // A project without update 18 still allows only 3 shots per request.
+  if (/pick up to 3 skills/i.test(message)) {
+    return "Asking about more than 3 shots needs a database update. Run supabase/scripts/pickleproapp_upgrade_18.sql in the Supabase SQL Editor, then send again.";
+  }
   if (/p_focus_skills|p_with_video|rate_shared_skill|session_peer_ratings|peer_ratings|focus_skills|with_video|p_skill/i.test(message)
       && !/^partners:/.test(message)) {
     return "Peer feedback needs a database update. Run supabase/scripts/pickleproapp_upgrade_9.sql in the Supabase SQL Editor, then reload.";
@@ -150,7 +154,7 @@ export async function listSessionShares(sb: SupabaseClient, sessionId: string): 
   return (data ?? []) as SessionShare[];
 }
 
-/** Share a session with a partner, asking about up to 3 skills, with or without the video. Sharing again updates the ask. */
+/** Share a session with a partner, asking about one or more skills, with or without the video. Sharing again updates the ask. */
 export async function shareSession(sb: SupabaseClient, sessionId: string, partnerId: string, focusSkills: SelfSkill[], withVideo: boolean): Promise<void> {
   await rpc<null>(sb, "share_session", { p_session_id: sessionId, p_partner_id: partnerId, p_focus_skills: focusSkills, p_with_video: withVideo });
 }
