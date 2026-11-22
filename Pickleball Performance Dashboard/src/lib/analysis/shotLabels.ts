@@ -58,11 +58,11 @@ export function shotsByPlayer(result: AnalysisResultV1): { player: PlayerSummary
   return rows;
 }
 
-export function playerName(result: AnalysisResultV1, id: number | null, myPlayerId?: number | null): string {
+export function playerName(_result: AnalysisResultV1, id: number | null, myPlayerId?: number | null): string {
   if (id == null) return "Unknown player";
   if (myPlayerId != null && id === myPlayerId) return "You";
-  const p = (result.players ?? []).find((x) => x.player_id === id);
-  return p ? `Player ${id} (${p.label.toLowerCase()})` : `Player ${id}`;
+  // Short on purpose: each player's colour already shows who is who; the side ("near side, right") made chips wide.
+  return `Player ${id}`;
 }
 
 export function countByType(shots: ShotEvent[]): [ShotType, number][] {

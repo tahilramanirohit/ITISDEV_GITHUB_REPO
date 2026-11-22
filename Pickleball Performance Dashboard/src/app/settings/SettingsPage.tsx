@@ -12,13 +12,12 @@ import { DATA_PREFERENCES_UPDATED } from "../onboarding/DataUse";
 import { LargeTextToggle } from "../shell/AppShell";
 import { RecoveryCard, useInjury } from "../recovery/RecoveryCard";
 import { RecoveryEntry } from "../recovery/RecoverySwitch";
-import { BORDER, INK, WHITE, WHITE_DIM, WHITE_SUB, applyAppearance, readAppearance, type Appearance } from "../theme";
+import { BORDER, INK, WHITE, WHITE_SUB, applyAppearance, readAppearance, type Appearance } from "../theme";
 
-function LinkRow({ href, title, detail }: { href: string; title: string; detail: string }) {
+function LinkRow({ href, title }: { href: string; title: string }) {
   return (
     <a href={href} className="flex min-h-[56px] items-center justify-between gap-3 border-b px-4 py-3 last:border-b-0" style={{ borderColor: BORDER }}>
-      <span className="min-w-0"><span className="block text-sm font-semibold" style={{ color: INK }}>{title}</span>
-        <span className="block text-xs" style={{ color: WHITE_SUB }}>{detail}</span></span>
+      <span className="min-w-0 text-sm font-semibold" style={{ color: INK }}>{title}</span>
       <ChevronRight size={18} style={{ color: WHITE_SUB }} aria-hidden="true" />
     </a>
   );
@@ -133,7 +132,7 @@ export default function SettingsPage({ sb, userId, account, devLinks }: {
         }} />
       <button type="button" className="mt-2 min-h-[44px] text-sm font-bold underline" style={{ color: "var(--pp-accent-ink)" }}
         onClick={() => void clearGameShareTrust(sb).then(() => setShareMessage("You'll be asked again for every buddy.")).catch(() => setShareMessage("Couldn't save that. Try again."))}>
-        Ask me again for buddies I always accept</button>
+        Reset buddies I always accept</button>
       {shareMessage && <p className="mt-1 text-sm" role="status" style={{ color: "var(--pp-ink-2)" }}>{shareMessage}</p>}
     </Card>}
     <Card>
@@ -146,12 +145,11 @@ export default function SettingsPage({ sb, userId, account, devLinks }: {
           </Chip>
         ))}
       </div>
-      <p className="mt-4 text-sm" style={{ color: WHITE_DIM }}>Make all text larger on this device.</p>
-      <div className="mt-2"><LargeTextToggle /></div>
+      <div className="mt-4"><LargeTextToggle /></div>
     </Card>
     <section className="overflow-hidden rounded-[14px]" style={{ background: WHITE, border: `1px solid ${BORDER}` }} aria-label="More settings">
-      <LinkRow href="#/welcome" title="My game and starting skills" detail="Level, goals and your usual skill ratings" />
-      <LinkRow href="#/privacy" title="Your data and privacy" detail="What is stored, who can see it, how to delete it" />
+      <LinkRow href="#/welcome" title="My game and starting skills" />
+      <LinkRow href="#/privacy" title="Your data and privacy" />
     </section>
     {devLinks && <Card>
       <SectionTitle>Research tools</SectionTitle>

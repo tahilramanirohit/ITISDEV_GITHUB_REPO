@@ -177,7 +177,7 @@ export function CapturePanel({ sb, session, onSessionUpdated, step: requestedSte
     <div className="mt-4">
       {step === 0 && <>
         <h3 className="text-lg font-extrabold" style={{ color: INK }}>Pre-game check-in</h3>
-        <p className="text-sm" style={{ color: WHITE_DIM }}>A quick check before you play. It shapes your plan, nothing else.</p>
+        <p className="text-sm" style={{ color: WHITE_DIM }}>A quick check before you play.</p>
         <div className="mt-3 grid gap-4 sm:grid-cols-2">
           <Question title="How ready do you feel?">
             <HoldRater label="Readiness, 1 lowest to 5 highest" min={1} max={5} value={toNumber(readiness)}

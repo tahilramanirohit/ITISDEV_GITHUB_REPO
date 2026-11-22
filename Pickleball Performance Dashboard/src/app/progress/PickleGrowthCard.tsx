@@ -87,9 +87,8 @@ export function PickleGrowthCard({ jar, quests, kindWord, planHref }: {
           <p className="text-[22px] font-extrabold leading-tight">{jar.name}</p>
           <p className="mt-2 text-[40px] leading-none" style={numStyle}>{jar.brine}%</p>
           <p className="text-xs font-extrabold">brine in the jar</p>
-          <p className="mt-1.5 text-xs font-semibold leading-snug" style={{ color: SUB }}>
-            {jar.nextName ? <>Fill it and Pickle grows into a <b style={{ color: INK }}>{jar.nextName}</b></> : <>Pickle is fully grown. Keep it topped up!</>}
-          </p>
+          {jar.nextName && <p className="mt-1.5 text-xs font-semibold leading-snug" style={{ color: SUB }}>
+            Fill it and Pickle grows into a <b style={{ color: INK }}>{jar.nextName}</b></p>}
         </div>
       </div>
 

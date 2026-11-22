@@ -209,11 +209,11 @@ export default function ProgressPage({ sb, userId }: { sb: SupabaseClient; userI
     .flatMap((yes) => { const no = insights.lines.find((l) => l.id === `${yes.id.slice(0, -4)}-no`); return no ? [[yes, no] as const] : []; });
   const questsDone = quests.filter((q) => q.done).length;
   const weakest = [...skills].sort((a, b) => a.change - b.change || a.now - b.now)[0];
-  // One next step, picked in this order: new goals, a game to rate, the weakest skill's plan, log a game.
+  // One next step, picked in this order: a game to rate, the weakest skill's plan, log a game.
   const lastTest = courtTests ? lastTestedOn(courtTests) : null;
   const retestIn = lastTest ? goalLength * 7 - (daysSince(lastTest) ?? 0) : null;
-  const next = goalsEnded ? { href: "#/welcome", label: "Set new goals" }
-    : unrated[0] ? { href: `#/sessions/${unrated[0].sessionId}?tab=plan`, label: `Rate ${unrated[0].title}` }
+  // New goals have their own button in the goals card, so this one picks the next thing after that.
+  const next = unrated[0] ? { href: `#/sessions/${unrated[0].sessionId}?tab=plan`, label: `Rate ${unrated[0].title}` }
     : last && weakest ? { href: `#/sessions/${last.sessionId}?tab=plan`, label: `Work on ${SKILL_INFO[weakest.skill].label.toLowerCase()} next` }
     : { href: "#/new", label: "Log a game" };
 
@@ -277,7 +277,7 @@ export default function ProgressPage({ sb, userId }: { sb: SupabaseClient; userI
       {view === "jar" && <PickleGrowthCard jar={jar} quests={quests} kindWord={kindWord} planHref={last ? `#/sessions/${last.sessionId}?tab=plan` : null} />}
 
       {view === "habits" && <section aria-label="Before and after your games" className="rounded-[20px] p-4" style={card}>
-        <p className="text-xs" style={{ color: INK_3 }}>Average {kindWord} rating out of 5, with and without each habit. A gap under 0.3 is too close to call.</p>
+        <p className="text-xs" style={{ color: INK_3 }}>Your average {kindWord} rating with and without each habit.</p>
         {pairs.length > 0 ? <ul className="mt-1.5">{pairs.map(([yes, no]) => <HabitPair key={yes.id} yes={yes} no={no} />)}</ul>
           : <p className="mt-2 text-sm" style={{ color: INK_2 }}>Fill in the pre-game check-in on a few {kindWord === "practice" ? "practices" : "games"} to see patterns.</p>}
         {insights.recoveryNote && <p className="mt-2 rounded-[14px] px-3 py-2.5 text-[13px] leading-snug" style={{ background: ACTION_SOFT, color: INK }}>

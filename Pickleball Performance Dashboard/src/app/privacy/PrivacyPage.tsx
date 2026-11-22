@@ -1,4 +1,4 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChevronDown } from "lucide-react";
 import { config } from "../../lib/config";
 import { DEFAULT_UPLOAD_LIMITS } from "../../lib/upload/limits";
 import { BORDER, DISPLAY_FONT, GREEN, INK, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
@@ -60,12 +60,16 @@ export default function PrivacyPage() {
           <p className="mt-2 text-sm" style={{ color: WHITE_DIM }}>What PicklePro keeps, who can see it, and how to remove it.</p>
         </div>
         {SECTIONS.map((section) => (
-          <section key={section.title} className="rounded-[14px] p-5" style={{ background: WHITE, border: `1px solid ${BORDER}` }} aria-labelledby={`privacy-${section.title}`}>
-            <h2 id={`privacy-${section.title}`} className="text-lg font-bold" style={{ fontFamily: DISPLAY_FONT }}>{section.title}</h2>
-            <ul className="mt-2 list-disc space-y-2 pl-5 text-sm leading-relaxed" style={{ color: INK }}>
+          // Folded so the page is a short list of topics; tap one to read it.
+          <details key={section.title} className="group rounded-[14px] px-5" style={{ background: WHITE, border: `1px solid ${BORDER}` }}>
+            <summary className="flex min-h-[56px] cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
+              <h2 className="text-lg font-bold" style={{ fontFamily: DISPLAY_FONT }}>{section.title}</h2>
+              <ChevronDown size={20} aria-hidden="true" className="shrink-0 transition-transform group-open:rotate-180" style={{ color: WHITE_SUB }} />
+            </summary>
+            <ul className="list-disc space-y-2 pb-5 pl-5 text-sm leading-relaxed" style={{ color: INK }}>
               {section.items.map((item) => <li key={item}>{item}</li>)}
             </ul>
-          </section>
+          </details>
         ))}
         <section className="rounded-[14px] p-5" style={{ background: "var(--pp-accent-soft)" }} aria-labelledby="privacy-contact">
           <h2 id="privacy-contact" className="text-lg font-bold" style={{ fontFamily: DISPLAY_FONT }}>Questions or deletion requests</h2>

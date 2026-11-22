@@ -193,6 +193,7 @@ export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings
   const buddyIsPartner = buddyLink?.status === "active";
   const alreadyAsked = !!playedWith && shares.some((s) => s.partner_id === playedWith.id);
   const focusName = goalSkills[0] ? SKILL_INFO[goalSkills[0]].label.toLowerCase() : null;
+  const askPlayedWith = !!playedWith && buddyIsPartner && !alreadyAsked && partners.some((p) => p.other_id === playedWith.id);
 
   async function inviteBuddy() {
     if (!playedWith) return;
@@ -229,10 +230,7 @@ export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings
         return <div key={a.id} className="rounded-[18px] p-4" style={cardStyle}>
           <div className="flex items-center gap-3">
             <Avatar name={a.name} />
-            <div className="min-w-0">
-              <h3 className="text-[15px] font-extrabold" style={{ color: INK }}>Feedback from {a.name}</h3>
-              <p className="text-xs" style={{ color: INK_3 }}>Your partner's view, next to your own rating</p>
-            </div>
+            <h3 className="min-w-0 text-[15px] font-extrabold" style={{ color: INK }}>Feedback from {a.name}</h3>
           </div>
           {rows.length > 0 && <ul className="mt-3 space-y-3" aria-label={`You vs ${a.name}`}>
             {rows.map((r) => <li key={r.skill}>
@@ -263,7 +261,7 @@ export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings
         </div>;
       })}
 
-      {showAskCards && playedWith && !alreadyAsked && <div className="rounded-[18px] p-4" style={{ background: ACCENT_SOFT, color: INK }} role="note"
+      {showAskCards && playedWith && !alreadyAsked && !buddyIsPartner && <div className="rounded-[18px] p-4" style={{ background: ACCENT_SOFT, color: INK }} role="note"
         aria-label={`Feedback from ${playedWith.name}`}>
         <p className="text-[15px] font-extrabold">You played with {playedWith.name}. Ask {playedWith.name} for feedback{focusName ? ` on your ${focusName}` : ""}?</p>
         {buddyIsPartner
@@ -309,10 +307,20 @@ export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings
         </ul>}
         {partners.length === 0 && !error
           ? <p className="mt-3 text-sm" style={{ color: INK_2 }}>No video partners yet. <a href="#/players?section=partners" className="font-bold underline" style={{ color: ACCENT_INK }}>Partner with a buddy under Players</a> first.</p>
-          : !error && <button type="button" onClick={() => setAsking({ partner: null })}
+          : !error && (askPlayedWith
+            // You played with a video partner: ask them straight away (one ask, not two cards).
+            ? <>
+                <button type="button" onClick={() => setAsking({ partner: playedWith!.id })}
+                  className={`mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-[15px] font-extrabold ${pressable}`}
+                  style={{ background: ACTION, color: ON_ACTION, border: `1px solid ${ACTION_EDGE}` }}>
+                  <Send size={17} aria-hidden="true" /> Ask {playedWith!.name}{focusName ? ` about your ${focusName}` : ""}</button>
+                {partners.length > 1 && <button type="button" onClick={() => setAsking({ partner: null })}
+                  className={`mt-1 inline-flex min-h-[44px] w-full items-center justify-center text-sm font-bold ${pressable}`} style={{ color: ACCENT_INK }}>Ask someone else</button>}
+              </>
+            : <button type="button" onClick={() => setAsking({ partner: null })}
               className={`mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-[15px] font-extrabold ${pressable}`}
               style={{ background: ACTION, color: ON_ACTION, border: `1px solid ${ACTION_EDGE}` }}>
-              <Send size={17} aria-hidden="true" /> Ask for feedback</button>}
+              <Send size={17} aria-hidden="true" /> Ask for feedback</button>)}
       </div>}
 
       {asking && partners.length > 0 && <AskSheet partners={partners} shares={shares} goalSkills={goalSkills} hasVideo={hasVideo}

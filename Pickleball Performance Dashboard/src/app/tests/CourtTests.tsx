@@ -111,7 +111,7 @@ export function CourtTests({ sb, onSaved, onSkip, aboveTabBar = false }: {
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-3">
         <p className="text-sm leading-relaxed" style={{ color: INK_2 }}>
-          Count, don't guess. Do them in any order, with a partner, in about 15 minutes. Save any you finish; skip the rest.</p>
+          About 15 minutes with a partner. Skip any you like.</p>
         {onSkip && <button type="button" onClick={onSkip} className={`min-h-[44px] shrink-0 rounded-full px-3 text-sm font-bold ${pressable}`}
           style={{ color: ACCENT_INK }}>Skip for now</button>}
       </div>

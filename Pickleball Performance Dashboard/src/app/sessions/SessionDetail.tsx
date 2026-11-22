@@ -644,9 +644,10 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
         <a href="#/sessions" className="-ml-1 mb-2 inline-flex min-h-[44px] items-center gap-1 px-1 text-sm font-semibold" style={{ color: ACCENT_INK }}><ArrowLeft size={16} aria-hidden="true" /> Sessions</a>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-sm" style={{ color: WHITE_SUB }}>
+            {scoreGames(session.match_score).length > 0 ? startTimeLabel(session.actual_start_at) && <p className="text-sm" style={{ color: WHITE_SUB }}>{startTimeLabel(session.actual_start_at)}</p>
+            : <p className="text-sm" style={{ color: WHITE_SUB }}>
               {KIND_LABELS[sessionKind(session)]}{session.tournament_round ? ` · ${session.tournament_round}` : ""} · {new Date(`${session.session_date}T12:00:00`).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}{startTimeLabel(session.actual_start_at) ? ` · ${startTimeLabel(session.actual_start_at)}` : ""} · {FORMAT_LABELS[session.play_format]}
-            </p>
+            </p>}
             <h1 className="mt-1 break-words text-[1.75rem] font-extrabold leading-[1.1] tracking-[-0.02em] md:text-4xl" style={{ fontFamily: DISPLAY_FONT }}>{session.title}
               <button type="button" aria-label="Rename session" onClick={() => { openDetails(); window.setTimeout(() => document.getElementById("edit-details")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50); }}
                 className="ml-1.5 inline-grid h-9 w-9 place-items-center rounded-full align-middle" style={{ color: ACCENT_INK }}><Pencil size={18} aria-hidden="true" /></button></h1>
@@ -747,12 +748,12 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
           <h2 className="text-base font-bold" style={{ fontFamily: DISPLAY_FONT }}>Players</h2>
           {sessionKind(session) === "solo" ? <p className="mt-2 text-sm" style={{ color: WHITE_DIM }}>Solo practice: just you.</p> : (
             <ul className="mt-3 grid grid-cols-4 gap-2 text-center text-xs font-semibold">
-              {[{ name: "You", role: "You" }, ...players.map((p) => ({ name: p.display_name, role: p.role === "partner" ? "Partner" : "Opponent" }))].map((p, i) => (
+              {[{ name: "You", role: "" }, ...players.map((p) => ({ name: p.display_name, role: p.role === "partner" ? "Partner" : "Opponent" }))].map((p, i) => (
                 <li key={`${p.name}-${i}`} className="min-w-0">
                   <span className="mx-auto mb-1 grid h-12 w-12 place-items-center rounded-full text-sm font-extrabold"
-                    style={i === 0 ? { background: "var(--pp-strong)", color: "var(--pp-on-strong)" } : { background: "var(--pp-surface-2)", color: "var(--pp-ink)" }}>{p.name === "You" ? "ME" : initials(p.name)}</span>
+                    style={i === 0 ? { background: "var(--pp-strong)", color: "var(--pp-on-strong)" } : { background: "var(--pp-surface-2)", color: "var(--pp-ink)" }}>{i === 0 ? "ME" : initials(p.name)}</span>
                   <span className="block truncate" style={{ color: "var(--pp-ink)" }}>{p.name}</span>
-                  <span className="block text-xs" style={{ color: WHITE_SUB }}>{p.role}</span>
+                  {p.role && <span className="block text-xs" style={{ color: WHITE_SUB }}>{p.role}</span>}
                 </li>
               ))}
             </ul>)}

@@ -195,6 +195,11 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
     { label: "Ball", ok: (c.frames_with_ball_detections ?? 0) > 0 },
     { label: "Shots", ok: shotsShown },
   ] : [];
+  const checkList = checks.length > 0 ? <ul aria-label="What the video analysis found" className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm font-bold">
+      {checks.map((item) => <li key={item.label} className="flex items-center gap-1" style={{ color: item.ok ? NEON : WHITE_SUB }}>
+        {item.ok ? <CheckCircle2 size={16} aria-hidden="true" /> : <CircleDashed size={16} aria-hidden="true" />}
+        <span>{item.label}<span className="sr-only">{item.ok ? " found" : " not found"}</span></span></li>)}
+    </ul> : null;
 
   // One section at a time: Shots, Errors, Position and Comments.
   const tabCandidates: ([ReportTab, string] | null)[] = [
@@ -268,6 +273,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
             courtLines={result.court_lines ?? []} shots={allowShotDisplay ? shotDisplayResult.metrics.shot_classification.value?.shots ?? [] : []}
             bounces={allowShotDisplay ? shotMetric.value?.bounces ?? [] : []}
             selectedTrackId={myPlayerId} playerNames={playerNames} jump={jump} onVideoElement={setVideoEl}
+            details={checkList}
             onSelectTrack={selectingPlayer ? (id, time) => { setSelectingPlayer(false); setMyPlayerId(id); onSelectTrack?.(id, time); } : undefined} />
           {videoUrl && tracks.size > 0 && <div className="space-y-1.5">
             <button type="button" role="switch" aria-checked={courtView} onClick={() => setCourtView(!courtView)}
@@ -306,12 +312,8 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
           )}
         </section>
 
-        {checks.length > 0 && <ul aria-label="What the video analysis found" className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm font-bold">
-          {checks.map((item) => <li key={item.label} className="flex items-center gap-1" style={{ color: item.ok ? NEON : WHITE_SUB }}>
-            {item.ok ? <CheckCircle2 size={16} aria-hidden="true" /> : <CircleDashed size={16} aria-hidden="true" />}
-            <span>{item.label}<span className="sr-only">{item.ok ? " found" : " not found"}</span></span></li>)}
-        </ul>}
 
+        {!videoUrl && checkList}
         {stats.length > 0 && <dl className="mt-3 grid gap-2" style={{ gridTemplateColumns: `repeat(${stats.length}, minmax(0, 1fr))` }}>
           {stats.map((s) => <div key={s.label} className="rounded-[14px] p-2.5" style={{ background: "var(--pp-surface-2)" }}>
             <dd className="text-[28px] leading-none" style={{ ...numStyle, color: s.warn ? ORANGE_L : INK }}>{s.value}</dd>

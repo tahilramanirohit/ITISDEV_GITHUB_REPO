@@ -54,11 +54,11 @@ describe("Peer feedback (owner)", () => {
     expect(screen.getByRole("list", { name: "Shared with" })).toBeTruthy();
   });
 
-  it("lets the player choose who to ask: nobody is picked for them, even the buddy they played with", async () => {
+  it("Ask someone else: nobody is picked for them, even the buddy they played with", async () => {
     const { sb, rpc } = fakeSb([], [], [KYLE, { id: "l2", status: "active", direction: "sent", other_id: "c", other_name: "Carla" }]);
     render(<PeerFeedback sb={sb} sessionId="s1" hasVideo selfRatings={null} peerRatings={[]} goalSkills={["dinking"]}
       playedWith={{ id: "k", name: "Kyle" }} />);
-    fireEvent.click(await screen.findByRole("button", { name: "Ask for feedback" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Ask someone else" }));
     const sheet = screen.getByRole("dialog", { name: "Ask for feedback" });
     const who = within(sheet).getByRole("group", { name: "Who" });
     expect(within(who).getAllByRole("button").map((b) => b.getAttribute("aria-pressed"))).toEqual(["false", "false"]);
@@ -129,8 +129,9 @@ describe("Peer feedback (owner)", () => {
     const { sb } = fakeSb();
     const view = render(<PeerFeedback sb={sb} sessionId="s1" hasVideo selfRatings={null} peerRatings={[]} goalSkills={["dinking"]}
       playedWith={{ id: "k", name: "Kyle" }} />);
-    expect(await screen.findByText("You played with Kyle. Ask Kyle for feedback on your dinking?")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Ask Kyle" }));
+    // One ask, not two cards: the partner's view card offers the buddy you played with first.
+    fireEvent.click(await screen.findByRole("button", { name: "Ask Kyle about your dinking" }));
+    expect(screen.queryByText(/You played with Kyle/)).toBeNull();
     expect(screen.getByRole("dialog", { name: "Ask for feedback" })).toBeTruthy();
     view.unmount();
 

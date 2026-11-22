@@ -3,7 +3,7 @@ import type { SharedSession } from "../../lib/api/partners";
 import { CONTEXT_LABELS, FORMAT_LABELS } from "../../lib/api/types";
 import { feedbackDue } from "../../lib/coaching/people";
 import { SKILL_INFO, type SelfSkill } from "../../lib/coaching/selfAssessment";
-import { GREEN, INK, ROSE, WHITE_DIM } from "../theme";
+import { GREEN, INK, WHITE_DIM } from "../theme";
 import { Card, PrimaryButton, SectionTitle } from "../shell/primitives";
 import { Avatar, shortDate } from "./parts";
 import type { PlayersData, Section } from "./PlayersPage";
@@ -23,7 +23,7 @@ export function SharedCard({ s }: { s: SharedSession }) {
         <p className="text-sm" style={{ color: WHITE_DIM }}>
           {shortDate(s.session_date)} · {CONTEXT_LABELS[s.session_context]} · {FORMAT_LABELS[s.play_format]}{s.with_video === false ? " · ratings only" : " · with video"}</p>
         {s.focus_skills?.length ? <p className="mt-1 text-sm" style={{ color: INK }}>Asked: <b>{skillList(s.focus_skills)}</b></p> : null}
-        <p className="mt-1 flex items-center gap-1.5 text-sm font-bold" style={{ color: due || s.has_report || s.focus_skills?.length ? GREEN : ROSE }}>
+        <p className="mt-1 flex items-center gap-1.5 text-sm font-bold" style={{ color: due || s.has_report || s.focus_skills?.length ? GREEN : WHITE_DIM }}>
           {s.focus_skills?.length
             ? due ? "Rate and send feedback" : "✓ Feedback sent"
             : s.has_report ? <><MessageSquareText size={14} aria-hidden="true" />

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import type { BallSnapshot, BounceEvent, CourtLinesSnapshot, PositionSnapshot, ShotEvent } from "../../lib/analysis/contract";
 import { SHOT_INFO, formatClock } from "../../lib/analysis/shotLabels";
 import { INK, WHITE_DIM } from "../theme";
@@ -68,6 +68,7 @@ export function VideoOverlayPlayer({
   onSelectTrack,
   jump = null,
   onVideoElement,
+  details = null,
 }: {
   src: string | null;
   positions: PositionSnapshot[];
@@ -82,6 +83,8 @@ export function VideoOverlayPlayer({
   jump?: JumpRequest;
   /** Gives the page the video element, e.g. to pin a note at the current time. Pass a stable function. */
   onVideoElement?: (video: HTMLVideoElement | null) => void;
+  /** Extra lines for the closed "Video details" section, e.g. what the analysis found. */
+  details?: ReactNode;
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const setVideo = useCallback((video: HTMLVideoElement | null) => {
@@ -334,17 +337,17 @@ export function VideoOverlayPlayer({
           <p className="text-base p-8 text-center" style={{ color: WHITE_DIM }}>Video preview unavailable.</p>
         )}
       </div>
-      {src && compact && showLabels && shots.length > 0 && (
+      {src && compact && showLabels && captionShot && (
         <p aria-label="Latest shot" className="flex min-h-[44px] items-center gap-2 rounded-[10px] border border-line bg-surface px-3 text-sm" style={{ color: INK }}>
-          {captionShot ? <>
-            <span className="tabular-nums" style={{ color: WHITE_DIM }}>{formatClock(captionShot.time_seconds)}</span>
-            <span className="rounded-full px-2.5 py-0.5 text-xs font-bold text-white" style={{ background: SHOT_INFO[captionShot.shot_type].color }}>
-              {SHOT_INFO[captionShot.shot_type].name}?</span>
-            <span className="truncate">{captionWho}</span>
-          </> : <span style={{ color: WHITE_DIM }}>Shot names show here as the video plays.</span>}
+          <span className="tabular-nums" style={{ color: WHITE_DIM }}>{formatClock(captionShot.time_seconds)}</span>
+          <span className="rounded-full px-2.5 py-0.5 text-xs font-bold text-white" style={{ background: SHOT_INFO[captionShot.shot_type].color }}>
+            {SHOT_INFO[captionShot.shot_type].name}?</span>
+          <span className="truncate">{captionWho}</span>
         </p>
       )}
       {src && (
+        <details className="text-sm">
+        <summary className="min-h-[40px] cursor-pointer py-2 font-bold" style={{ color: INK }}>Video details</summary>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <ul aria-label="What the colours mean" className="flex flex-wrap gap-x-4 gap-y-1 text-sm" style={{ color: INK }}>
             {hasSelected && <LegendItem color={YOU} label={myName} />}
@@ -357,6 +360,8 @@ export function VideoOverlayPlayer({
             Show labels on video
           </label>
         </div>
+        {details}
+        </details>
       )}
     </div>
   );

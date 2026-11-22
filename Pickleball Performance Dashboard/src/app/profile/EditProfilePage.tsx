@@ -139,7 +139,7 @@ export default function EditProfilePage({ sb, userId }: { sb: SupabaseClient; us
             </div>
           </div>
           <input ref={fileInput} type="file" accept="image/*" className="hidden" onChange={(e) => void pickPhoto(e.target.files?.[0])} />
-          <p className="mt-3 text-xs" style={{ color: WHITE_SUB }}>Take a photo or choose one. It is cropped square, made smaller, and saves straight away. Other players see it on the Players tab.</p>
+          <p className="mt-3 text-xs" style={{ color: WHITE_SUB }}>Saves straight away. Other players see it on the Players tab.</p>
           {photoError && <div className="mt-3"><Notice tone="error">{photoError}</Notice></div>}
         </Card> : <Notice tone="info">Profile photo, bio, home court and paddle appear here after the latest database update.</Notice>}
 
@@ -190,7 +190,6 @@ export default function EditProfilePage({ sb, userId }: { sb: SupabaseClient; us
               <PrimaryButton type="submit" className="flex-1" disabled={saving || !form.display_name.trim()}>{saving ? "Saving…" : "Save profile"}</PrimaryButton>
               <a href="#/profile" className="inline-flex min-h-[48px] items-center rounded-[12px] px-6 text-sm font-bold" style={{ border: `1px solid ${BORDER}`, color: INK }}>Cancel</a>
             </div>
-            <p className="text-xs" style={{ color: WHITE_DIM }}>Your details give context to your plans. They are not a skill rating.</p>
           </form>
         </Card>
       </div>

@@ -31,7 +31,7 @@ export const GOAL_LABELS: Record<ImprovementGoal, string> = {
 
 export const CONTEXT_LABELS: Record<SessionContext, string> = {
   practice: "Practice",
-  casual_match: "Casual match",
+  casual_match: "Casual game",
   tournament: "Tournament",
   leveling_game: "Leveling game",
   drill: "Drill",

@@ -183,7 +183,7 @@ export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: s
                   <li key={s.id} className="border-t first:border-t-0" style={{ borderColor: LINE }}>
                     <a href={`#/sessions/${s.id}`} className="grid min-h-[52px] grid-cols-[52px_1fr_auto_34px] items-center gap-2 py-1.5 pl-1 text-[15px]">
                       <span className="text-sm" style={{ color: INK_3 }}>{formatSessionDate(s.session_date, { weekday: "short" })}</span>
-                      <span className="truncate" style={{ color: INK }}>{CONTEXT_LABELS[s.session_context]} · {FORMAT_LABELS[s.play_format].toLowerCase()}</span>
+                      <span className="truncate" style={{ color: INK }}>{s.title || `${CONTEXT_LABELS[s.session_context]} · ${FORMAT_LABELS[s.play_format].toLowerCase()}`}</span>
                       <span className="text-base" style={{ ...numStyle, fontWeight: 700, color: won ? ACCENT_INK : INK_3 }}>{score ? `${score[0]}–${score[1]}` : "—"}</span>
                       <span className="text-right text-base" style={{ ...numStyle, fontWeight: 700, color: INK }}>{rating != null ? rating.toFixed(1) : "—"}</span>
                     </a>
