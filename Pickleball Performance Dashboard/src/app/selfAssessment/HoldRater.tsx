@@ -6,7 +6,7 @@ const STEP_MS = 320;   // one step while holding
 const TAP_MS = 220;    // a shorter press is a tap: one step up
 
 /** A pickleball: yellow with holes. `fill` 0-1 lights the ring around it. */
-function Ball({ fill, pressed }: { fill: number; pressed: boolean }) {
+export function Ball({ fill, pressed }: { fill: number; pressed: boolean }) {
   const r = 46;
   const c = 2 * Math.PI * r;
   return (
@@ -99,5 +99,84 @@ export function HoldRater({ label, min, max, value, onChange, valueText, hint }:
           {shown === undefined ? hint ?? "Hold the ball, let go to rate" : valueText(shown)}</p>
       </div>
     </div>
+  );
+}
+
+const COUNT_HOLD_MS = 350; // a press shorter than this is a tap: one more
+
+/**
+ * The same pickleball as a counter, for counted drills (court tests): tap it once for every good
+ * one, or hold it to count up from where you are, faster the longer you hold. Arrow keys work too;
+ * the ring fills toward the number of tries (or in laps of 10 for a best-run count).
+ */
+export function HoldCounter({ label, value, max, outOf, onChange }: {
+  label: string; value: number; max: number;
+  /** Tries the count is out of, or null for a best run. */
+  outOf: number | null;
+  onChange: (v: number) => void;
+}) {
+  const [live, setLive] = useState(value);
+  const [pressed, setPressed] = useState(false);
+  const holding = useRef(false);
+  const timer = useRef<number | null>(null);
+  const started = useRef(0);
+  const steps = useRef(0);
+  const current = useRef(value);
+  useEffect(() => { if (!holding.current) { setLive(value); current.current = value; } }, [value]);
+  useEffect(() => () => { if (timer.current) window.clearTimeout(timer.current); }, []);
+
+  const set = (v: number) => { current.current = v; setLive(v); };
+  const buzz = () => { try { navigator.vibrate?.(8); } catch { /* not supported */ } };
+  const stop = () => { if (timer.current) window.clearTimeout(timer.current); timer.current = null; };
+
+  function tick() {
+    if (current.current < max) { set(current.current + 1); buzz(); }
+    steps.current += 1;
+    // Speeds up while held, so a long dink run doesn't take a minute.
+    timer.current = window.setTimeout(tick, steps.current < 5 ? 260 : steps.current < 15 ? 140 : 70);
+  }
+  function down(e: PointerEvent<HTMLButtonElement>) {
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    holding.current = true;
+    setPressed(true);
+    started.current = Date.now();
+    steps.current = 0;
+    timer.current = window.setTimeout(tick, COUNT_HOLD_MS);
+  }
+  function up() {
+    if (!holding.current) return;
+    holding.current = false;
+    stop();
+    setPressed(false);
+    if (Date.now() - started.current < COUNT_HOLD_MS) {
+      const next = Math.min(max, value + 1);
+      if (next !== value) buzz();
+      set(next);
+      onChange(next);
+      return;
+    }
+    onChange(current.current);
+  }
+  function key(e: KeyboardEvent<HTMLButtonElement>) {
+    const next = e.key === "ArrowUp" || e.key === "ArrowRight" ? value + 1
+      : e.key === "ArrowDown" || e.key === "ArrowLeft" ? value - 1
+      : e.key === "PageUp" ? value + 5 : e.key === "PageDown" ? value - 5
+      : e.key === "Home" ? 0 : e.key === "End" ? max : null;
+    if (next === null) return;
+    e.preventDefault();
+    const v = Math.min(max, Math.max(0, next));
+    set(v);
+    onChange(v);
+  }
+
+  const fill = outOf ? live / outOf : live === 0 ? 0 : (((live - 1) % 10) + 1) / 10;
+  return (
+    <button type="button" role="slider" aria-label={label} aria-valuemin={0} aria-valuemax={max} aria-valuenow={live}
+      aria-valuetext={outOf ? `${live} of ${outOf}` : String(live)}
+      onPointerDown={down} onPointerUp={up} onPointerCancel={up} onLostPointerCapture={up} onKeyDown={key}
+      onContextMenu={(e) => e.preventDefault()}
+      className="shrink-0 touch-none select-none rounded-full outline-offset-4" style={{ WebkitTouchCallout: "none" }}>
+      <Ball fill={Math.max(0, Math.min(1, fill))} pressed={pressed} />
+    </button>
   );
 }

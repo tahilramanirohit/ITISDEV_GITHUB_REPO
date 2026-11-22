@@ -22,8 +22,9 @@ describe("Court tests", () => {
     render(<CourtTests sb={sb} onSaved={onSaved} />);
     const save = await screen.findByRole("button", { name: "Save baseline · 0 of 5 tests" });
     expect((save as HTMLButtonElement).disabled).toBe(true);
-    const more = screen.getByRole("button", { name: "One more: Deep serves" });
-    for (let i = 0; i < 3; i++) fireEvent.click(more);
+    // Tap the pickleball once per good serve.
+    const ball = screen.getByRole("slider", { name: /^Count Deep serves/ });
+    for (let i = 0; i < 3; i++) { fireEvent.pointerDown(ball); fireEvent.pointerUp(ball); }
     fireEvent.click(screen.getByRole("button", { name: "One less: Deep serves" }));
     expect((screen.getByLabelText("Deep serves: deep serves out of 20") as HTMLInputElement).value).toBe("2");
     fireEvent.change(screen.getByLabelText("Deep serves: deep serves out of 20"), { target: { value: "25" } });
@@ -47,7 +48,8 @@ describe("Court tests", () => {
     const { sb } = fakeSb([{ id: "a", test_key: "deep_returns", value: 4, out_of: 10, tested_on: "2026-10-03", created_at: "2026-10-03T10:00:00Z" }]);
     render(<CourtTests sb={sb} />);
     expect(await screen.findByText(/Last 4\/10 · /)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "One more: Deep serves" }));
+    const ball = screen.getByRole("slider", { name: /^Count Deep serves/ });
+    fireEvent.pointerDown(ball); fireEvent.pointerUp(ball);
     expect(screen.getByRole("button", { name: "Save results · 1 of 5 tests" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Leave out" }));
     expect(screen.getByRole("button", { name: "Save results · 0 of 5 tests" })).toBeTruthy();

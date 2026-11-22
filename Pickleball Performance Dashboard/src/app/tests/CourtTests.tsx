@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { Check, ChevronDown, Minus, Plus } from "lucide-react";
+import { Check, ChevronDown, Minus } from "lucide-react";
 import {
   COURT_TESTS, formatResult, latestResults, maxValue, type CourtTest, type CourtTestKey, type CourtTestRow,
 } from "../../lib/coaching/baselineTests";
@@ -9,29 +9,34 @@ import { courtTestErrorText, listCourtTests, saveCourtTests } from "../../lib/ap
 import { isoDate } from "../../lib/api/buddy";
 import { ACCENT_INK, ACTION, ACTION_EDGE, CHECK, INK, INK_2, INK_3, LINE, LINE_STRONG, ON_ACTION, ON_CHECK, PAGE_BG } from "../theme";
 import { Notice, cardStyle, numStyle, pressable } from "../shell/primitives";
+import { HoldCounter } from "../selfAssessment/HoldRater";
 
 const shortDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short" });
 
-/** A big −/+ counter: tap + for every good one while you do the drill, or type the number. */
+/**
+ * The pickleball counter (like the rating balls): tap the ball for every good one while you do
+ * the drill, or hold it to count up fast. "−" fixes a miscount; the number can also be typed.
+ */
 function Counter({ test, value, onChange }: { test: CourtTest; value: number; onChange: (v: number) => void }) {
   const max = maxValue(test);
   const set = (v: number) => onChange(Math.min(max, Math.max(0, Math.round(v))));
-  const button = `grid h-[52px] w-[52px] shrink-0 place-items-center rounded-full ${pressable}`;
-  return <div>
-    <div className="flex items-center justify-between gap-3">
-      <button type="button" className={button} style={{ border: `1px solid ${LINE_STRONG}`, color: INK }} disabled={value <= 0}
-        onClick={() => set(value - 1)} aria-label={`One less: ${test.label}`}><Minus size={24} aria-hidden="true" /></button>
-      <span className="flex min-w-0 flex-1 items-baseline justify-center gap-1">
+  return <div className="flex items-center gap-3">
+    <HoldCounter label={`Count ${test.label}: tap for each one, hold to count fast`} value={value} max={max} outOf={test.outOf} onChange={set} />
+    <div className="min-w-0 flex-1">
+      <span className="flex items-baseline gap-1">
         <input type="number" inputMode="numeric" min={0} max={max} value={value} aria-label={`${test.label}: ${test.unit}`}
           onChange={(e) => set(Number(e.target.value || 0))} onFocus={(e) => e.target.select()}
-          className="shrink-0 bg-transparent text-center text-[clamp(44px,15vw,64px)] leading-none outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
-          style={{ ...numStyle, color: INK, width: `${String(value).length + 0.3}ch` }} />
+          className="shrink-0 bg-transparent leading-none outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+          style={{ ...numStyle, fontSize: 44, color: INK, width: `${String(value).length + 0.3}ch` }} />
         {test.outOf && <span className="shrink-0 text-xl" style={{ ...numStyle, color: INK_3 }}>/{test.outOf}</span>}
       </span>
-      <button type="button" className={button} style={{ background: ACTION, color: ON_ACTION, border: `1px solid ${ACTION_EDGE}` }}
-        disabled={value >= max} onClick={() => set(value + 1)} aria-label={`One more: ${test.label}`}><Plus size={24} aria-hidden="true" /></button>
+      {/* "/20" is already beside the number, so the unit drops its "out of 20". */}
+      <p className="mt-1 text-sm font-semibold" style={{ color: INK_2 }}>{test.unit.replace(/ out of \d+$/, "")}</p>
+      <p className="text-xs" style={{ color: INK_3 }}>Tap for each one, hold to count fast</p>
     </div>
-    <p className="mt-1 text-center text-xs" style={{ color: INK_3 }}>{test.unit}</p>
+    <button type="button" className={`grid h-11 w-11 shrink-0 place-items-center rounded-full ${pressable}`}
+      style={{ border: `1px solid ${LINE_STRONG}`, color: INK }} disabled={value <= 0}
+      onClick={() => set(value - 1)} aria-label={`One less: ${test.label}`}><Minus size={20} aria-hidden="true" /></button>
   </div>;
 }
 
