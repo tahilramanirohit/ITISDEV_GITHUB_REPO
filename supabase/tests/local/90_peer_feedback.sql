@@ -1,4 +1,4 @@
--- Targeted peer feedback: the owner picks the skills (any number since update 18); the partner rates only those,
+-- Targeted peer feedback: the owner picks up to 3 skills; the partner rates only those,
 -- sees the video only when it is shared, and loses access when the share stops.
 \set ON_ERROR_STOP 1
 set client_min_messages = notice;
@@ -44,11 +44,8 @@ select public.redeem_partner_code(:'olga_code');
 -- ── Olga asks for feedback on 2 skills, with video ──────────────────────
 select set_config('request.jwt.claim.sub', 'e1111111-1111-4111-8111-111111111111', false);
 select set_config('request.jwt.claims', '{"sub":"e1111111-1111-4111-8111-111111111111","is_anonymous":false}', false);
--- Any number of skills can be asked about (update 18; it was at most 3).
-select public.share_session('5e100000-0000-4000-8000-000000000001', 'e2222222-2222-4222-8222-222222222222',
-  array['dinking', 'third_shot', 'serve', 'return', 'volleys'], true);
-select tests.expect_true((select cardinality(focus_skills) = 5 from public.report_shares),
-  'more than 3 skills can be asked about');
+select tests.expect_error($$ select public.share_session('5e100000-0000-4000-8000-000000000001', 'e2222222-2222-4222-8222-222222222222',
+  array['dinking', 'third_shot', 'serve', 'return'], true) $$, 'at most 3 skills can be asked about');
 select tests.expect_error($$ select public.share_session('5e100000-0000-4000-8000-000000000001', 'e2222222-2222-4222-8222-222222222222',
   array['lobbing'], true) $$, 'only real skill keys can be asked about');
 select public.share_session('5e100000-0000-4000-8000-000000000001', 'e2222222-2222-4222-8222-222222222222',

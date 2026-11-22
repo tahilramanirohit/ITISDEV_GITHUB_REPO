@@ -23,10 +23,6 @@ describe("error messages", () => {
     expect(partnerErrorText(new Error("partners: this code is not valid or has expired; ask for a new one")))
       .toBe("This code is not valid or has expired; ask for a new one");
   });
-  it("names update 18 when the project still allows only 3 shots per request", () => {
-    expect(partnerErrorText(new Error("partners: pick up to 3 skills to get feedback on")))
-      .toMatch(/more than 3 shots needs a database update.*pickleproapp_upgrade_18\.sql/);
-  });
   it("names the missing database update", () => {
     expect(partnerErrorText(new Error("Could not find the function public.my_partners without parameters in the schema cache")))
       .toMatch(/pickleproapp_upgrade_7\.sql/);

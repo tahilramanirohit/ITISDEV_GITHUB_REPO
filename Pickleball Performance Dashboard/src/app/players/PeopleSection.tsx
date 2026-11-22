@@ -124,7 +124,7 @@ function PersonCard({ sb, person: p, data, act, busyId, reload, onOpen }: {
                 <span className="shrink-0 text-xs" style={{ color: INK_3 }}>{shortDate(s.session_date)}</span>
               </a></li>)}
           </ul>}
-      <p className="mt-2 text-xs" style={{ color: WHITE_DIM }}>You pick the skills and whether to share the video. Your own ratings, journal and plan stay private.</p>
+      <p className="mt-2 text-xs" style={{ color: WHITE_DIM }}>You pick up to 3 skills and whether to share the video. Your own ratings, journal and plan stay private.</p>
     </div>}
 
     {p.buddySessions.length > 0 && <div className="mt-4 space-y-3 border-t pt-3" style={{ borderColor: BORDER }}>
