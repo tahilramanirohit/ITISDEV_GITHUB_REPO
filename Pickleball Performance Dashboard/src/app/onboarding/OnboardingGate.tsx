@@ -12,20 +12,31 @@ const Onboarding = lazy(() => import("./Onboarding").then((m) => ({ default: m.O
 
 const Loading = () => <p className="p-8 text-sm" style={{ color: WHITE_SUB }}>Loading…</p>;
 
+/** The database's reason, short: "PGRST106: The schema must be one of …" or "Failed to fetch". */
+export function profileErrorDetail(e: unknown): string {
+  const err = (e ?? {}) as { code?: unknown; message?: unknown };
+  const message = typeof err.message === "string" ? err.message : e instanceof Error ? e.message : "";
+  const code = typeof err.code === "string" && err.code ? `${err.code}: ` : "";
+  return `${code}${message}`.trim().slice(0, 200);
+}
+
 /** Shows "getting to know you" once, before the app, until the player finishes it. */
 export function OnboardingGate({ sb, userId, skip, children }: { sb: SupabaseClient; userId: string; skip: boolean; children: ReactNode }) {
   const [profile, setProfile] = useState<PlayerProfile | null | undefined>(skip ? null : undefined);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
   const load = useCallback(() => {
-    getProfile(sb, userId).then((p) => { setProfile(p); setFailed(false); })
-      // Fail closed: unknown consent must never open the app.
-      .catch(() => { setProfile(null); setFailed(true); });
+    getProfile(sb, userId).then((p) => { setProfile(p); setFailed(null); })
+      // Fail closed: unknown consent must never open the app. Keep the database's reason, so a
+      // setup problem (e.g. a new Supabase project with the Data API off) can be told apart.
+      .catch((e: unknown) => { setProfile(null); setFailed(profileErrorDetail(e)); });
   }, [sb, userId]);
   useEffect(() => { if (!skip) load(); }, [skip, load]);
   useEffect(() => { window.addEventListener(DATA_PREFERENCES_UPDATED, load); return () => window.removeEventListener(DATA_PREFERENCES_UPDATED, load); }, [load]);
 
   if (skip) return <>{children}</>;
-  if (failed) return <AppShell><Notice tone="error">We couldn't load your data choices. Please try again.</Notice><PrimaryButton onClick={load}>Try again</PrimaryButton></AppShell>;
+  if (failed !== null) return <AppShell><Notice tone="error">We couldn't load your data choices. Please try again.</Notice>
+    {failed && <p className="mt-2 text-xs" style={{ color: WHITE_SUB }}>Details: {failed}</p>}
+    <div className="mt-3"><PrimaryButton onClick={load}>Try again</PrimaryButton></div></AppShell>;
   if (profile === undefined) return <Loading />;
   if (needsConsent(profile)) return <AppShell><ConsentStep sb={sb} userId={userId} profile={profile} onDone={load} /></AppShell>;
   if (needsOnboarding(profile)) {
