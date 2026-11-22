@@ -118,7 +118,7 @@ function AskSheet({ partners, shares, goalSkills, hasVideo, initialPartner, sess
  * Peer coaching on the owner's session (WP5): ask partners for feedback on chosen
  * skills, then see "You vs Kyle" per skill and their notes grouped by skill.
  */
-export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings, goalSkills, onWatch, onChanged, askFor = null, playedWith = null, sessionTitle = "this session" }: {
+export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings, goalSkills, onWatch, onChanged, askFor = null, playedWith = null, sessionTitle = "this session", showAsk = true }: {
   sb: SupabaseClient; sessionId: string; hasVideo: boolean; sessionTitle?: string;
   selfRatings: SelfRatings | null; peerRatings: PeerRating[]; goalSkills: SelfSkill[];
   /** Open the Ask sheet for this partner straight away (from their card under Players). */
@@ -128,6 +128,9 @@ export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings
   /** Jump the video to a note's moment. */
   onWatch?: (timeSeconds: number) => void;
   onChanged?: () => void;
+  /** False before the game is rated: feedback already received still shows, the "ask" cards wait
+      (professor's notes, 22 Nov: less on screen while rating). Sessions already shared stay listed. */
+  showAsk?: boolean;
 }) {
   const [partners, setPartners] = useState<PartnerLink[] | null>(null);
   const [links, setLinks] = useState<PartnerLink[]>([]);
@@ -244,7 +247,7 @@ export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings
         </div>;
       })}
 
-      {playedWith && !alreadyAsked && <div className="rounded-[18px] p-4" style={{ background: ACCENT_SOFT, color: INK }} role="note"
+      {showAsk && playedWith && !alreadyAsked && <div className="rounded-[18px] p-4" style={{ background: ACCENT_SOFT, color: INK }} role="note"
         aria-label={`Feedback from ${playedWith.name}`}>
         <p className="text-[15px] font-extrabold">You played with {playedWith.name}. Ask {playedWith.name} for feedback{focusName ? ` on your ${focusName}` : ""}?</p>
         {buddyIsPartner
@@ -267,7 +270,7 @@ export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings
                 </>}
       </div>}
 
-      <div className="rounded-[18px] p-4" style={cardStyle}>
+      {(showAsk || shares.length > 0 || !!error || !!notice) && <div className="rounded-[18px] p-4" style={cardStyle}>
         <div className="flex items-start gap-3">
           <img src={mascotUrl} alt="" aria-hidden="true" className="h-12 w-9 shrink-0 object-contain" />
           <div className="min-w-0 flex-1">
@@ -294,7 +297,7 @@ export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings
               className={`mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-[15px] font-extrabold ${pressable}`}
               style={{ background: ACTION, color: ON_ACTION, border: `1px solid ${ACTION_EDGE}` }}>
               <Send size={17} aria-hidden="true" /> Ask for feedback</button>}
-      </div>
+      </div>}
 
       {asking && partners.length > 0 && <AskSheet partners={partners} shares={shares} goalSkills={goalSkills} hasVideo={hasVideo}
         sessionTitle={sessionTitle} initialPartner={asking.partner} onClose={() => setAsking(null)}

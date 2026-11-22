@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { BarChart3, ChevronRight, CircleDot, Flame, Hand, LogOut, MapPin, Pencil, Settings, ShieldCheck, Star, Users } from "lucide-react";
+import { ChevronRight, CircleDot, Flame, Hand, LogOut, MapPin, Pencil, Settings, ShieldCheck, Star, Users } from "lucide-react";
 import { getProfile, type PlayerProfile } from "../../lib/api/profile";
 import { useSessionsData, weekStreak } from "../sessions/sessionUi";
 import { playerCode } from "../../lib/api/players";
@@ -42,12 +42,12 @@ export default function ProfilePage({ sb, userId, account, signOut }: {
   ].filter(Boolean) as { icon: typeof MapPin; text: string }[];
   if (loading) return <p className="text-sm" style={{ color: WHITE_SUB }}>Loading profile…</p>;
 
+  // Titles only (professor's notes, 22 Nov: less text). Progress has its own tab, so it is not repeated here.
   const links = [
-    ["#/profile/edit", Pencil, "Edit profile", "Photo, name, bio, home court and paddle"],
-    ["#/settings", Settings, "Settings", "Default settings, display, research tools"],
-    ["#/welcome", Star, "My game and starting skills", "Level, goals and usual skill ratings"],
-    ["#/progress", BarChart3, "Self-rated progress", "How your ratings change over time"],
-    ["#/privacy", ShieldCheck, "Your data and privacy", "What is stored and how to delete it"],
+    ["#/profile/edit", Pencil, "Edit profile"],
+    ["#/settings", Settings, "Settings"],
+    ["#/welcome", Star, "My game and starting skills"],
+    ["#/privacy", ShieldCheck, "Your data and privacy"],
   ] as const;
 
   return <div>
@@ -89,10 +89,10 @@ export default function ProfilePage({ sb, userId, account, signOut }: {
 
     <div className="space-y-5 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)] lg:items-start lg:gap-6 lg:space-y-0">
     <nav aria-label="Profile links" className="overflow-hidden rounded-[20px]" style={{ background: WHITE, border: `1px solid ${BORDER}`, boxShadow: `inset 5px 0 0 ${ACTION}` }}>
-      {links.map(([href, Icon, title, detail]) => (
-        <a key={href} href={href} className="flex min-h-[64px] items-center gap-3 border-b py-3 pl-4 pr-3 last:border-b-0" style={{ borderColor: BORDER }}>
+      {links.map(([href, Icon, title]) => (
+        <a key={href} href={href} className="flex min-h-[56px] items-center gap-3 border-b py-2.5 pl-4 pr-3 last:border-b-0" style={{ borderColor: BORDER }}>
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-[14px]" style={{ background: "color-mix(in srgb, var(--pp-green) 16%, var(--pp-surface))", color: CHECK }}><Icon size={20} aria-hidden="true" /></span>
-          <span className="min-w-0 flex-1"><span className="block text-base font-bold" style={{ color: INK }}>{title}</span><span className="block text-sm" style={{ color: WHITE_SUB }}>{detail}</span></span>
+          <span className="min-w-0 flex-1 text-base font-bold" style={{ color: INK }}>{title}</span>
           <ChevronRight size={18} style={{ color: WHITE_SUB }} aria-hidden="true" />
         </a>
       ))}

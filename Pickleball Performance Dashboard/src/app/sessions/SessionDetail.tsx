@@ -21,7 +21,7 @@ import { initials, listOtherPlayers, saveOtherPlayers, shortId, type OtherPlayer
 import { AvatarStack } from "./sessionUi";
 import { hasUploadConsent, loadCapture, recordUploadConsent, type Capture } from "../../lib/api/capture";
 import { getSelfAssessment } from "../../lib/api/selfAssessment";
-import { GamePhases, PreGameSummary, type Phase } from "./GamePhases";
+import { GamePhases, type Phase } from "./GamePhases";
 import type { CaptureStep } from "./CapturePanel";
 import { BaselineNotice } from "./BaselineNotice";
 import { ACCENT_INK, BLUE_SKY, BORDER, DISPLAY_FONT, INK, NUM_FONT, ORANGE, WHITE_DIM, WHITE_SUB, alpha } from "../theme";
@@ -723,14 +723,13 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
       ]} />
 
       {activeTab === "plan" && <div {...tabPanelProps("session", "plan")} className="space-y-4 outline-none">
-        <PreGameSummary checkin={capture?.checkin ?? null} onOpen={() => openPhase("pre")} />
         {injury.open && <RecoveryCard sb={sb} injury={injury.open} onChanged={() => void injury.reload()} showPlan={false} />}
         <SelfAssessmentPanel sb={sb} session={session} recovery={recovery} peerRatings={peerRatings} injured={!!injury.open}
           onSaved={() => { loadPhases(); void load(); loadFeedback(); }} />
-        {rated && !(capture?.recovery || capture?.reflection) && <button type="button" onClick={() => openPhase("post")}
-          className={`flex min-h-[52px] w-full items-center justify-center rounded-full px-4 text-base font-extrabold ${pressable}`}
-          style={{ background: "var(--pp-action)", color: "var(--pp-on-action)" }}>Next: post-game recovery</button>}
-        <PeerFeedback sb={sb} sessionTitle={session.title} sessionId={session.id} hasVideo={!!uploadedPath} selfRatings={selfRatings} peerRatings={peerRatings}
+        {/* Feedback already received always shows; asking for more waits until the game is rated, unless an
+            "Ask" link from a partner's card opened this page. The checklist's "Next" replaces the extra
+            "Next: post-game recovery" button (professor's notes, 22 Nov). */}
+        <PeerFeedback showAsk={rated || !!searchParams.get("ask")} sb={sb} sessionTitle={session.title} sessionId={session.id} hasVideo={!!uploadedPath} selfRatings={selfRatings} peerRatings={peerRatings}
           goalSkills={goalSkills} onChanged={loadFeedback} askFor={searchParams.get("ask")} playedWith={playedWith}
           onWatch={uploadedPath ? (time) => { setTab("video"); setVideoSeek({ time, id: Date.now() }); } : undefined} />
       </div>}

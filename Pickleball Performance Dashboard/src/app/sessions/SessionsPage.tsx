@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { Plus, Trophy } from "lucide-react";
+import { Trophy } from "lucide-react";
+import { PickleballPlus } from "../shell/PickleballPlus";
 import { getProfile } from "../../lib/api/profile";
 import { listGameShares, type GameShare } from "../../lib/api/gameShares";
 import { sessionKind } from "../../lib/api/types";
@@ -51,7 +52,7 @@ export default function SessionsPage({ sb, userId }: { sb: SupabaseClient; userI
   return (
     <div>
       <PageHero band eyebrow="Your games" title="Sessions" subtitle={items ? `${items.length} logged${monthCount ? ` · ${monthCount} this month` : ""}` : undefined}
-        action={<a href="#/new" aria-label="Log a session" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full" style={{ background: YELLOW, color: YELLOW_INK }}><Plus size={22} /></a>} />
+        action={<a href="#/new" aria-label="Log a session" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-transform duration-150 active:scale-[0.94] motion-reduce:transition-none"><PickleballPlus size={48} /></a>} />
       <Sheet>
       <div className="space-y-5">
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 lg:mx-0 lg:flex-wrap lg:px-0" role="group" aria-label="Filter sessions">

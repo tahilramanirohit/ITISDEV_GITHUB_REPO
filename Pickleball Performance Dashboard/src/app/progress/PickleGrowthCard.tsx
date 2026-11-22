@@ -3,6 +3,7 @@ import { Check, ChevronRight, ListChecks, Sparkles, Star, Video } from "lucide-r
 import { PICKLE_SIZES } from "../../lib/coaching/pickleGrowth";
 import type { PickleJar, Quest } from "../../lib/coaching/brineJar";
 import { mascot2xUrl, mascotUrl, numStyle, pressable } from "../shell/primitives";
+import { ChecklistBar } from "../shell/ChecklistBar";
 
 // The level-up look: warm ball yellow with sun rays and dark ink.
 const INK = "#1f1a05";
@@ -95,9 +96,10 @@ export function PickleGrowthCard({ jar, quests, kindWord, planHref }: {
       <p className="relative mt-3 rounded-[14px] px-3 py-2 text-sm font-semibold leading-snug" style={{ background: "rgba(255,255,255,.6)" }}>
         {message(jar, kindWord)}</p>
 
-      <div className="relative mt-3 flex items-baseline justify-between gap-2">
+      <div className="relative mt-3 space-y-1.5">
         <p className="text-[11px] font-extrabold uppercase tracking-[0.12em]">This week's quests</p>
-        <p className="text-xs font-bold" style={{ color: SUB }}>{done} of {quests.length} · resets Mon</p>
+        <ChecklistBar bare label="Quests done this week" done={done} total={quests.length} count={`${done} of ${quests.length} · resets Mon`}
+          fill="#1f6b35" track="rgba(255,255,255,.65)" textColor={SUB} />
       </div>
       <ul className="relative mt-1.5 space-y-1.5">
         {quests.map((q) => {

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Check, ChevronDown, ChevronRight, Clock, Dumbbell, Target, TrendingDown, TrendingUp, Minus, Video } from "lucide-react";
 import { SKILL_INFO, type SelfProgressRow, type SelfReport } from "../../lib/coaching/selfAssessment";
 import { TermHelp } from "./TermHelp";
+import { ChecklistBar } from "../shell/ChecklistBar";
 import { ACCENT_INK, ACTION, ACTION_SOFT, BORDER, CHECK, DISPLAY_FONT, GREEN, GREEN_BG, HERO, INK, ON_CHECK, ON_HERO, OPTIC, ORANGE, WHITE, WHITE_DIM, WHITE_SUB } from "../theme";
 import { Card, RingTile, SectionTitle, cardStyle, mascot2xUrl, mascotUrl, numStyle, pressable } from "../shell/primitives";
 import { selfCoachScript } from "../../lib/coaching/coachScript";
@@ -48,15 +49,15 @@ function FocusCard({ index, item }: { index: number; item: SelfReport["focus"][n
         </span>
         <ChevronDown size={20} style={{ color: WHITE_SUB, transform: open ? "rotate(180deg)" : undefined }} aria-hidden="true" />
       </button>
-      {open && <div className="space-y-3 border-t px-4 pb-4 pt-3 text-sm" style={{ borderColor: BORDER }}>
+      {/* Less text (professor's notes, 22 Nov): the drill is written out once, under "Your next week"; the reasons sit behind "Why?". */}
+      {open && <div className="space-y-2.5 border-t px-4 pb-4 pt-3 text-sm" style={{ borderColor: BORDER }}>
         <p style={{ color: INK }}>{item.observation}<TermHelp term={item.label} meaning={SKILL_INFO[item.skill].meaning} /></p>
-        <p style={{ color: WHITE_DIM }}>{item.why}</p>
-        <div className="rounded-[14px] p-3" style={{ background: GREEN_BG }}>
-          <p className="flex items-center gap-1.5 font-bold" style={{ color: GREEN }}><Dumbbell size={15} /> Drill: {item.drill.name}</p>
-          <p className="mt-1" style={{ color: INK }}>{item.drill.how}</p>
-        </div>
+        <p className="flex items-center gap-1.5 rounded-[12px] px-3 py-2 font-bold" style={{ background: GREEN_BG, color: GREEN }}><Dumbbell size={15} aria-hidden="true" /> Drill: {item.drill.name}</p>
         <p className="flex items-start gap-1.5 font-semibold" style={{ color: INK }}><Target size={15} className="mt-0.5 shrink-0" style={{ color: GREEN }} />{item.target}</p>
-        <p className="text-xs" style={{ color: WHITE_SUB }}>Picked because {item.reasons.join(", ")}.</p>
+        <details className="text-sm">
+          <summary className="min-h-[36px] cursor-pointer font-semibold" style={{ color: ACCENT_INK }}>Why?</summary>
+          <p className="mt-1" style={{ color: WHITE_DIM }}>{item.why} Picked because {item.reasons.join(", ")}.</p>
+        </details>
       </div>}
     </Card>
   );
@@ -112,7 +113,7 @@ export function SelfReportView({ report, progress, previousLabel, onEdit, sessio
         <RingTile label="Self rating" value={report.overall.toFixed(1)} fraction={(report.overall - 1) / 4} />
         <RingTile label="Level" value={report.level ?? "–"} fraction={(report.overall - 1) / 4} />
       </div>
-      <p className="text-sm" style={{ color: WHITE_DIM }}>{report.introduction}</p>
+      <p className="text-sm" style={{ color: WHITE_DIM }}>{report.focus.length === 1 ? "1 thing" : `${report.focus.length} things`} to practice before your next game.</p>
 
       <div className="space-y-5 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start lg:gap-6 lg:space-y-0">
       <div className="space-y-5">
@@ -133,23 +134,31 @@ export function SelfReportView({ report, progress, previousLabel, onEdit, sessio
       </div>
       <div className="space-y-5">
       {report.plan.length > 0 && <section className="space-y-3">
-        <div className="flex items-baseline justify-between"><SectionTitle>Your next week</SectionTitle>
-          <span className="text-sm font-bold" style={{ color: WHITE_SUB }}>{report.plan.filter((st) => ticks.done.includes(st.day)).length} of {report.plan.length} done</span></div>
+        <div className="space-y-1.5"><SectionTitle>Your next week</SectionTitle>
+          <ChecklistBar bare label="Plan steps done" done={report.plan.filter((st) => ticks.done.includes(st.day)).length} total={report.plan.length} /></div>
         <Card className="!py-2">
           <ol>
             {report.plan.map((step) => {
               const on = ticks.done.includes(step.day);
+              // First sentence on the card, the rest under "How" (no lookbehind: older iPhones lack it).
+              const split = /^(.+?\.)\s+([\s\S]+)$/.exec(step.detail);
+              const first = split ? split[1] : step.detail;
+              const rest = split ? [split[2]] : [];
               return <li key={step.day} className="border-t first:border-t-0" style={{ borderColor: BORDER }}>
                 <button type="button" role="checkbox" aria-checked={on} onClick={() => ticks.toggle(step.day)}
-                  className="flex min-h-[56px] w-full items-start gap-3 py-2.5 text-left">
+                  className="flex min-h-[56px] w-full items-start gap-3 pt-2.5 text-left">
                   <span aria-hidden="true" className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-[9px] transition-colors"
                     style={on ? { background: CHECK, color: ON_CHECK } : { border: `2px solid ${BORDER}` }}>{on && <Check size={16} strokeWidth={3} />}</span>
                   <span className="min-w-0">
                     <span className="block text-xs font-bold" style={{ color: WHITE_SUB }}>{step.day}</span>
                     <span className="block text-sm font-bold" style={{ color: INK, textDecoration: on ? "line-through" : undefined }}>{step.title}</span>
-                    <span className="block text-sm" style={{ color: WHITE_DIM }}>{step.detail}</span>
+                    <span className="block text-sm" style={{ color: WHITE_DIM }}>{first}</span>
                   </span>
                 </button>
+                {rest.length > 0 ? <details className="pb-2.5 pl-10 text-sm">
+                  <summary className="min-h-[32px] cursor-pointer font-semibold" style={{ color: ACCENT_INK }}>How</summary>
+                  <p style={{ color: WHITE_DIM }}>{rest.join(" ")}</p>
+                </details> : <div className="pb-2.5" />}
               </li>;
             })}
           </ol>
@@ -166,8 +175,9 @@ export function SelfReportView({ report, progress, previousLabel, onEdit, sessio
         <SectionTitle>Since last time</SectionTitle>
         <Card>
           {previousLabel && <p className="mb-2 text-xs" style={{ color: WHITE_SUB }}>Compared with {previousLabel}</p>}
+          {!progress.some((row) => row.change !== "same") && <p className="text-sm" style={{ color: WHITE_DIM }}>No change in your ratings.</p>}
           <ul className="divide-y" style={{ borderColor: BORDER }}>
-            {progress.map((row) => {
+            {progress.filter((row) => row.change !== "same").map((row) => {
               const Icon = row.change === "better" ? TrendingUp : row.change === "worse" ? TrendingDown : Minus;
               const color = row.change === "better" ? GREEN : row.change === "worse" ? ORANGE : WHITE_SUB;
               return <li key={row.skill} className="flex items-center justify-between gap-3 py-2 text-sm">
@@ -184,7 +194,7 @@ export function SelfReportView({ report, progress, previousLabel, onEdit, sessio
       </div>
       </div>
 
-      <p className="text-xs leading-relaxed" style={{ color: WHITE_SUB }}>{report.limitation}</p>
+      <p className="text-xs" style={{ color: WHITE_SUB }}>From your own ratings, not measured.</p>
       <button type="button" onClick={onEdit} className="w-full rounded-[14px] py-3 text-sm font-bold lg:w-auto lg:px-8" style={{ border: `1px solid ${BORDER}`, background: WHITE, color: INK }}>
         Edit my ratings
       </button>

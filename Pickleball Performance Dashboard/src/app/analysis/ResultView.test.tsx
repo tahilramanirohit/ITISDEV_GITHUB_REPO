@@ -162,7 +162,8 @@ describe("ResultView", () => {
       fireEvent.click(screen.getByRole("button", { name: "Close coaching" }));
       expect(screen.queryByRole("dialog")).toBeNull();
       expect(cancel).toHaveBeenCalled();
-      expect(screen.getByText(/Record and analyze another session/)).toBeTruthy();
+      expect(screen.queryByText(/Record and analyze another session/)).toBeNull(); // removed: less text (22 Nov)
+      expect(screen.getAllByText("Why?").length).toBeGreaterThan(0); // why and evidence sit behind "Why?"
     } finally {
       cleanup();
       localStorage.removeItem("picklepro.coach.fullText");

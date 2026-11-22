@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ArrowRight, Check, ChevronRight, Flame, Plus, Target, Video } from "lucide-react";
+import { ArrowRight, Check, ChevronRight, Flame, Target, Video } from "lucide-react";
+import { PickleballPlus } from "../shell/PickleballPlus";
 import { getProfile, type PlayerProfile } from "../../lib/api/profile";
 import type { SessionListItem } from "../../lib/api/sessions";
 import type { SelfAssessment } from "../../lib/api/selfAssessment";
@@ -108,7 +109,8 @@ export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: s
   const bubble = items === null ? null
     : injured ? { title: `Rest up${name ? `, ${name}` : ""}.`, body: "Recovery mode is on: your plan is rest and your goals are paused. Turn off recovery mode when you're ready." }
     : sessions.length === 0 ? { title: `Hi${name ? ` ${name}` : ""}, I'm Pickle.`, body: "Log your first game and I'll tell you what to work on." }
-    : focus ? { title: hasRatedPlan ? `Next up: ${focus.label.toLowerCase()}` : "Nice first game!", body: `${focus.drill.name}, 3 times this week.` }
+    // The practice card below says what's next; no second card saying the same (professor's notes, 22 Nov).
+    : focus && latestPlan ? null
     : { title: thisWeek >= WEEKLY_TARGET ? "You hit this week's target." : "Good to see you back.", body: "Rate your next game and I'll pick a drill." };
 
   const left = Math.max(0, WEEKLY_TARGET - thisWeek);
@@ -126,7 +128,7 @@ export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: s
         <img src={mascotUrl} alt="" aria-hidden="true" className="h-28 w-auto shrink-0" />
         <div className="mb-2 rounded-[20px] rounded-bl-[4px] px-4 py-3" style={{ background: ACTION, color: ON_ACTION }}><h2 className="text-xl font-extrabold leading-tight">Log your first game</h2><p className="mt-1 text-base">About 2 minutes. Then I'll tell you what to work on.</p></div>
       </div>
-      <a href="#/new?mode=self" className={`mt-3 flex min-h-[56px] items-center justify-center gap-2 rounded-full text-base font-extrabold ${pressable}`} style={{ background: ACTION, color: ON_ACTION }}><Plus size={22} />Log your first game</a>
+      <a href="#/new?mode=self" className={`mt-3 flex min-h-[56px] items-center justify-center gap-2 rounded-full text-base font-extrabold ${pressable}`} style={{ background: ACTION, color: ON_ACTION }}><PickleballPlus size={30} />Log your first game</a>
     </section>
     <GetStarted steps={steps} />
     <a href="#/new?mode=video" className={`flex min-h-[76px] items-center gap-3 rounded-[22px] p-4 ${pressable}`} style={{ background: ACTION_SOFT, border: `1px solid ${LINE}`, color: INK }}>
@@ -155,14 +157,15 @@ export default function HomePage({ sb, userId }: { sb: SupabaseClient; userId: s
       </div>
       <div className="space-y-4">
         {latestPlan && focus && <section className="rounded-[22px] border-t-4 p-4" style={{ background: HERO, borderColor: ACTION, color: ON_HERO }}>
-          <h2 className="flex items-center gap-1.5 text-sm font-bold" style={{ color: "#c6d3ca" }}><Target size={16} aria-hidden="true" style={{ color: ACTION }} />{injured ? "When you're back" : latestPlan.starting ? "Where to start" : "Practice next"}</h2>
+          <h2 className="flex items-center gap-1.5 text-sm font-bold" style={{ color: "#c6d3ca" }}><Target size={16} aria-hidden="true" style={{ color: ACTION }} />{injured ? "When you're back" : latestPlan.starting ? "Where to start" : `Next up: ${focus.label.toLowerCase()}`}</h2>
           <h3 className="mt-1 text-2xl font-extrabold">{focus.drill.name}</h3>
-          <p className="mt-1 text-base" style={{ color: "#c6d3ca" }}>{latestPlan.report.plan[0]?.detail.split(". ")[0]}.{injured ? " Wait until you're ready to play." : ""}</p>
+          <p className="mt-1 text-base" style={{ color: "#c6d3ca" }}>{latestPlan.report.plan[0]?.detail.split(". ")[0]}.{injured ? " Wait until you're ready to play." : " 3 times this week."}</p>
           <a href={latestPlan.href} className={`mt-3 inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 text-sm font-bold ${pressable}`} style={{ background: ACTION, color: ON_ACTION }}>Full plan <ArrowRight size={16} /></a>
         </section>}
         {coachScript && !injured && <CoachLauncher shortScript={coachScript} tone="light" compact />}
       </div>
-      <a href="#/new?mode=self" className={`mt-2 flex min-h-[52px] items-center justify-center gap-2 rounded-full text-base font-extrabold lg:col-span-2 ${pressable}`} style={{ background: ACTION, color: ON_ACTION }}><Plus size={22} />{sessions.length === 0 ? "Log your first game" : "Log today's game"}</a>
+      {/* Once there are games, the pickleball in the tab bar is the way in (professor's notes, 22 Nov: less on screen). */}
+      {sessions.length === 0 && <a href="#/new?mode=self" className={`mt-2 flex min-h-[52px] items-center justify-center gap-2 rounded-full text-base font-extrabold lg:col-span-2 ${pressable}`} style={{ background: ACTION, color: ON_ACTION }}><PickleballPlus size={30} />Log your first game</a>}
 
     </div>
           {earlier.length > 0 && <section aria-label="Earlier games">

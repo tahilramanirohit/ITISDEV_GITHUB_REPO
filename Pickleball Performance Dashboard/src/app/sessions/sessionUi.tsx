@@ -5,7 +5,7 @@ import { listSessions, type SessionListItem } from "../../lib/api/sessions";
 import type { GameShare } from "../../lib/api/gameShares";
 import { listSelfAssessments, type SelfAssessment } from "../../lib/api/selfAssessment";
 import { initials, listAllOtherPlayers, type OtherPlayer } from "../../lib/api/players";
-import { CONTEXT_LABELS, FORMAT_LABELS, KIND_LABELS, sessionKind, type SessionRow } from "../../lib/api/types";
+import { FORMAT_LABELS, KIND_LABELS, sessionKind, type SessionRow } from "../../lib/api/types";
 import { deriveAnalysisState, STATE_LABELS, type AnalysisUiState } from "../../lib/analysis/state";
 import { buildSelfReport } from "../../lib/coaching/selfAssessment";
 import { startTimeLabel } from "../../lib/coaching/sessionNames";
@@ -99,9 +99,10 @@ export function SessionCard({ item, assessment, players = [], you = "You" }: {
   const others = players.map((p) => p.display_name).filter(Boolean);
   const named = (role: OtherPlayer["role"]) => players.filter((p) => p.role === role).map((p) => p.display_name.split(" ")[0]).filter(Boolean);
   const partners = named("partner"), opponents = named("opponent");
-  const who = partners.length ? `with ${partners.join(" & ")}` : opponents.length ? `vs ${opponents.join(" & ")}` : CONTEXT_LABELS[session.session_context];
+  // Who you played with, if named; the setting ("Casual match") is left out (professor's notes, 22 Nov: less text).
+  const who = partners.length ? `with ${partners.join(" & ")}` : opponents.length ? `vs ${opponents.join(" & ")}` : "";
   const time = startTimeLabel(session.actual_start_at);
-  const meta = [`${formatSessionDate(session.session_date, { weekday: "short" })}${time ? ` ${time}` : ""}`, FORMAT_LABELS[session.play_format], who];
+  const meta = [`${formatSessionDate(session.session_date, { weekday: "short" })}${time ? ` ${time}` : ""}`, FORMAT_LABELS[session.play_format], who].filter(Boolean);
   const pill = "inline-flex min-h-[26px] items-center gap-1 rounded-full px-2.5 text-xs font-bold";
   return (
     <a href={`#/sessions/${session.id}`} className="flex min-h-[60px] w-full items-center gap-3 py-2.5 pl-4 pr-3 text-left transition-colors hover:bg-sunken">
@@ -111,7 +112,7 @@ export function SessionCard({ item, assessment, players = [], you = "You" }: {
         {won == null ? <KindIcon size={20} aria-hidden="true" /> : <><span aria-hidden="true">{won ? "W" : "L"}</span><span className="sr-only">{won ? "Won" : "Lost"}</span></>}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-base font-bold" style={{ color: INK }}>{session.title}</span>
+        <span className="line-clamp-2 block break-words text-base font-bold" style={{ color: INK }}>{session.title}</span>
         <span className="block text-sm" style={{ color: WHITE_SUB }} aria-label={[you, ...others].join(", ")}>{meta.join(" · ")}</span>
         {(!status.done || kind === "tournament" || item.result?.data_origin === "test_fixture") && <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
           {!status.done && <span className={pill} style={{ background: alpha(status.color, 14), color: status.color }}>{status.text}</span>}

@@ -20,8 +20,22 @@
 | Players: closed partner cards, photos, video comments for everyone, removing cancelled sessions | ✅ Done (10 Nov 2026) | **Yes**: `20261111090000_video_comments_player_photos.sql` (`pickleproapp_upgrade_14.sql`) |
 | Buddy game video, Ask sheet picks who, result in Wrap-up only, journal redesign | ✅ Done (10 Nov 2026) | **Yes** for the buddy game video: `20261112090000_buddy_session_video.sql` (`pickleproapp_upgrade_15.sql`) |
 | Video report simplified (summary, tabs, Video settings) | ✅ Done (10 Nov 2026) | No |
+| Professor's notes of 22 Nov: checklist bar, pickleball create button, less text | ✅ Done (22 Nov 2026) | No |
 
 **All work packages are done.** Still open (not a work package): a review-only video for solo drills (gap analysis §4b.1), and the proposal text changes in section 7. Everything left needs a new migration, so read rule 6 in section 3 first.
+
+### 22 Nov 2026: Professor's notes (checklist bar, pickleball button, less text)
+
+- **Checklist progress bar** (`src/app/shell/ChecklistBar.tsx`): one bar along a dashed court line, "2 of 3 done", with a small pickleball riding the end on the large size. Used for the game steps (Pre-game / In-game / Post-game, now one "Game checklist" card with a "Next: …" link), Rate your game ("4 of 10 rated"), the practice plan's "Your next week" and the weekly quests on Progress. Screen readers get a `progressbar` with the same count.
+- **Create session is a pickleball** (`src/app/shell/PickleballPlus.tsx`, option B): a yellow ball with a dark "+" in the bottom bar, the desktop sidebar, the Sessions header and Home's "Log your first game".
+- **Less text.** Word counts on the demo account, before → after: practice plan 571 → 333, Rate your game 248 → 197 (with two partners' feedback; 147 without), video report 321 → 284, Profile 90 → 56, Players 141 → 108, Sessions 135 → 112, Log a game 111 → 91, Settings 182 → 154, Home 90 → 83.
+  - Practice plan: each focus shows the observation, the drill and the target; "Why?" opens the reason. Each step under "Your next week" shows its first sentence, "How" opens the rest. "Since last time" lists only ratings that changed.
+  - Video report: drill details and "Why?" fold away; the "record another session" paragraph and the long footer are gone.
+  - Rate your game: the pre-game banner and the extra "Next: post-game recovery" button are gone (the checklist covers both). Feedback partners already gave still shows; the "Get a partner's view" and "Ask Kyle" cards wait until the game is rated (`PeerFeedback` `showAsk`).
+  - Home: the mascot bubble is hidden when the practice card says the same thing; "Log today's game" shows only before the first game.
+  - Sessions list: rows no longer repeat "Casual match"; long titles wrap to two lines instead of being cut.
+  - Profile: menu titles only; "Self-rated progress" removed (it is the Progress tab).
+  - Log a game, Players, Settings: one explanatory line each removed.
 
 ### 10 Nov 2026: Database check
 

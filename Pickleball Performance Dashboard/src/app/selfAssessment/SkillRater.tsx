@@ -9,8 +9,10 @@ import { TermHelp } from "./TermHelp";
  * description, so a 3 means the same thing every session. The "?" explains the term.
  * Shared by session rating and onboarding.
  */
-export function SkillRater({ skill, value, onChange, question, playFormat }: {
+export function SkillRater({ skill, value, onChange, question, playFormat, hint }: {
   skill: SelfSkill; value: SkillRating | undefined; onChange: (v: SkillRating | undefined) => void; question?: string; playFormat?: string;
+  /** What an unrated ball says; the rating screen says "Hold a ball…" once at the top instead. */
+  hint?: string;
 }) {
   const info = skillInfo(skill, playFormat);
   return (
@@ -25,7 +27,7 @@ export function SkillRater({ skill, value, onChange, question, playFormat }: {
       </div>
       <div className="mt-3">
         <HoldRater label={`${info.label} rating, 1 lowest to ${RATING_MAX} highest`} min={1} max={RATING_MAX} value={value}
-          onChange={(n) => onChange(n as SkillRating)} valueText={(n) => `${n}/${RATING_MAX} · ${info.anchors[n - 1]}`} />
+          onChange={(n) => onChange(n as SkillRating)} valueText={(n) => `${n}/${RATING_MAX} · ${info.anchors[n - 1]}`} hint={hint} />
       </div>
     </Card>
   );

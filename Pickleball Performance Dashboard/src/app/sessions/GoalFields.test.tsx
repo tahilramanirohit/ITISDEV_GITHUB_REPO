@@ -28,6 +28,7 @@ describe("GoalFields", () => {
     expect(screen.getByRole("slider", { name: /^Shot outcomes self rating/ }).getAttribute("aria-valuetext")).toBe("Learning");
     fireEvent.click(screen.getByRole("button", { name: "Clear" }));
     expect(value.shot_outcomes_rating).toBeNull();
-    expect(screen.getByText(/your own assessment/i)).toBeTruthy();
+    // The footer about how focus is used was cut (professor's notes, 22 Nov: less text).
+    expect(screen.queryByText(/your own assessment/i)).toBeNull();
   });
 });

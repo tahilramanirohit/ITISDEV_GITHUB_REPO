@@ -14,6 +14,7 @@ import { ACCENT_SOFT, ACCENT_INK, ACTION, ACTION_SOFT, CHECK, BORDER, GREEN, HER
 import { Chip, Notice, PrimaryButton, cardStyle, numStyle, fieldStyle, labelClass, labelStyle, pressable } from "../shell/primitives";
 import { SelfReportView } from "./SelfReportView";
 import { SkillRater } from "./SkillRater";
+import { ChecklistBar } from "../shell/ChecklistBar";
 import { useDataUse } from "../onboarding/DataUse";
 import { parseGameScore } from "../../lib/coaching/scoreParse";
 import { peerLowerSkills, type PeerRating } from "../../lib/coaching/peerFeedback";
@@ -192,17 +193,15 @@ export function SelfAssessmentPanel({ sb, session, recovery, onSaved, peerRating
   return (
     <div className="space-y-4">
       <div>
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-xl font-extrabold tracking-tight" style={{ color: INK }}>Rate your game</h2>
-          <span className="text-xs font-bold" style={{ color: WHITE_SUB }}>{ratedCount} of {SELF_SKILLS.length} rated</span>
-        </div>
+        <h2 className="text-xl font-extrabold tracking-tight" style={{ color: INK }}>Rate your game</h2>
+        <div className="mt-1.5"><ChecklistBar bare label="Skills rated" done={ratedCount} total={SELF_SKILLS.length} count={`${ratedCount} of ${SELF_SKILLS.length} rated`} /></div>
         {/* Steps as underlined tabs; any step can be opened directly. */}
         <nav aria-label="Rating steps" className="mt-2 flex gap-5 overflow-x-auto border-b" style={{ borderColor: BORDER }}>
           {STEPS.map((s, i) => <button key={s} type="button" onClick={() => { setError(""); setStep(i); }} aria-current={i === step ? "step" : undefined}
             className="-mb-px min-h-[40px] shrink-0 border-b-[3px] py-2 text-sm font-semibold"
             style={i === step ? { color: INK, borderColor: PICKLE } : { color: i < step ? GREEN : WHITE_DIM, borderColor: "transparent" }}>{s}</button>)}
         </nav>
-        {step === 0 && <p className="mt-3 text-sm" style={{ color: WHITE_DIM }}>Think about this game only. Skip anything that didn't come up.</p>}
+        {step === 0 && <p className="mt-3 text-sm" style={{ color: WHITE_DIM }}>Hold a ball, let go to rate. Skip anything that didn't come up.</p>}
         {last && <p className="mt-3 text-[26px] font-extrabold leading-tight" style={{ color: INK }}>{solo ? "Nice session." : "Nice game."}</p>}
       </div>
 
@@ -229,7 +228,7 @@ export function SelfAssessmentPanel({ sb, session, recovery, onSaved, peerRating
         </ul>
       </section>}
       {last && resultFields}
-      {group !== "Wrap-up" ? <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">{skills.map((skill) => <SkillRater key={skill} skill={skill} playFormat={session.play_format} value={draft.ratings[skill]} onChange={(v) => rate(skill, v)} />)}</div> : <div className="space-y-4 lg:max-w-xl">
+      {group !== "Wrap-up" ? <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">{skills.map((skill) => <SkillRater hint="Not rated" key={skill} skill={skill} playFormat={session.play_format} value={draft.ratings[skill]} onChange={(v) => rate(skill, v)} />)}</div> : <div className="space-y-4 lg:max-w-xl">
         <div>
           <p className={labelClass} style={labelStyle}>Unforced errors</p>
           <div className="grid grid-cols-3 gap-2" role="group" aria-label="Unforced errors">

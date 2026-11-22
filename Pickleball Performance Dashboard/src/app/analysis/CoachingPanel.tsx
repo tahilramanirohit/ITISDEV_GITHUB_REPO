@@ -9,24 +9,27 @@ export type PreviousSession = { label: string; result: AnalysisResultV1 };
 
 const itemStyle = { background: "var(--pp-surface-2)", border: `1px solid ${BORDER}` };
 
+/** One focus area: what was seen, the drill and the target; the drill's steps and the evidence open on tap. */
 function FocusItem({ item, index }: { item: CoachingItem; index: number }) {
   return (
     <li className="rounded-xl p-3" style={itemStyle}>
       <p className="text-sm font-semibold text-ink">{index + 1}. {item.title}</p>
       <p className="mt-1 text-sm text-ink">{item.observation}</p>
-      {item.why && <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>{item.why}</p>}
       {item.drill && (
-        <div className="mt-2 rounded-lg p-2" style={{ background: "var(--pp-surface-2)" }}>
-          <p className="text-sm font-semibold" style={{ color: NEON }}>Drill: {item.drill.name}</p>
-          <p className="mt-0.5 text-sm text-ink">{item.drill.how}</p>
-        </div>
+        <details className="mt-2 rounded-lg p-2" style={{ background: "var(--pp-surface-2)" }}>
+          <summary className="cursor-pointer text-sm font-semibold" style={{ color: NEON }}>Drill: {item.drill.name}</summary>
+          <p className="mt-1 text-sm text-ink">{item.drill.how}</p>
+        </details>
       )}
       {item.target && (
         <p className="mt-2 flex gap-1.5 text-sm font-semibold" style={{ color: BLUE_SKY }}>
           <Target size={12} className="mt-0.5 flex-shrink-0" /> {item.target}
         </p>
       )}
-      <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Evidence: {item.evidence}</p>
+      <details className="mt-1 text-sm">
+        <summary className="cursor-pointer font-semibold" style={{ color: WHITE_DIM }}>Why?</summary>
+        <p className="mt-1" style={{ color: WHITE_DIM }}>{item.why ? `${item.why} ` : ""}Evidence: {item.evidence}</p>
+      </details>
     </li>
   );
 }
@@ -119,11 +122,6 @@ export function CoachingPanel({ result, previous, onRateSession }: {
         </div>
       )}
       {progress && previous && <ProgressTable rows={progress} label={previous.label} />}
-      {report.available && !progress && (
-        <p className="mt-3 text-sm" style={{ color: WHITE_DIM }}>
-          Record and analyze another session with a similar view and play format to track progress against these targets.
-        </p>
-      )}
       <p className="mt-3 text-sm" style={{ color: WHITE_DIM }}>{report.limitation}</p>
     </Card>
   );

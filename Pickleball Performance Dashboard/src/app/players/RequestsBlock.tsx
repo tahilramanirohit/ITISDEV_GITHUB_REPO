@@ -26,8 +26,6 @@ export function NeedsAnswer({ sb, data, act, busyId }: { sb: SupabaseClient; dat
               <p className="text-sm" style={{ color: WHITE_DIM }}>{levelText(b.other_level)}</p>
             </div>
           </div>
-          <p className="mt-2 text-sm" style={{ color: WHITE_DIM }}>Buddies can ask each other to play and partner for video feedback.
-            Nothing else is shared.</p>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <PrimaryButton tone="light" disabled={busyId === b.id} onClick={() => void act(b.id, () => respondBuddy(sb, b.id, false))}>
               <X size={18} aria-hidden="true" /> Decline</PrimaryButton>
@@ -140,15 +138,12 @@ export function SentAndCancelled({ sb, data, act, busyId }: { sb: SupabaseClient
             <div className="min-w-[9rem] flex-1">
               <p className="text-base font-bold" style={{ color: INK }}>{r.other_name}</p>
               <p className="text-sm font-bold" style={{ color: ROSE }}>
-                {r.cancelled_by_me ? "You cancelled" : `${r.other_name} cancelled`}{r.cancelled_at ? ` · ${shortDate(r.cancelled_at)}` : ""}</p>
+                {r.cancelled_by_me ? "You cancelled" : `${r.other_name} cancelled`}{r.cancelled_at ? ` · ${shortDate(r.cancelled_at)}` : ""}{r.cancel_reason ? ` · ${r.cancel_reason}` : ""}</p>
             </div>
             <PrimaryButton tone="light" disabled={busyId === `hide-${r.id}`} aria-label={`Remove the cancelled session with ${r.other_name}`}
               onClick={() => void act(`hide-${r.id}`, () => hideCancelledSession(sb, r.id), "Removed from your list.")}>
               <Trash2 size={16} aria-hidden="true" /> Remove</PrimaryButton>
           </div>
-          <p className="mt-2 text-sm" style={{ color: INK }}>
-            {r.cancel_reason ? <><strong>Reason:</strong> {r.cancel_reason}</> : <span style={{ color: WHITE_DIM }}>No reason given</span>}</p>
-          <RequestDetails r={r} />
         </Card></li>)}
       </ul>
     </section>}

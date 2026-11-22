@@ -138,7 +138,8 @@ it("derives result counts from score while preserving individual manual override
   fireEvent.change(screen.getByLabelText("Score (optional)"), { target: { value: "unreadable" } });
   expect(screen.queryByText("AUTO")).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Shots" }));
-  expect(screen.getAllByText("Hold the ball, let go to rate").length).toBeGreaterThan(0);
+  expect(screen.getByText(/^Hold a ball, let go to rate\./)).toBeTruthy(); // said once, not on every card
+  expect(screen.getAllByText("Not rated").length).toBeGreaterThan(0);
 });
 
 it("lets a player clear accidental optional counts and keep zero wins", async () => {

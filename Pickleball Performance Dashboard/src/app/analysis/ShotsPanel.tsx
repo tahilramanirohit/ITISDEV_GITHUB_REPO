@@ -99,8 +99,7 @@ export function ShotsPanel({ result, myPlayerId, onWatch, research = false, team
         </button>}
       </div>
       <p className="mt-1 text-sm" style={{ color: INK_2 }}>
-        Your team on the right, the other team on the left. {onWatch ? "Tap a shot to jump the video there." : ""}
-        {!validated && " Labels are estimates from the ball's flight, so some will be wrong."}
+        {onWatch ? "Tap a shot to watch it. " : ""}Your team is on the right.
       </p>
 
       <div role="radiogroup" aria-label="Show shots by" className="mt-3 grid grid-cols-4 gap-1 rounded-full p-1" style={{ background: TABBAR, border: `1px solid ${LINE}` }}>

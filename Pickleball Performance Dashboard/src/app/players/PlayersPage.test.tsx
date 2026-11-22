@@ -237,8 +237,7 @@ describe("Players: answers and shared sessions", () => {
     const { sb } = fakeSb({ profile: { ...me }, requests: [
       buddySession({ status: "called_off", cancelled_by_me: false, cancel_reason: null, cancelled_at: "2026-10-24T09:00:00Z" })] });
     show(sb, "/players?section=partners");
-    expect(await screen.findByText(/^Cy cancelled/)).toBeTruthy();
-    expect(screen.getByText("No reason given")).toBeTruthy();
+    expect(await screen.findByText(/^Cy cancelled · Oct 24$/)).toBeTruthy(); // one line: no reason given, nothing more
   });
 
   it("removes a cancelled session from your list", async () => {

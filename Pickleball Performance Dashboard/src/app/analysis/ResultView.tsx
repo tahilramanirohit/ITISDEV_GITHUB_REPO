@@ -295,8 +295,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
       </div>}
 
       {measured && (shotsShown || errorValue || zoneRows.length > 0 || courtMap) && <p className="text-center text-xs" style={{ color: WHITE_SUB }}>
-        Shots, errors and positions are estimates from the video and not yet checked against hand counts, so some will be wrong.
-        Shots without a seen bounce (for example into the net) are not counted as errors.</p>}
+        Shots, errors and positions are estimates from the video; some will be wrong.</p>}
 
       {(changePlayers || settings || (experimentalReview && result.data_origin === "measured")) && (
         <details className="rounded-[20px] p-4" style={{ background: "var(--pp-surface)", border: `1px solid ${BORDER}` }}>

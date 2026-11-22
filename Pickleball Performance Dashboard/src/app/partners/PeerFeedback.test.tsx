@@ -95,6 +95,21 @@ describe("Peer feedback (owner)", () => {
     expect(await screen.findByText("Stopped sharing with Kyle.")).toBeTruthy();
   });
 
+  it("before the game is rated, shows feedback already received but not the ask cards", async () => {
+    const { sb } = fakeSb();
+    const view = render(<PeerFeedback sb={sb} sessionId="s1" hasVideo selfRatings={null} peerRatings={[kyle("dinking", 3)]} goalSkills={["dinking"]}
+      playedWith={{ id: "k", name: "Kyle" }} showAsk={false} />);
+    expect(await screen.findByText("Feedback from Kyle")).toBeTruthy();
+    expect(screen.queryByText("Get a partner's view")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Ask for feedback" })).toBeNull();
+    expect(screen.queryByText(/You played with Kyle/)).toBeNull();
+    // A session already shared stays listed, so it can still be stopped.
+    view.unmount();
+    render(<PeerFeedback sb={fakeSb([{ partner_id: "k", focus_skills: ["dinking"], with_video: true }]).sb} sessionId="s1" hasVideo
+      selfRatings={null} peerRatings={[]} goalSkills={["dinking"]} showAsk={false} />);
+    expect(await screen.findByRole("button", { name: "Stop sharing with Kyle" })).toBeTruthy();
+  });
+
   it("opens the Ask sheet for the partner picked on their Players card", async () => {
     const { sb } = fakeSb();
     render(<PeerFeedback sb={sb} sessionId="s1" hasVideo selfRatings={null} peerRatings={[]} goalSkills={["dinking"]} askFor="k" />);

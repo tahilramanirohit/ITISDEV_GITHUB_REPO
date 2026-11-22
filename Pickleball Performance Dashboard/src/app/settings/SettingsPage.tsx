@@ -81,7 +81,6 @@ export default function SettingsPage({ sb, userId, account, devLinks }: {
     <div className="space-y-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
     <Card>
       <SectionTitle>Default settings</SectionTitle>
-      <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Used to fill in new sessions. You can still change them each time.</p>
       <div className="mt-4 space-y-4">
         <div>
           <p className={labelClass} style={labelStyle}>How to review</p>
@@ -126,7 +125,7 @@ export default function SettingsPage({ sb, userId, account, devLinks }: {
     {shareMode && <Card>
       <SectionTitle>Games buddies share with you</SectionTitle>
       <PreferenceSwitch label="Add buddies' games automatically"
-        detail="Off: you're asked each time a buddy names you in a game. On: their games go straight into your Sessions."
+        detail="Otherwise you're asked each time."
         checked={shareMode === "auto"} onChange={() => {
           const next: GameShareMode = shareMode === "auto" ? "ask" : "auto";
           setShareMode(next); setShareMessage("");

@@ -57,7 +57,6 @@ export function GoalFields({ value, onChange }: { value: GoalValues; onChange: (
           );
         })}
       </div>
-      <p className="text-xs mt-2" style={{ color: WHITE_SUB }}>Your focus shapes which skills your practice plan puts first. Any rating is your own assessment, not a video score.</p>
     </div>
   );
 }

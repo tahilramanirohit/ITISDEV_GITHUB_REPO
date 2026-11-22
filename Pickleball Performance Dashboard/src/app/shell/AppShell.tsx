@@ -5,6 +5,7 @@ import {
   ACCENT_INK, ACTION, ACTION_EDGE, BODY_FONT, COURT_LINE, DANGER, HERO, INK, INK_2, INK_3, LINE, ON_ACTION, ON_HERO, ON_STRONG, PAGE_BG, STRONG, SURFACE, SURFACE_2,
   applyAppearance, readAppearance, type Appearance,
 } from "../theme";
+import { PickleballPlus } from "./PickleballPlus";
 import { PickleProLogo, PickleProMark, pressable } from "./primitives";
 import { PhoneViewToggle } from "./PhoneView";
 
@@ -102,8 +103,8 @@ function BottomTabs({ badges }: { badges?: TabBadges }) {
             <li key={tab.href} className="justify-self-center">
               <a href={tab.href} aria-label="Log a game" aria-current={active ? "page" : undefined}
                 className="-mt-[34px] grid h-[62px] w-[62px] place-items-center rounded-full transition-transform duration-150 active:scale-[0.94] motion-reduce:transition-none"
-                style={{ background: ACTION, color: ON_ACTION, boxShadow: `0 0 0 6px ${PAGE_BG}, 0 8px 18px rgba(240,173,0,.45)` }}>
-                <Icon size={28} strokeWidth={2.6} aria-hidden="true" />
+                style={{ boxShadow: `0 0 0 6px ${PAGE_BG}, 0 8px 18px rgba(240,173,0,.45)` }}>
+                <PickleballPlus size={62} />
               </a>
             </li>
           );
@@ -139,7 +140,7 @@ function SideNav({ account, badges }: { account?: ReactNode; badges?: TabBadges 
         <span className="hidden lg:block"><PickleProLogo size="sm" tone="light" /></span>
       </a>
       <a href="#/new" aria-label="Log a game" title="Log a game" className={`mt-6 flex h-12 w-12 items-center justify-center gap-2 rounded-full text-[0.95rem] font-bold lg:w-auto ${pressable}`}
-        style={{ background: ACTION, color: ON_ACTION, border: `1px solid ${ACTION_EDGE}` }}><Plus size={20} strokeWidth={2.6} aria-hidden="true" /><span className="hidden lg:inline">Log a game</span></a>
+        style={{ background: ACTION, color: ON_ACTION, border: `1px solid ${ACTION_EDGE}` }}><PickleballPlus size={30} /><span className="hidden lg:inline">Log a game</span></a>
       <nav aria-label="Sidebar" className="mt-6 w-full">
         <ul className="space-y-1">
           {items.map((tab) => {
