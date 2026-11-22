@@ -4,7 +4,7 @@ import { ChevronRight } from "lucide-react";
 import { getProfile, type PlayerProfile } from "../../lib/api/profile";
 import { listJournalSummaries } from "../../lib/api/capture";
 import { SKILL_INFO, type ErrorLevel } from "../../lib/coaching/selfAssessment";
-import { daysSince, goalProgress, goalTargets, goalWeeks, weeksLabel } from "../../lib/coaching/goals";
+import { daysSince, goalPeriodEnded, goalProgress, goalTargets, goalWeeks, weeksLabel } from "../../lib/coaching/goals";
 import { pausedDays } from "../../lib/coaching/injury";
 import { RecoveryCard, useInjury } from "../recovery/RecoveryCard";
 import { PickleGrowthCard } from "./PickleGrowthCard";
@@ -129,6 +129,8 @@ export default function ProgressPage({ sb, userId }: { sb: SupabaseClient; userI
       const now = latestRating(allPoints, g.skill);
       return { ...g, now, ...goalProgress(g, now) };
     }), [profile, allPoints, goalPause, goalLength]);
+  // Not while recovery mode pauses the goals.
+  const goalsEnded = !injury.open && goalPeriodEnded(goals[0]?.due, localDate());
 
   const measured = useMemo(() => courtTestGoals(courtTests ?? []), [courtTests]);
   const peer = useMemo(() => latestPeerBySkill(peerRows), [peerRows]);
@@ -233,10 +235,17 @@ export default function ProgressPage({ sb, userId }: { sb: SupabaseClient; userI
 
           {(goals.length > 0 || measured.length > 0) && <section aria-label="Your goals" className="rounded-[20px] p-4" style={{ ...cardStyle, borderTop: `4px solid ${CHECK}` }}>
             <div className="flex items-baseline justify-between gap-2">
-              <h2 className="text-[17px] font-extrabold">Your goals</h2>
+              <h2 className="shrink-0 text-[17px] font-extrabold">Your goals</h2>
               <span className="text-xs" style={{ color: INK_3 }}>{weeksLabel(goalLength)}{injury.open ? " · paused for recovery mode"
+                : goalsEnded ? ` · ended ${shortDate(goals[0].due!)}`
                 : goals[0]?.due ? ` · due ${shortDate(goals[0].due)}` : ""} · <a href="#/settings" className="font-bold underline" style={{ color: ACCENT_INK }}>Change</a></span>
             </div>
+            {/* Once the due date passes, say so and offer the next step (re-rating starts a new period). */}
+            {goalsEnded && <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-[14px] px-3 py-2.5" style={{ background: SURFACE_2 }}>
+              <span className="text-sm font-bold" style={{ color: INK }}>Goal period ended</span>
+              <a href="#/welcome" className={`inline-flex min-h-[44px] items-center rounded-full px-4 text-sm font-extrabold ${pressable}`}
+                style={{ background: ACTION, color: ON_ACTION }}>Set new goals</a>
+            </div>}
             <ul className="mt-3 space-y-3.5">
               {goals.map((g) => <li key={g.skill}>
                 <div className="flex justify-between text-sm"><b>{g.label}</b>

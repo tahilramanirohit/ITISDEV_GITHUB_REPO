@@ -34,6 +34,11 @@ export function goalDueDate(setAt: string | null | undefined, pausedDays = 0, we
   return new Date(start + (weeks * 7 + pausedDays) * DAY_MS).toISOString().slice(0, 10);
 }
 
+/** True once the due date (YYYY-MM-DD) is before today (YYYY-MM-DD, the player's local date). */
+export function goalPeriodEnded(due: string | null | undefined, today: string): boolean {
+  return !!due && due < today;
+}
+
 /** Whole days since the baseline was set, or null without a date. */
 export function daysSince(setAt: string | null | undefined, now = Date.now()): number | null {
   if (!setAt) return null;

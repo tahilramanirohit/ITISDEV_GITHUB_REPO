@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { daysSince, goalDueDate, goalProgress, goalTargets, goalWeeks, weeksLabel } from "./goals";
+import { daysSince, goalDueDate, goalProgress, goalTargets, goalWeeks, weeksLabel, goalPeriodEnded } from "./goals";
 
 describe("goal targets from the baseline", () => {
   it("picks the two lowest skills and aims one point higher", () => {
@@ -43,5 +43,14 @@ describe("goal length", () => {
     expect(goalTargets({ serve: 2 }, [], "2026-10-01T00:00:00Z", 0, 6)[0].due).toBe("2026-11-12");
     expect([goalWeeks(2), goalWeeks(undefined), goalWeeks(0), goalWeeks(53), goalWeeks(1.5)]).toEqual([2, 4, 4, 4, 4]);
     expect([weeksLabel(1), weeksLabel(3)]).toEqual(["1 week", "3 weeks"]);
+  });
+});
+
+describe("goal period", () => {
+  it("has ended once the due date is before today, not on the day itself", () => {
+    expect(goalPeriodEnded("2026-10-17", "2026-11-22")).toBe(true);
+    expect(goalPeriodEnded("2026-11-22", "2026-11-22")).toBe(false);
+    expect(goalPeriodEnded("2026-12-01", "2026-11-22")).toBe(false);
+    expect(goalPeriodEnded(null, "2026-11-22")).toBe(false);
   });
 });
