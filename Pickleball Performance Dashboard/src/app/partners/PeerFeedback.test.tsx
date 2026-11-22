@@ -75,6 +75,7 @@ describe("Peer feedback (owner)", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Ask for feedback" }));
     const sheet = screen.getByRole("dialog", { name: "Ask for feedback" });
     expect(within(sheet).queryByRole("switch")).toBeNull();
+    expect(within(sheet).getByText("1 of 3")).toBeTruthy(); // one shot is enough to send
     fireEvent.click(within(sheet).getByRole("button", { name: "Send to Kyle" }));
     await waitFor(() => expect(rpc).toHaveBeenCalledWith("share_session",
       { p_session_id: "s1", p_partner_id: "k", p_focus_skills: ["consistency"], p_with_video: false }));
