@@ -221,15 +221,13 @@ describe("getting to know the player", () => {
     await screen.findByRole("slider", { name: /^Dinking rating, 1 lowest to 5 highest/ });
     for (const k of ["Home", "ArrowRight"]) fireEvent.keyDown(screen.getByRole("slider", { name: /^Dinking rating/ }), { key: k });  // 2/5
     // A baseline needs at least 3 skills.
-    fireEvent.click(screen.getByRole("button", { name: "Save · next: quick court tests" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save and start" }));
     expect(await screen.findByText(/Rate at least 3 skills/)).toBeTruthy();
     for (const k of ["Home", ...Array(2).fill("ArrowRight")]) fireEvent.keyDown(screen.getByRole("slider", { name: /^Serve rating/ }), { key: k });  // 3/5
     for (const k of ["Home", ...Array(3).fill("ArrowRight")]) fireEvent.keyDown(screen.getByRole("slider", { name: /^Consistency rating/ }), { key: k });  // 1 + 3 steps → 4/5
     expect(screen.getByText(/Dinking 2 → 3/)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Save · next: quick court tests" }));
-    // The profile is saved; the court tests are optional.
-    expect(await screen.findByRole("heading", { name: "Quick court tests" })).toBeTruthy();
-    fireEvent.click(await screen.findByRole("button", { name: "Skip for now" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save and start" }));
+    // The profile is saved and the app opens (no court tests step since 22 Nov).
 
     expect(await screen.findByRole("navigation", { name: "Main" })).toBeTruthy();
     expect(sb.upserts[1]).toMatchObject({

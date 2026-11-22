@@ -72,3 +72,26 @@ export function readinessInsights(points: SessionPoint[], journal: Map<string, J
 
   return { lines, recoveryNote };
 }
+
+/** A gap smaller than this (on the 1-5 scale) is too small to call a pattern. */
+export const CLEAR_GAP = 0.3;
+const HABIT: Record<string, string> = { sleep: "sleep 7 h or more", ready: "you feel ready", warmup: "you warm up" };
+
+/**
+ * One plain line for the Progress overview: the biggest gap between a pair of lines, or
+ * "No clear pattern yet" while every gap is under CLEAR_GAP (most players start there).
+ */
+export function insightHeadline(lines: InsightLine[]): string | null {
+  let best: { id: string; gap: number } | null = null;
+  for (const yes of lines.filter((l) => l.id.endsWith("-yes"))) {
+    const id = yes.id.slice(0, -4);
+    const no = lines.find((l) => l.id === `${id}-no`);
+    if (!no) continue;
+    const gap = Math.round((Number(yes.value) - Number(no.value)) * 10) / 10;
+    if (!best || Math.abs(gap) > Math.abs(best.gap)) best = { id, gap };
+  }
+  if (!best) return null;
+  if (Math.abs(best.gap) < CLEAR_GAP) return "No clear pattern yet";
+  const habit = HABIT[best.id] ?? best.id;
+  return `You rate ${Math.abs(best.gap).toFixed(1)} ${best.gap > 0 ? "higher" : "lower"} when ${habit}`;
+}

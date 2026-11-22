@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { SessionPoint } from "./progressStats";
-import { isHeavyRecovery, readinessInsights, type JournalEntry } from "./readinessInsights";
+import { insightHeadline, isHeavyRecovery, readinessInsights, type JournalEntry } from "./readinessInsights";
 
 const point = (id: string, overall: number | null): SessionPoint => ({
   sessionId: id, date: "2026-10-01", title: id, kind: "match", overall, ratings: {},
@@ -45,5 +45,22 @@ describe("before and after your games", () => {
     expect(isHeavyRecovery({ soreness: 3, exertion: 4 })).toBe(true);
     expect(isHeavyRecovery({ soreness: 3, exertion: 3 })).toBe(false);
     expect(isHeavyRecovery(null)).toBe(false);
+  });
+});
+
+describe("insight headline", () => {
+  const pair = (id: string, yes: string, no: string) => [
+    { id: `${id}-yes`, label: "", count: 5, value: yes, better: yes > no },
+    { id: `${id}-no`, label: "", count: 5, value: no, better: no > yes },
+  ];
+  it("says there is no clear pattern while every gap is under 0.3", () => {
+    expect(insightHeadline([...pair("sleep", "3.0", "2.8"), ...pair("warmup", "3.0", "2.9")])).toBe("No clear pattern yet");
+  });
+  it("names the biggest gap once it is clear", () => {
+    expect(insightHeadline([...pair("sleep", "3.0", "2.8"), ...pair("warmup", "3.6", "3.0")])).toBe("You rate 0.6 higher when you warm up");
+    expect(insightHeadline(pair("ready", "2.5", "3.1"))).toBe("You rate 0.6 lower when you feel ready");
+  });
+  it("has nothing to say without pairs", () => {
+    expect(insightHeadline([])).toBeNull();
   });
 });

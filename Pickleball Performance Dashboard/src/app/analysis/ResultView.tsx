@@ -13,6 +13,8 @@ import { ShotsPanel } from "./ShotsPanel";
 import { ZoneTimePanel } from "./ZoneTimePanel";
 import { CourtMapPanel, type PositioningGoal } from "./CourtMapPanel";
 import { buildCourtMap } from "../../lib/analysis/courtMap";
+import { playerHeat } from "../../lib/analysis/playerHeat";
+import { PlayersCourtMap } from "./PlayersCourtMap";
 import { ErrorsPanel } from "./ErrorsPanel";
 import { PlayersOnCourtToggle, type PlayersOnCourt } from "./AnalysisStatus";
 import { VideoOverlayPlayer, type JumpRequest } from "./VideoOverlayPlayer";
@@ -155,6 +157,8 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
   // the level and challenge only when that player is the viewer.
   const courtMap = useMemo(() => (measured ? buildCourtMap(result) : null), [measured, result]);
   const previousMap = useMemo(() => (previous ? buildCourtMap(previous.result) : null), [previous]);
+  // Every on-court player on one top-view court (team request, 22 Nov).
+  const allHeat = useMemo(() => (measured ? playerHeat(result) : []), [measured, result]);
   const mapIsMine = analysedId == null || myPlayerId == null || myPlayerId === analysedId;
   const mapName = sharedBy ?? (mapIsMine ? undefined : playerNames[analysedId!] ?? `Player ${analysedId}`);
   const stats = measured ? [
@@ -173,7 +177,7 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
   const tabCandidates: ([ReportTab, string] | null)[] = [
     measured && allowShotDisplay && shotsShown ? ["shots", "Shots"] : null,
     measured && errorValue ? ["errors", "Errors"] : null,
-    measured && (zoneRows.length || courtMap) ? ["position", "Position"] : null,
+    measured && (zoneRows.length || courtMap || allHeat.length) ? ["position", "Position"] : null,
     notes ? ["comments", "Comments"] : null,
   ];
   const tabs = tabCandidates.filter((x): x is [ReportTab, string] => !!x);
@@ -288,13 +292,14 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
           {activeTab === "position" && <div className="space-y-3">
             {courtMap && <CourtMapPanel map={courtMap} name={mapName} previous={previousMap} playful={mapIsMine && !sharedBy}
               goal={mapIsMine && !sharedBy ? positioningGoal : undefined} />}
+            {allHeat.length > 0 && <PlayersCourtMap result={result} heat={allHeat} myPlayerId={myPlayerId} names={playerNames} />}
             <ZoneTimePanel result={result} myPlayerId={myPlayerId} othersOf={courtMap ? analysedId ?? myPlayerId : undefined} />
           </div>}
           {activeTab === "comments" && notes?.({ video: videoEl, seek })}
         </div>
       </div>}
 
-      {measured && (shotsShown || errorValue || zoneRows.length > 0 || courtMap) && <p className="text-center text-xs" style={{ color: WHITE_SUB }}>
+      {measured && (shotsShown || errorValue || zoneRows.length > 0 || courtMap || allHeat.length > 0) && <p className="text-center text-xs" style={{ color: WHITE_SUB }}>
         Shots, errors and positions are estimates from the video; some will be wrong.</p>}
 
       {(changePlayers || settings || (experimentalReview && result.data_origin === "measured")) && (

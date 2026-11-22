@@ -13,7 +13,6 @@ import { ACTION, ON_ACTION, SURFACE, LINE, ACCENT_INK, INK_2, alpha, BORDER, CHE
 import { Chip, Notice, PickleSays, numStyle, pressable, rovingIndex, PrimaryButton, fieldStyle, labelClass, labelStyle } from "../shell/primitives";
 import { SkillRater } from "../selfAssessment/SkillRater";
 import { LevelHint } from "../buddy/LevelHint";
-import { CourtTests } from "../tests/CourtTests";
 import { PROFILE_LEVELS } from "../../lib/api/buddy";
 
 import { EXPERIENCE, nearestExperience } from "./experience";
@@ -32,12 +31,14 @@ const GOAL_HINTS: Record<ImprovementGoal, string> = {
 };
 const HANDS = [["right", "Right"], ["left", "Left"], ["ambidextrous", "Both"]] as const;
 const FORMATS = [["doubles", "Doubles"], ["singles", "Singles"], ["both", "Both"]] as const;
-const STEPS = ["About you", "Your game", "Why you play", "Your goals", "Your skills", "Court tests"] as const;
-/** The profile is saved after "Your skills"; the court tests that follow are optional. */
+const STEPS = ["About you", "Your game", "Why you play", "Your goals", "Your skills"] as const;
+/** The profile is saved after "Your skills", the last step (the court tests step was removed, 22 Nov). */
 const SKILLS_STEP = 4;
 
-function Question({ label, children }: { label: string; children: ReactNode }) {
-  return <div><p className={labelClass} style={labelStyle}>{label}</p><div className="flex flex-wrap gap-2">{children}</div></div>;
+/** `list`: one answer per row, left-aligned, in order (for scales like how often you play). */
+function Question({ label, children, list = false }: { label: string; children: ReactNode; list?: boolean }) {
+  return <div><p className={labelClass} style={labelStyle}>{label}</p>
+    <div className={list ? "flex flex-col items-stretch gap-2" : "flex flex-wrap gap-2"} role={list ? "group" : undefined} aria-label={list ? label : undefined}>{children}</div></div>;
 }
 
 /**
@@ -80,8 +81,7 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
     try {
       await completeOnboarding(sb, userId, { ...form, display_name: form.display_name.trim() });
       setBusy(false);
-      setStep(SKILLS_STEP + 1);
-      window.scrollTo({ top: 0 });
+      onDone();
     } catch (e) {
       setError(friendlyDbError(e instanceof Error ? e.message : String((e as { message?: string })?.message ?? e)));
       setBusy(false);
@@ -90,7 +90,6 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
 
   const ratedCount = Object.keys(form.baseline_ratings).length;
   const last = step === SKILLS_STEP;
-  const testsStep = step === SKILLS_STEP + 1;
   const enough = ratedCount >= MIN_RATED_SKILLS;
   const goals = enough ? goalTargets(form.baseline_ratings, form.main_goals) : [];
 
@@ -99,10 +98,10 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
       <div>
         <div className="flex min-h-[44px] items-center justify-between text-sm font-bold">
           <button type="button" className="inline-flex min-h-[44px] items-center gap-1" style={{ color: ACCENT_INK }} onClick={() => { if (step > 0) { setError(""); setStep(step - 1); } else if (onCancel) onCancel(); else void sb.auth.signOut(); }}><ArrowLeft size={16} />{step === 0 ? "Cancel" : "Back"}</button>
-          <span style={{ color: INK_2 }}>{testsStep ? "Optional court tests" : `Step ${step + 1} of ${SKILLS_STEP + 1}`}</span>
+          <span style={{ color: INK_2 }}>{`Step ${step + 1} of ${SKILLS_STEP + 1}`}</span>
         </div>
-        {!testsStep && <div className="mt-3 grid grid-cols-5 gap-1" aria-hidden="true">{STEPS.slice(0, SKILLS_STEP + 1).map((s, i) => <span key={s} className="h-1.5 rounded-full" style={{ background: i <= step ? ACTION : SURFACE_2 }} />)}</div>}
-        {!testsStep && <><p className="mt-5 text-sm font-extrabold uppercase tracking-wide" style={{ color: ACCENT_INK }}>Let's get to know your game</p><h1 className="mt-1 text-2xl font-extrabold" style={{ color: INK }}>{STEPS[step]}</h1></>}
+        {<div className="mt-3 grid grid-cols-5 gap-1" aria-hidden="true">{STEPS.slice(0, SKILLS_STEP + 1).map((s, i) => <span key={s} className="h-1.5 rounded-full" style={{ background: i <= step ? ACTION : SURFACE_2 }} />)}</div>}
+        {<><p className="mt-5 text-sm font-extrabold uppercase tracking-wide" style={{ color: ACCENT_INK }}>Let's get to know your game</p><h1 className="mt-1 text-2xl font-extrabold" style={{ color: INK }}>{STEPS[step]}</h1></>}
       </div>
 
       {step === 0 && <div className="space-y-4">
@@ -132,8 +131,8 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
       </div>}
 
       {step === 1 && <div className="space-y-5">
-        <Question label="How often do you play?">
-          {PLAY_FREQUENCIES.map((f) => <Chip key={f} selected={form.play_frequency === f} onClick={() => set("play_frequency", f)}>{FREQUENCY_LABELS[f]}</Chip>)}
+        <Question label="How often do you play?" list>
+          {PLAY_FREQUENCIES.map((f) => <Chip key={f} className="w-full justify-start rounded-[14px] px-4 text-left text-[15px]" selected={form.play_frequency === f} onClick={() => set("play_frequency", f)}>{FREQUENCY_LABELS[f]}</Chip>)}
         </Question>
         <Question label="What do you usually play?">
           {FORMATS.map(([v, l]) => <Chip key={v} selected={form.usual_format === v} onClick={() => set("usual_format", v)}>{l}</Chip>)}
@@ -200,19 +199,9 @@ export function Onboarding({ sb, userId, initial, onDone, onCancel }: {
         </section>}
       </div>}
 
-      {testsStep && <div className="space-y-3">
-        <div>
-          <h2 className="text-2xl font-extrabold leading-tight" style={{ color: INK, fontFamily: DISPLAY_FONT }}>Quick court tests</h2>
-          <p className="mt-1.5 text-sm leading-relaxed" style={{ color: WHITE_DIM }}>
-            Your profile is saved. These counted drills give Pickle a <strong style={{ color: INK }}>measured baseline</strong> next to your ratings.
-            Do them now at the court, or later from Progress.</p>
-        </div>
-        <CourtTests sb={sb} onSkip={onDone} onSaved={onDone} />
-      </div>}
-
       {error && <Notice tone="error">{error}</Notice>}
-      {testsStep ? null : last
-        ? <PrimaryButton type="button" className="w-full" disabled={busy} onClick={() => void finish()}>{busy ? "Saving…" : "Save · next: quick court tests"}</PrimaryButton>
+      {last
+        ? <PrimaryButton type="button" className="w-full" disabled={busy} onClick={() => void finish()}>{busy ? "Saving…" : "Save and start"}</PrimaryButton>
         : <PrimaryButton type="button" className="mt-auto w-full" onClick={next}>Continue</PrimaryButton>}
     </div>
   );
