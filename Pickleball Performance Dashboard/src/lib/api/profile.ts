@@ -57,8 +57,9 @@ export type OnboardingInput = ProfileInput &
 
 export async function getProfile(sb: SupabaseClient, userId: string): Promise<PlayerProfile | null> {
   // "*" keeps this working on databases without the onboarding columns yet.
-  const { data, error } = await sb.from("profiles").select("*").eq("id", userId).maybeSingle();
-  if (error) throw error;
+  const { data, error, status } = await sb.from("profiles").select("*").eq("id", userId).maybeSingle();
+  // Keep the HTTP status: with the Data API off, Supabase answers 404 with no message at all.
+  if (error) throw Object.assign(error, { status });
   if (!data || Array.isArray(data)) return null;
   return { ...(data as PlayerProfile), baseline_ratings: parseRatings((data as { baseline_ratings?: unknown }).baseline_ratings) };
 }

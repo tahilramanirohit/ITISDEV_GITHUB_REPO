@@ -12,13 +12,17 @@ const Onboarding = lazy(() => import("./Onboarding").then((m) => ({ default: m.O
 
 const Loading = () => <p className="p-8 text-sm" style={{ color: WHITE_SUB }}>Loading…</p>;
 
-/** The database's reason, short: "PGRST106: The schema must be one of …" or "Failed to fetch". */
+/** The database's reason, short: "PGRST106 · HTTP 406 · The schema must be one of …", "Failed to fetch" or "HTTP 404". */
 export function profileErrorDetail(e: unknown): string {
-  const err = (e ?? {}) as { code?: unknown; message?: unknown };
-  const message = typeof err.message === "string" ? err.message : e instanceof Error ? e.message : "";
-  const code = typeof err.code === "string" && err.code ? `${err.code}: ` : "";
-  return `${code}${message}`.trim().slice(0, 200);
+  const err = (e ?? {}) as { code?: unknown; message?: unknown; status?: unknown };
+  const message = typeof err.message === "string" ? err.message.trim() : "";
+  const code = typeof err.code === "string" ? err.code : "";
+  const status = typeof err.status === "number" && err.status > 0 ? `HTTP ${err.status}` : "";
+  return [code, status, message].filter(Boolean).join(" · ").slice(0, 200) || "no message from the database";
 }
+
+/** The commit this site was built from (Vercel sets it at build time), so a screenshot shows which version is live. */
+const BUILD = String((import.meta as { env?: Record<string, unknown> }).env?.VITE_VERCEL_GIT_COMMIT_SHA ?? "").slice(0, 7);
 
 /** Shows "getting to know you" once, before the app, until the player finishes it. */
 export function OnboardingGate({ sb, userId, skip, children }: { sb: SupabaseClient; userId: string; skip: boolean; children: ReactNode }) {
@@ -35,7 +39,7 @@ export function OnboardingGate({ sb, userId, skip, children }: { sb: SupabaseCli
 
   if (skip) return <>{children}</>;
   if (failed !== null) return <AppShell><Notice tone="error">We couldn't load your data choices. Please try again.</Notice>
-    {failed && <p className="mt-2 text-xs" style={{ color: WHITE_SUB }}>Details: {failed}</p>}
+    <p className="mt-2 text-xs" style={{ color: WHITE_SUB }}>Details: {failed}{BUILD ? ` · build ${BUILD}` : ""}</p>
     <div className="mt-3"><PrimaryButton onClick={load}>Try again</PrimaryButton></div></AppShell>;
   if (profile === undefined) return <Loading />;
   if (needsConsent(profile)) return <AppShell><ConsentStep sb={sb} userId={userId} profile={profile} onDone={load} /></AppShell>;
