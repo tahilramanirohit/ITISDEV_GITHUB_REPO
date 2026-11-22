@@ -79,6 +79,8 @@ On Windows, `start_website.bat` in the dashboard folder is the website launcher.
 
 A Git checkout does not apply database changes. Follow [Supabase setup](docs/SUPABASE_SETUP.md) for the base schema and project configuration, and apply the repository's migrations in timestamp order through **`20261105110000_buddy_match.sql`** for this branch. Do not reset an existing hosted database.
 
+**New, empty Supabase project?** Paste `supabase/scripts/new_project_setup.sql` once (every migration, in order); see [Moving to a new Supabase project](docs/NEW_SUPABASE_PROJECT.md).
+
 | Branch migration | Adds |
 | --- | --- |
 | `20261006090000_self_assessment.sql` | Session review mode and private skill ratings |

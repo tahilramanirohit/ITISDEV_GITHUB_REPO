@@ -65,7 +65,9 @@ begin
   insert into public.checkins (participant_id, captured_at, warmup_done, sleep_hours, readiness, focus, timing_status)
   values (pid, start_at - interval '45 minutes', p_warmup, p_sleep, p_readiness, 'Get to the kitchen line after the return', 'pre_game');
   insert into public.recovery_logs (participant_id, captured_at, exertion, soreness, cooldown_done)
-  values (pid, start_at + interval '2 hours', p_exertion, p_soreness, p_soreness < 4);
+  -- Effort is out of 5 since update 17 (20261113090000_effort_out_of_5.sql); the history below is
+  -- written out of 10, so halve it the same way that update converted saved values (6 -> 3, 8 -> 4).
+  values (pid, start_at + interval '2 hours', ceil(p_exertion / 2.0)::int, p_soreness, p_soreness < 4);
   insert into public.reflections (participant_id, captured_at, went_well, change_next)
   values (pid, start_at + interval '2 hours 10 minutes', p_went_well, p_change_next);
   return sid;

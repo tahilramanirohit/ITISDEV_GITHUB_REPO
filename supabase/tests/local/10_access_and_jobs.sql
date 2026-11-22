@@ -57,8 +57,9 @@ select tests.expect_true((select captured_at from public.checkins
   where participant_id = (select id from public.session_participants
     where session_id = '5a000000-0000-4000-8000-00000000000a')) > :'checkin_before'::timestamptz,
   'editing an answer records a new capture time');
+-- Effort is out of 5 since 20261113090000_effort_out_of_5.sql.
 insert into public.recovery_logs(participant_id, exertion, soreness, cooldown_done)
-select id, 7, null, true from public.session_participants where session_id = '5a000000-0000-4000-8000-00000000000a';
+select id, 4, null, true from public.session_participants where session_id = '5a000000-0000-4000-8000-00000000000a';
 insert into public.reflections(participant_id, went_well, change_next)
 select id, 'Kept rallies going', 'Practice returns' from public.session_participants
   where session_id = '5a000000-0000-4000-8000-00000000000a';

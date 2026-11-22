@@ -119,4 +119,11 @@ if [ "$jobs" != "1" ]; then
   echo "FAIL concurrent finalize created $jobs jobs"; exit 1
 fi
 echo "  PASS 20 concurrent finalize calls created exactly one job"
+# The one-file setup for a new project must list every migration (rebuild it after adding one).
+bash "$HERE/../scripts/make_new_project_setup.sh" "$TMP/new_project_setup.sql" >/dev/null
+if cmp -s "$TMP/new_project_setup.sql" "$HERE/../scripts/new_project_setup.sql"; then
+  echo "  PASS new_project_setup.sql matches the migrations"
+else
+  echo "FAIL new_project_setup.sql is out of date: run bash supabase/scripts/make_new_project_setup.sh"; exit 1
+fi
 echo "LOCAL SQL TESTS PASSED ($(postgres --version))"
