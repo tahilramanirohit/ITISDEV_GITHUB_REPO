@@ -211,6 +211,13 @@
     font-family: var(--font-display);
   }
 
+  /* Edge adds its own eye to password fields; the app's PasswordInput has one already,
+     and two eyes (working opposite ways) confused players. */
+  input::-ms-reveal,
+  input::-ms-clear {
+    display: none;
+  }
+
   :focus-visible {
     outline: 3px solid var(--pp-focus);
     outline-offset: 2px;
