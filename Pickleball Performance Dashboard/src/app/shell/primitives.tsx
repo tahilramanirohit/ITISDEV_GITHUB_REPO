@@ -334,7 +334,8 @@ export function PasswordInput({ className = "", style, ...rest }: Omit<InputHTML
         className={`w-full pr-14 ${className}`} style={{ ...fieldStyle, ...style }} />
       <button type="button" onClick={() => setShown((v) => !v)} aria-label={shown ? "Hide password" : "Show password"} aria-pressed={shown}
         className="absolute inset-y-0 right-1 my-auto flex h-11 w-11 items-center justify-center rounded-full" style={{ color: INK_2 }}>
-        {shown ? <EyeOff size={20} aria-hidden="true" /> : <Eye size={20} aria-hidden="true" />}
+        {/* The eye shows the current state: open = the password is visible, closed (crossed out) = hidden. */}
+        {shown ? <Eye size={20} aria-hidden="true" /> : <EyeOff size={20} aria-hidden="true" />}
       </button>
     </div>
   );

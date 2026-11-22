@@ -47,10 +47,16 @@ describe("password field", () => {
   it("shows and hides the password", () => {
     render(<label>Password<PasswordInput defaultValue="secret12" /></label>);
     const input = screen.getByLabelText("Password") as HTMLInputElement;
+    const icon = () => screen.getByRole("button", { name: /password$/ }).querySelector("svg")!.getAttribute("class") ?? "";
+    // Closed (crossed-out) eye while hidden, open eye while visible.
     expect(input.type).toBe("password");
+    expect(icon()).toMatch(/lucide-eye-off/);
     fireEvent.click(screen.getByRole("button", { name: "Show password" }));
     expect(input.type).toBe("text");
+    expect(icon()).toMatch(/lucide-eye(?!-off)/);
+    expect(icon()).not.toMatch(/eye-off/);
     fireEvent.click(screen.getByRole("button", { name: "Hide password" }));
     expect(input.type).toBe("password");
+    expect(icon()).toMatch(/lucide-eye-off/);
   });
 });
