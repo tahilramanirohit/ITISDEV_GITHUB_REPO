@@ -26,7 +26,7 @@ const kyle = (skill: PeerRating["skill"], rating: number): PeerRating =>
   ({ author_id: "k", author_name: "Kyle", skill, rating, updated_at: "2026-11-05T10:00:00Z" });
 
 describe("Peer feedback (owner)", () => {
-  it("asks about one skill, preselects the goal and keeps private fields private", async () => {
+  it("asks about up to 3 skills, preselects the goal and keeps private fields private", async () => {
     const { sb, rpc } = fakeSb();
     render(<PeerFeedback sb={sb} sessionId="s1" sessionTitle="Saturday open play" hasVideo selfRatings={null} peerRatings={[]} goalSkills={["dinking", "third_shot"]} />);
     fireEvent.click(await screen.findByRole("button", { name: "Ask for feedback" }));
@@ -36,13 +36,20 @@ describe("Peer feedback (owner)", () => {
     const skills = within(sheet).getByRole("group", { name: "Skills to look at" });
     expect(within(skills).getAllByRole("button")[0].textContent).toBe("Dinking");
     expect(within(skills).getByRole("button", { name: "Dinking" }).getAttribute("aria-pressed")).toBe("true");
+    // More than one: Serve and Return are added to Dinking; a 4th cannot be picked until one is removed.
     fireEvent.click(within(skills).getByRole("button", { name: "Serve" }));
+    fireEvent.click(within(skills).getByRole("button", { name: "Return of serve" }));
+    expect(within(skills).getByRole("button", { name: "Dinking" }).getAttribute("aria-pressed")).toBe("true");
+    expect(within(sheet).getByText("3 of 3")).toBeTruthy();
+    expect((within(skills).getByRole("button", { name: "Volleys & hands" }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(within(skills).getByRole("button", { name: "Dinking" })); // tap again to remove
     expect(within(skills).getByRole("button", { name: "Dinking" }).getAttribute("aria-pressed")).toBe("false");
+    expect((within(skills).getByRole("button", { name: "Volleys & hands" }) as HTMLButtonElement).disabled).toBe(false);
     expect(within(sheet).getByText("Your ratings, journal and plan stay private.")).toBeTruthy();
     expect(within(sheet).getByRole("switch", { name: "Share the video" }).getAttribute("aria-checked")).toBe("true");
     fireEvent.click(within(sheet).getByRole("button", { name: "Send to Kyle" }));
     await waitFor(() => expect(rpc).toHaveBeenCalledWith("share_session",
-      { p_session_id: "s1", p_partner_id: "k", p_focus_skills: ["serve"], p_with_video: true }));
+      { p_session_id: "s1", p_partner_id: "k", p_focus_skills: ["serve", "return"], p_with_video: true }));
     expect(await screen.findByText(/Sent to Kyle/)).toBeTruthy();
     expect(screen.getByRole("list", { name: "Shared with" })).toBeTruthy();
   });

@@ -92,10 +92,10 @@ export function Pill({ children, color = VIOLET, title }: { children: ReactNode;
 }
 
 /** A tappable choice chip, used for single and multiple selection. */
-export function Chip({ selected, children, onClick, label }: { selected: boolean; children: ReactNode; onClick: () => void; label?: string }) {
+export function Chip({ selected, children, onClick, label, disabled = false }: { selected: boolean; children: ReactNode; onClick: () => void; label?: string; disabled?: boolean }) {
   return (
-    <button type="button" aria-pressed={selected} aria-label={label} onClick={onClick}
-      className={`inline-flex min-h-[44px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold ${pressable}`}
+    <button type="button" aria-pressed={selected} aria-label={label} onClick={onClick} disabled={disabled}
+      className={`inline-flex min-h-[44px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-45 ${pressable}`}
       style={selected
         ? { background: ACTION, color: ON_ACTION, border: `1px solid ${ACTION_EDGE}` }
         : { background: SURFACE, color: INK, border: `1px solid ${LINE}` }}>
