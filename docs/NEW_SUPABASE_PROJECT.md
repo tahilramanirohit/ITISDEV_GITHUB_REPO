@@ -29,7 +29,7 @@ New query → paste `supabase/scripts/check_database.sql` → Run. Every row sho
 ## 4. Demo accounts (optional)
 
 New query → paste `supabase/scripts/demo_data.sql` → Run. Creates bea.reyes, marco.santos,
-lia.cruz and jun.tan `@picklepro.demo` with weeks of history (the password is the `pw` line near the top of the file).
+lia.cruz and jun.tan `@picklepro.com` with weeks of history, all with the password `123456`.
 
 ## 5. Sign-in settings
 

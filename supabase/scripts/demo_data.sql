@@ -5,12 +5,15 @@
 -- Needs every update through pickleproapp_upgrade_12.sql. Running it again
 -- deletes the four demo accounts (and everything they own) and creates them fresh.
 --
--- Accounts (password below; change it first if this repository is public):
---   bea.reyes@picklepro.demo   Beginner, mostly solo drills, a buddy request waiting for her
---   marco.santos@picklepro.demo  Intermediate, 10 games with results and journal, court tests,
---                                a partner (Lia) who rated two skills, a buddy session coming up
---   lia.cruz@picklepro.demo    Advanced, competition, Marco's partner and buddy
---   jun.tan@picklepro.demo     Novice, looking for practice
+-- Accounts, all with the password 123456 (the `pw` line below; a demo-only password,
+-- never use it for a real account):
+--   bea.reyes@picklepro.com     Beginner, mostly solo drills, a buddy request waiting for her
+--   marco.santos@picklepro.com  Intermediate, 10 games with results and journal, court tests,
+--                               a partner (Lia) who rated two skills, a buddy session coming up
+--   lia.cruz@picklepro.com      Advanced, competition, Marco's partner and buddy
+--   jun.tan@picklepro.com       Novice, looking for practice
+-- Only these four exact addresses are deleted and re-created, so other accounts on
+-- @picklepro.com are never touched. (Older runs used @picklepro.demo; those four are removed too.)
 --
 -- Only self-reported data is created (ratings, results, journal, court test counts,
 -- buddy and partner activity). No video reports are faked: upload a real clip with
@@ -75,7 +78,9 @@ end $$;
 
 do $$
 declare
-  pw constant text := 'PickleDemo-2026';
+  pw constant text := '123456';
+  demo_emails constant text[] := array['bea.reyes@picklepro.com', 'marco.santos@picklepro.com', 'lia.cruz@picklepro.com', 'jun.tan@picklepro.com',
+    'bea.reyes@picklepro.demo', 'marco.santos@picklepro.demo', 'lia.cruz@picklepro.demo', 'jun.tan@picklepro.demo'];
   bea uuid; marco uuid; lia uuid; jun uuid;
   marco_lia uuid; marco_jun uuid; jun_bea uuid;
   shared uuid;
@@ -85,13 +90,13 @@ declare
 begin
   -- Start fresh: deleting the users removes everything they own. Sessions go first:
   -- deleting a user directly would try to empty the session's uploader link.
-  delete from public.sessions where owner_id in (select id from auth.users where email like '%@picklepro.demo');
-  delete from auth.users where email like '%@picklepro.demo';
+  delete from public.sessions where owner_id in (select id from auth.users where email = any(demo_emails));
+  delete from auth.users where email = any(demo_emails);
 
-  bea := pg_temp.demo_user('bea.reyes@picklepro.demo', pw);
-  marco := pg_temp.demo_user('marco.santos@picklepro.demo', pw);
-  lia := pg_temp.demo_user('lia.cruz@picklepro.demo', pw);
-  jun := pg_temp.demo_user('jun.tan@picklepro.demo', pw);
+  bea := pg_temp.demo_user('bea.reyes@picklepro.com', pw);
+  marco := pg_temp.demo_user('marco.santos@picklepro.com', pw);
+  lia := pg_temp.demo_user('lia.cruz@picklepro.com', pw);
+  jun := pg_temp.demo_user('jun.tan@picklepro.com', pw);
 
   insert into public.profiles (id, display_name, dominant_hand, years_playing, usual_format, self_level, is_adult_confirmed,
     play_frequency, play_reasons, main_goals, baseline_ratings, onboarding_completed_at, bio, home_court,
@@ -235,4 +240,4 @@ select p.display_name, u.email,
        (select count(*) from public.sessions s where s.owner_id = p.id) as sessions,
        (select count(*) from public.baseline_tests t where t.owner_id = p.id) as court_tests
 from public.profiles p join auth.users u on u.id = p.id
-where u.email like '%@picklepro.demo' order by u.email;
+where u.email in ('bea.reyes@picklepro.com', 'marco.santos@picklepro.com', 'lia.cruz@picklepro.com', 'jun.tan@picklepro.com') order by u.email;

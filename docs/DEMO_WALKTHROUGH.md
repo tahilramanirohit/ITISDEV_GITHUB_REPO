@@ -6,14 +6,14 @@ Two walkthroughs: a **blank slate** (a new sign-up) and one **with data** (the d
 
 1. Apply every database update through `supabase/scripts/pickleproapp_upgrade_16.sql`. `supabase/scripts/check_database.sql` lists anything still missing.
 2. Paste [`supabase/scripts/demo_data.sql`](../supabase/scripts/demo_data.sql) into Supabase Dashboard → SQL Editor → New query → Run. Running it again resets the four accounts.
-3. Sign in with any account below. Password: `PickleDemo-2026` (change it in the script first if the repository is public).
+3. Sign in with any account below. Password: `123456` (demo accounts only).
 
 | Account | Who | Shows |
 |---|---|---|
-| `bea.reyes@picklepro.demo` | Beginner, mostly solo drills | Self-assessment without video, drills, court tests (baseline and re-test), a buddy request waiting for her |
-| `marco.santos@picklepro.demo` | Intermediate, league doubles | 10 games with results and journal, Progress, sleep patterns, court tests, Lia's peer ratings and notes, a buddy session coming up |
-| `lia.cruz@picklepro.demo` | Advanced, tournaments | Sessions shared with her by Marco; giving peer feedback; a tournament result |
-| `jun.tan@picklepro.demo` | Novice | Looking for practice partners |
+| `bea.reyes@picklepro.com` | Beginner, mostly solo drills | Self-assessment without video, drills, court tests (baseline and re-test), a buddy request waiting for her |
+| `marco.santos@picklepro.com` | Intermediate, league doubles | 10 games with results and journal, Progress, sleep patterns, court tests, Lia's peer ratings and notes, a buddy session coming up |
+| `lia.cruz@picklepro.com` | Advanced, tournaments | Sessions shared with her by Marco; giving peer feedback; a tournament result |
+| `jun.tan@picklepro.com` | Novice | Looking for practice partners |
 
 The data is self-reported (ratings, results, journal, court test counts, buddy and partner activity). There are no video reports: for the computer-vision part, start the analyzer (`server/start_worker.bat`) and upload a real clip during or before the demo.
 
