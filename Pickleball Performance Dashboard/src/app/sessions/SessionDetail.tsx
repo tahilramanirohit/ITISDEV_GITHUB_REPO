@@ -726,11 +726,10 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
         {injury.open && <RecoveryCard sb={sb} injury={injury.open} onChanged={() => void injury.reload()} showPlan={false} />}
         <SelfAssessmentPanel sb={sb} session={session} recovery={recovery} peerRatings={peerRatings} injured={!!injury.open}
           onSaved={() => { loadPhases(); void load(); loadFeedback(); }} />
-        {/* Feedback already received always shows; asking for more waits until the game is rated, unless an
-            "Ask" link from a partner's card opened this page. The checklist's "Next" replaces the extra
-            "Next: post-game recovery" button (professor's notes, 22 Nov). */}
-        <PeerFeedback showAsk={rated || !!searchParams.get("ask")} sb={sb} sessionTitle={session.title} sessionId={session.id} hasVideo={!!uploadedPath} selfRatings={selfRatings} peerRatings={peerRatings}
-          goalSkills={goalSkills} onChanged={loadFeedback} askFor={searchParams.get("ask")} playedWith={playedWith}
+        {/* Feedback partners gave shows here; asking for it is at the bottom of the Video tab (22 Nov).
+            The checklist's "Next" replaces the extra "Next: post-game recovery" button (professor's notes, 22 Nov). */}
+        <PeerFeedback part="received" sb={sb} sessionTitle={session.title} sessionId={session.id} hasVideo={!!uploadedPath} selfRatings={selfRatings} peerRatings={peerRatings}
+          goalSkills={goalSkills} onChanged={loadFeedback}
           onWatch={uploadedPath ? (time) => { setTab("video"); setVideoSeek({ time, id: Date.now() }); } : undefined} />
       </div>}
       {activeTab === "journal" && <div {...tabPanelProps("session", "journal")} className="outline-none"><CapturePanel key={session.id} sb={sb} session={session}
@@ -859,9 +858,9 @@ export default function SessionDetail({ sb, userId }: { sb: SupabaseClient; user
         onSelectTrack={job && finished && !video?.raw_video_deleted_at && !video?.raw_video_deleting_at && !config.trialNoWorker ? (trackId, timeSeconds) => void run(() => requestReanalysis(sb, job.id, {
           ...job.params, selection: { method: "track_id", track_id: trackId }, selection_time_s: timeSeconds,
         })) : undefined} />}
-      {parsed?.ok && <button type="button" onClick={() => { setTab("plan"); window.setTimeout(() => document.getElementById("peer-feedback")?.scrollIntoView({ behavior: "smooth" }), 50); }}
-        className={`flex min-h-[52px] w-full items-center justify-center rounded-full px-4 text-[15px] font-extrabold ${pressable}`}
-        style={{ border: "1px solid var(--pp-line-strong)", color: "var(--pp-ink)" }}>Ask a partner for feedback on this video</button>}
+      {/* "Get a partner's view" lives at the bottom of the Video tab (team request, 22 Nov); feedback received stays in Rate & plan. */}
+      <PeerFeedback part="ask" sb={sb} sessionTitle={session.title} sessionId={session.id} hasVideo={!!uploadedPath} selfRatings={selfRatings} peerRatings={peerRatings}
+        goalSkills={goalSkills} onChanged={loadFeedback} askFor={searchParams.get("ask")} playedWith={playedWith} />
       {parsed && !parsed.ok && (
         <Notice tone="error">The stored result could not be read ({parsed.error}). It is not shown to avoid presenting it incorrectly.</Notice>
       )}

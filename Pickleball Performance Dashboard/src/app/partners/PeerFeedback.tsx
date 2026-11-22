@@ -130,7 +130,7 @@ function AskSheet({ partners, shares, goalSkills, hasVideo, initialPartner, sess
  * Peer coaching on the owner's session (WP5): ask partners for feedback on chosen
  * skills, then see "You vs Kyle" per skill and their notes grouped by skill.
  */
-export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings, goalSkills, onWatch, onChanged, askFor = null, playedWith = null, sessionTitle = "this session", showAsk = true }: {
+export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings, goalSkills, onWatch, onChanged, askFor = null, playedWith = null, sessionTitle = "this session", showAsk = true, part = "all" }: {
   sb: SupabaseClient; sessionId: string; hasVideo: boolean; sessionTitle?: string;
   selfRatings: SelfRatings | null; peerRatings: PeerRating[]; goalSkills: SelfSkill[];
   /** Open the Ask sheet for this partner straight away (from their card under Players). */
@@ -143,7 +143,11 @@ export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings
   /** False before the game is rated: feedback already received still shows, the "ask" cards wait
       (professor's notes, 22 Nov: less on screen while rating). Sessions already shared stay listed. */
   showAsk?: boolean;
+  /** "received": only feedback partners gave (Rate & plan). "ask": only the ask cards (bottom of the Video tab, 22 Nov). */
+  part?: "all" | "received" | "ask";
 }) {
+  const showReceived = part !== "ask";
+  const showAskCards = part !== "received" && showAsk;
   const [partners, setPartners] = useState<PartnerLink[] | null>(null);
   const [links, setLinks] = useState<PartnerLink[]>([]);
   const [inviting, setInviting] = useState(false);
@@ -217,8 +221,8 @@ export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings
   }
 
   return (
-    <section id="peer-feedback" aria-label="Peer feedback" className="space-y-4 scroll-mt-6">
-      {authors.map((a) => {
+    <section id={part === "received" ? "peer-feedback-received" : "peer-feedback"} aria-label={part === "ask" ? "Get a partner's view" : "Peer feedback"} className="space-y-4 scroll-mt-6">
+      {showReceived && authors.map((a) => {
         const rows = comparePeer(selfRatings, peerRatings, a.id);
         const theirNotes = notes.filter((n) => n.author_id === a.id);
         const groups = [...new Set(theirNotes.map((n) => n.skill ?? null))];
@@ -259,7 +263,7 @@ export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings
         </div>;
       })}
 
-      {showAsk && playedWith && !alreadyAsked && <div className="rounded-[18px] p-4" style={{ background: ACCENT_SOFT, color: INK }} role="note"
+      {showAskCards && playedWith && !alreadyAsked && <div className="rounded-[18px] p-4" style={{ background: ACCENT_SOFT, color: INK }} role="note"
         aria-label={`Feedback from ${playedWith.name}`}>
         <p className="text-[15px] font-extrabold">You played with {playedWith.name}. Ask {playedWith.name} for feedback{focusName ? ` on your ${focusName}` : ""}?</p>
         {buddyIsPartner
@@ -282,7 +286,7 @@ export function PeerFeedback({ sb, sessionId, hasVideo, selfRatings, peerRatings
                 </>}
       </div>}
 
-      {(showAsk || shares.length > 0 || !!error || !!notice) && <div className="rounded-[18px] p-4" style={cardStyle}>
+      {part !== "received" && (showAsk || shares.length > 0 || !!error || !!notice) && <div className="rounded-[18px] p-4" style={cardStyle}>
         <div className="flex items-start gap-3">
           <img src={mascotUrl} alt="" aria-hidden="true" className="h-12 w-9 shrink-0 object-contain" />
           <div className="min-w-0 flex-1">

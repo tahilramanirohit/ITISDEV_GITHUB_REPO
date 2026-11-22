@@ -23,8 +23,8 @@ const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60))
  * shots out, kitchen faults and court positioning errors, for you or for everyone,
  * with each one a tap away in the video.
  */
-export function ErrorsPanel({ result, myPlayerId, onWatch }: {
-  result: AnalysisResultV1; myPlayerId: number | null; onWatch?: (time: number) => void;
+export function ErrorsPanel({ result, myPlayerId, onWatch, names = {} }: {
+  result: AnalysisResultV1; myPlayerId: number | null; onWatch?: (time: number) => void; names?: Record<number, string>;
 }) {
   const metric = result.metrics.error_counts;
   const value = metric?.value;
@@ -37,7 +37,7 @@ export function ErrorsPanel({ result, myPlayerId, onWatch }: {
     return value.players.find((p) => p.player_id === myPlayerId)!.counts;
   }, [value, scope, myPlayerId]);
   const events = useMemo(() => (value?.events ?? []).filter((e) => scope === "all" || e.player_id === myPlayerId), [value, scope, myPlayerId]);
-  const name = (id: number | null) => (id == null ? "Unknown player" : id === myPlayerId ? "You" : `Player ${id}`);
+  const name = (id: number | null) => (id == null ? "Unknown player" : id === myPlayerId ? "You" : names[id] ?? `Player ${id}`);
 
   if (!metric || metric.status === "not_computed" || !value || !counts) return null;
   const total = ERROR_KINDS.reduce((sum, k) => sum + counts[k], 0);

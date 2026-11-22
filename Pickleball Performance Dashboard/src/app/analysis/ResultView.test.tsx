@@ -57,8 +57,7 @@ describe("ResultView", () => {
 
   it("explains insufficient data instead of showing a heatmap", () => {
     render(<ResultView result={parseAnalysisResult(insufficient)} videoUrl={null} />);
-    expect(screen.getAllByText("LIMITED RESULT").length).toBe(1); // the overall status (the metric table is gone)
-    expect(screen.getAllByText(/Court not calibrated/).length).toBeGreaterThan(0);
+    expect(screen.queryByText("LIMITED RESULT")).toBeNull(); // no status badge (22 Nov); the sentence says it
     expect(screen.queryByRole("img", { name: /Court heatmap/ })).toBeNull();
   });
 
@@ -221,18 +220,17 @@ describe("ResultView", () => {
         last_seen_s: 5, observed_frames: 20, median_court_m: [-2, 6], thumbnail: null },
     ];
     window.localStorage.clear();
-    // A saved player report shows the same estimates, marked experimental.
+    // A saved player report shows the same estimates (no "experimental" badge since 22 Nov).
     const report = render(<ResultView result={parseAnalysisResult(result)} videoUrl="/demo.mp4" />);
     expect(screen.getByRole("radio", { name: "All, 4 shots" })).toBeTruthy();
-    expect(screen.getAllByText("EXPERIMENTAL").length).toBeGreaterThan(0);
+    expect(screen.queryByText("EXPERIMENTAL")).toBeNull();
     expect(screen.getByRole("button", { name: /Serve at 0:01\. Jump the video here/ })).toBeTruthy();
     report.unmount();
     window.localStorage.clear();
     render(<ResultView result={parseAnalysisResult(result)} videoUrl="/demo.mp4" experimentalReview />);
     expect(screen.getByText("The selected player was tracked.")).toBeTruthy();
     expect(screen.queryByText(/4 hits were estimated/)).toBeNull();
-    // Experimental labels are shown, clearly marked, for every player.
-    expect(screen.getAllByText("EXPERIMENTAL").length).toBeGreaterThan(0);
+    // Labels are shown for every player.
     expect(screen.getByRole("radio", { name: "All, 4 shots" })).toBeTruthy();
     expect(screen.getByRole("table", { name: "Shots by player", hidden: true })).toBeTruthy();
     expect(screen.getAllByRole("button", { name: /Jump the video here/ })).toHaveLength(4);

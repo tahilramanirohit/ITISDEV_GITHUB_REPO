@@ -67,8 +67,8 @@ function ZoneRow({ row, mine, name, thumbnail, rules }: {
  * Where each on-court player stood (F01, F02, F12). Once you pick yourself it shows only you,
  * with "Show everyone" for the others (adviser notes, 10 Nov: less on screen).
  */
-export function ZoneTimePanel({ result, myPlayerId, othersOf }: {
-  result: AnalysisResultV1; myPlayerId: number | null;
+export function ZoneTimePanel({ result, myPlayerId, othersOf, names = {} }: {
+  result: AnalysisResultV1; myPlayerId: number | null; names?: Record<number, string>;
   /** Set when the court map above already shows this player: list everyone else, folded away. */
   othersOf?: number | null;
 }) {
@@ -91,7 +91,7 @@ export function ZoneTimePanel({ result, myPlayerId, othersOf }: {
           ? `During rallies (${Math.round(value.window_s)} s of play).` : `Over the whole video (${Math.round(value.window_s)} s).`}</p>
         <ZoneLegend definitions={value.zone_definitions} />
         <ul className="mb-3 space-y-3">{others.map((row) => <ZoneRow key={row.player_id} row={row} mine={row.player_id === myPlayerId}
-          name={people.get(row.player_id)?.label} thumbnail={people.get(row.player_id)?.thumbnail} rules={value.estimate_rules} />)}</ul>
+          name={names[row.player_id] ?? people.get(row.player_id)?.label} thumbnail={people.get(row.player_id)?.thumbnail} rules={value.estimate_rules} />)}</ul>
       </details>
     );
   }
@@ -104,7 +104,7 @@ export function ZoneTimePanel({ result, myPlayerId, othersOf }: {
         <ZoneLegend definitions={value.zone_definitions} />
         <ul className="space-y-3">
           {rows.map((row) => <ZoneRow key={row.player_id} row={row} mine={row.player_id === myPlayerId}
-            name={people.get(row.player_id)?.label} thumbnail={people.get(row.player_id)?.thumbnail} rules={value.estimate_rules} />)}
+            name={names[row.player_id] ?? people.get(row.player_id)?.label} thumbnail={people.get(row.player_id)?.thumbnail} rules={value.estimate_rules} />)}
         </ul>
         {mineKnown && sorted.length > 1 && <button type="button" onClick={() => setEveryone(!everyone)}
           className="mt-2 min-h-[44px] text-sm font-bold underline" style={{ color: BLUE_SKY }}>{everyone ? "Show only me" : "Show everyone"}</button>}

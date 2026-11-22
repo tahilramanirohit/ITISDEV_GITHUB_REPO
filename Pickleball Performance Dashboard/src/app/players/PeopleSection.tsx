@@ -118,7 +118,7 @@ function PersonCard({ sb, person: p, data, act, busyId, reload, onOpen }: {
       {recent.length === 0 ? <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Log a session first, then ask {p.name} about it.</p>
         : <ul className="mt-2 space-y-1.5" aria-label={`Ask ${p.name} about`}>
             {recent.map((s) => <li key={s.id}>
-              <a href={`#/sessions/${s.id}?tab=plan&ask=${p.id}`} className={`flex min-h-[44px] items-center justify-between gap-3 rounded-[12px] px-3 text-sm ${pressable}`}
+              <a href={`#/sessions/${s.id}?tab=video&ask=${p.id}`} className={`flex min-h-[44px] items-center justify-between gap-3 rounded-[12px] px-3 text-sm ${pressable}`}
                 style={{ background: SURFACE_2, color: INK }}>
                 <span className="min-w-0 truncate font-bold">{s.title}</span>
                 <span className="shrink-0 text-xs" style={{ color: INK_3 }}>{shortDate(s.session_date)}</span>

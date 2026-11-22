@@ -5,9 +5,9 @@ import type { AnalysisResultV1, ShotEvent, ShotType } from "../../lib/analysis/c
 import { PUBLIC_SHOT_TYPES, SHOT_TYPES } from "../../lib/analysis/contract";
 import { SHOT_INFO, countByType, courtPlayers, formatClock, shotsByPlayer, shotsOf } from "../../lib/analysis/shotLabels";
 import {
-  ACTION, CHECK, INK, INK_2, INK_3, LINE, LINE_STRONG, ON_ACTION, ON_CHECK, SURFACE, SURFACE_2, TABBAR, VIOLET, WARN, WHITE_DIM,
+  ACTION, CHECK, INK, INK_2, INK_3, LINE, LINE_STRONG, ON_ACTION, ON_CHECK, SURFACE, SURFACE_2, TABBAR, WARN, WHITE_DIM,
 } from "../theme";
-import { Card, Pill, numStyle, pressable } from "../shell/primitives";
+import { Card, numStyle, pressable } from "../shell/primitives";
 
 const LIST_LIMIT = 60;
 type Side = "near" | "far";
@@ -34,8 +34,9 @@ function useTeamFixes(key: string | undefined): [Record<number, Side>, (next: Re
  * the left. Tap a shot to jump the video there. Teams come from which side of the net
  * each player was on, and can be fixed by hand when the video got them wrong.
  */
-export function ShotsPanel({ result, myPlayerId, onWatch, research = false, teamsKey }: {
+export function ShotsPanel({ result, myPlayerId, onWatch, research = false, teamsKey, names = {} }: {
   result: AnalysisResultV1; myPlayerId: number | null; onWatch?: (time: number) => void; research?: boolean;
+  /** Names the player gave each person in the video (and session names); "Player 3" otherwise. */ names?: Record<number, string>;
   /** Where team fixes for this video are saved on the device. */ teamsKey?: string;
 }) {
   const metric = result.metrics.shot_classification;
@@ -45,7 +46,6 @@ export function ShotsPanel({ result, myPlayerId, onWatch, research = false, team
   const [filter, setFilter] = useState<Filter>("all");
   const [selected, setSelected] = useState<number | null>(null);
   const [editing, setEditing] = useState(false);
-  const validated = metric.validation === "evaluated_on_real_footage";
 
   const sideOf = useMemo(() => {
     const base = new Map<number, Side>();
@@ -62,7 +62,7 @@ export function ShotsPanel({ result, myPlayerId, onWatch, research = false, team
   const name = (s: ShotEvent) => {
     if (isMe(s)) return "You";
     if (s.hitter_track_id == null) return "Unknown player";
-    return `Player ${s.hitter_track_id}`;
+    return names[s.hitter_track_id] ?? `Player ${s.hitter_track_id}`;
   };
 
   if (!metric.value || all.length === 0) {
@@ -91,7 +91,6 @@ export function ShotsPanel({ result, myPlayerId, onWatch, research = false, team
     <Card className="!p-4">
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="text-lg font-extrabold" style={{ color: INK }}>Shots</h3>
-        <Pill color={VIOLET} title={metric.reason ?? undefined}>{validated ? "EVALUATED" : "EXPERIMENTAL"}</Pill>
         {players.length >= 2 && <button type="button" onClick={() => setEditing(true)}
           className={`ml-auto inline-flex min-h-[40px] items-center gap-1.5 rounded-full px-3.5 text-[13px] font-bold ${pressable}`}
           style={{ border: `1px solid ${LINE_STRONG}`, color: INK }}>
@@ -159,7 +158,7 @@ export function ShotsPanel({ result, myPlayerId, onWatch, research = false, team
       <details className="mt-4">
         <summary className="cursor-pointer text-sm font-semibold" style={{ color: INK_2 }}>Shot totals and what each type means</summary>
         <ShotCounts shots={all} />
-        <PlayerTable result={result} research={research} />
+        <PlayerTable result={result} research={research} myPlayerId={myPlayerId} names={names} />
         <dl className="mt-3 grid gap-2 sm:grid-cols-2">
           {(research ? SHOT_TYPES : PUBLIC_SHOT_TYPES).map((type) => (
             <div key={type} className="text-sm">
@@ -170,7 +169,7 @@ export function ShotsPanel({ result, myPlayerId, onWatch, research = false, team
         </dl>
       </details>
 
-      {editing && createPortal(<TeamsSheet players={players.map((p) => p.player_id)} sideOf={sideOf} myPlayerId={meId}
+      {editing && createPortal(<TeamsSheet players={players.map((p) => p.player_id)} sideOf={sideOf} myPlayerId={meId} names={names}
         onMove={(id) => setFixes({ ...fixes, [id]: other(sideOf.get(id) ?? "near") })}
         onReset={() => setFixes({})} onClose={() => setEditing(false)} />, document.body)}
     </Card>
@@ -178,9 +177,10 @@ export function ShotsPanel({ result, myPlayerId, onWatch, research = false, team
 }
 
 /** Bottom sheet: tap a player to move them to the other team. Teams must be even to close. */
-function TeamsSheet({ players, sideOf, myPlayerId, onMove, onReset, onClose }: {
+function TeamsSheet({ players, sideOf, myPlayerId, onMove, onReset, onClose, names = {} }: {
   players: number[]; sideOf: Map<number, Side>; myPlayerId: number | null;
   onMove: (id: number) => void; onReset: () => void; onClose: () => void;
+  names?: Record<number, string>;
 }) {
   const near = players.filter((id) => (sideOf.get(id) ?? "near") === "near");
   const far = players.filter((id) => sideOf.get(id) === "far");
@@ -199,7 +199,7 @@ function TeamsSheet({ players, sideOf, myPlayerId, onMove, onReset, onClose }: {
           style={{ background: SURFACE, border: `1px solid ${LINE}`, color: INK }}>
           <span className="grid h-7 w-7 place-items-center rounded-full text-[10px] font-extrabold"
             style={id === myPlayerId ? { background: ACTION, color: ON_ACTION } : { background: LINE, color: INK_2 }}>{id === myPlayerId ? "You" : id}</span>
-          {id === myPlayerId ? "You" : `Player ${id}`}
+          {id === myPlayerId ? "You" : names[id] ?? `Player ${id}`}
           <ArrowLeftRight size={13} aria-hidden="true" className="ml-auto" style={{ color: INK_3 }} />
         </button>
       ))}
@@ -242,7 +242,7 @@ function ShotCounts({ shots }: { shots: ShotEvent[] }) {
   );
 }
 
-function PlayerTable({ result, research }: { result: AnalysisResultV1; research: boolean }) {
+function PlayerTable({ result, research, myPlayerId, names }: { result: AnalysisResultV1; research: boolean; myPlayerId: number | null; names: Record<number, string> }) {
   const rows = shotsByPlayer(result).filter((r) => r.shots.length > 0);
   const types = (research ? SHOT_TYPES : PUBLIC_SHOT_TYPES).filter((t) => rows.some((r) => r.shots.some((s) => s.shot_type === t)));
   if (!rows.length) return null;
@@ -259,7 +259,7 @@ function PlayerTable({ result, research }: { result: AnalysisResultV1; research:
         <tbody>
           {rows.map(({ player, shots }) => (
             <tr key={player?.player_id ?? "unknown"} className="border-t" style={{ borderColor: LINE, color: INK }}>
-              <th scope="row" className="py-1.5 pr-3 text-left font-semibold">{player ? `Player ${player.player_id}` : "Hitter not identified"}</th>
+              <th scope="row" className="py-1.5 pr-3 text-left font-semibold">{player ? (player.player_id === myPlayerId ? "You" : names[player.player_id] ?? `Player ${player.player_id}`) : "Hitter not identified"}</th>
               <td className="px-2 py-1.5 text-right font-bold">{shots.length}</td>
               {types.map((t) => <td key={t} className="px-2 py-1.5 text-right">{shots.filter((s) => s.shot_type === t).length || "·"}</td>)}
             </tr>

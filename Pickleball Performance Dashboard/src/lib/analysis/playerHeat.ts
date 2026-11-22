@@ -1,4 +1,4 @@
-import type { AnalysisResultV1, CourtLinesSnapshot } from "./contract";
+import type { AnalysisResultV1, CourtLinesSnapshot, HeatmapValue } from "./contract";
 import { courtPlayers } from "./shotLabels";
 import { COURT_LENGTH_M as L, COURT_WIDTH_M as W } from "../coaching/lastGameReview";
 
@@ -148,4 +148,72 @@ export function mainZone(h: PlayerHeat): { zone: HeatZone; share: number } | nul
   }));
   const [zone, s] = (Object.entries(sums) as [HeatZone, number][]).sort((a, b) => b[1] - a[1])[0];
   return { zone, share: s / h.totalS };
+}
+
+export type TrackPoint = { t: number; x: number; y: number };
+
+/**
+ * Every on-court player's path on the court (metres), frame by frame, over the whole video,
+ * for the moving dots. Uses the same corner mapping as playerHeat; frames without a full court are skipped.
+ */
+export function playerTracks(result: AnalysisResultV1): Map<number, TrackPoint[]> {
+  const out = new Map<number, TrackPoint[]>();
+  const snaps = result.player_positions ?? [];
+  const lines = [...(result.court_lines ?? [])].sort((a, b) => a.time_seconds - b.time_seconds);
+  const onCourt = new Set(courtPlayers(result).map((p) => p.player_id));
+  if (!snaps.length || !lines.length || !onCourt.size) return out;
+  let li = -1;
+  let h: Homography | null = courtMappingFrom(lines[0]);
+  for (const s of snaps) {
+    while (li + 1 < lines.length && lines[li + 1].time_seconds <= s.time_seconds + 1e-6) { li++; h = courtMappingFrom(lines[li]); }
+    if (!h) continue;
+    for (const box of s.players) {
+      if (box.track_id == null || !onCourt.has(box.track_id)) continue;
+      const [x1, , x2, y2] = box.bbox;
+      const p = applyHomography(h, [(x1 + x2) / 2, y2]);
+      if (!p || p[0] < HEAT_X0 || p[0] > HEAT_X0 + HEAT_COLS * HEAT_CELL_M || p[1] < HEAT_Y0 || p[1] > HEAT_Y0 + HEAT_ROWS * HEAT_CELL_M) continue;
+      const list = out.get(box.track_id) ?? [];
+      list.push({ t: s.time_seconds, x: p[0], y: p[1] });
+      out.set(box.track_id, list);
+    }
+  }
+  return out;
+}
+
+/** Where a player is at time t: between the two nearest samples (up to 1 s apart), else the nearest within 0.6 s, else null. */
+export function positionAt(track: TrackPoint[], t: number): TrackPoint | null {
+  if (!track.length) return null;
+  let lo = 0, hi = track.length - 1;
+  while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (track[mid].t <= t) lo = mid; else hi = mid - 1; }
+  const a = track[lo], b = track[lo + 1];
+  if (a.t > t) return t >= a.t - 0.6 ? a : null;
+  if (b && b.t - a.t <= 1) {
+    const f = (t - a.t) / (b.t - a.t);
+    return { t, x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f };
+  }
+  if (t - a.t <= 0.6) return a;
+  return b && b.t - t <= 0.6 ? b : null;
+}
+
+/**
+ * A heatmap in the analyser's court_heatmap format from the stored positions, for places that only
+ * know that format (Home's Last game). The chosen player's own time if they are on court, else everyone's.
+ */
+export function heatmapFromPositions(result: AnalysisResultV1, playerId: number | null): { value: HeatmapValue; nearSide: boolean; everyone: boolean } | null {
+  const heat = playerHeat(result);
+  if (!heat.length) return null;
+  const mine = playerId != null ? heat.find((h) => h.playerId === playerId) : undefined;
+  const parts = mine ? [mine] : heat;
+  const seconds = Array.from({ length: HEAT_ROWS }, (_, r) => Array.from({ length: HEAT_COLS }, (_, c) => parts.reduce((s, h) => s + h.seconds[r][c], 0)));
+  return {
+    value: {
+      units: "seconds", coordinate_system: "pickleball_full_court_v1: x across court from near-left sideline, y from near baseline (metres)",
+      cell_size_m: HEAT_CELL_M,
+      x_edges_m: Array.from({ length: HEAT_COLS + 1 }, (_, i) => HEAT_X0 + i * HEAT_CELL_M),
+      y_edges_m: Array.from({ length: HEAT_ROWS + 1 }, (_, i) => HEAT_Y0 + i * HEAT_CELL_M),
+      dwell_seconds: seconds, tracked_time_s: parts.reduce((s, h) => s + h.totalS, 0), outside_mapped_area_s: 0,
+    },
+    nearSide: mine ? mine.side !== "far" : true,
+    everyone: !mine,
+  };
 }

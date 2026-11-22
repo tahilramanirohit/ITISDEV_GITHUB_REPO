@@ -290,7 +290,7 @@ describe("Players: My partners", () => {
     fireEvent.click(within(people).getByRole("button", { name: "Ask for feedback" }));
     const pick = within(people).getByRole("list", { name: "Ask Quinn about" });
     expect(within(pick).getAllByRole("link").map((a) => a.getAttribute("href")))
-      .toEqual(["#/sessions/m2?tab=plan&ask=q", "#/sessions/m1?tab=plan&ask=q"]);
+      .toEqual(["#/sessions/m2?tab=video&ask=q", "#/sessions/m1?tab=video&ask=q"]);
   });
 
   it("asks a buddy to play (even while hidden from the list), partners for video feedback, cancels a session and removes the buddy", async () => {

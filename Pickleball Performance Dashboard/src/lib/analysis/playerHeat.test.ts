@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import fixture from "../../../contracts/fixtures/analysis_result.test_fixture.v1.json";
 import { parseAnalysisResult, type AnalysisResultV1 } from "./contract";
-import { applyHomography, courtMappingFrom, heatZoneAt, homographyFrom4, mainZone, playerHeat, HEAT_CELL_M, HEAT_X0, HEAT_Y0 } from "./playerHeat";
+import { applyHomography, courtMappingFrom, heatZoneAt, homographyFrom4, mainZone, heatmapFromPositions, playerHeat, playerTracks, positionAt, HEAT_CELL_M, HEAT_X0, HEAT_Y0 } from "./playerHeat";
 import { COURT_LENGTH_M as L, COURT_WIDTH_M as W } from "../coaching/lastGameReview";
 
 // A camera behind the near baseline: the court as a trapezoid, narrower far away.
@@ -75,5 +75,36 @@ describe("rally window", () => {
     r.metrics.rally_segmentation = { ...r.metrics.rally_segmentation, value: { ...(r.metrics.rally_segmentation.value ?? {}), rallies: [{ rally_index: 0, start_s: 0, end_s: 2, shots: 3 }] } } as typeof r.metrics.rally_segmentation;
     const heat = playerHeat(r);
     expect(heat[0].totalS).toBeCloseTo(2.5, 1); // frames at 0, 0.5, 1, 1.5, 2 s, 0.5 s each
+  });
+});
+
+describe("moving dots", () => {
+  it("keeps each on-court player's path in court metres", () => {
+    const tracks = playerTracks(withPlayers());
+    expect([...tracks.keys()]).toEqual([1, 2]);
+    expect(tracks.get(1)!.length).toBe(10);
+    expect(tracks.get(1)![0].x).toBeCloseTo(1.5, 1);
+    expect(tracks.get(1)![0].y).toBeCloseTo(4.8, 1);
+  });
+  it("moves smoothly between samples and disappears in long gaps", () => {
+    const track = [{ t: 0, x: 0, y: 0 }, { t: 1, x: 2, y: 4 }, { t: 5, x: 3, y: 3 }];
+    expect(positionAt(track, 0.5)).toEqual({ t: 0.5, x: 1, y: 2 });
+    expect(positionAt(track, 1.3)).toEqual(track[1]);   // a gap of 4 s: hold briefly
+    expect(positionAt(track, 3)).toBeNull();            // then hide
+    expect(positionAt(track, 4.6)).toEqual(track[2]);   // the next sample is near
+    expect(positionAt([], 1)).toBeNull();
+  });
+});
+
+describe("heatmap for Home", () => {
+  it("gives the chosen player's own heat, or everyone's when nobody is chosen", () => {
+    const mine = heatmapFromPositions(withPlayers(), 2)!;
+    expect(mine.everyone).toBe(false);
+    expect(mine.nearSide).toBe(false);
+    expect(mine.value.dwell_seconds.flat().reduce((a, b) => a + b, 0)).toBeCloseTo(mine.value.tracked_time_s, 2);
+    const all = heatmapFromPositions(withPlayers(), null)!;
+    expect(all.everyone).toBe(true);
+    expect(all.value.tracked_time_s).toBeCloseTo(9.4, 1);
+    expect(all.value.x_edges_m).toHaveLength(15);
   });
 });

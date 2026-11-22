@@ -13,12 +13,12 @@ import { ShotsPanel } from "./ShotsPanel";
 import { ZoneTimePanel } from "./ZoneTimePanel";
 import { CourtMapPanel, type PositioningGoal } from "./CourtMapPanel";
 import { buildCourtMap } from "../../lib/analysis/courtMap";
-import { playerHeat } from "../../lib/analysis/playerHeat";
-import { PlayersCourtMap } from "./PlayersCourtMap";
+import { playerHeat, playerTracks } from "../../lib/analysis/playerHeat";
+import { LiveCourtStrip, PlayersCourtMap, playerColors } from "./PlayersCourtMap";
 import { ErrorsPanel } from "./ErrorsPanel";
 import { PlayersOnCourtToggle, type PlayersOnCourt } from "./AnalysisStatus";
 import { VideoOverlayPlayer, type JumpRequest } from "./VideoOverlayPlayer";
-import { courtPlayers, focusShots, playerNamesFor, type SessionNames } from "../../lib/analysis/shotLabels";
+import { courtPlayers, focusShots, playerName, playerNamesFor, type SessionNames } from "../../lib/analysis/shotLabels";
 
 function downloadResult(result: AnalysisResultV1) {
   const name = (result.provenance.source.filename ?? "video").replace(/\.[^.]+$/, "");
@@ -119,8 +119,20 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
   const [myPlayerId, setMyPlayerId] = useMyPlayer(`picklepro:me:${reportKey}`, analysedId);
   const hasPlayers = courtPlayers(result).length > 0;
   // A shared report is seen by someone else, so the chosen player is the owner, not "You".
-  const playerNames = useMemo(() => playerNamesFor(result, myPlayerId, sharedBy ? { me: sharedBy } : names ?? {}),
+  const sessionNames = useMemo(() => playerNamesFor(result, myPlayerId, sharedBy ? { me: sharedBy } : names ?? {}),
     [result, myPlayerId, sharedBy, names]);
+  // Names typed for each person in the video (team request, 22 Nov), saved for this session on this device.
+  const namesKey = `picklepro:names:${reportKey}`;
+  const [customNames, setCustomNamesState] = useState<Record<number, string>>(() => {
+    try { return JSON.parse(window.localStorage.getItem(namesKey) ?? "{}") as Record<number, string>; } catch { return {}; }
+  });
+  const setCustomName = (id: number, name: string) => {
+    const next = { ...customNames };
+    if (name.trim()) next[id] = name.trim().slice(0, 24); else delete next[id];
+    setCustomNamesState(next);
+    try { window.localStorage.setItem(namesKey, JSON.stringify(next)); } catch { /* private window: this visit only */ }
+  };
+  const playerNames = useMemo(() => ({ ...sessionNames, ...customNames }), [sessionNames, customNames]);
   // Older saved reports included an experimental hit count in the summary.
   // Keep that count hidden until the shot detector has real-footage evaluation.
   const visibleMessage = shotsValidated ? result.message
@@ -159,6 +171,11 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
   const previousMap = useMemo(() => (previous ? buildCourtMap(previous.result) : null), [previous]);
   // Every on-court player on one top-view court (team request, 22 Nov).
   const allHeat = useMemo(() => (measured ? playerHeat(result) : []), [measured, result]);
+  // The same players as dots that move with the video (option A, 22 Nov); the strip under the video can be turned off.
+  const tracks = useMemo(() => (measured ? playerTracks(result) : new Map()), [measured, result]);
+  const courtColors = useMemo(() => playerColors(result), [result]);
+  const [courtView, setCourtViewState] = useState(() => { try { return window.localStorage.getItem("picklepro:courtView") !== "off"; } catch { return true; } });
+  const setCourtView = (on: boolean) => { setCourtViewState(on); try { window.localStorage.setItem("picklepro:courtView", on ? "on" : "off"); } catch { /* private window */ } };
   const mapIsMine = analysedId == null || myPlayerId == null || myPlayerId === analysedId;
   const mapName = sharedBy ?? (mapIsMine ? undefined : playerNames[analysedId!] ?? `Player ${analysedId}`);
   const stats = measured ? [
@@ -195,26 +212,25 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
         </Notice>
       )}
 
-      <Card accent={result.status === "ok" ? NEON : ORANGE}>
+      {/* No status badge or "Why?" (team request, 22 Nov): the sentence below says it plainly. */}
+      <Card accent={NEON}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="flex flex-wrap items-center gap-2">
             {(devMock || result.data_origin === "test_fixture") && <OriginBadge origin={result.data_origin} devMock={devMock} />}
-            <Pill color={devMock ? ORANGE : result.status === "ok" ? NEON : ORANGE}>
-              {devMock ? "SAMPLE" : result.status === "ok" ? "RESULT" : "LIMITED RESULT"}</Pill>
+            {devMock && <Pill color={ORANGE}>SAMPLE</Pill>}
           </span>
           {measured && (result.video.container_duration_s ?? 0) > 0 && <span className="text-xs font-bold" style={{ color: WHITE_SUB }}>{Math.round(result.video.container_duration_s!)} s of video</span>}
         </div>
         <h2 id="video-heading" className="mt-2 text-xl font-bold text-ink">{sharedBy ? `Watch ${sharedBy}'s video` : "Your video review"}</h2>
         {devMock && <p className="mt-1 text-sm text-ink">This sample shows the kind of practice plan PicklePro can display. It is not feedback about your play.</p>}
-        {!devMock && result.status !== "ok" && <p className="mt-1 text-sm" style={{ color: WHITE_DIM }}>Some measures need a clearer view of the court or players.</p>}
         {!devMock && result.status === "ok" && visibleMessage && <p className="sr-only">{visibleMessage}</p>}
-        {!devMock && (result.status !== "ok" || warnings.length > 0) && (
+        {!devMock && result.status === "ok" && warnings.length > 0 && (
           <details className="mt-1">
             <summary className="cursor-pointer text-sm font-semibold" style={{ color: ORANGE_L }}>
-              {result.status !== "ok" ? "Why?" : warnings.length === 1 ? "1 note about this video" : `${warnings.length} notes about this video`}
+              {warnings.length === 1 ? "1 note about this video" : `${warnings.length} notes about this video`}
             </summary>
             <ul className="mt-2 space-y-1.5">
-              {(result.status !== "ok" && visibleMessage ? [visibleMessage, ...warnings] : warnings).map((w) => (
+              {warnings.map((w) => (
                 <li key={w} className="text-sm flex gap-2" style={{ color: ORANGE_L }}>
                   <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" aria-hidden="true" /> {w}
                 </li>
@@ -245,6 +261,29 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
             bounces={allowShotDisplay ? shotMetric.value?.bounces ?? [] : []}
             selectedTrackId={myPlayerId} playerNames={playerNames} jump={jump} onVideoElement={setVideoEl}
             onSelectTrack={selectingPlayer ? (id, time) => { setSelectingPlayer(false); setMyPlayerId(id); onSelectTrack?.(id, time); } : undefined} />
+          {videoUrl && tracks.size > 0 && <div className="space-y-1.5">
+            <button type="button" role="switch" aria-checked={courtView} onClick={() => setCourtView(!courtView)}
+              className="inline-flex min-h-[40px] items-center gap-2 text-sm font-bold" style={{ color: INK }}>
+              <span aria-hidden="true" className="relative inline-block h-5 w-9 rounded-full transition-colors" style={{ background: courtView ? NEON : WHITE_SUB }}>
+                <span className="absolute top-0.5 h-4 w-4 rounded-full bg-white transition-[left]" style={{ left: courtView ? 18 : 2 }} /></span>
+              Court view</button>
+            {courtView && <LiveCourtStrip result={result} tracks={tracks} video={videoEl} names={playerNames} myPlayerId={myPlayerId} />}
+            <details className="text-sm">
+              <summary className="min-h-[40px] cursor-pointer py-2 font-bold" style={{ color: BLUE_SKY }}>Name the players</summary>
+              <ul className="grid gap-2 sm:grid-cols-2" aria-label="Player names">
+                {[...tracks.keys()].sort((a, b) => a - b).map((id) => <li key={id}>
+                  <label className="flex items-center gap-2">
+                    <i aria-hidden="true" className="inline-block h-3 w-3 shrink-0 rounded-full" style={{ background: courtColors[id] }} />
+                    <span className="sr-only">Name for player {id}</span>
+                    <input type="text" maxLength={24} defaultValue={customNames[id] ?? ""} placeholder={sessionNames[id] ?? playerName(result, id, myPlayerId)}
+                      onBlur={(e) => setCustomName(id, e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+                      className="min-h-[44px] w-full min-w-0 rounded-[12px] px-3 text-sm" style={{ background: "var(--pp-surface)", border: `1px solid ${BORDER}`, color: INK }} />
+                  </label>
+                </li>)}
+              </ul>
+              <p className="mt-1.5 text-xs" style={{ color: WHITE_SUB }}>Used on the video, the court and every list. Saved on this device.</p>
+            </details>
+          </div>}
           {videoUrl && onSelectTrack && result.tracks.length > 0 && !hasPlayers && (
             <div className="flex flex-wrap items-center gap-2">
               <button type="button" onClick={() => setSelectingPlayer((value) => !value)} className="min-h-[44px] text-sm font-bold underline" style={{ color: BLUE_SKY }}>
@@ -287,20 +326,19 @@ export function ResultView({ result, videoUrl, previous, session, onSelectTrack,
             style={activeTab === key ? { color: INK, borderColor: PICKLE } : { color: WHITE_DIM, borderColor: "transparent" }}>{label}</button>)}
         </div>
         <div role="tabpanel" id={`report-panel-${activeTab}`} aria-labelledby={`report-tab-${activeTab}`} className="mt-3 outline-none">
-          {activeTab === "shots" && <ShotsPanel result={shotDisplayResult} myPlayerId={myPlayerId} research={experimentalReview} teamsKey={`picklepro:teams:${reportKey}`} onWatch={watch} />}
-          {activeTab === "errors" && <ErrorsPanel result={result} myPlayerId={myPlayerId} onWatch={watch} />}
+          {activeTab === "shots" && <ShotsPanel result={shotDisplayResult} myPlayerId={myPlayerId} research={experimentalReview} teamsKey={`picklepro:teams:${reportKey}`} onWatch={watch} names={playerNames} />}
+          {activeTab === "errors" && <ErrorsPanel result={result} myPlayerId={myPlayerId} onWatch={watch} names={playerNames} />}
           {activeTab === "position" && <div className="space-y-3">
             {courtMap && <CourtMapPanel map={courtMap} name={mapName} previous={previousMap} playful={mapIsMine && !sharedBy}
               goal={mapIsMine && !sharedBy ? positioningGoal : undefined} />}
-            {allHeat.length > 0 && <PlayersCourtMap result={result} heat={allHeat} myPlayerId={myPlayerId} names={playerNames} />}
-            <ZoneTimePanel result={result} myPlayerId={myPlayerId} othersOf={courtMap ? analysedId ?? myPlayerId : undefined} />
+            {allHeat.length > 0 && <PlayersCourtMap result={result} heat={allHeat} tracks={tracks.size ? tracks : undefined} video={videoEl} myPlayerId={myPlayerId} names={playerNames} />}
+            <ZoneTimePanel result={result} myPlayerId={myPlayerId} othersOf={courtMap ? analysedId ?? myPlayerId : undefined} names={playerNames} />
           </div>}
           {activeTab === "comments" && notes?.({ video: videoEl, seek })}
         </div>
       </div>}
 
-      {measured && (shotsShown || errorValue || zoneRows.length > 0 || courtMap || allHeat.length > 0) && <p className="text-center text-xs" style={{ color: WHITE_SUB }}>
-        Shots, errors and positions are estimates from the video; some will be wrong.</p>}
+      {/* The estimates footer was removed (team request, 22 Nov). */}
 
       {(changePlayers || settings || (experimentalReview && result.data_origin === "measured")) && (
         <details className="rounded-[20px] p-4" style={{ background: "var(--pp-surface)", border: `1px solid ${BORDER}` }}>

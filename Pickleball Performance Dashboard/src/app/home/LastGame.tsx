@@ -7,6 +7,7 @@ import { parseAnalysisResult } from "../../lib/analysis/contract";
 import { formatClock } from "../../lib/analysis/shotLabels";
 import { chosenPlayer, lastGameReview, type LastGameReview } from "../../lib/coaching/lastGameReview";
 import { deriveAnalysisState } from "../../lib/analysis/state";
+import { heatmapFromPositions } from "../../lib/analysis/playerHeat";
 import { TopCourtHeatmap } from "../analysis/TopCourtHeatmap";
 import { ACTION, HERO, INK, LINE, ON_ACTION, ON_HERO, PAGE_BG, SURFACE } from "../theme";
 import { numStyle, pressable } from "../shell/primitives";
@@ -97,7 +98,8 @@ function useReview(sb: SupabaseClient, item: SessionListItem) {
   const [state, setState] = useState<{ review: LastGameReview | null; videoPath: string | null } | null>(null);
   const id = item.session.id;
   const uploaded = item.video?.upload_status === "uploaded";
-  const measured = item.result?.data_origin === "measured" && item.result.result_status === "ok";
+  // A limited result can still have player positions to draw (22 Nov), so any measured result is tried.
+  const measured = item.result?.data_origin === "measured";
   useEffect(() => {
     setState(null);
     if (!uploaded) return;
@@ -108,7 +110,12 @@ function useReview(sb: SupabaseClient, item: SessionListItem) {
       if (measured && bundle.result?.result) {
         try {
           const result = parseAnalysisResult(bundle.result.result);
-          review = lastGameReview(result, chosenPlayer(result, savedPlayer(id)));
+          const me = chosenPlayer(result, savedPlayer(id));
+          review = lastGameReview(result, me);
+          // No analyser heatmap (e.g. nobody picked as "you"): draw it from the stored positions, as the session page does.
+          const fallback = review ? null : heatmapFromPositions(result, me);
+          if (fallback) review = { heatmap: fallback.value, nearSide: fallback.nearSide, kitchenLineShare: null, zoneShare: null,
+            window: "video", moments: [], everyone: fallback.everyone } as LastGameReview & { everyone: boolean };
         } catch { /* An unreadable result: show the video without a heatmap. */ }
       }
       const v = bundle.video;
@@ -168,6 +175,7 @@ export function LastGameCard({ sb, ...props }: Props & { sb: SupabaseClient }) {
   const share = review?.kitchenLineShare != null ? Math.round(review.kitchenLineShare * 100) : null;
   const where = share != null
     ? `You spent ${share}% of ${review?.window === "rallies" ? "rallies" : "the video"} at the kitchen line`
+    : (review as { everyone?: boolean } | null)?.everyone ? "Where everyone stood. Pick yourself in the full review to see just you"
     : "Where you stood during the game";
   const tabs: [View, string, ReactNode][] = [
     ["replay", "Shot replay", <Play key="p" size={16} fill="currentColor" aria-hidden="true" />],
