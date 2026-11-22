@@ -53,7 +53,8 @@ export function sessionStatus(item: SessionListItem, assessment: SelfAssessment 
     return report.available ? { text: "Plan ready", color: SUCCESS, done: true } : { text: "Finish rating", color: ORANGE, done: false };
   }
   const state = deriveAnalysisState({ video: item.video, job: item.job, result: item.result });
-  return { text: STATE_LABELS[state], color: STATE_TONE[state], done: state === "completed" };
+  // A limited result is finished too: no "Limited result" badge on the row (team request, 22 Nov).
+  return { text: STATE_LABELS[state], color: STATE_TONE[state], done: state === "completed" || state === "insufficient_data" };
 }
 
 export function formatSessionDate(iso: string, opts: Intl.DateTimeFormatOptions = { weekday: "short", month: "short", day: "numeric" }) {
